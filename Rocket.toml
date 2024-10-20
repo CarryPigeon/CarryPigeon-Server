@@ -13,7 +13,7 @@ cli_colors = true
 
 [default.limits]
 json = "5 MiB"
-file = "10 MiB"
+file = "1 GiB"
 
 # [default.tls]
 # 测试阶段跳过证书验证

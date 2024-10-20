@@ -1,3 +1,4 @@
+use crate::dao::REDIS_POOL;
 use crate::model::protocol::ws::request::WebSocketRequest;
 use crate::model::protocol::ws::response::WebSocketResponse;
 use crate::model::vo::account::user::{UserLoginResponseVo, UserLoginVo};
@@ -8,12 +9,21 @@ use crate::ws::dispatcher::ws_dispatcher;
 use base64::engine::general_purpose;
 use base64::Engine;
 use rbatis::rbatis_codegen::ops::AsProxy;
+use redis::AsyncCommands;
 use rocket::futures::StreamExt;
 use rocket::get;
 use rocket::serde::json::serde_json::json;
 use rocket_ws::Message;
-use std::sync::Arc;
+use std::cell::SyncUnsafeCell;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 use tokio::sync::Mutex;
+
+pub static MESSAGE_MAP: OnceLock<SyncUnsafeCell<HashMap<i64, bool>>> = OnceLock::new();
+
+pub fn init_message_map() {
+    let _ = MESSAGE_MAP.set(SyncUnsafeCell::new(HashMap::new()));
+}
 
 #[get("/connect?<username>&<password>")]
 pub async fn websocket_service(
@@ -62,6 +72,36 @@ pub async fn websocket_service(
                     push_user_service(user, Arc::clone(&sender), token).await;
                     let mut shut_flag = false;
                     while let Some(message) = receiver.next().await {
+                        // 接收信息
+                        if unsafe {
+                            *MESSAGE_MAP
+                                .get()
+                                .unwrap()
+                                .get()
+                                .as_mut()
+                                .unwrap()
+                                .get(&id)
+                                .unwrap()
+                        } {
+                            unsafe {
+                                let temp = REDIS_POOL.get().unwrap().get().as_mut().unwrap();
+                                let temp_pool: Vec<String> = temp.get(id).await.unwrap();
+                                if !temp_pool.is_empty() {
+                                    for i in temp_pool {
+                                        let _ = sender.lock().await.send_json(i).await;
+                                    }
+                                }
+                                MESSAGE_MAP
+                                    .get()
+                                    .unwrap()
+                                    .get()
+                                    .as_mut()
+                                    .unwrap()
+                                    .insert(id, false);
+                            }
+                        }
+
+                        // 处理发送信息
                         match message {
                             Err(error) => {
                                 tracing::error!("{}", format!("websocket error,msg:{:?}", error));
@@ -99,7 +139,7 @@ pub async fn websocket_service(
                                     }
                                     Message::Pong(_) => {
                                         // 暂不接受Pong
-                                        shut_flag = true;
+                                        //shut_flag = true;
                                     }
                                     Message::Close(_) => {
                                         shut_flag = true;

@@ -1,6 +1,7 @@
 use crate::{
     dao::{message::Message, MYSQL_POOL, REDIS_POOL},
     model::{protocol::ws::response::WebSocketResponse, vo::chat::ChatSendResponseVO},
+    ws::socket::MESSAGE_MAP,
 };
 use redis::AsyncCommands;
 use rocket::serde::json::{from_value, Value};
@@ -41,7 +42,16 @@ pub async fn chat_send_controller(info: Value) -> WebSocketResponse {
                 let mut temp_pool: Vec<String> = temp.get(value.to_id).await.unwrap();
                 temp_pool.push(info.to_string());
                 let _: () = temp.set(value.to_id, temp_pool).await.unwrap();
-            };
+            }
+            unsafe {
+                MESSAGE_MAP
+                    .get()
+                    .unwrap()
+                    .get()
+                    .as_mut()
+                    .unwrap()
+                    .insert(value.to_id.unwrap(), true);
+            }
             WebSocketResponse::success(Value::String(ChatSendResponseVO::success().msg))
         }
         Err(e) => WebSocketResponse::error(Value::String(e.to_string())),
