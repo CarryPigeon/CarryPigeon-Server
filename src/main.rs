@@ -1,12 +1,14 @@
 #[macro_use]
 extern crate rocket;
 
-use carrypigeon_server::controller::account::user::user_register_controller;
 use carrypigeon_server::controller::tree_hole::tree_hole_send_controller;
 use carrypigeon_server::manager::ws::init_web_socket_manager;
 use carrypigeon_server::utils::id::init_snow;
 use carrypigeon_server::ws::init_ws_dispatcher;
 use carrypigeon_server::ws::socket::websocket_service;
+use carrypigeon_server::{
+    controller::account::user::user_register_controller, ws::socket::init_message_map,
+};
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
     Registry, filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
@@ -43,9 +45,8 @@ async fn main() -> Result<(), rocket::Error> {
     init_snow();
     init_web_socket_manager();
     init_ws_dispatcher();
-
-    // connect database
     carrypigeon_server::dao::init_pool().await;
+    init_message_map().await;
 
     let _rocket = rocket::build()
         //.mount("/authenticator", routes![post_authenticator])

@@ -39,9 +39,20 @@ pub async fn chat_send_controller(info: Value) -> WebSocketResponse {
             // 添加数据至redis作为缓存
             unsafe {
                 let temp = REDIS_POOL.get().unwrap().get().as_mut().unwrap();
-                let mut temp_pool: Vec<String> = temp.get(value.to_id).await.unwrap();
-                temp_pool.push(info.to_string());
-                let _: () = temp.set(value.to_id, temp_pool).await.unwrap();
+                let temp_pool = if MESSAGE_MAP.get().unwrap().get().as_mut().unwrap().get(&value.to_id.unwrap()).is_some() && 
+                *MESSAGE_MAP.get().unwrap().get().as_mut().unwrap().get(&value.to_id.unwrap()).unwrap(){
+                    let mut temp_pool: String =
+                        temp.get(value.to_id.unwrap().clone()).await.unwrap();
+                    temp_pool = temp_pool + &info.clone().to_string();
+                    temp_pool
+                } else{
+                    info.clone().to_string()
+                };
+
+                let _: () = temp
+                    .set(value.to_id.unwrap().clone(), temp_pool.clone())
+                    .await
+                    .unwrap();
             }
             unsafe {
                 MESSAGE_MAP
