@@ -1,10 +1,10 @@
 use crate::{
-    dao::{message::Message, MYSQL_POOL, REDIS_POOL},
+    dao::{MYSQL_POOL, REDIS_POOL, message::Message},
     model::{protocol::ws::response::WebSocketResponse, vo::chat::ChatSendResponseVO},
     ws::socket::MESSAGE_MAP,
 };
 use redis::AsyncCommands;
-use rocket::serde::json::{from_value, Value};
+use rocket::serde::json::{Value, from_value};
 use rocket_json_response::json_gettext::serde_json::json;
 
 /**
@@ -19,9 +19,9 @@ pub struct Message {
     pub id: Option<i64>,
     ///  消息发送者id
     pub from_id: Option<i64>,
-    /// 消息发送到的位置，根据消息tag决定指向的为群聊id
+    /// 消息发送到的位置
     pub to_id: Option<i64>,
-    /// 消息tag，决定消息的类型是群聊类型还是私聊类型还是树洞类型
+    /// 消息tag，决定消息的类型:1:群聊类型 2:私聊类型 3:树洞类型
     pub message_tag: Option<i32>,
     /// 消息的具体数据，通过解释引擎进行解释
     pub data: Option<String>,

@@ -1,5 +1,5 @@
-use crate::dao::account::friend::Friend;
 use crate::dao::MYSQL_POOL;
+use crate::dao::account::friend::Friend;
 
 /**
 或者指定用户的所有以通过好友申请的好友

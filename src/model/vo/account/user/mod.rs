@@ -1,6 +1,6 @@
 use crate::model::dto::account::user::{UserLoginDTO, UserRegisterDTO};
-use rocket::serde::{Deserialize, Serialize};
 use rocket::FromForm;
+use rocket::serde::{Deserialize, Serialize};
 use rocket_json_response::serialize_to_json;
 
 /**

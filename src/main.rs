@@ -9,7 +9,7 @@ use carrypigeon_server::ws::init_ws_dispatcher;
 use carrypigeon_server::ws::socket::websocket_service;
 use tracing_appender::{non_blocking, rolling};
 use tracing_subscriber::{
-    filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt, Registry,
+    Registry, filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
 #[rocket::main]

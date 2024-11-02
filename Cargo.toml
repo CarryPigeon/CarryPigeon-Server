@@ -1,7 +1,7 @@
 cargo-features = ["edition2024"]
 [package]
 name = "carrypigeon-server"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 
 [dependencies]
@@ -15,13 +15,9 @@ tracing = "0.1.40"
 tracing-appender = "0.2.3"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-tokio = "1.40.0"
+tokio = "1.41.0"
 tokio-test = "0.4.4"
-serde = { version = "1.0.210", features = ["derive"] }
-jsonwebtoken = { version = "9.3.0", features = ["use_pem"] }
-rand = { version = "0.8.5", features = ["std_rng"] }
-pkcs8 = { version = "0.10.2", features = ["alloc"] }
-cbc = { version = "0.1.2", features = ["block-padding", "alloc"] }
+serde = { version = "1.0.214", features = ["derive"] }
 thiserror = "1.0.64"
 base64 = "0.22.1"
 # 数据库连接相关
@@ -29,5 +25,3 @@ rbs = { version = "4.5.22" }
 rbdc-mysql = { version = "4.5.12" }
 rbatis = { version = "4.5.32"}
 redis = { version = "0.27.5", features = ["tokio-comp", "aio"] }
-# 热补丁
-minori = { path = "./minori"}

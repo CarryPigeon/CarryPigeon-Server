@@ -1,8 +1,8 @@
 use crate::model::protocol::ws::response::WebSocketResponse;
-use rocket::futures::stream::SplitSink;
 use rocket::futures::SinkExt;
-use rocket_ws::stream::DuplexStream;
+use rocket::futures::stream::SplitSink;
 use rocket_ws::Message;
+use rocket_ws::stream::DuplexStream;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

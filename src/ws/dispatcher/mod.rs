@@ -1,5 +1,5 @@
 use crate::model::protocol::ws::request::WebSocketRequest;
-use crate::model::protocol::ws::response::{WebSocketResponse, WEBSOCKET_RESPONSE_ROUTE_ERROR};
+use crate::model::protocol::ws::response::{WEBSOCKET_RESPONSE_ROUTE_ERROR, WebSocketResponse};
 use crate::ws::WS_DISPATCHER;
 use rocket::serde::json::Value;
 use std::collections::HashMap;
@@ -65,9 +65,9 @@ impl WebSocketDispatcher {
         &mut self,
         route: &str,
         handler: impl Fn(Value) -> Pin<Box<dyn Future<Output = WebSocketResponse> + Send>>
-            + Send
-            + Sync
-            + 'static,
+        + Send
+        + Sync
+        + 'static,
     ) {
         self.route_map.insert(route.to_string(), Arc::new(handler));
     }

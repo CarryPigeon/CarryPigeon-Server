@@ -1,5 +1,5 @@
-use crate::dao::account::user::User;
 use crate::dao::MYSQL_POOL;
+use crate::dao::account::user::User;
 
 /**
 通过用户名获取用户

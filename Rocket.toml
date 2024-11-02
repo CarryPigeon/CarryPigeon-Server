@@ -15,10 +15,9 @@ cli_colors = true
 json = "5 MiB"
 file = "1 GiB"
 
-# [default.tls]
-# 测试阶段跳过证书验证
-# certs = "./tls/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
-# key = "./tls/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 or SEC1 key.
+[default.tls]
+certs = "./tls/certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+key = "./tls/key.pem"     # Path or bytes to DER-encoded ASN.1 PKCS#1/#8 or SEC1 key.
 
 [release]
 address = "0.0.0.0"
