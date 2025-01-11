@@ -6,6 +6,9 @@ edition = "2024"
 
 [dependencies]
 # 用于处理请求的相关库
+tonic = "0.12.3"
+axum = "0.7.9"
+
 rocket = { version = "0.5.1", features = ["tls","json"] }
 rocket_ws = "0.1.1"
 # 用于格式化请求返回值

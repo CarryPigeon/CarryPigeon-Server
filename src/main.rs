@@ -1,3 +1,8 @@
+use axum::{
+    routing::{get, post},
+    http::StatusCode,
+    Json, Router,
+};
 #[macro_use]
 extern crate rocket;
 
@@ -14,7 +19,7 @@ use tracing_subscriber::{
     Registry, filter::EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
-#[rocket::main]
+#[tokio::main]
 async fn main() -> Result<(), rocket::Error> {
     // 处理tracing输出和调用
     let env_filter =
