@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: CarryPigeonBackend
+logging:
+  config: classpath:log4j2_config.xml
