@@ -6,12 +6,12 @@
 		<groupId>CarryPigeon</groupId>
 		<artifactId>Backend</artifactId>
 		<version>1.0.0</version>
-		<relativePath/>
+		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<artifactId>ChatDomain</artifactId>
+	<artifactId>ChatDAO</artifactId>
 	<version>1.0.0</version>
-	<name>ChatDomain</name>
-	<description>ChatDomain</description>
+	<name>ChatDAO</name>
+	<description>ChatDAO</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -30,17 +30,8 @@
 	</properties>
 	<dependencies>
 		<dependency>
-			<groupId>CarryPigeon</groupId>
-			<artifactId>api</artifactId>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>CarryPigeon</groupId>
-			<artifactId>Common</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>CarryPigeon</groupId>
-			<artifactId>ChatDAO</artifactId>
+			<groupId>com.baomidou</groupId>
+			<artifactId>mybatis-plus-spring-boot3-starter</artifactId>
 		</dependency>
 	</dependencies>
 

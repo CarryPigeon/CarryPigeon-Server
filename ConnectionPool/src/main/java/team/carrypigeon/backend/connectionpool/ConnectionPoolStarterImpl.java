@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.connectionpool;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -25,10 +26,12 @@ import java.net.InetSocketAddress;
 public class ConnectionPoolStarterImpl implements ConnectionPoolStarter {
 
     private final CPControllerDispatcher cpControllerDispatcher;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public ConnectionPoolStarterImpl(CPControllerDispatcher cpControllerDispatcher) {
+    public ConnectionPoolStarterImpl(CPControllerDispatcher cpControllerDispatcher, ObjectMapper objectMapper) {
         this.cpControllerDispatcher = cpControllerDispatcher;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -45,7 +48,7 @@ public class ConnectionPoolStarterImpl implements ConnectionPoolStarter {
                     // 添加解码器
                     ch.pipeline().addLast(new ByteToJsonDecoder());
                     // 添加处理器
-                    ch.pipeline().addLast(new ConnectionHandler(cpControllerDispatcher));
+                    ch.pipeline().addLast(new ConnectionHandler(cpControllerDispatcher,objectMapper));
                     // 添加编码码器
                     ch.pipeline().addLast(new JsonToByteEncoder());
                 }

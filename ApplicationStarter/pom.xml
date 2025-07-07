@@ -32,12 +32,18 @@
         <dependency>
             <groupId>CarryPigeon</groupId>
             <artifactId>api</artifactId>
-            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
             <artifactId>ConnectionPool</artifactId>
-            <version>1.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>Common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>ChatDAO</artifactId>
         </dependency>
     </dependencies>
 
