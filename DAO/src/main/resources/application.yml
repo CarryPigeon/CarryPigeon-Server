@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://carrypigeon-midreamsheep-2a81.e.aivencloud.com:20723/db_name?useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: avnadmin
+    password: AVNS_FaUz7fmaEVYlJtRp0zV

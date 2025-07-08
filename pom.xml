@@ -18,7 +18,7 @@
         <module>ApplicationStarter</module>
         <module>ConnectionPool</module>
         <module>ChatDomain</module>
-        <module>ChatDAO</module>
+        <module>DAO</module>
         <module>ChatService</module>
         <module>Common</module>
     </modules>
@@ -85,7 +85,7 @@
             </dependency>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>ChatDAO</artifactId>
+                <artifactId>DAO</artifactId>
                 <version>1.0.0</version>
             </dependency>
         </dependencies>

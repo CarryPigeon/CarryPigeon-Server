@@ -40,7 +40,7 @@
 		</dependency>
 		<dependency>
 			<groupId>CarryPigeon</groupId>
-			<artifactId>ChatDAO</artifactId>
+			<artifactId>DAO</artifactId>
 		</dependency>
 	</dependencies>
 
