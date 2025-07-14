@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.common.json;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -20,6 +21,7 @@ public class JacksonConfiguration {
         mapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         //在序列化时自定义时间日期格式
         mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         return mapper;
     }
 }

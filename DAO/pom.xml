@@ -39,6 +39,10 @@
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
             <version>3.5.12</version>
         </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

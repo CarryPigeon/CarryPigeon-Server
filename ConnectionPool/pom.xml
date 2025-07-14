@@ -41,6 +41,17 @@
             <version>5.8.24</version>
         </dependency>
         <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+            <version>1.70</version>
+        </dependency>
+
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>CarryPigeon</groupId>
             <artifactId>api</artifactId>
         </dependency>
@@ -48,6 +59,7 @@
             <groupId>CarryPigeon</groupId>
             <artifactId>ChatDomain</artifactId>
         </dependency>
+
     </dependencies>
 
     <build>

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.dao.mapper.msg;
+package team.carrypigeon.backend.dao.mapper.message;
 
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @TableName("message")
-public class CPMessagePO {
+public class MessagePO {
     @TableId
     private long id;
     private long sendUserId;
