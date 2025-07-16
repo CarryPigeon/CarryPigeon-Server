@@ -7,7 +7,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 
 public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
 
-    private ObjectMapper mapper;
+    private final ObjectMapper mapper;
 
     public CPNettyHeartBeatHandler(ObjectMapper mapper) {
         this.mapper = mapper;

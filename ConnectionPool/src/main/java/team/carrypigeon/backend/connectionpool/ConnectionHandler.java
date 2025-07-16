@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.connectionpool;
 
-import cn.hutool.crypto.symmetric.AES;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
@@ -9,6 +8,7 @@ import io.netty.util.AttributeKey;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
+import team.carrypigeon.backend.api.domain.CPChannel;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurity;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurityEnum;
 import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
@@ -16,7 +16,6 @@ import team.carrypigeon.backend.connectionpool.security.aes.AESUtil;
 import team.carrypigeon.backend.connectionpool.security.ecc.ECCUtil;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 
 @AllArgsConstructor
 @Slf4j
@@ -25,10 +24,13 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
     private CPControllerDispatcher cpControllerDispatcher;
     private ObjectMapper objectMapper;
     private static final AttributeKey<CPClientSecurity> SECURITY_STATE = AttributeKey.valueOf("SecurityState");
+    private static final AttributeKey<CPChannel> CHANNEL_STATE = AttributeKey.valueOf("Channel");
+
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) {
         ctx.channel().attr(SECURITY_STATE).setIfAbsent(new CPClientSecurity());
+        ctx.channel().attr(CHANNEL_STATE).setIfAbsent(new NettyChannel(ctx));
         CPClientSecurity security = ctx.channel().attr(SECURITY_STATE).get();
         switch (security.getState()) {
             case WAIT_ASYMMETRY:
@@ -41,11 +43,21 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
                 // 若已经建立连接则break跳出switch进行下一步处理
                 break;
         }
-        try {
-            ctx.writeAndFlush(objectMapper.writeValueAsString(cpControllerDispatcher.process(msg)));
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage());
-        }
+        // 提交任务
+        ctx.channel().eventLoop().execute(()->{
+                try {
+                    ctx.writeAndFlush(objectMapper.writeValueAsString(cpControllerDispatcher.process(msg,ctx.channel().attr(CHANNEL_STATE).get())));
+                } catch (JsonProcessingException e) {
+                    log.error(e.getMessage(),e);
+                }
+            }
+        );
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        // 回调监听事件
+        cpControllerDispatcher.channelInactive(ctx.channel().attr(CHANNEL_STATE).get());
     }
 
     /**

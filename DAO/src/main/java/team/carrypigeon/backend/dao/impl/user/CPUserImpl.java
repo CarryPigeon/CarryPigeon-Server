@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.dao.impl.user;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.injector.methods.SelectMaps;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +55,13 @@ public class CPUserImpl implements CPUserDAO {
 
     @Override
     public CPUserBO login(String email, String password) {
-        return null;
+        QueryWrapper<UserPO> userPOQueryWrapper = new QueryWrapper<>();
+        userPOQueryWrapper.eq("email",email);
+        userPOQueryWrapper.eq("password",password);
+        UserPO userPO = userMapper.selectOne(userPOQueryWrapper);
+        if(userPO==null){
+            return null;
+        }
+        return userPO.toUserBO(objectMapper);
     }
 }
