@@ -8,7 +8,6 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
-import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.connectionpool.ed.ByteToJsonDecoder;
 import team.carrypigeon.backend.connectionpool.ed.JsonToByteEncoder;
 import team.carrypigeon.backend.connectionpool.heart.CPNettyHeartBeatHandler;
@@ -19,6 +18,11 @@ import team.carrypigeon.backend.connectionpool.security.ecc.RsaKeyPair;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 测试数据
+ *  登录: {"id":123123,"route":"/core/account/login","data":{"email":"midream","password":"midream","device_name":"midream"}}
+ *  消息发送：{"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"content":"awdadawd"}}
+ * */
 public class CarryPigeonBackendCommanderTest {
 
     public static void main(String[] args) throws InterruptedException {

@@ -14,7 +14,7 @@ import team.carrypigeon.backend.common.response.CPResponse;
 
 @Slf4j
 @CPControllerTag("/core/account/login")
-public class LoginController implements CPController {
+public class CPLoginController implements CPController {
 
     private final ObjectMapper objectMapper;
 
@@ -22,7 +22,7 @@ public class LoginController implements CPController {
 
     private final CPUserManager userManager;
 
-    public LoginController(ObjectMapper objectMapper, CPUserDAO userDAO, CPUserManager userManager) {
+    public CPLoginController(ObjectMapper objectMapper, CPUserDAO userDAO, CPUserManager userManager) {
         this.objectMapper = objectMapper;
         this.userDAO = userDAO;
         this.userManager = userManager;
@@ -31,7 +31,7 @@ public class LoginController implements CPController {
     @Override
     public CPResponse process(JsonNode data, CPChannel channel) {
         try {
-            LoginVO loginVO = objectMapper.treeToValue(data, LoginVO.class);
+            CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
             CPUserBO userBO = userDAO.login(loginVO.getEmail(), loginVO.getPassword());
             System.out.println("login ok");
             if(userBO != null){
@@ -39,6 +39,9 @@ public class LoginController implements CPController {
                 channel.setCPUserBO(userBO);
                 userManager.addChannel(channel);
             }
+            CPResponse response = new CPResponse();
+            response.setCode(200);
+            return  response;
         } catch (JsonProcessingException e) {
             log.error(e.getMessage(),e);
         }

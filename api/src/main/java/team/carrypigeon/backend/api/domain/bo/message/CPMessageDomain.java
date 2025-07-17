@@ -15,6 +15,10 @@ public class CPMessageDomain {
     private CPMessageDomainEnum type;
     private String pluginName;
 
+    public CPMessageDomain(CPMessageDomainEnum cpMessageDomainEnum) {
+        this.type = cpMessageDomainEnum;
+    }
+
     /**
      * 用于输出为数据库中存储的结构
      * CORE->core
@@ -24,7 +28,7 @@ public class CPMessageDomain {
     public String toString() {
         return switch (type) {
             case CORE -> "core";
-            case PLUGIN -> "plugins:"+pluginName;
+            case PLUGINS -> "plugins:"+pluginName;
         };
     }
 }

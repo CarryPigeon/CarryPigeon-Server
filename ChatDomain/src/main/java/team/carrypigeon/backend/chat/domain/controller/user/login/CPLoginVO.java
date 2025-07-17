@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class LoginVO {
+public class CPLoginVO {
     private String email;
     private String password;
     private String deviceName;
