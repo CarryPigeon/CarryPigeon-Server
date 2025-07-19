@@ -9,7 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.domain.bo.user.CPUserBO;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 
 import java.time.LocalDateTime;
 

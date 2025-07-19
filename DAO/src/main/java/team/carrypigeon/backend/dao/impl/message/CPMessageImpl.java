@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageBO;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.dao.mapper.message.MessageMapper;
 import team.carrypigeon.backend.dao.mapper.message.MessagePO;
 

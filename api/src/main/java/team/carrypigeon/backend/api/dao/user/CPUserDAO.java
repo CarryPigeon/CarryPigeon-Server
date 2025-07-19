@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.dao.user;
 
-import team.carrypigeon.backend.api.domain.bo.user.CPUserBO;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 
 /**
  * 关于用户相关的DAO接口,用于保存用户相关的信息

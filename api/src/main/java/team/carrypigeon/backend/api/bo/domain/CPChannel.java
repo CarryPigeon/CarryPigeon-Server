@@ -1,6 +1,6 @@
-package team.carrypigeon.backend.api.domain;
+package team.carrypigeon.backend.api.bo.domain;
 
-import team.carrypigeon.backend.api.domain.bo.user.CPUserBO;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 
 /**
  * CarryPigeon通道包装类，用于包装通道用于不同模块之间的解耦

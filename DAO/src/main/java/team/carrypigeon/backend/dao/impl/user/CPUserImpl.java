@@ -1,13 +1,12 @@
 package team.carrypigeon.backend.dao.impl.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.injector.methods.SelectMaps;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.dao.user.CPUserDAO;
-import team.carrypigeon.backend.api.domain.bo.user.CPUserBO;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 import team.carrypigeon.backend.dao.mapper.user.UserMapper;
 import team.carrypigeon.backend.dao.mapper.user.UserPO;
 

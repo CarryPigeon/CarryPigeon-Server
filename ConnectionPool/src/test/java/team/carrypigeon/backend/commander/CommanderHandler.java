@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.commander;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -7,6 +8,8 @@ import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
 import team.carrypigeon.backend.connectionpool.security.aes.AESUtil;
 import team.carrypigeon.backend.connectionpool.security.ecc.ECCUtil;
 import team.carrypigeon.backend.connectionpool.security.ecc.RsaKeyPair;
+
+import static team.carrypigeon.backend.commander.State.SUCCESS;
 
 public class CommanderHandler extends SimpleChannelInboundHandler<String> {
 
@@ -18,20 +21,30 @@ public class CommanderHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext ctx, String msg) throws JsonProcessingException {
+        System.out.println("接受到消息");
         switch (testClientState.getState()) {
             case WAITE_RECEIVE_KEY:
                 CPKeyMessage cpKeyMessage = objectMapper.readValue(msg, CPKeyMessage.class);
                 String s = ECCUtil.eccDecrypt(testClientState.getECCKey(), cpKeyMessage.getKey());
                 testClientState.setAesKey(s);
                 // 输出验证消息
-                ctx.writeAndFlush(AESUtil.encrypt("verification",AESUtil.convertStringToKey(testClientState.getAesKey())));
+                try {
+                    ctx.writeAndFlush(AESUtil.encrypt("verification",AESUtil.convertStringToKey(testClientState.getAesKey())));
+                } catch (Exception e) {
+
+                }
+                testClientState.setState(SUCCESS);
                 break;
             case SUCCESS:
-                System.out.println(
-                        AESUtil.decrypt(msg,AESUtil.convertStringToKey(testClientState.getAesKey()))
-                );
                 break;
+        }
+        try {
+            System.out.println(
+                    AESUtil.decrypt(msg,AESUtil.convertStringToKey(testClientState.getAesKey()))
+            );
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 }

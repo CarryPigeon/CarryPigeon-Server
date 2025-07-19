@@ -4,13 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.api.chat.domain.channel.CPChatChannel;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
-import team.carrypigeon.backend.api.domain.CPChannel;
-import team.carrypigeon.backend.api.domain.bo.channel.ChannelCoreTypeMenu;
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageBO;
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageData;
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageDomain;
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageDomainEnum;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomainEnum;
+import team.carrypigeon.backend.api.vo.CPNotification;
+import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.response.CPResponse;
 
@@ -24,9 +26,12 @@ public class CPCoreTextMessageService {
 
     private final ObjectMapper objectMapper;
 
-    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, ObjectMapper objectMapper) {
+    private final CPChannelManager cpChannelManager;
+
+    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, ObjectMapper objectMapper, CPChannelManager cpChannelManager) {
         this.cpMessageDAO = cpMessageDAO;
         this.objectMapper = objectMapper;
+        this.cpChannelManager = cpChannelManager;
     }
 
     /**
@@ -35,12 +40,9 @@ public class CPCoreTextMessageService {
     @SneakyThrows
     public CPResponse textMessageSend(long toId, String content, CPChannel channel, String typeName){
         // 权限校验
-        ChannelCoreTypeMenu channelCoreTypeMenu = ChannelCoreTypeMenu.valueOfByName(typeName);
-        switch (channelCoreTypeMenu){
-            case FRIEND:
-                break;
-            case null:
-                break;
+        CPChatChannel chatChannel = cpChannelManager.getChannel(typeName);
+        if(!chatChannel.verifyMember(toId, channel.getCPUserBO().getId())){
+            return CPResponse.ERROR_RESPONSE.copy();
         }
         // 存储数据结构
         CPMessageBO cpMessageBO = new CPMessageBO();
@@ -55,8 +57,10 @@ public class CPCoreTextMessageService {
         // 数据持久化
         cpMessageDAO.saveMessage(cpMessageBO);
         // 消息通知
-        CPResponse response = new CPResponse();
-        response.setCode(200);
-        return response;
+        CPNotification cpNotification = new CPNotification();
+        cpNotification.setRoute("/core/msg/text/send");
+        cpNotification.setData(objectMapper.readValue(String.format("{\"mid\":%d,\"channel_id\":%d}",cpMessageBO.getId(),toId),JsonNode.class));
+        chatChannel.noticeMember(toId,cpNotification);
+        return CPResponse.SUCCESS_RESPONSE.copy();
     }
 }

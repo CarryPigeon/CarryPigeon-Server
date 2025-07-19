@@ -3,8 +3,8 @@ package team.carrypigeon.backend.dao.impl.channel;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.dao.channel.CPChannelTypeDAO;
-import team.carrypigeon.backend.api.domain.bo.channel.ChannelTypeBO;
-import team.carrypigeon.backend.api.domain.bo.channel.ChannelTypeMenu;
+import team.carrypigeon.backend.api.bo.domain.channel.ChannelTypeBO;
+import team.carrypigeon.backend.api.bo.domain.channel.ChannelTypeMenu;
 import team.carrypigeon.backend.dao.mapper.channel.ChannelTypeMapper;
 import team.carrypigeon.backend.dao.mapper.channel.ChannelTypePO;
 

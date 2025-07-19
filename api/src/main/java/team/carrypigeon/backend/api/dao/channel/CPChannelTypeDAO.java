@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.dao.channel;
 
-import team.carrypigeon.backend.api.domain.bo.channel.ChannelTypeBO;
+import team.carrypigeon.backend.api.bo.domain.channel.ChannelTypeBO;
 
 /**
  * channel_type的dao接口

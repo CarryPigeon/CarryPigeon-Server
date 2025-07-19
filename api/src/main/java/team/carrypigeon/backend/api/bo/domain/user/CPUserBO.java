@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.api.domain.bo.user;
+package team.carrypigeon.backend.api.bo.domain.user;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;

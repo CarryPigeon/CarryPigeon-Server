@@ -13,19 +13,19 @@ import java.util.Map;
  * */
 @Component
 public class CPControllerPostProcessor implements BeanPostProcessor {
-    private final Map<String, CPController> serviceMap = new HashMap<>();
+    private final Map<String, CPController> userMap = new HashMap<>();
 
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         CPControllerTag annotation = bean.getClass().getAnnotation(CPControllerTag.class);
         if (annotation != null&& bean instanceof CPController controller) {
-            serviceMap.put(annotation.value(), controller);
+            userMap.put(annotation.value(), controller);
         }
         return bean;
     }
 
     @Bean
-    public Map<String, CPController> getPaymentServiceMap() {
-        return serviceMap;
+    public Map<String, CPController> getUserMap() {
+        return userMap;
     }
 }

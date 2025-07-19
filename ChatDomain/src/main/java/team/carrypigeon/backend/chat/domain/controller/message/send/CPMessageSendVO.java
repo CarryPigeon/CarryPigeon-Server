@@ -8,6 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CPMessageSendVO {
-    private long to_id;
+    private long toId;
     private String content;
 }

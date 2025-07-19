@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.api.domain.bo.message;
+package team.carrypigeon.backend.api.bo.domain.message;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

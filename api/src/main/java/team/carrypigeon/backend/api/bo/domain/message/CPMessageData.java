@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.api.domain.bo.message;
+package team.carrypigeon.backend.api.bo.domain.message;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;

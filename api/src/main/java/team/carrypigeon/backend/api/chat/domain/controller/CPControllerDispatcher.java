@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
-import team.carrypigeon.backend.api.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.common.response.CPResponse;
 
 /**

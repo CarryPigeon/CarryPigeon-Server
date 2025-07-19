@@ -7,8 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.dao.channel.CPChannelTypeDAO;
-import team.carrypigeon.backend.api.domain.CPChannel;
-import team.carrypigeon.backend.api.domain.bo.channel.ChannelTypeBO;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.channel.ChannelTypeBO;
 import team.carrypigeon.backend.chat.domain.service.message.send.CPCoreTextMessageService;
 import team.carrypigeon.backend.common.response.CPResponse;
 
@@ -37,25 +37,24 @@ public class CPTextMessageSendController implements CPController {
         CPMessageSendVO vo;
         try {
             vo = objectMapper.treeToValue(data, CPMessageSendVO.class);
-            log.debug(vo.toString());
         } catch (JsonProcessingException e) {
             // TODO 错误处理
             log.error(e.getMessage(),e);
-            return null;
+            return CPResponse.ERROR_RESPONSE.copy();
         }
         // 类型获取
-        ChannelTypeBO channelType = cpChannelTypeDAO.getChannelType(vo.getTo_id());
+        ChannelTypeBO channelType = cpChannelTypeDAO.getChannelType(vo.getToId());
         if (channelType == null) {
             // TODO 错误处理
             log.error(vo.toString());
-            return null;
+            return CPResponse.ERROR_RESPONSE.copy();
         }
         switch (channelType.getType()){
             case CORE:
-                return cpCoreTextMessageService.textMessageSend(vo.getTo_id(),vo.getContent(), channel,channelType.getTypeName());
+                return cpCoreTextMessageService.textMessageSend(vo.getToId(),vo.getContent(), channel,channelType.getTypeName());
             case PLUGINS:
                 break;
         }
-        return null;
+        return CPResponse.ERROR_RESPONSE.copy();
     }
 }

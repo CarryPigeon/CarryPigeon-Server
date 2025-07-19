@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.api.domain.bo.channel;
+package team.carrypigeon.backend.api.bo.domain.channel;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

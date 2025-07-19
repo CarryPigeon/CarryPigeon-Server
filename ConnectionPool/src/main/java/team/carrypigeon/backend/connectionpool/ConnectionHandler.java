@@ -8,7 +8,7 @@ import io.netty.util.AttributeKey;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
-import team.carrypigeon.backend.api.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurity;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurityEnum;
 import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
@@ -24,14 +24,14 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
     private CPControllerDispatcher cpControllerDispatcher;
     private ObjectMapper objectMapper;
     private static final AttributeKey<CPClientSecurity> SECURITY_STATE = AttributeKey.valueOf("SecurityState");
-    private static final AttributeKey<CPChannel> CHANNEL_STATE = AttributeKey.valueOf("Channel");
+    private static final AttributeKey<CPChannel> CHANNEL = AttributeKey.valueOf("Channel");
 
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) {
         ctx.channel().attr(SECURITY_STATE).setIfAbsent(new CPClientSecurity());
-        ctx.channel().attr(CHANNEL_STATE).setIfAbsent(new NettyChannel(ctx));
         CPClientSecurity security = ctx.channel().attr(SECURITY_STATE).get();
+        ctx.channel().attr(CHANNEL).setIfAbsent(new NettyChannel(ctx,security));
         switch (security.getState()) {
             case WAIT_ASYMMETRY:
                 receiveAsymmetry(ctx, msg,security);
@@ -43,10 +43,11 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
                 // 若已经建立连接则break跳出switch进行下一步处理
                 break;
         }
+        CPChannel cpChannel = ctx.channel().attr(CHANNEL).get();
         // 提交任务
         ctx.channel().eventLoop().execute(()->{
                 try {
-                    ctx.writeAndFlush(objectMapper.writeValueAsString(cpControllerDispatcher.process(msg,ctx.channel().attr(CHANNEL_STATE).get())));
+                    cpChannel.sendMessage(objectMapper.writeValueAsString(cpControllerDispatcher.process(msg,cpChannel)));
                 } catch (JsonProcessingException e) {
                     log.error(e.getMessage(),e);
                 }
@@ -57,7 +58,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // 回调监听事件
-        cpControllerDispatcher.channelInactive(ctx.channel().attr(CHANNEL_STATE).get());
+        cpControllerDispatcher.channelInactive(ctx.channel().attr(CHANNEL).get());
     }
 
     /**

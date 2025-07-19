@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.dao.message;
 
-import team.carrypigeon.backend.api.domain.bo.message.CPMessageBO;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 
 /**
  * 消息相关dao接口

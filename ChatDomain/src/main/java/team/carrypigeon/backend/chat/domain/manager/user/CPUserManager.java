@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.manager.user;
 
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,5 +24,6 @@ public class CPUserManager {
 
     public void addChannel(CPChannel channel) {
         getChannels(channel.getCPUserBO().getId()).add(channel);
+        System.out.println(channel.getCPUserBO().getId());
     }
 }

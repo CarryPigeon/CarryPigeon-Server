@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import team.carrypigeon.backend.api.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.common.response.CPResponse;
 
 /**

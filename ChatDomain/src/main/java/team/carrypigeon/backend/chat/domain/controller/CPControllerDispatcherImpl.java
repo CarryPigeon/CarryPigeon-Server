@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
-import team.carrypigeon.backend.api.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.chat.domain.manager.user.CPUserManager;
 import team.carrypigeon.backend.chat.domain.pojo.controller.CPRoute;
 import team.carrypigeon.backend.common.response.CPResponse;

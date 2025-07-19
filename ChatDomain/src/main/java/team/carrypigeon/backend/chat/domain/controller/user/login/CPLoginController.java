@@ -7,8 +7,8 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.dao.user.CPUserDAO;
-import team.carrypigeon.backend.api.domain.CPChannel;
-import team.carrypigeon.backend.api.domain.bo.user.CPUserBO;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 import team.carrypigeon.backend.chat.domain.manager.user.CPUserManager;
 import team.carrypigeon.backend.common.response.CPResponse;
 
@@ -33,7 +33,6 @@ public class CPLoginController implements CPController {
         try {
             CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
             CPUserBO userBO = userDAO.login(loginVO.getEmail(), loginVO.getPassword());
-            System.out.println("login ok");
             if(userBO != null){
                 // 进行用户注册操作
                 channel.setCPUserBO(userBO);
