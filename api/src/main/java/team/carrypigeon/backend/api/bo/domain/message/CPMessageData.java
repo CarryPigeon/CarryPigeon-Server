@@ -5,10 +5,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * 聊天消息的数据，根据具体数据类型由服务端自行处理结构
+ * */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class CPMessageData {
+    ///  类型id，由核心域或者插件域自行决定
     private int type;
+    ///  数据
     private JsonNode data;
 }

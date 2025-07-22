@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @TableName("channel_type")
 public class ChannelTypePO {
     @TableId
-    private long id;
-    private long channelId;
+    private Long id;
+    private Long channelId;
     private String type;
 }

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.common.response;
+package team.carrypigeon.backend.api.connection.vo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,16 +14,39 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CPResponse{
+    /**
+     * 返回值id，用于客户端标识为哪个请求的响应
+     * */
     private long id;
+    /**
+     * 响应code
+     * */
     private int code;
+    /**
+     * 响应数据
+     * */
     private JsonNode data;
 
+    /**
+     * 错误数据的标准响应值
+     * */
     @JsonIgnore
     public static CPResponse ERROR_RESPONSE = new CPResponse(-1,100,null);
 
+    /**
+     * 成功数据标准响应值
+     * */
     @JsonIgnore
     public static CPResponse SUCCESS_RESPONSE = new CPResponse(-1,200,null);
 
+    /**
+     * 路径不存在response
+     * */
+    @JsonIgnore
+    public static CPResponse PATH_NOT_FOUND_RESPONSE = new CPResponse(-1,404,null);
+    /**
+     * 主要用于copy错误与正确的响应修改id标识
+     * */
     public CPResponse copy() {
         CPResponse clone = new CPResponse();
         clone.setId(this.id);

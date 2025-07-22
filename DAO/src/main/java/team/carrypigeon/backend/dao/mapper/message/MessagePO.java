@@ -14,11 +14,11 @@ import java.time.LocalDateTime;
 @TableName("message")
 public class MessagePO {
     @TableId
-    private long id;
-    private long sendUserId;
-    private long toId;
+    private Long id;
+    private Long sendUserId;
+    private Long toId;
     private String domain;
-    private int type;
+    private Integer type;
     private String data;
     private LocalDateTime sendTime;
 }

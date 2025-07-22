@@ -14,10 +14,10 @@ import java.time.LocalDateTime;
 @TableName("group_member")
 public class GroupMemberPO {
     @TableId
-    private long id;
-    private long gid;
-    private long uid;
-    private int authority;
-    private int state;
+    private Long id;
+    private Long gid;
+    private Long uid;
+    private Integer authority;
+    private Integer state;
     private LocalDateTime time;
 }

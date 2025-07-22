@@ -10,7 +10,7 @@ import team.carrypigeon.backend.api.dao.channel.CPChannelTypeDAO;
 import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.ChannelTypeBO;
 import team.carrypigeon.backend.chat.domain.service.message.send.CPCoreTextMessageService;
-import team.carrypigeon.backend.common.response.CPResponse;
+import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 /**
  * 消息发送处理器，用于处理消息发送事件

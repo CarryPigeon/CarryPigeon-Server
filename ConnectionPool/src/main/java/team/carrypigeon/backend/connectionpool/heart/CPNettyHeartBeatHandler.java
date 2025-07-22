@@ -23,7 +23,7 @@ public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
                     break;
                 case WRITER_IDLE:
                     // 写空闲则发送心跳包
-                    ctx.channel().writeAndFlush(mapper.writeValueAsString(HeartBeatMessage.INSTANCE));
+                    ctx.channel().writeAndFlush(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
                     break;
                 case ALL_IDLE:
                     ctx.channel().close();

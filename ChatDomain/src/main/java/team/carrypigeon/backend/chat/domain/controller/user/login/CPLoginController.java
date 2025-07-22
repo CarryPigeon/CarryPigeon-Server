@@ -9,8 +9,8 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.dao.user.CPUserDAO;
 import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
-import team.carrypigeon.backend.chat.domain.manager.user.CPUserManager;
-import team.carrypigeon.backend.common.response.CPResponse;
+import team.carrypigeon.backend.chat.domain.manager.user.CPUserToChannelManager;
+import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 @Slf4j
 @CPControllerTag("/core/account/login")
@@ -20,9 +20,9 @@ public class CPLoginController implements CPController {
 
     private final CPUserDAO userDAO;
 
-    private final CPUserManager userManager;
+    private final CPUserToChannelManager userManager;
 
-    public CPLoginController(ObjectMapper objectMapper, CPUserDAO userDAO, CPUserManager userManager) {
+    public CPLoginController(ObjectMapper objectMapper, CPUserDAO userDAO, CPUserToChannelManager userManager) {
         this.objectMapper = objectMapper;
         this.userDAO = userDAO;
         this.userManager = userManager;

@@ -56,7 +56,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(ChannelHandlerContext ctx) {
         // 回调监听事件
         cpControllerDispatcher.channelInactive(ctx.channel().attr(CHANNEL).get());
     }

@@ -1,0 +1,6 @@
+# 用户一
+{"id":123123,"route":"/core/account/login","data":{"email":"midream","password":"midream","device_name":"midream"}}
+# 用户二
+{"id":123123,"route":"/core/account/login","data":{"email":"midreamsheep","password":"midreamsheep","device_name":"midreamsheep"}}
+# 消息发送
+{"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"content":"awdadawd"}}

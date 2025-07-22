@@ -20,13 +20,13 @@ import java.time.LocalDateTime;
 @Slf4j
 public class UserPO {
     @TableId
-    private long id;
+    private Long id;
     private String name;
     private String email;
     private String password;
     private String data;
     private LocalDateTime registerTime;
-    private long stateId;
+    private Long stateId;
 
     public CPUserBO toUserBO(ObjectMapper objectMapper) {
         CPUserBO userBO = new CPUserBO();

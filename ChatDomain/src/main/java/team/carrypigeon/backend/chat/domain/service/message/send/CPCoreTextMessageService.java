@@ -4,17 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.api.chat.domain.channel.CPChatChannel;
+import team.carrypigeon.backend.api.chat.domain.structure.CPChatStructure;
+import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
 import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomainEnum;
-import team.carrypigeon.backend.api.vo.CPNotification;
-import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
+import team.carrypigeon.backend.chat.domain.manager.channel.nameToChatStructureManager;
 import team.carrypigeon.backend.common.id.IdUtil;
-import team.carrypigeon.backend.common.response.CPResponse;
+import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 /**
  * 核心通讯结构文本类型消息的服务
@@ -26,12 +26,12 @@ public class CPCoreTextMessageService {
 
     private final ObjectMapper objectMapper;
 
-    private final CPChannelManager cpChannelManager;
+    private final nameToChatStructureManager nameToChatStructureManager;
 
-    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, ObjectMapper objectMapper, CPChannelManager cpChannelManager) {
+    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, ObjectMapper objectMapper, nameToChatStructureManager nameToChatStructureManager) {
         this.cpMessageDAO = cpMessageDAO;
         this.objectMapper = objectMapper;
-        this.cpChannelManager = cpChannelManager;
+        this.nameToChatStructureManager = nameToChatStructureManager;
     }
 
     /**
@@ -40,7 +40,7 @@ public class CPCoreTextMessageService {
     @SneakyThrows
     public CPResponse textMessageSend(long toId, String content, CPChannel channel, String typeName){
         // 权限校验
-        CPChatChannel chatChannel = cpChannelManager.getChannel(typeName);
+        CPChatStructure chatChannel = nameToChatStructureManager.getChannel(typeName);
         if(!chatChannel.verifyMember(toId, channel.getCPUserBO().getId())){
             return CPResponse.ERROR_RESPONSE.copy();
         }
@@ -57,7 +57,7 @@ public class CPCoreTextMessageService {
         // 数据持久化
         cpMessageDAO.saveMessage(cpMessageBO);
         // 消息通知
-        CPNotification cpNotification = new CPNotification();
+        CPPacket cpNotification = new CPPacket();
         cpNotification.setRoute("/core/msg/text/send");
         cpNotification.setData(objectMapper.readValue(String.format("{\"mid\":%d,\"channel_id\":%d}",cpMessageBO.getId(),toId),JsonNode.class));
         chatChannel.noticeMember(toId,cpNotification);

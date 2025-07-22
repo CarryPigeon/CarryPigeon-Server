@@ -7,8 +7,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * 用户id到通道列表的映射
+ * */
 @Component
-public class CPUserManager {
+public class CPUserToChannelManager {
     private final HashMap<Long, List<CPChannel>> map = new HashMap<>();
 
     public List<CPChannel> getChannels(Long userId) {

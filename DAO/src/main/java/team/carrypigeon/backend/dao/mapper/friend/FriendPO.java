@@ -18,12 +18,12 @@ import java.time.LocalDateTime;
 @TableName("friend")
 public class FriendPO {
     @TableId
-    private long id;
+    private Long id;
     @TableField("user_1")
-    private long user1;
+    private Long user1;
     @TableField("user_2")
-    private long user2;
-    private int state;
+    private Long user2;
+    private Integer state;
     private LocalDateTime time;
 
     public CPFriendBO toBO(){
