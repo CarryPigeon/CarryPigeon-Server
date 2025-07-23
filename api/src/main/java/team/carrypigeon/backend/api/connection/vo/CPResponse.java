@@ -2,9 +2,13 @@ package team.carrypigeon.backend.api.connection.vo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 /**
  * 返回值标准格式，详细请见
@@ -13,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 public class CPResponse{
     /**
      * 返回值id，用于客户端标识为哪个请求的响应
@@ -53,5 +58,10 @@ public class CPResponse{
         clone.setCode(this.code);
         clone.setData(this.data);
         return clone;
+    }
+
+    public CPResponse setTextData(String content){
+        ObjectNode msg = JsonNodeFactory.instance.objectNode().put("msg", content);
+        return this.setData(msg);
     }
 }

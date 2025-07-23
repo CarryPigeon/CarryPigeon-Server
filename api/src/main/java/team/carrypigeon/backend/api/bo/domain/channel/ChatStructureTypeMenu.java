@@ -10,7 +10,7 @@ import lombok.Getter;
  * */
 @Getter
 @AllArgsConstructor
-public enum ChannelTypeMenu {
+public enum ChatStructureTypeMenu {
     CORE("core"),PLUGINS("plugins");
     private final String typeName;
 
@@ -22,8 +22,8 @@ public enum ChannelTypeMenu {
      * @param typeName 要查找的菜单名称
      * @return 对应的ChannelTypeMenu枚举值，如果找不到匹配项则返回null
      */
-    public static ChannelTypeMenu valueOfByName(String typeName){
-        for (ChannelTypeMenu channelTypeMenu : ChannelTypeMenu.values()) {
+    public static ChatStructureTypeMenu valueOfByName(String typeName){
+        for (ChatStructureTypeMenu channelTypeMenu : ChatStructureTypeMenu.values()) {
             if (channelTypeMenu.getTypeName().equals(typeName)) {
                 return channelTypeMenu;
             }

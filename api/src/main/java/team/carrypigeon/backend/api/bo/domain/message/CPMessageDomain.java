@@ -3,6 +3,7 @@ package team.carrypigeon.backend.api.bo.domain.message;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * 消息域，用于标识消息是核心消息还是插件的自定义消息

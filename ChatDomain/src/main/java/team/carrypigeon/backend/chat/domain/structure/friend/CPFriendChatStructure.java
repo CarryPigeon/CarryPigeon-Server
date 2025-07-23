@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.channel.friend;
+package team.carrypigeon.backend.chat.domain.structure.friend;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

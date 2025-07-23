@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurity;
 import team.carrypigeon.backend.connectionpool.security.CPClientSecurityEnum;
 import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
@@ -17,14 +18,15 @@ import team.carrypigeon.backend.connectionpool.security.ecc.ECCUtil;
 
 import javax.crypto.SecretKey;
 
+import static team.carrypigeon.backend.connectionpool.ConnectionConstant.CHANNEL;
+import static team.carrypigeon.backend.connectionpool.ConnectionConstant.SECURITY_STATE;
+
 @AllArgsConstructor
 @Slf4j
 public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
 
     private CPControllerDispatcher cpControllerDispatcher;
     private ObjectMapper objectMapper;
-    private static final AttributeKey<CPClientSecurity> SECURITY_STATE = AttributeKey.valueOf("SecurityState");
-    private static final AttributeKey<CPChannel> CHANNEL = AttributeKey.valueOf("Channel");
 
 
     @Override
@@ -47,11 +49,16 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
         // 提交任务
         ctx.channel().eventLoop().execute(()->{
                 try {
-                    cpChannel.sendMessage(objectMapper.writeValueAsString(cpControllerDispatcher.process(msg,cpChannel)));
+                    CPResponse response = cpControllerDispatcher.process(AESUtil.decrypt(msg, AESUtil.convertStringToKey(security.getKey())), cpChannel);
+                    if (response!=null){
+                        cpChannel.sendMessage(objectMapper.writeValueAsString(response));
+                    }
                 } catch (JsonProcessingException e) {
                     log.error(e.getMessage(),e);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-            }
+        }
         );
     }
 

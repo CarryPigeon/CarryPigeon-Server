@@ -4,7 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleStateEvent;
+import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 
+import static team.carrypigeon.backend.connectionpool.ConnectionConstant.CHANNEL;
+
+@Slf4j
 public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
 
     private final ObjectMapper mapper;
@@ -18,15 +23,23 @@ public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
         if (evt instanceof IdleStateEvent event) {
             switch (event.state()) {
                 case READER_IDLE:
+                    log.debug("读空闲");
                     // 读空闲则关闭连接
-                    ctx.channel().close();
+                    ctx.close();
                     break;
                 case WRITER_IDLE:
+                    log.debug("写空闲");
                     // 写空闲则发送心跳包
-                    ctx.channel().writeAndFlush(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
+                    CPChannel cpChannel = ctx.channel().attr(CHANNEL).get();
+                    if (cpChannel != null){
+                        cpChannel.sendMessage(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
+                    }else {
+                        ctx.writeAndFlush(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
+                    }
                     break;
                 case ALL_IDLE:
-                    ctx.channel().close();
+                    log.debug("读写空闲");
+                    ctx.close();
                     break;
             }
             return;

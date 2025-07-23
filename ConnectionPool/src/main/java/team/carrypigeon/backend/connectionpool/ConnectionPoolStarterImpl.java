@@ -9,14 +9,17 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.connection.pool.ConnectionPoolStarter;
 import team.carrypigeon.backend.connectionpool.ed.ByteToJsonDecoder;
 import team.carrypigeon.backend.connectionpool.ed.JsonToByteEncoder;
 import team.carrypigeon.backend.connectionpool.heart.CPNettyHeartBeatHandler;
+import team.carrypigeon.backend.connectionpool.security.CPClientSecurity;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +46,9 @@ public class ConnectionPoolStarterImpl implements ConnectionPoolStarter {
         try{
             log.info("netty server is starting");
             ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(new NioEventLoopGroup())
+            NioEventLoopGroup bossGroup = new NioEventLoopGroup();
+            NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+            bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .localAddress(new InetSocketAddress(port))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -55,7 +60,7 @@ public class ConnectionPoolStarterImpl implements ConnectionPoolStarter {
                     // 添加编码码器
                     pipeline.addLast(new JsonToByteEncoder());
                     // 添加心跳检测
-                    pipeline.addLast(new IdleStateHandler(10,10,20, TimeUnit.SECONDS));
+                    pipeline.addLast(new IdleStateHandler(13,10,20, TimeUnit.SECONDS));
                     pipeline.addLast(new CPNettyHeartBeatHandler(objectMapper));
                     // 添加处理器
                     pipeline.addLast(new ConnectionHandler(cpControllerDispatcher,objectMapper));
@@ -64,6 +69,8 @@ public class ConnectionPoolStarterImpl implements ConnectionPoolStarter {
             log.info("netty server started on port {}", port);
             ChannelFuture channelFuture= bootstrap.bind().sync();
             channelFuture.channel().closeFuture().sync();
+            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully();
             log.info("netty server is shut down");
         } catch (InterruptedException e) {
             log.error("netty server is interrupted,error msg:{}\n{}",e.getMessage(),e);

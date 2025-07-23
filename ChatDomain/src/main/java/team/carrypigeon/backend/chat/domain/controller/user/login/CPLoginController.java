@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.user.login;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
@@ -28,24 +29,14 @@ public class CPLoginController implements CPController {
         this.userManager = userManager;
     }
 
+    @SneakyThrows
     @Override
     public CPResponse process(JsonNode data, CPChannel channel) {
-        try {
-            CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
-            CPUserBO userBO = userDAO.login(loginVO.getEmail(), loginVO.getPassword());
-            if(userBO != null){
-                // 进行用户注册操作
-                channel.setCPUserBO(userBO);
-                userManager.addChannel(channel);
-            }
-            CPResponse response = new CPResponse();
-            response.setCode(200);
-            return  response;
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage(),e);
-        }
-        CPResponse response = new CPResponse();
-        response.setCode(100);
-        return  response;
+        CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
+        CPUserBO userBO = userDAO.login(loginVO.getEmail(), loginVO.getPassword());
+        if(userBO == null) return CPResponse.ERROR_RESPONSE.copy();
+        channel.setCPUserBO(userBO);
+        userManager.addChannel(channel);
+        return  CPResponse.SUCCESS_RESPONSE.copy();
     }
 }

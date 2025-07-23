@@ -35,6 +35,10 @@
             <artifactId>hutool-all</artifactId>
             <version>5.8.24</version>
         </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>api</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

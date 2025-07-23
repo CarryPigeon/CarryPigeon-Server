@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChannelTypeBO {
-    private ChannelTypeMenu type;
+public class ChatStructureTypeBO {
+    private ChatStructureTypeMenu type;
     private String typeName;
 }

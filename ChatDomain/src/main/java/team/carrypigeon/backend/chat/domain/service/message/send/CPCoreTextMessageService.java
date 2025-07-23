@@ -1,8 +1,7 @@
 package team.carrypigeon.backend.chat.domain.service.message.send;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.chat.domain.structure.CPChatStructure;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
@@ -12,25 +11,24 @@ import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomainEnum;
-import team.carrypigeon.backend.chat.domain.manager.channel.nameToChatStructureManager;
+import team.carrypigeon.backend.chat.domain.manager.channel.NameToChatStructureManager;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
+import team.carrypigeon.backend.common.json.JsonNodeUtil;
 
 /**
  * 核心通讯结构文本类型消息的服务
  * */
 @Service
+@Slf4j
 public class CPCoreTextMessageService {
 
     private final CPMessageDAO cpMessageDAO;
 
-    private final ObjectMapper objectMapper;
+    private final NameToChatStructureManager nameToChatStructureManager;
 
-    private final nameToChatStructureManager nameToChatStructureManager;
-
-    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, ObjectMapper objectMapper, nameToChatStructureManager nameToChatStructureManager) {
+    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, NameToChatStructureManager nameToChatStructureManager) {
         this.cpMessageDAO = cpMessageDAO;
-        this.objectMapper = objectMapper;
         this.nameToChatStructureManager = nameToChatStructureManager;
     }
 
@@ -45,22 +43,28 @@ public class CPCoreTextMessageService {
             return CPResponse.ERROR_RESPONSE.copy();
         }
         // 存储数据结构
-        CPMessageBO cpMessageBO = new CPMessageBO();
-        cpMessageBO.setId(IdUtil.generateId());
-        cpMessageBO.setSendUserId(channel.getCPUserBO().getId());
-        cpMessageBO.setToId(toId);
-        cpMessageBO.setDomain(new CPMessageDomain(CPMessageDomainEnum.CORE));
-        CPMessageData cpMessageData = new CPMessageData();
-        cpMessageData.setType(1);
-        cpMessageData.setData(objectMapper.readValue("\"text\":\""+content+"\"",JsonNode.class));
+        CPMessageBO cpMessageBO = new CPMessageBO()
+                .setId(IdUtil.generateId())
+                .setSendUserId(channel.getCPUserBO().getId())
+                .setToId(toId)
+                .setDomain(new CPMessageDomain(CPMessageDomainEnum.CORE));
+        CPMessageData cpMessageData = new CPMessageData()
+                .setType(1)
+                .setData(JsonNodeUtil.createJsonNode("text",content));
         cpMessageBO.setData(cpMessageData);
-        // 数据持久化
+        // 消息持久化
         cpMessageDAO.saveMessage(cpMessageBO);
         // 消息通知
-        CPPacket cpNotification = new CPPacket();
-        cpNotification.setRoute("/core/msg/text/send");
-        cpNotification.setData(objectMapper.readValue(String.format("{\"mid\":%d,\"channel_id\":%d}",cpMessageBO.getId(),toId),JsonNode.class));
-        chatChannel.noticeMember(toId,cpNotification);
+        CPPacket cpPacket = new CPPacket()
+                .setRoute("/core/msg/text/send");
+        cpPacket.setData(
+                JsonNodeUtil.createJsonNode(
+                        "mid",cpMessageBO.getId()+"",
+                        "channel_id",toId+""
+                )
+        );
+        chatChannel.noticeMember(toId,cpPacket);
+        // 返回成功值
         return CPResponse.SUCCESS_RESPONSE.copy();
     }
 }

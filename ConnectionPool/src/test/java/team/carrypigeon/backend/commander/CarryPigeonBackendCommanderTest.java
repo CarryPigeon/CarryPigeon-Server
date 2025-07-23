@@ -8,15 +8,19 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
+import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.connectionpool.ed.ByteToJsonDecoder;
 import team.carrypigeon.backend.connectionpool.ed.JsonToByteEncoder;
 import team.carrypigeon.backend.connectionpool.heart.CPNettyHeartBeatHandler;
+import team.carrypigeon.backend.connectionpool.heart.HeartBeatMessage;
 import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
 import team.carrypigeon.backend.connectionpool.security.ecc.ECCUtil;
 import team.carrypigeon.backend.connectionpool.security.ecc.RsaKeyPair;
 
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+
+import static team.carrypigeon.backend.connectionpool.ConnectionConstant.CHANNEL;
 
 /**
  * 测试数据
@@ -41,7 +45,7 @@ public class CarryPigeonBackendCommanderTest {
                             // 添加编码码器
                             pipeline.addLast(new JsonToByteEncoder());
                             // 添加心跳检测
-                            pipeline.addLast(new IdleStateHandler(10,10,20, TimeUnit.SECONDS));
+                            pipeline.addLast(new IdleStateHandler(13,10,20, TimeUnit.SECONDS));
                             pipeline.addLast(new CPNettyHeartBeatHandler(new ObjectMapper()));
                             // 添加处理器
                             pipeline.addLast(new CommanderHandler(testClientState));
@@ -72,6 +76,12 @@ public class CarryPigeonBackendCommanderTest {
         while (true) {
             String s = scanner.nextLine();
             channel.writeAndFlush(s);
+            CPChannel cpChannel = channel.attr(CHANNEL).get();
+            if (cpChannel != null){
+                cpChannel.sendMessage(s);
+            }else {
+                channel.writeAndFlush(s);
+            }
         }
     }
 }
