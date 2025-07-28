@@ -14,4 +14,8 @@ import lombok.NoArgsConstructor;
 public class ChatStructureTypeBO {
     private ChatStructureTypeMenu type;
     private String typeName;
+
+    public String toStringData(){
+        return type.getTypeName() + ":" + typeName;
+    }
 }

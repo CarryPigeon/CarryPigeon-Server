@@ -1,13 +1,20 @@
 package team.carrypigeon.backend.dao.impl.message;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
+import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomainEnum;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.dao.mapper.message.MessageMapper;
 import team.carrypigeon.backend.dao.mapper.message.MessagePO;
+
+import java.time.ZoneId;
 
 @Component
 public class CPMessageImpl implements CPMessageDAO {
@@ -45,12 +52,41 @@ public class CPMessageImpl implements CPMessageDAO {
 
     @Override
     public boolean deleteMessage(long id, long userId) {
-        return false;
+        Wrapper<MessagePO> wrapper = new QueryWrapper<MessagePO>()
+                .eq("id", id)
+                .eq("send_user_id", userId);
+        return messageMapper.delete(wrapper)>0;
     }
 
+    @SneakyThrows
     @Override
     public CPMessageBO getMessage(long id) {
-        return null;
+        // 从数据库获取数据
+        MessagePO messagePO = messageMapper.selectById(id);
+        // 非空处理
+        if (messagePO == null) return null;
+        // 封装数据
+        CPMessageBO message = new CPMessageBO();
+        message.setId(messagePO.getId())
+                .setToId(messagePO.getToId())
+                .setSendUserId(messagePO.getSendUserId())
+                .setSendTime(messagePO.getSendTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+
+        CPMessageData cpMessageData = new CPMessageData()
+                .setType(messagePO.getType())
+                .setData(mapper.readValue(messagePO.getData(), JsonNode.class));
+        message.setData(cpMessageData);
+        // 封装domain
+        CPMessageDomain cpMessageDomain = new CPMessageDomain();
+        if (messagePO.getDomain().equals("core")) {
+            cpMessageDomain.setType(CPMessageDomainEnum.CORE);
+        } else {
+            cpMessageDomain.setType(CPMessageDomainEnum.PLUGINS);
+            cpMessageDomain.setPluginName(messagePO.getDomain().split(":")[1]);
+        }
+        message.setDomain(cpMessageDomain);
+        // 返回数据
+        return message;
     }
 
     @Override

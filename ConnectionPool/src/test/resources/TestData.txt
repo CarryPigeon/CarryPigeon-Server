@@ -5,4 +5,5 @@
 # 消息发送
 {"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"content":"awdadawd"}}
 # 消息获取
-{"id":23423,"route":"/core/msg/get/id","data":{"from_time":1753273950687,"count":50,"channel_id":1}}
+{"id":23423,"route":"/core/msg/get/id","data":{"from_time":1753681863000,"count":50,"channel_id":1}}
+{"id":23423,"route":"/core/msg/get/content","data":{"mids":[1949709159072890880]}}

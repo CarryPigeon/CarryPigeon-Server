@@ -75,13 +75,8 @@ public class CarryPigeonBackendCommanderTest {
         Scanner scanner = new Scanner(System.in);
         while (true) {
             String s = scanner.nextLine();
-            channel.writeAndFlush(s);
             CPChannel cpChannel = channel.attr(CHANNEL).get();
-            if (cpChannel != null){
-                cpChannel.sendMessage(s);
-            }else {
-                channel.writeAndFlush(s);
-            }
+            cpChannel.sendMessage(s);
         }
     }
 }

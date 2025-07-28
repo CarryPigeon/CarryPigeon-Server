@@ -24,10 +24,8 @@ public class CPChannelTypeImpl implements CPChatStructureTypeDAO {
         if (channelTypePO == null) return null;
         ChatStructureTypeBO channelTypeBO = new ChatStructureTypeBO();
         String[] split = channelTypePO.getType().split(":");
-        System.out.println(split[0]);
         channelTypeBO.setType(ChatStructureTypeMenu.valueOfByName(split[0]));
         channelTypeBO.setTypeName(channelTypePO.getType().substring(split[0].length()+1));
-        System.out.println(channelTypeBO);
         return channelTypeBO;
     }
 }

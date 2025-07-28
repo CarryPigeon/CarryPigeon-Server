@@ -13,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.manager.user.CPUserToChannelManager;
 /**
  * 私聊通信结构
  * */
-@CPChatStructureTag("friend")
+@CPChatStructureTag("core:friend")
 @Slf4j
 public class CPFriendChatStructure implements CPChatStructure {
 

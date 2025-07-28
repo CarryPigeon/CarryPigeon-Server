@@ -9,7 +9,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.dao.channel.CPChatStructureTypeDAO;
 import team.carrypigeon.backend.api.bo.domain.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.ChatStructureTypeBO;
-import team.carrypigeon.backend.chat.domain.service.message.send.CPCoreTextMessageService;
+import team.carrypigeon.backend.chat.domain.service.message.send.CPTextMessageService;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 /**
@@ -23,12 +23,12 @@ public class CPTextMessageSendController implements CPController {
 
     private final CPChatStructureTypeDAO cpChatStructureTypeDAO;
 
-    private final CPCoreTextMessageService cpCoreTextMessageService;
+    private final CPTextMessageService cpTextMessageService;
 
-    public CPTextMessageSendController(ObjectMapper objectMapper, CPChatStructureTypeDAO cpChatStructureTypeDAO, CPCoreTextMessageService cpCoreTextMessageService) {
+    public CPTextMessageSendController(ObjectMapper objectMapper, CPChatStructureTypeDAO cpChatStructureTypeDAO, CPTextMessageService cpCoreTextMessageService) {
         this.objectMapper = objectMapper;
         this.cpChatStructureTypeDAO = cpChatStructureTypeDAO;
-        this.cpCoreTextMessageService = cpCoreTextMessageService;
+        this.cpTextMessageService = cpCoreTextMessageService;
     }
 
     @SneakyThrows
@@ -43,13 +43,6 @@ public class CPTextMessageSendController implements CPController {
             return CPResponse.ERROR_RESPONSE.copy()
                     .setTextData("illegal chat structure type");
         }
-        switch (chatStructureType.getType()){
-            case CORE:
-                return cpCoreTextMessageService.textMessageSend(vo.getToId(),vo.getContent(), channel,chatStructureType.getTypeName());
-            case PLUGINS:
-                break;
-        }
-        return CPResponse.ERROR_RESPONSE.copy()
-                .setTextData("illegal chat structure type");
+        return cpTextMessageService.textMessageSend(vo.getToId(),vo.getContent(), channel,chatStructureType.toStringData());
     }
 }

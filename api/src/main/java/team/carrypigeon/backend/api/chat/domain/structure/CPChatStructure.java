@@ -3,7 +3,8 @@ package team.carrypigeon.backend.api.chat.domain.structure;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
 
 /**
- * 聊天通道接口，私聊、群聊、订阅聊天均需实现一下接口
+ * 聊天结构接口，用于定义一个具体的聊天结构
+ *
  * */
 public interface CPChatStructure {
     /**

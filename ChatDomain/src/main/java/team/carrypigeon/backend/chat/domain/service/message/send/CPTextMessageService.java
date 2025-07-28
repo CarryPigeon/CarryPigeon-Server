@@ -11,7 +11,7 @@ import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomainEnum;
-import team.carrypigeon.backend.chat.domain.manager.channel.NameToChatStructureManager;
+import team.carrypigeon.backend.chat.domain.manager.channel.CPChatStructureManager;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.common.json.JsonNodeUtil;
@@ -21,15 +21,15 @@ import team.carrypigeon.backend.common.json.JsonNodeUtil;
  * */
 @Service
 @Slf4j
-public class CPCoreTextMessageService {
+public class CPTextMessageService {
 
     private final CPMessageDAO cpMessageDAO;
 
-    private final NameToChatStructureManager nameToChatStructureManager;
+    private final CPChatStructureManager chatStructureManager;
 
-    public CPCoreTextMessageService(CPMessageDAO cpMessageDAO, NameToChatStructureManager nameToChatStructureManager) {
+    public CPTextMessageService(CPMessageDAO cpMessageDAO, CPChatStructureManager cpChatStructureManager) {
         this.cpMessageDAO = cpMessageDAO;
-        this.nameToChatStructureManager = nameToChatStructureManager;
+        this.chatStructureManager = cpChatStructureManager;
     }
 
     /**
@@ -38,7 +38,7 @@ public class CPCoreTextMessageService {
     @SneakyThrows
     public CPResponse textMessageSend(long toId, String content, CPChannel channel, String typeName){
         // 权限校验
-        CPChatStructure chatChannel = nameToChatStructureManager.getChannel(typeName);
+        CPChatStructure chatChannel = chatStructureManager.getChannel(typeName);
         if(!chatChannel.verifyMember(toId, channel.getCPUserBO().getId())){
             return CPResponse.ERROR_RESPONSE.copy();
         }

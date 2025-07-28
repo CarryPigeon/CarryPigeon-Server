@@ -23,13 +23,12 @@ public class CPMessageDomain {
     /**
      * 用于输出为数据库中存储的结构
      * CORE->core
-     * PLUGIN->plugins:pluginName
+     * PLUGIN->plugin:pluginName
      * */
-    @Override
-    public String toString() {
+    public String toDomain() {
         return switch (type) {
             case CORE -> "core";
-            case PLUGINS -> "plugins:"+pluginName;
+            case PLUGINS -> "plugin:"+pluginName;
         };
     }
 }
