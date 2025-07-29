@@ -3,7 +3,9 @@
 # 用户二
 {"id":123123,"route":"/core/account/login","data":{"email":"midreamsheep","password":"midreamsheep","device_name":"midreamsheep"}}
 # 消息发送
-{"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"content":"awdadawd"}}
+{"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"text":"awdadawd333"}}
 # 消息获取
 {"id":23423,"route":"/core/msg/get/id","data":{"from_time":1753681863000,"count":50,"channel_id":1}}
 {"id":23423,"route":"/core/msg/get/content","data":{"mids":[1949709159072890880]}}
+# 消息撤回
+{"id":41234234,"route":"/core/msg/delete","data":{"mid":1950112116079644672}}

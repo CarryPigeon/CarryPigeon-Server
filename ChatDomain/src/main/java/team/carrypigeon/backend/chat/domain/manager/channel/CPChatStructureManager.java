@@ -18,12 +18,12 @@ public class CPChatStructureManager {
         this.mapper = mapper;
     }
 
-    public CPChatStructure getChannel(String typeName){
+    public CPChatStructure getChatStructure(String typeName){
         System.out.println(typeName);
         return mapper.get(typeName);
     }
 
-    public CPChatStructure getChannel(long channelId){
-        return getChannel(cpChatStructureTypeDAO.getChatStructureType(channelId).toStringData());
+    public CPChatStructure getChatStructure(long channelId){
+        return getChatStructure(cpChatStructureTypeDAO.getChatStructureType(channelId).toStringData());
     }
 }

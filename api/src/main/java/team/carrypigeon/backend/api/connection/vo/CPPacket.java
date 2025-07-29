@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.api.connection.vo;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -30,5 +33,6 @@ public class CPPacket {
      * 具体的结构数据，统一用jsonNode包装用于使其生成为
      * "data":{}的形式
      * */
+    @JsonSetter(nulls = Nulls.SKIP)
     private JsonNode data;
 }

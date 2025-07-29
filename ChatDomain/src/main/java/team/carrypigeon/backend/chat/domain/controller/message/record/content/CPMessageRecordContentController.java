@@ -44,7 +44,7 @@ public class CPMessageRecordContentController implements CPController {
         for (long mid : cpMessageRecordContentVO.getMids()) {
             // 权限校验
             CPMessageBO message = cpMessageDAO.getMessage(mid);
-            if (!cpChatStructureManager.getChannel(message.getToId()).verifyMember(message.getToId(), channel.getCPUserBO().getId())){
+            if (!cpChatStructureManager.getChatStructure(message.getToId()).verifyMember(message.getToId(), channel.getCPUserBO().getId())){
                 continue;
             }
             messageList.add(message.toJsonData(objectMapper));

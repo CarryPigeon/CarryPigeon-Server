@@ -42,7 +42,7 @@ public class CPMessageImpl implements CPMessageDAO {
             case CORE:
                 messagePO.setDomain("core");
                 break;
-            case PLUGINS:
+            case PLUGIN:
                 messagePO.setDomain("plugins:"+message.getDomain().getPluginName());
                 break;
         }
@@ -81,7 +81,7 @@ public class CPMessageImpl implements CPMessageDAO {
         if (messagePO.getDomain().equals("core")) {
             cpMessageDomain.setType(CPMessageDomainEnum.CORE);
         } else {
-            cpMessageDomain.setType(CPMessageDomainEnum.PLUGINS);
+            cpMessageDomain.setType(CPMessageDomainEnum.PLUGIN);
             cpMessageDomain.setPluginName(messagePO.getDomain().split(":")[1]);
         }
         message.setDomain(cpMessageDomain);

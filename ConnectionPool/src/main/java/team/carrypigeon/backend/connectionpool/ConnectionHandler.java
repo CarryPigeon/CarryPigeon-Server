@@ -54,9 +54,11 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<String> {
                         cpChannel.sendMessage(objectMapper.writeValueAsString(response));
                     }
                 } catch (JsonProcessingException e) {
-                    log.error(e.getMessage(),e);
+                    try {
+                        log.error("illegal json pattern;json:{}",AESUtil.decrypt(msg, AESUtil.convertStringToKey(security.getKey())));
+                    } catch (Exception ignored) {}
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    log.error("unexpected Exception:{}",e.getMessage(),e);
                 }
         }
         );

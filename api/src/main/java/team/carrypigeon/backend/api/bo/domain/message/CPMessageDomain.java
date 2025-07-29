@@ -3,7 +3,6 @@ package team.carrypigeon.backend.api.bo.domain.message;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 /**
  * 消息域，用于标识消息是核心消息还是插件的自定义消息
@@ -28,7 +27,18 @@ public class CPMessageDomain {
     public String toDomain() {
         return switch (type) {
             case CORE -> "core";
-            case PLUGINS -> "plugin:"+pluginName;
+            case PLUGIN -> "plugin:"+pluginName;
         };
+    }
+
+    /**
+     * 用于通过数据库中存储的结构获取CPMessageDomain
+     * */
+    public static CPMessageDomain fromDomain(String domain) {
+        if (domain.equals("core")) {
+            return new CPMessageDomain(CPMessageDomainEnum.CORE);
+        }else {
+            return new CPMessageDomain(CPMessageDomainEnum.PLUGIN, domain.substring(domain.indexOf(":")+1));
+        }
     }
 }

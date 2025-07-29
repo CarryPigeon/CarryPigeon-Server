@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.common.json;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.annotation.Nulls;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
@@ -25,6 +27,8 @@ public class JacksonConfiguration {
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         // 实现下划线格式到驼峰格式的自动转化
         mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        // 默认转换非空
+        mapper.setDefaultSetterInfo(JsonSetter.Value.forValueNulls(Nulls.FAIL));
         return mapper;
     }
 }
