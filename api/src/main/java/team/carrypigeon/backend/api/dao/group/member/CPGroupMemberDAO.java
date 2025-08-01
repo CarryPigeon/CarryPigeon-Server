@@ -20,9 +20,13 @@ public interface CPGroupMemberDAO {
      * */
     CPGroupMemberBO getMember(long uid, long gid);
     /**
+     * 获取所有的管理
+     */
+    Long[] getAdmins(long gid);
+    /**
      * 更改用户权限状态
      * */
-    boolean updateMember(long gid, long uid, int authority);
+    boolean updateAuthority(long gid, long uid, int authority);
     /**
      * 向群组发送申请
      * */
@@ -31,4 +35,8 @@ public interface CPGroupMemberDAO {
      * 更改用户状态
      * */
     boolean updateState(long gid, long uid, int state);
+    /**
+     * 删除用户
+     * */
+    boolean deleteMember(CPGroupMemberBO memberBO);
 }

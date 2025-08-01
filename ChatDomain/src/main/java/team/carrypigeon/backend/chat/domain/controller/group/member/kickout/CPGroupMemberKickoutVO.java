@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.controller.group.delete;
+package team.carrypigeon.backend.chat.domain.controller.group.member.kickout;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CPGroupDeleteVO {
+public class CPGroupMemberKickoutVO {
     private long gid;
+    private long uid;
 }

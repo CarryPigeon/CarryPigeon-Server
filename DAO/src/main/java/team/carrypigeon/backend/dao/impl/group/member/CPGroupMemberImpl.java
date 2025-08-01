@@ -7,10 +7,12 @@ import team.carrypigeon.backend.api.bo.domain.group.member.CPGroupMemberBO;
 import team.carrypigeon.backend.api.dao.group.member.CPGroupMemberDAO;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.dao.mapper.group.GroupMapper;
+import team.carrypigeon.backend.dao.mapper.group.GroupPO;
 import team.carrypigeon.backend.dao.mapper.group.member.GroupMemberMapper;
 import team.carrypigeon.backend.dao.mapper.group.member.GroupMemberPO;
 
 import java.time.LocalDateTime;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -64,7 +66,23 @@ public class CPGroupMemberImpl implements CPGroupMemberDAO {
     }
 
     @Override
-    public boolean updateMember(long gid, long uid, int authority) {
+    public Long[] getAdmins(long gid) {
+        GroupPO groupPO = groupMapper.selectById(gid);
+        if (groupPO == null){
+            return new Long[0];
+        }
+        LinkedList<Long> admins = new LinkedList<>();
+        admins.add(groupPO.getOwner());
+        for (CPGroupMemberBO member : getMembers(gid)) {
+            if (member.getAuthority() == 2) {
+                admins.add(member.getUid());
+            }
+        }
+        return admins.toArray(new Long[0]);
+    }
+
+    @Override
+    public boolean updateAuthority(long gid, long uid, int authority) {
         QueryWrapper<GroupMemberPO> queryWrapper = new QueryWrapper<GroupMemberPO>()
                 .eq("gid", gid)
                 .eq("uid", uid);
@@ -101,5 +119,10 @@ public class CPGroupMemberImpl implements CPGroupMemberDAO {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public boolean deleteMember(CPGroupMemberBO memberBO) {
+        return groupMemberMapper.deleteById(memberBO.getId())>0;
     }
 }
