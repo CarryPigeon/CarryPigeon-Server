@@ -26,8 +26,4 @@ public interface CPGroupDAO {
      * 更新群聊信息
      * */
     boolean updateGroup(CPGroupBO group);
-    /**
-     * 移交群聊
-     * */
-    boolean transferGroup(long gid, long userId);
 }

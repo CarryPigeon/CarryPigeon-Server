@@ -52,11 +52,4 @@ public class CPGroupImpl implements CPGroupDAO {
         groupPO.fillData(group);
         return groupMapper.updateById(groupPO) > 0;
     }
-
-    @Override
-    public boolean transferGroup(long gid, long userId) {
-        CPGroupBO group = getById(gid);
-        group.setOwner(userId);
-        return updateGroup(group);
-    }
 }

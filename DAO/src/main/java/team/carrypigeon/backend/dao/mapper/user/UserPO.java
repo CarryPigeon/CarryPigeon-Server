@@ -49,7 +49,9 @@ public class UserPO {
         id = userBO.getId();
         name = userBO.getName();
         email = userBO.getEmail();
-        registerTime =  LocalDateTimeUtil.of(userBO.getRegisterTime());
+        if(userBO.getRegisterTime()!=0){
+            registerTime =  LocalDateTimeUtil.of(userBO.getRegisterTime());
+        }
         stateId = userBO.getStateId();
         this.password = password;
         introduction = userBO.getIntroduction();

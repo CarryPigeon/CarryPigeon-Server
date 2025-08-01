@@ -16,6 +16,10 @@ public interface CPGroupMemberDAO {
      * */
     CPGroupBO[] getPrivateGroups(long uid);
     /**
+     * 通过用户id和群聊id获取群聊
+     * */
+    CPGroupMemberBO getMember(long uid, long gid);
+    /**
      * 更改用户权限状态
      * */
     boolean updateMember(long gid, long uid, int authority);

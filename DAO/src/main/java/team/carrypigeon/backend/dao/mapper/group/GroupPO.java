@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.dao.mapper.group;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
@@ -7,15 +8,13 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.group.CPGroupBO;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("group")
+@TableName("`group`")
 public class GroupPO {
     @TableId
     private Long id;
@@ -44,10 +43,9 @@ public class GroupPO {
         this.owner = groupBO.getOwner();
         this.introduction = groupBO.getIntroduction();
         this.profile = groupBO.getProfile();
-        this.registerTime = LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(groupBO.getRegisterTime()),
-                ZoneOffset.systemDefault()
-        );
+        if (groupBO.getRegisterTime() != 0){
+            this.registerTime = LocalDateTimeUtil.of(groupBO.getRegisterTime());
+        }
         this.stateId = groupBO.getStateId();
     }
 }

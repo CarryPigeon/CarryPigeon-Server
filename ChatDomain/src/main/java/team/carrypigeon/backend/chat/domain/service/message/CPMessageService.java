@@ -66,7 +66,7 @@ public class CPMessageService {
                 .setData(
                         JsonNodeUtil.createJsonNode(
                                 "mid",cpMessageBO.getId()+"",
-                                "channel_id", cpMessageSendVO.getToId()+""
+                                "cid", cpMessageSendVO.getToId()+""
                 )
         );
         chatChannel.noticeMember(cpMessageSendVO.getToId(), cpPacket);
@@ -95,7 +95,7 @@ public class CPMessageService {
                 .setData(
                         JsonNodeUtil.createJsonNode(
                                 "mid",message.getId()+"",
-                                "channel_id", message.getToId()+""
+                                "cid", message.getToId()+""
                         )
                 );
         chatStructure.noticeMember(message.getToId(), cpPacket);
