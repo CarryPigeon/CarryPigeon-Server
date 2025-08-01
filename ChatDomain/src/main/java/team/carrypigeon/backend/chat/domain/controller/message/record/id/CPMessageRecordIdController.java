@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
+import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 
 import java.time.LocalDateTime;
 
@@ -31,6 +32,7 @@ public class CPMessageRecordIdController implements CPController {
 
 
     @SneakyThrows
+    @LoginPermission
     @Override
     public CPResponse process(JsonNode data, CPChannel channel) {
         System.out.println(System.currentTimeMillis());

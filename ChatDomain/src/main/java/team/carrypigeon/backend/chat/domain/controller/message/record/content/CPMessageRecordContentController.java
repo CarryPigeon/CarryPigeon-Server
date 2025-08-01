@@ -12,6 +12,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
 import team.carrypigeon.backend.chat.domain.manager.channel.CPChatStructureManager;
+import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +39,7 @@ public class CPMessageRecordContentController implements CPController {
 
     @SneakyThrows
     @Override
+    @LoginPermission
     public CPResponse process(JsonNode data, CPChannel channel) {
         CPMessageRecordContentVO cpMessageRecordContentVO = objectMapper.treeToValue(data, CPMessageRecordContentVO.class);
         List<JsonNode> messageList = new ArrayList<>();

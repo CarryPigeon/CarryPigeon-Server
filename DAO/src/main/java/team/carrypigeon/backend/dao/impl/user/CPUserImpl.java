@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.dao.impl.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,16 +14,15 @@ import team.carrypigeon.backend.dao.mapper.user.UserPO;
 public class CPUserImpl implements CPUserDAO {
 
     @Autowired
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-
+    public CPUserImpl(UserMapper userMapper) {
+        this.userMapper = userMapper;
+    }
 
     @Override
     public CPUserBO getById(long id) {
-        return userMapper.selectById(id).toUserBO(objectMapper);
+        return userMapper.selectById(id).toUserBO();
     }
 
     @Override
@@ -36,7 +34,7 @@ public class CPUserImpl implements CPUserDAO {
     @Override
     public boolean register(CPUserBO user, String password) {
         UserPO userPO = new UserPO();
-        userPO.fillData(user,password,objectMapper);
+        userPO.fillData(user,password);
         userMapper.insert(userPO);
         return true;
     }
@@ -44,7 +42,7 @@ public class CPUserImpl implements CPUserDAO {
     @Override
     public boolean update(CPUserBO user, String password) {
         UserPO userPO = new UserPO();
-        userPO.fillData(user,password,objectMapper);
+        userPO.fillData(user,password);
         if(password.isEmpty()){
             userPO.setPassword(userMapper.selectById(user.getId()).getPassword());
         }
@@ -61,6 +59,6 @@ public class CPUserImpl implements CPUserDAO {
         if(userPO==null){
             return null;
         }
-        return userPO.toUserBO(objectMapper);
+        return userPO.toUserBO();
     }
 }

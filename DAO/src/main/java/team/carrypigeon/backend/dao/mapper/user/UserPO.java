@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.dao.mapper.user;
 
+import cn.hutool.core.date.LocalDateTimeUtil;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @TableName("user")
 @Data
@@ -24,36 +26,35 @@ public class UserPO {
     private String name;
     private String email;
     private String password;
-    private String data;
+    private Long profile;
+    private Integer authority;
+    private String introduction;
     private LocalDateTime registerTime;
     private Long stateId;
 
-    public CPUserBO toUserBO(ObjectMapper objectMapper) {
+    public CPUserBO toUserBO() {
         CPUserBO userBO = new CPUserBO();
         userBO.setId(id);
         userBO.setName(name);
         userBO.setEmail(email);
-        userBO.setRegisterTime(registerTime);
+        userBO.setRegisterTime(registerTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
         userBO.setStateId(stateId);
-        try {
-            userBO.setData(objectMapper.readValue(data, JsonNode.class));
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage(),e);
-        }
+        userBO.setIntroduction(introduction);
+        userBO.setProfile(profile);
+        userBO.setAuthority(authority);
         return userBO;
     }
 
-    public void fillData(CPUserBO userBO,String password,ObjectMapper objectMapper) {
+    public void fillData(CPUserBO userBO,String password) {
         id = userBO.getId();
         name = userBO.getName();
         email = userBO.getEmail();
-        registerTime = userBO.getRegisterTime();
+        registerTime =  LocalDateTimeUtil.of(userBO.getRegisterTime());
         stateId = userBO.getStateId();
         this.password = password;
-        try {
-            data = objectMapper.writeValueAsString(userBO.getData());
-        } catch (JsonProcessingException e) {
-            log.error(e.getMessage(),e);
-        }
+        introduction = userBO.getIntroduction();
+        profile = userBO.getProfile();
+        authority = userBO.getAuthority();
+
     }
 }

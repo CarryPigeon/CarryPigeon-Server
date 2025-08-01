@@ -43,6 +43,10 @@
             <groupId>CarryPigeon</groupId>
             <artifactId>api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>Common</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
