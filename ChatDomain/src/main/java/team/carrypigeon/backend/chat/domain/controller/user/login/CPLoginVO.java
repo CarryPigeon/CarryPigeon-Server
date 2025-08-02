@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CPLoginVO {
-    private String email;
-    private String password;
+    private String key;
     private String deviceName;
 }

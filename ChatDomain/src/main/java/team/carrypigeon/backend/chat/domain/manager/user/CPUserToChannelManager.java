@@ -27,6 +27,5 @@ public class CPUserToChannelManager {
 
     public void addChannel(CPChannel channel) {
         getChannels(channel.getCPUserBO().getId()).add(channel);
-        System.out.println(channel.getCPUserBO().getId());
     }
 }

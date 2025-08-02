@@ -35,7 +35,6 @@ public class CPMessageRecordIdController implements CPController {
     @LoginPermission
     @Override
     public CPResponse process(JsonNode data, CPChannel channel) {
-        System.out.println(System.currentTimeMillis());
         CPMessageRecordIdVO cpMessageRecordIdVO = objectMapper.treeToValue(data, CPMessageRecordIdVO.class);
         Long[] ids = cpMessageDAO.getMessageFromTime(cpMessageRecordIdVO.getChannelId(), cpMessageRecordIdVO.getFromTime(), cpMessageRecordIdVO.getCount());
         ObjectNode objectNode = objectMapper.createObjectNode();

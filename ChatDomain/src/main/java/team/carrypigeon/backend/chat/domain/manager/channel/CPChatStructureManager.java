@@ -19,7 +19,6 @@ public class CPChatStructureManager {
     }
 
     public CPChatStructure getChatStructure(String typeName){
-        System.out.println(typeName);
         return mapper.get(typeName);
     }
 

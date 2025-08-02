@@ -54,5 +54,6 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     @Override
     public void channelInactive(CPChannel cpChannel) {
         cpUserManager.removeChannel(cpChannel);
+
     }
 }

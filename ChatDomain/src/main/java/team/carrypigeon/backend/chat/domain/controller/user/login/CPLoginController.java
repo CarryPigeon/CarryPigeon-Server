@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.controller.user.login;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
@@ -14,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.manager.user.CPUserToChannelManager;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 @Slf4j
-@CPControllerTag("/core/account/login")
+@CPControllerTag("/core/user/login")
 public class CPLoginController implements CPController {
 
     private final ObjectMapper objectMapper;
@@ -33,7 +32,7 @@ public class CPLoginController implements CPController {
     @Override
     public CPResponse process(JsonNode data, CPChannel channel) {
         CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
-        CPUserBO userBO = userDAO.login(loginVO.getEmail(), loginVO.getPassword());
+        CPUserBO userBO = userDAO.login(loginVO.getKey());
         if(userBO == null) return CPResponse.ERROR_RESPONSE.copy();
         channel.setCPUserBO(userBO);
         userManager.addChannel(channel);
