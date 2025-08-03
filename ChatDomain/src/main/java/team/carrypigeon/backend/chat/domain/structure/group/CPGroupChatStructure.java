@@ -10,7 +10,7 @@ import team.carrypigeon.backend.api.chat.domain.structure.CPChatStructureTag;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.api.dao.group.CPGroupDAO;
 import team.carrypigeon.backend.api.dao.group.member.CPGroupMemberDAO;
-import team.carrypigeon.backend.chat.domain.manager.user.CPUserToChannelManager;
+import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
 
 @Slf4j
 @CPChatStructureTag("core:group")
@@ -20,11 +20,11 @@ public class CPGroupChatStructure implements CPChatStructure {
 
     private final CPGroupMemberDAO cpGroupMemberDAO;
 
-    private final CPUserToChannelManager cpUserToChannelManager;
+    private final CPChannelManager cpUserToChannelManager;
 
     private final ObjectMapper objectMapper;
 
-    public CPGroupChatStructure(CPGroupDAO cpGroupDAO, CPGroupMemberDAO cpGroupMemberDAO, CPUserToChannelManager cpUserToChannelManager, ObjectMapper objectMapper) {
+    public CPGroupChatStructure(CPGroupDAO cpGroupDAO, CPGroupMemberDAO cpGroupMemberDAO, CPChannelManager cpUserToChannelManager, ObjectMapper objectMapper) {
         this.cpGroupDAO = cpGroupDAO;
         this.cpGroupMemberDAO = cpGroupMemberDAO;
         this.cpUserToChannelManager = cpUserToChannelManager;

@@ -5,6 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import team.carrypigeon.backend.api.connection.pool.ConnectionPoolStarter;
 
 /**
@@ -12,6 +13,8 @@ import team.carrypigeon.backend.api.connection.pool.ConnectionPoolStarter;
  * */
 // 声明springboot应用
 @SpringBootApplication
+// 允许定时任务
+@EnableScheduling
 // 扫描team.carrypigeon.backend包下的所有类文件
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
 @Slf4j

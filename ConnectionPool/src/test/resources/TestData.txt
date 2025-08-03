@@ -1,10 +1,11 @@
 # 用户一
 {"id":123123,"route":"/core/account/register","data":{"name":"midream","email":"midream","password":"midream"}}
 {"id":123123,"route":"/core/account/key","data":{"email":"midream","password":"midream"}}
-{"id":123123,"route":"/core/user/login","data":{"key":"7eb10de0-e60e-4a95-a95f-963dab2d2ba9"}}
+{"id":123123,"route":"/core/user/login","data":{"key":"midream","uid":1951560369056829440}}
 # 用户二
 {"id":123123,"route":"/core/account/register","data":{"name":"midreamsheep","email":"midreamsheep","password":"midreamsheep"}}
 {"id":123123,"route":"/core/account/key","data":{"email":"midreamsheep","password":"midreamsheep"}}
+{"id":123123,"route":"/core/user/login","data":{"key":"midreamsheep","uid":1951560464116535296}}
 # 消息发送
 {"id":12323,"route":"/core/msg/text/send","data":{"to_id":1,"text":"awdadawd333"}}
 # 消息获取

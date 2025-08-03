@@ -30,10 +30,11 @@ public interface CPUserDAO {
     /**
      * 通过邮箱和密码登录并返回登录密钥
      * */
-    String getKey(String email, String password);
+    String generateToken(String email, String password, String deviceName);
 
     /**
      * 通过登录密钥获取用户对象
-     * */
-    CPUserBO login(String loginKey);
+     * @return 如果密钥发生了更新则返回新的密钥，成功返回"",失败返回null
+     */
+    String login(long uid,String token);
 }

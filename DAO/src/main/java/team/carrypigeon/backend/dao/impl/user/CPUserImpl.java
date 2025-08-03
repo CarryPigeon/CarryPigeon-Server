@@ -4,17 +4,18 @@ import cn.hutool.core.lang.UUID;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.ibatis.ognl.Token;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.dao.user.CPUserDAO;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 import team.carrypigeon.backend.common.id.IdUtil;
-import team.carrypigeon.backend.dao.mapper.key.KeyMapper;
-import team.carrypigeon.backend.dao.mapper.key.KeyPO;
+import team.carrypigeon.backend.dao.mapper.token.TokenMapper;
+import team.carrypigeon.backend.dao.mapper.token.TokenPO;
 import team.carrypigeon.backend.dao.mapper.user.UserMapper;
 import team.carrypigeon.backend.dao.mapper.user.UserPO;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Component
 @Slf4j
@@ -22,11 +23,11 @@ public class CPUserImpl implements CPUserDAO {
 
     private final UserMapper userMapper;
 
-    private final KeyMapper keyMapper;
+    private final TokenMapper tokenMapper;
 
-    public CPUserImpl(UserMapper userMapper, KeyMapper keyMapper) {
+    public CPUserImpl(UserMapper userMapper, TokenMapper tokenMapper) {
         this.userMapper = userMapper;
-        this.keyMapper = keyMapper;
+        this.tokenMapper = tokenMapper;
     }
 
     @Override
@@ -66,7 +67,7 @@ public class CPUserImpl implements CPUserDAO {
     }
 
     @Override
-    public String getKey(String email, String password) {
+    public String generateToken(String email, String password, String deviceName) {
         // 校验是否存在用户
         QueryWrapper<UserPO> userPOQueryWrapper = new QueryWrapper<>();
         userPOQueryWrapper.eq("email",email);
@@ -74,21 +75,56 @@ public class CPUserImpl implements CPUserDAO {
         if (userPO == null|| !BCrypt.checkpw(password,userPO.getPassword())){
             return "";
         }
+        // 检验有效token数量
+        QueryWrapper<TokenPO> keyPOQueryWrapper = new QueryWrapper<>();
+        keyPOQueryWrapper.eq("uid",userPO.getId());
+        if (tokenMapper.selectCount(keyPOQueryWrapper)>=5){
+            return "";
+        }
         // 生成密钥
-        String key = UUID.randomUUID().toString();
-        keyMapper.insert(new KeyPO(IdUtil.generateId(),userPO.getId(),key, LocalDateTime.now()));
-        return key;
+        String token = UUID.randomUUID().toString();
+        // 对key进行加密
+        token = BCrypt.hashpw(token,BCrypt.gensalt());
+        tokenMapper.insert(new TokenPO(IdUtil.generateId(),userPO.getId(),token,deviceName, LocalDateTime.now()));
+        return token;
     }
 
-
     @Override
-    public CPUserBO login(String loginKey) {
-        QueryWrapper<KeyPO> keyPOQueryWrapper = new QueryWrapper<>();
-        keyPOQueryWrapper.eq("login_key",loginKey);
-        KeyPO keyPO = keyMapper.selectOne(keyPOQueryWrapper);
-        if (keyPO == null) {
+    public String login(long uid, String token) {
+        QueryWrapper<TokenPO> keyPOQueryWrapper = new QueryWrapper<>();
+        keyPOQueryWrapper.eq("uid", uid);
+        List<TokenPO> tokenPOS = tokenMapper.selectList(keyPOQueryWrapper);
+        TokenPO targetTokenPO = null;
+        for (TokenPO tokenPO : tokenPOS) {
+            if (!BCrypt.checkpw(token, tokenPO.getToken())){
+                continue;
+            }
+            // 判断是否过期
+            if (!LocalDateTime.now().isAfter(tokenPO.getTime().plusDays(1))){
+                return "";
+            }
+            // 如果过期了则重置token
+            String string = UUID.randomUUID().toString();
+            string = BCrypt.hashpw(string, BCrypt.gensalt());
+            tokenPO.setToken(string);
+            tokenPO.setTime(LocalDateTime.now());
+            tokenMapper.updateById(tokenPO);
+            targetTokenPO = tokenPO;
+        }
+        if (targetTokenPO == null) return null;
+        // 判断有效token数是否超过最大值 最大值：TODO
+        int count = 0;
+        for (TokenPO tokenPO : tokenPOS) {
+            if (!LocalDateTime.now().isAfter(tokenPO.getTime().plusDays(1))){
+                count++;
+            }
+        }
+        if (count >= 5){
+            // 删除当前 token
+            tokenMapper.deleteById(targetTokenPO.getId());
             return null;
         }
-        return userMapper.selectById(keyPO.getUid()).toUserBO();
+        // 登录成功
+        return targetTokenPO.getToken();
     }
 }

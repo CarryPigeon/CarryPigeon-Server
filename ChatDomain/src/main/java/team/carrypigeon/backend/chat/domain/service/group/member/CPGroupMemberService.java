@@ -10,7 +10,7 @@ import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.api.dao.group.CPGroupDAO;
 import team.carrypigeon.backend.api.dao.group.member.CPGroupMemberDAO;
-import team.carrypigeon.backend.chat.domain.manager.user.CPUserToChannelManager;
+import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
 import team.carrypigeon.backend.chat.domain.structure.group.CPGroupChatStructure;
 import team.carrypigeon.backend.common.json.JsonNodeUtil;
 
@@ -22,13 +22,13 @@ public class CPGroupMemberService {
 
     private final CPGroupMemberDAO cpGroupMemberDAO;
 
-    private final CPUserToChannelManager cpUserToChannelManager;
+    private final CPChannelManager cpUserToChannelManager;
 
     private final ObjectMapper objectMapper;
 
     private final CPGroupChatStructure cpGroupChatStructure;
 
-    public CPGroupMemberService(CPGroupDAO cpGroupDAO, CPGroupMemberDAO cpGroupMemberDAO, CPUserToChannelManager cpUserToChannelManager, ObjectMapper objectMapper, CPGroupChatStructure cpGroupChatStructure) {
+    public CPGroupMemberService(CPGroupDAO cpGroupDAO, CPGroupMemberDAO cpGroupMemberDAO, CPChannelManager cpUserToChannelManager, ObjectMapper objectMapper, CPGroupChatStructure cpGroupChatStructure) {
         this.cpGroupDAO = cpGroupDAO;
         this.cpGroupMemberDAO = cpGroupMemberDAO;
         this.cpUserToChannelManager = cpUserToChannelManager;
