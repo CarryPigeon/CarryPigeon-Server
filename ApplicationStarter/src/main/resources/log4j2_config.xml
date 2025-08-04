@@ -142,7 +142,7 @@
         <!-- 根日志设置 -->
         <Root level="debug">
             <AppenderRef ref="allFileAppender" level="all"/>
-            <AppenderRef ref="consoleAppender" level="debug"/>
+            <AppenderRef ref="consoleAppender" level="info"/>
             <AppenderRef ref="debugFileAppender" level="debug"/>
             <AppenderRef ref="infoFileAppender" level="info"/>
             <AppenderRef ref="warnFileAppender" level="warn"/>

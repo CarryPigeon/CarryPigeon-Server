@@ -3,3 +3,9 @@ spring:
     name: CarryPigeonBackend
 logging:
   config: classpath:log4j2_config.xml
+# TODO 配置迁移
+minio:
+  endpoint: http://localhost:9005
+  bucketName: carrygieon
+  accessKey: minioadmin
+  secretKey: minioadmin
