@@ -7,8 +7,9 @@
         <groupId>CarryPigeon</groupId>
         <artifactId>Backend</artifactId>
         <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
-
+    <packaging>jar</packaging>
     <artifactId>api</artifactId>
 
     <properties>
