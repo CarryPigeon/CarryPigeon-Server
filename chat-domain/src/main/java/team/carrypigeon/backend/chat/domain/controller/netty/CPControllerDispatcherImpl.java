@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -34,7 +34,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     }
 
     @Override
-    public CPResponse process(String msg, CPChannel channel) {
+    public CPResponse process(String msg, CPSession channel) {
         try {
             CPPacket route = mapper.readValue(msg, CPPacket.class);
             if (!controllers.containsKey(route.getRoute())){
@@ -52,7 +52,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     }
 
     @Override
-    public void channelInactive(CPChannel cpChannel) {
+    public void channelInactive(CPSession cpChannel) {
         cpUserManager.removeChannel(cpChannel);
 
     }

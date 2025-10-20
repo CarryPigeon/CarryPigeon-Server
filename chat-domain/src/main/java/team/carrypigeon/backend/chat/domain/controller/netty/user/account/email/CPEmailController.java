@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -31,7 +31,7 @@ public class CPEmailController implements CPController {
 
     @SneakyThrows
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPEmailVO cpEmailVO = objectMapper.treeToValue(data, CPEmailVO.class);
         // 生成随机6位code
         CPEmailCode code = new CPEmailCode( (int)(Math.random() * 1000000), LocalDateTime.now());

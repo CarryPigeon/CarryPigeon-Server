@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.netty.group.get;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.bo.domain.group.CPGroupBO;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
@@ -31,7 +31,7 @@ public class CPGroupGetController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         List<CPGroupGetReturn> userGroups = new ArrayList<>();
         for (CPGroupBO userGroup : cpGroupService.getUserGroups(channel.getCPUserBO().getId())) {
             userGroups.add(new CPGroupGetReturn(userGroup.getId(), userGroup.getStateId()));

@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.netty.user.account.updat
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -25,7 +25,7 @@ public class CPAccountEditController implements CPController {
     @SneakyThrows
     @LoginPermission
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPAccountEditVO cpAccountEditVO = objectMapper.treeToValue(data, CPAccountEditVO.class);
         return cpAccountService.update(channel.getCPUserBO().getId(),cpAccountEditVO.getName(),cpAccountEditVO.getIntroduction(),cpAccountEditVO.getProfile());
     }

@@ -7,7 +7,7 @@ import team.carrypigeon.backend.api.chat.domain.structure.CPChatStructure;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.api.dao.channel.CPChatStructureTypeDAO;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
@@ -39,7 +39,7 @@ public class CPMessageService {
     /**
      * 发送消息
      * */
-    public CPResponse send(CPChannel cpChannel, CPMessageSendVO cpMessageSendVO){
+    public CPResponse send(CPSession cpChannel, CPMessageSendVO cpMessageSendVO){
         // 权限校验,获取通讯结构
         ChatStructureTypeBO chatStructureType = cpChatStructureTypeDAO.getChatStructureType(cpMessageSendVO.getToId());
         if (chatStructureType == null) {
@@ -74,7 +74,7 @@ public class CPMessageService {
         return CPResponse.SUCCESS_RESPONSE.copy();
     }
 
-    public CPResponse delete(CPChannel cpChannel,long messageId){
+    public CPResponse delete(CPSession cpChannel, long messageId){
         // 获取消息
         CPMessageBO message = cpMessageDAO.getMessage(messageId);
         // 权限校验

@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.netty.group.give;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -24,7 +24,7 @@ public class CPGroupGiveController implements CPController {
     @SneakyThrows
     @LoginPermission
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPGroupGiveVO cpGroupGiveVO = objectMapper.treeToValue(data, CPGroupGiveVO.class);
         return cpGroupService.giveGroup(cpGroupGiveVO.getGid(), channel.getCPUserBO().getId(), cpGroupGiveVO.getUid());
     }

@@ -9,3 +9,5 @@ minio:
   bucketName: carrygieon
   accessKey: minioadmin
   secretKey: minioadmin
+connection:
+  port: 7609

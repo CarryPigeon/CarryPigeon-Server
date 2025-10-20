@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.netty.user.account.regis
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -23,7 +23,7 @@ public class CPAccountRegisterController implements CPController {
 
     @SneakyThrows
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPAccountRegisterVO cpAccountRegisterVO = objectMapper.treeToValue(data, CPAccountRegisterVO.class);
         return cpAccountService.register(cpAccountRegisterVO.getEmail(),cpAccountRegisterVO.getCode() ,cpAccountRegisterVO.getName(), cpAccountRegisterVO.getPassword());
     }

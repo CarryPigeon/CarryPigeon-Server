@@ -6,10 +6,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
-import team.carrypigeon.backend.api.dao.user.CPUserDAO;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
-import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
-import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.chat.domain.service.user.CPUserService;
 
@@ -28,7 +25,7 @@ public class CPLoginController implements CPController {
 
     @SneakyThrows
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPLoginVO loginVO = objectMapper.treeToValue(data, CPLoginVO.class);
         return  cpUserService.login(loginVO.getUid(), loginVO.getKey(), channel);
     }

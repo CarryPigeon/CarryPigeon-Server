@@ -7,7 +7,7 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.chat.domain.controller.netty.message.standard.send.CPMessageSendController;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
@@ -33,7 +33,7 @@ public class CPTextMessageSendController implements CPController {
     @SneakyThrows
     @LoginPermission
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         // 解析数据
         CPTextMessageSendVO vo = objectMapper.treeToValue(data, CPTextMessageSendVO.class);
         // 重组为cpMessageSendController所需的数据

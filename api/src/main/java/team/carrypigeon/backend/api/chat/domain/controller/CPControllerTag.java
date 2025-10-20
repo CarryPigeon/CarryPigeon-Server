@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
+import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
 
 import java.lang.annotation.ElementType;
@@ -15,5 +16,6 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Component
 public @interface CPControllerTag {
+    @AliasFor(annotation = Component.class)
     String value();
 }

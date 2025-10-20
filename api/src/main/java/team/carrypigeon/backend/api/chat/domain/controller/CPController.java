@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 /**
@@ -14,5 +14,5 @@ public interface CPController {
      * @param data    具体的请求携带的数据
      * @param channel
      */
-    CPResponse process(JsonNode data, CPChannel channel);
+    CPResponse process(JsonNode data, CPSession channel);
 }

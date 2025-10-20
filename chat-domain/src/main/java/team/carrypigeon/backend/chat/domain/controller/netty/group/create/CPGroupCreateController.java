@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.group.create;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -24,7 +24,7 @@ public class CPGroupCreateController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         long group = cpGroupService.createGroup(channel.getCPUserBO().getId());
         JsonNode gid = JsonNodeUtil.createJsonNode("gid", group + "");
         if (group != -1){

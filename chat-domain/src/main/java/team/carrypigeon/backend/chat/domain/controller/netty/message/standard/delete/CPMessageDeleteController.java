@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.controller.netty.message.standard.d
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -25,7 +25,7 @@ public class CPMessageDeleteController implements CPController {
     @SneakyThrows
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         // 数据转换
         CPMessageDeleteVO cpMessageDeleteVO = mapper.treeToValue(data, CPMessageDeleteVO.class);
         return cpMessageService.delete(channel,cpMessageDeleteVO.getMid());

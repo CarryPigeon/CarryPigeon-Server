@@ -14,9 +14,9 @@
             <includes>
                 <include>CarryPigeon:api</include>
                 <include>CarryPigeon:Common</include>
-                <include>CarryPigeon:DAO</include>
+                <include>CarryPigeon:dao</include>
                 <include>CarryPigeon:ChatDomain</include>
-                <include>CarryPigeon:ConnectionPool</include>
+                <include>CarryPigeon:connection</include>
                 <include>CarryPigeon:ChatService</include>
             </includes>
             <binaries>

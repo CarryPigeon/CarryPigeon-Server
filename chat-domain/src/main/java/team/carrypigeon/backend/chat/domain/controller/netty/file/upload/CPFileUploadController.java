@@ -4,7 +4,7 @@ import cn.hutool.core.lang.UUID;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.SneakyThrows;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileBO;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
@@ -34,7 +34,7 @@ public class CPFileUploadController implements CPController {
     @LoginPermission
     @SneakyThrows
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPFileUploadVO cpFileUploadVO = objectMapper.treeToValue(data, CPFileUploadVO.class);
         CPFileBO fileBO = new CPFileBO()
                 .setName(cpFileUploadVO.getName())

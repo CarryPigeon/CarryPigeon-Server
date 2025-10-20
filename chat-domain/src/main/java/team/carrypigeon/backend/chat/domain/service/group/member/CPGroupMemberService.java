@@ -68,7 +68,7 @@ public class CPGroupMemberService {
                 cpUserToChannelManager.getChannels( admin)
                         .forEach(channel -> {
                             try {
-                                channel.sendMessage(objectMapper.writeValueAsString(cpPacket));
+                                channel.write(objectMapper.writeValueAsString(cpPacket));
                             } catch (JsonProcessingException e) {
                                 log.error(e.getMessage(), e);
                             }
@@ -101,7 +101,7 @@ public class CPGroupMemberService {
                 cpUserToChannelManager.getChannels(admin)
                         .forEach(channel -> {
                             try {
-                                channel.sendMessage(objectMapper.writeValueAsString(cpPacket));
+                                channel.write(objectMapper.writeValueAsString(cpPacket));
                             } catch (JsonProcessingException e) {
                                 log.error(e.getMessage(), e);
                             }
@@ -110,7 +110,7 @@ public class CPGroupMemberService {
             cpUserToChannelManager.getChannels(uid)
                     .forEach(channel -> {
                         try {
-                            channel.sendMessage(objectMapper.writeValueAsString(cpPacket));
+                            channel.write(objectMapper.writeValueAsString(cpPacket));
                         } catch (JsonProcessingException e) {
                             log.error(e.getMessage(), e);
                         }
@@ -174,7 +174,7 @@ public class CPGroupMemberService {
             cpUserToChannelManager.getChannels(uid)
                     .forEach(channel -> {
                         try {
-                            channel.sendMessage(objectMapper.writeValueAsString(cpPacket));
+                            channel.write(objectMapper.writeValueAsString(cpPacket));
                         }catch (JsonProcessingException e){
                             log.error(e.getMessage(),e);
                         }

@@ -36,7 +36,7 @@
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>connection-pool</artifactId>
+            <artifactId>connection</artifactId>
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
@@ -44,7 +44,7 @@
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>DAO</artifactId>
+            <artifactId>dao</artifactId>
         </dependency>
     </dependencies>
 

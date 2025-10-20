@@ -52,7 +52,7 @@ public class CPGroupChatStructure implements CPChatStructure {
             cpUserToChannelManager.getChannels(member.getUid()).forEach(
                     cpChannel -> {
                         try {
-                            cpChannel.sendMessage(objectMapper.writeValueAsString(packet));
+                            cpChannel.write(objectMapper.writeValueAsString(packet));
                         } catch (JsonProcessingException e) {
                             log.error("json write error:{}",packet,e);
                         }

@@ -15,9 +15,9 @@
     <packaging>pom</packaging>
     <modules>
         <module>api</module>
-        <module>DAO</module>
+        <module>dao</module>
         <module>common</module>
-        <module>connection-pool</module>
+        <module>connection</module>
         <module>chat-domain</module>
         <module>chat-service</module>
         <module>application-starter</module>
@@ -92,12 +92,12 @@
             </dependency>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>connection-pool</artifactId>
+                <artifactId>connection</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>DAO</artifactId>
+                <artifactId>dao</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>

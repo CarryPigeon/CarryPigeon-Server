@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.domain.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
@@ -32,7 +32,7 @@ public class CPMessageRecordIdController implements CPController {
     @SneakyThrows
     @LoginPermission
     @Override
-    public CPResponse process(JsonNode data, CPChannel channel) {
+    public CPResponse process(JsonNode data, CPSession channel) {
         CPMessageRecordIdVO cpMessageRecordIdVO = objectMapper.treeToValue(data, CPMessageRecordIdVO.class);
         Long[] ids = cpMessageDAO.getMessageFromTime(cpMessageRecordIdVO.getChannelId(), cpMessageRecordIdVO.getFromTime(), cpMessageRecordIdVO.getCount());
         ObjectNode objectNode = objectMapper.createObjectNode();
