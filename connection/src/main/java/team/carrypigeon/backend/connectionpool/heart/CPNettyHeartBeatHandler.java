@@ -32,7 +32,7 @@ public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
                     // 写空闲则发送心跳包
                     CPSession cpChannel = ctx.channel().attr(SESSIONS).get();
                     if (cpChannel != null){
-                        cpChannel.write(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
+                        cpChannel.write(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT),false);
                     }else {
                         ctx.writeAndFlush(mapper.writeValueAsString(HeartBeatMessage.HEARTBEAT));
                     }

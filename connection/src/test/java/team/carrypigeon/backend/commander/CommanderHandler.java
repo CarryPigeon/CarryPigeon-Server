@@ -5,8 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import team.carrypigeon.backend.connectionpool.channel.NettySession;
-import team.carrypigeon.backend.connectionpool.security.CPEncryptionState;
-import team.carrypigeon.backend.connectionpool.security.CPKeyMessage;
+import team.carrypigeon.backend.connectionpool.security.CPECCKeyPack;
 import team.carrypigeon.backend.connectionpool.protocol.encryption.aes.AESUtil;
 
 import static team.carrypigeon.backend.commander.State.SUCCESS;
@@ -26,7 +25,7 @@ public class CommanderHandler extends SimpleChannelInboundHandler<String> {
         System.out.println("接受到消息");
         switch (testClientState.getState()) {
             case WAITE_RECEIVE_KEY:
-                CPKeyMessage cpKeyMessage = objectMapper.readValue(msg, CPKeyMessage.class);
+                CPECCKeyPack cpKeyMessage = objectMapper.readValue(msg, CPECCKeyPack.class);
                 // String s = ECCUtil.eccDecrypt(testClientState.getECCKey(), cpKeyMessage.getKey());
                 // testClientState.setAesKey(s);
                 // 输出验证消息

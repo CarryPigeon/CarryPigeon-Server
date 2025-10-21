@@ -69,7 +69,9 @@ public class AESUtil {
     /**
      * 带关联数据的解密
      */
-    public static String decryptWithAAD(byte[] ciphertext, byte[] nonce, byte[] aad, SecretKey key) throws Exception {
+    public static String decryptWithAAD(byte[] ciphertext, byte[] nonce, byte[] aad, byte[] keyBytes) throws Exception {
+        SecretKey key = new SecretKeySpec(keyBytes, ALGORITHM_AES);
+
         Cipher cipher = Cipher.getInstance(ALGORITHM);
         GCMParameterSpec spec = new GCMParameterSpec(TAG_LENGTH_BIT, nonce);
         cipher.init(Cipher.DECRYPT_MODE, key, spec);

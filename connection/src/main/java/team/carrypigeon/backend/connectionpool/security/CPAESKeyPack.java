@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CPKeyMessage {
+public class CPAESKeyPack {
     private long id;
+    private long sessionId;
     private String key;
 }

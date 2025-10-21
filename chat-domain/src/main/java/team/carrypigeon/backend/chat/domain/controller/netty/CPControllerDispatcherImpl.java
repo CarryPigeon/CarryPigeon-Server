@@ -34,13 +34,13 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     }
 
     @Override
-    public CPResponse process(String msg, CPSession channel) {
+    public CPResponse process(String msg, CPSession session) {
         try {
             CPPacket route = mapper.readValue(msg, CPPacket.class);
             if (!controllers.containsKey(route.getRoute())){
                 return new CPResponse(route.getId(),404,mapper.convertValue(Map.of("msg","no such route"), JsonNode.class));
             }
-            CPResponse response = controllers.get(route.getRoute()).process(route.getData(),channel);
+            CPResponse response = controllers.get(route.getRoute()).process(route.getData(), session);
             if (response == null) return null;
             response.setId(route.getId());
             return  response;
@@ -52,8 +52,8 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     }
 
     @Override
-    public void channelInactive(CPSession cpChannel) {
-        cpUserManager.removeChannel(cpChannel);
+    public void channelInactive(CPSession session) {
+        cpUserManager.removeChannel(session);
 
     }
 }
