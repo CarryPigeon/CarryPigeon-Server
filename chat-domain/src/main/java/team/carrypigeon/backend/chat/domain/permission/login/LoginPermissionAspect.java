@@ -6,7 +6,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.bo.domain.CPSession;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 @Aspect
@@ -18,10 +18,10 @@ public class LoginPermissionAspect {
     @Around("@annotation(team.carrypigeon.backend.chat.domain.permission.login.LoginPermission)")
     public CPResponse loginPermission(ProceedingJoinPoint joinPoint) {
         Object arg = joinPoint.getArgs()[1];
-        if (!(arg instanceof CPSession channel)){
+        if (!(arg instanceof CPSession session)){
             throw new RuntimeException("loginPermission: arg is not CPChannel");
         }
-        if (channel.getCPUserBO()==null){
+        if (session.getCPUserBO()==null){
             return new CPResponse(CPResponse.ERROR_RESPONSE.getId(),401,null);
         }
         return (CPResponse) joinPoint.proceed();

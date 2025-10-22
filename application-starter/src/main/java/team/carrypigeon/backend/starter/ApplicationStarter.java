@@ -30,8 +30,6 @@ public class ApplicationStarter {
         ApplicationContext context = new SpringApplication(ApplicationStarter.class).run(args);
         // 输出日志，通知springboot初始化完成
         log.info("spring context ready.");
-        // 启动连接池
-        context.getBean(ConnectionStarter.class).run(context.getBean(ConnectionConfig.class));
     }
 
 }

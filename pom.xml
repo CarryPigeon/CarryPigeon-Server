@@ -19,7 +19,7 @@
         <module>common</module>
         <module>connection</module>
         <module>chat-domain</module>
-        <module>chat-service</module>
+        <module>external-service</module>
         <module>application-starter</module>
         <module>distribution</module>
     </modules>

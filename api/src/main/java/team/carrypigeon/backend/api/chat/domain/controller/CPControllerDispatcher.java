@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
-import team.carrypigeon.backend.api.bo.domain.CPSession;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 
 /**

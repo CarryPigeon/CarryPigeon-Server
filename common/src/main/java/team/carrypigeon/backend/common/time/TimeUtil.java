@@ -14,11 +14,11 @@ public class TimeUtil {
         return LocalDateTime.now();
     }
 
-    public static long toMillis(LocalDateTime localDateTime){
+    public static long LocalDateTimeToMillis(LocalDateTime localDateTime){
         return localDateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
-    public static LocalDateTime toLocalDateTime(long millis){
+    public static LocalDateTime MillisToLocalDateTime(long millis){
         return LocalDateTimeUtil.of(millis);
     }
 }

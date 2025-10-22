@@ -4,12 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import team.carrypigeon.backend.connectionpool.channel.NettySession;
-import team.carrypigeon.backend.connectionpool.security.CPECCKeyPack;
-import team.carrypigeon.backend.connectionpool.protocol.encryption.aes.AESUtil;
+import team.carrypigeon.backend.connection.session.NettySession;
+import team.carrypigeon.backend.connection.security.CPECCKeyPack;
+import team.carrypigeon.backend.connection.protocol.encryption.aes.AESUtil;
 
 import static team.carrypigeon.backend.commander.State.SUCCESS;
-import static team.carrypigeon.backend.connectionpool.attribute.ConnectionAttributes.SESSIONS;
+import static team.carrypigeon.backend.connection.attribute.ConnectionAttributes.SESSIONS;
 
 public class CommanderHandler extends SimpleChannelInboundHandler<String> {
 

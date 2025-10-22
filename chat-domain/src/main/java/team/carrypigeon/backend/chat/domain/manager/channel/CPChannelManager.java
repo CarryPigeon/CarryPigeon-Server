@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.manager.channel;
 
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.bo.domain.CPSession;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,17 +21,17 @@ public class CPChannelManager {
         return map.computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>());
     }
 
-    public void removeChannel(CPSession channel) {
-        Long userId = channel.getCPUserBO().getId();
+    public void removeChannel(CPSession session) {
+        Long userId = 0L; //TODO
         List<CPSession> channels = map.get(userId);
         if (channels != null) {
-            channels.remove(channel);
+            channels.remove(session);
         }
     }
 
-    public void addChannel(CPSession channel) {
+    public void addChannel(CPSession session) {
         // CopyOnWriteArrayList的add操作是线程安全的
-        getChannels(channel.getCPUserBO().getId()).add(channel);
+        getChannels(0L).add(session); //TODO
     }
 
     // 批量操作方法

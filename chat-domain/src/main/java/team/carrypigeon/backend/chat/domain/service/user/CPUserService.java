@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.service.user;
 
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.bo.domain.CPSession;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
 import team.carrypigeon.backend.api.connection.vo.CPResponse;
 import team.carrypigeon.backend.api.dao.user.CPUserDAO;
@@ -26,7 +26,7 @@ public class CPUserService {
         if (login == null) return CPResponse.ERROR_RESPONSE.copy();
         // 登录成功
         CPUserBO userBO = userDAO.getById(uid);
-        channel.setCPUserBO(userBO);
+        // channel.setCPUserBO(userBO);
         userManager.addChannel(channel);
         return CPResponse.SUCCESS_RESPONSE.copy().setData(JsonNodeUtil.createJsonNode("token",login));
     }

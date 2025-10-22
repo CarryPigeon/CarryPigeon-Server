@@ -13,11 +13,11 @@
             <useAllReactorProjects>true</useAllReactorProjects>
             <includes>
                 <include>CarryPigeon:api</include>
-                <include>CarryPigeon:Common</include>
+                <include>CarryPigeon:common</include>
                 <include>CarryPigeon:dao</include>
-                <include>CarryPigeon:ChatDomain</include>
+                <include>CarryPigeon:chat-domain</include>
                 <include>CarryPigeon:connection</include>
-                <include>CarryPigeon:ChatService</include>
+                <include>CarryPigeon:external-service</include>
             </includes>
             <binaries>
                 <outputDirectory>modules</outputDirectory>

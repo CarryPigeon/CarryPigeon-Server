@@ -7,7 +7,7 @@ import team.carrypigeon.backend.api.chat.domain.structure.CPChatStructure;
 import team.carrypigeon.backend.api.connection.vo.CPPacket;
 import team.carrypigeon.backend.api.dao.channel.CPChatStructureTypeDAO;
 import team.carrypigeon.backend.api.dao.message.CPMessageDAO;
-import team.carrypigeon.backend.api.bo.domain.CPSession;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageBO;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessageDomain;
