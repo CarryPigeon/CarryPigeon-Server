@@ -15,10 +15,16 @@ public interface ChannelDao {
     /**
      * 获取所有固有通道：owner=-1
      * */
-    CPChannel[] getAll();
+    CPChannel[] getAllFixed();
     /**
      * 保存通道数据（已存在则为更新，不存在则为插入）
      * @param channel 通道数据
      * */
     boolean save(CPChannel channel);
+
+    /**
+     * 删除通道数据
+     * @param cpChannel 通道数据
+     * */
+    boolean delete(CPChannel cpChannel);
 }

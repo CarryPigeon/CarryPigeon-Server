@@ -22,7 +22,7 @@ public class ChannelMemberPO {
     private Long cid;
     // 群昵称
     private String name;
-    // 权限，0为普通成员，1为管理员，2为被踢出
+    // 权限，0为普通成员，1为管理员
     private int authority;
     // 加入时间
     private LocalDateTime joinTime;

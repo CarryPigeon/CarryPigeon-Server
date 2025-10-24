@@ -3,12 +3,14 @@ package team.carrypigeon.backend.api.bo.domain.channel.application;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 public class CPChannelApplication {
     // 申请表id
     private Long id;
@@ -16,8 +18,6 @@ public class CPChannelApplication {
     private Long uid;
     // 申请通道id
     private Long cid;
-    // 处理人id
-    private Long aid;
     // 申请状态，0为待处理，1为通过，2为拒绝
     private CPChannelApplicationStateEnum state;
     // 申请信息留言

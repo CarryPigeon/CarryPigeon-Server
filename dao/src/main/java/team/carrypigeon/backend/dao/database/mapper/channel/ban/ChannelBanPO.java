@@ -22,8 +22,6 @@ public class ChannelBanPO {
     private Long uid;
     // 禁言的管理员id
     private Long aid;
-    // 禁言状态，1为有效，2为失效
-    private int state;
     // 禁言时长，单位为秒
     private int duration;
     // 创建时间

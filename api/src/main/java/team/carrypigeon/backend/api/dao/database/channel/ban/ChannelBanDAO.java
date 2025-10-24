@@ -11,13 +11,22 @@ public interface ChannelBanDAO {
     /**
      * 获取通道的封禁数据列表
      * @param channelId 通道id
-     * @param page 页码
-     * @param pageSize 每页数量
      * */
-    CPChannelBan[] getByChannelId(long channelId, int page, int pageSize);
+    CPChannelBan[] getByChannelId(long channelId);
+    /**
+     * 获取用户在通道的封禁数据列表
+     * @param channelId 通道id
+     * @param userId 用户id
+     * */
+    CPChannelBan getByChannelIdAndUserId(long channelId, long userId);
     /**
      * 保存封禁数据（有则为更新，无则为插入）
      * @param channelBan 封禁数据
      * */
     boolean save(CPChannelBan channelBan);
+    /**
+     * 删除封禁数据
+     * @param channelBan 封禁数据
+     * */
+    boolean delete(CPChannelBan channelBan);
 }

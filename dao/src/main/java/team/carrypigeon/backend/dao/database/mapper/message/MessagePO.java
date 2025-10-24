@@ -27,8 +27,6 @@ public class MessagePO {
     private String domain;
     // 消息数据
     private String data;
-    // 消息状态
-    private int state;
     // 发送时间
     private LocalDateTime sendTime;
 }

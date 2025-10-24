@@ -20,8 +20,6 @@ public class ChannelApplicationPO {
     private Long uid;
     // 申请通道id
     private Long cid;
-    // 处理人id
-    private Long aid;
     // 申请状态，0为待处理，1为通过，2为拒绝
     private int state;
     // 申请信息留言

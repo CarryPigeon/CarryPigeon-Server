@@ -7,8 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public enum CPChannelMemberAuthorityEnum {
     MEMBER(0),
-    ADMIN(1),
-    KICKED(2);
+    ADMIN(1),;
     private final int authority;
     CPChannelMemberAuthorityEnum(int authority) {
         this.authority = authority;
@@ -18,7 +17,6 @@ public enum CPChannelMemberAuthorityEnum {
         return switch (authority) {
             case 0 -> MEMBER;
             case 1 -> ADMIN;
-            case 2 -> KICKED;
             default -> throw new IllegalArgumentException("Channel member authority parse:Invalid authority: " + authority);
         };
     }

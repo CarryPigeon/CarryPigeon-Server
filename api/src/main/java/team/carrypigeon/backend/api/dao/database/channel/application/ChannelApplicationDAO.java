@@ -12,6 +12,12 @@ public interface ChannelApplicationDAO {
      * @param id 申请信息id
      * */
     CPChannelApplication getById(long id);
+    /**
+     * 通过用户id获取用户申请信息
+     * @param uid 用户id
+     * @param cid 通道id
+     * */
+    CPChannelApplication getByUidAndCid(long uid, long cid);
 
     /**
      * 获取通道申请数据

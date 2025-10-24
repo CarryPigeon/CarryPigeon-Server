@@ -16,7 +16,7 @@ public enum CPChannelApplicationStateEnum {
             case 0 -> PENDING;
             case 1 -> APPROVED;
             case 2 -> REJECTED;
-            default -> throw new IllegalArgumentException("Channel application state parse:Invalid value: " + value);
+            default -> null;
         };
     }
 

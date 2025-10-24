@@ -13,22 +13,29 @@ public interface ChannelMemberDao {
     CPChannelMember getById(long id);
     /**
      * 获取通道里的所有成员信息
-     * @param channelId 通道id
+     * @param cid 通道id
      * */
-    CPChannelMember[] getAllMember(long channelId);
+    CPChannelMember[] getAllMember(long cid);
     /**
      * 获取用户的成员信息，多条消息则获取最新的一条
-     * @param userId 用户id
-     * @param channelId 通道id
+     * @param uid 用户id
+     * @param cid 通道id
      * */
-    CPChannelMember getMember(long userId, long channelId);
+    CPChannelMember getMember(long uid, long cid);
     /**
      * 获取用户的所有成员信息
-     * @param userId 用户id
+     * @param uid 用户id
      * */
-    CPChannelMember[] getAllMemberByUserId(long userId);
+    CPChannelMember[] getAllMemberByUserId(long uid);
     /**
      * 保存成员信息表
+     * @param channelMember 成员信息表
      * */
     boolean save(CPChannelMember channelMember);
+
+    /**
+     * 删除成员信息表
+     * @param cpChannelMember 成员信息表
+     * */
+    boolean delete(CPChannelMember cpChannelMember);
 }

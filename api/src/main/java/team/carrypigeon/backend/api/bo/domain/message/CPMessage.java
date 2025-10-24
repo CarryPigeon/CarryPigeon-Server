@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBanStateEnum;
 
 import java.time.LocalDateTime;
 
@@ -25,8 +24,6 @@ public class CPMessage {
     private CPMessageDomain domain;
     // 消息数据
     private JsonNode data;
-    // 消息状态
-    private CPChannelBanStateEnum state;
     // 发送时间
     private LocalDateTime sendTime;
 }
