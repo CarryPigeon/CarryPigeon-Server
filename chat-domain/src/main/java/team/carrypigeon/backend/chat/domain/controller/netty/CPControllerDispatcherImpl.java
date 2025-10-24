@@ -8,9 +8,10 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.vo.CPPacket;
-import team.carrypigeon.backend.chat.domain.manager.channel.CPChannelManager;
-import team.carrypigeon.backend.api.connection.vo.CPResponse;
+import team.carrypigeon.backend.api.connection.protocol.CPPacket;
+import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 import java.util.Map;
 
@@ -25,12 +26,12 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
 
     private final Map<String, CPController> controllers;
 
-    private final CPChannelManager cpUserManager;
+    private final CPSessionCenterService cpSessionCenterService;
 
-    public CPControllerDispatcherImpl(ObjectMapper mapper, Map<String, CPController> controllers, CPChannelManager cpUserManager) {
+    public CPControllerDispatcherImpl(ObjectMapper mapper, Map<String, CPController> controllers, CPSessionCenterService cpSessionCenterService) {
         this.mapper = mapper;
         this.controllers = controllers;
-        this.cpUserManager = cpUserManager;
+        this.cpSessionCenterService = cpSessionCenterService;
     }
 
     @Override
@@ -53,7 +54,9 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
 
     @Override
     public void channelInactive(CPSession session) {
-        cpUserManager.removeChannel(session);
-
+        Long attributeValue = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
+        if (attributeValue != null){
+            cpSessionCenterService.removeSession(attributeValue,session);
+        }
     }
 }

@@ -1,10 +1,19 @@
 package team.carrypigeon.backend.api.bo.domain.user;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+
 import java.time.LocalDateTime;
 
 /**
  * CarryPigeon用户实体类，主要在chat-domain模块中作为用户信息
  * */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Accessors(chain = true)
 public class CPUser {
     // 用户唯一id
     private long id;

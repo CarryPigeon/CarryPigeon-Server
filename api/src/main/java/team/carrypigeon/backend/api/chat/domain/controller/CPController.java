@@ -2,7 +2,7 @@ package team.carrypigeon.backend.api.chat.domain.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.vo.CPResponse;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 
 /**
  * CarryPigeon Controller,用于处理一个客户端请求

@@ -11,7 +11,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.vo.CPResponse;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
 import team.carrypigeon.backend.connection.session.NettySession;
 import team.carrypigeon.backend.connection.protocol.encryption.ecc.ECCUtil;

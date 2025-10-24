@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.vo.CPResponse;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 
 /**
  * 客户端发送信息分发器，用于将用户的数据分发到每个具体的controller中

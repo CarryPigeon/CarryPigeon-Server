@@ -3,11 +3,8 @@ package team.carrypigeon.backend.chat.domain.service.file;
 import io.minio.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.api.bo.domain.file.CPFileBO;
 
 import java.io.InputStream;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
 
 @Service
 public class FileService {
@@ -20,10 +17,13 @@ public class FileService {
     public FileService(MinioClient minioClient) {
         this.minioClient = minioClient;
     }
+/*
 
-    /**
+    */
+/**
      * 流式文件上传
-     * */
+     * *//*
+
     public boolean uploadFile(InputStream steam, CPFileBO file) throws Exception {
         if (file == null || file.getName().isEmpty()) {
             throw new IllegalArgumentException("对象名称不能为空");
@@ -59,6 +59,7 @@ public class FileService {
             return true;
         }
     }
+*/
 
     /**
      * 下载文件

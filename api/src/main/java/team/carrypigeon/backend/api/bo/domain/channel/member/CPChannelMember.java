@@ -3,12 +3,14 @@ package team.carrypigeon.backend.api.bo.domain.channel.member;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 public class CPChannelMember {
     // 成员表id
     private long id;

@@ -19,6 +19,10 @@ public class CPMessageDomain {
     }
 
     public boolean isCore() {
-        return domain.equals("core");
+        return domain.equals("Core");
+    }
+
+    public String toPOData(){
+        return domain+":"+type;
     }
 }

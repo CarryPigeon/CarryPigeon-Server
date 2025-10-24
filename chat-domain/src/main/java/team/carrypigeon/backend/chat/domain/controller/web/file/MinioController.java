@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileBO;
-import team.carrypigeon.backend.api.dao.file.CPFileDAO;
+import team.carrypigeon.backend.api.dao.database.file.CPFileDAO;
 import team.carrypigeon.backend.chat.domain.manager.file.CPFileTokenData;
 import team.carrypigeon.backend.chat.domain.manager.file.CPFileTokenManager;
 import team.carrypigeon.backend.chat.domain.service.file.FileService;

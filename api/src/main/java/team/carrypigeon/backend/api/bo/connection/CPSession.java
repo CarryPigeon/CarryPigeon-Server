@@ -1,16 +1,10 @@
 package team.carrypigeon.backend.api.bo.connection;
 
-import team.carrypigeon.backend.api.bo.domain.user.CPUserBO;
-
 /**
  * CarryPigeon通道包装类，用于包装通道用于不同模块之间的解耦
  * @author midreamsheep
  * */
 public interface CPSession {
-    // TODO 用于规避报错
-    default CPUserBO getCPUserBO(){
-        return null;
-    }
     /**
      * 通过通道发送消息
      * @param msg 要发送的消息,为json格式

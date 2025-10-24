@@ -3,7 +3,7 @@ package team.carrypigeon.backend.dao.database.impl.file;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileBO;
-import team.carrypigeon.backend.api.dao.file.CPFileDAO;
+import team.carrypigeon.backend.api.dao.database.file.CPFileDAO;
 import team.carrypigeon.backend.dao.database.mapper.file.FileMapper;
 import team.carrypigeon.backend.dao.database.mapper.file.FilePO;
 
