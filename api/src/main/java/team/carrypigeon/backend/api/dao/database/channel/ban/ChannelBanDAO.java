@@ -15,10 +15,10 @@ public interface ChannelBanDAO {
     CPChannelBan[] getByChannelId(long channelId);
     /**
      * 获取用户在通道的封禁数据列表
-     * @param channelId 通道id
-     * @param userId 用户id
+     * @param cid 通道id
+     * @param uid 用户id
      * */
-    CPChannelBan getByChannelIdAndUserId(long channelId, long userId);
+    CPChannelBan getByChannelIdAndUserId(long uid,long cid);
     /**
      * 保存封禁数据（有则为更新，无则为插入）
      * @param channelBan 封禁数据

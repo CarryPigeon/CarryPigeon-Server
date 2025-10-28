@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 public class CPMessage {
     // 消息id
     private long id;
@@ -21,7 +23,7 @@ public class CPMessage {
     // 通道id
     private long cid;
     // 消息域，格式为 Domain:SubDomain
-    private CPMessageDomain domain;
+    private String domain;
     // 消息数据
     private JsonNode data;
     // 发送时间

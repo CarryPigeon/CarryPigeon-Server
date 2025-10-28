@@ -43,7 +43,7 @@ public class CPChannelCreateBanController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 校验参数
         CPChannelDeleteBanVO cpChannelCreateBanVO;
         try {
@@ -58,7 +58,7 @@ public class CPChannelCreateBanController implements CPController {
         }
 
         // 判断禁言表是否存在
-        CPChannelBan byChannelIdAndUserId = channelBanDAO.getByChannelIdAndUserId(cpChannelCreateBanVO.getCid(), cpChannelCreateBanVO.getUid());
+        CPChannelBan byChannelIdAndUserId = channelBanDAO.getByChannelIdAndUserId( cpChannelCreateBanVO.getUid(),cpChannelCreateBanVO.getCid());
         if (byChannelIdAndUserId == null) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("this user is not banned");
         }

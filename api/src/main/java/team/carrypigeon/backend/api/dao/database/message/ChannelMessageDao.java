@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
  * 消息dao接口
  * @author midreamsheep
  * */
-public interface MessageDao {
+public interface ChannelMessageDao {
     /**
      * 通过id获取消息
      * @param id 消息id
@@ -22,10 +22,22 @@ public interface MessageDao {
      * @param count 获取数量，数量范围为[1,100]
      * */
     CPMessage[] getBefore(long cid, LocalDateTime time, int count);
+    /**
+     * 获取指定通道指定时间之后条**有效**消息的数量 <br/>
+     * @param cid 通道id
+     * @param time 时间
+     * */
+    int getAfterCount(long cid,long uid, LocalDateTime time);
 
     /**
      * 保存消息（已存在则为更新，不存在则为插入）
      * @param message 消息
      * */
     boolean save(CPMessage message);
+
+    /**
+     * 删除消息
+     * @param message 消息
+     * */
+    boolean delete(CPMessage message);
 }

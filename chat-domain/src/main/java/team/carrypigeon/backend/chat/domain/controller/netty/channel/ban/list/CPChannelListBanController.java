@@ -39,7 +39,7 @@ public class CPChannelListBanController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 解析数据
         CPChannelListBanVO cpChannelListBanVO;
         try {

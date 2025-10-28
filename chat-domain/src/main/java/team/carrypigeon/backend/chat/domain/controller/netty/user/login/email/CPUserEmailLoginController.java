@@ -39,7 +39,7 @@ public class CPUserEmailLoginController implements CPController {
     }
 
     @Override
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 数据解析
         CPUserEmailLoginVO cpUserEmailLoginVO;
         try {

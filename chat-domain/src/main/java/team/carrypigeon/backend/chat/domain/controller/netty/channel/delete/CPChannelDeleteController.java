@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
@@ -17,8 +16,6 @@ import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
-import team.carrypigeon.backend.common.id.IdUtil;
-import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -51,7 +48,7 @@ public class CPChannelDeleteController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 获取参数
         CPChannelDeleteVO vo;
         try {

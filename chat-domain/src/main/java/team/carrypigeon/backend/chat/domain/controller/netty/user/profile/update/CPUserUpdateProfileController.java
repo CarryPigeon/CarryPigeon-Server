@@ -43,7 +43,7 @@ public class CPUserUpdateProfileController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 信息解析
         CPUserUpdateProfileVO cpUserUpdateProfileVO;
         try {

@@ -18,7 +18,7 @@ public class LoginPermissionAspect {
     @SneakyThrows
     @Around("@annotation(team.carrypigeon.backend.chat.domain.permission.login.LoginPermission)")
     public CPResponse loginPermission(ProceedingJoinPoint joinPoint) {
-        Object arg = joinPoint.getArgs()[1];
+        Object arg = joinPoint.getArgs()[0];
         if (!(arg instanceof CPSession session)){
             throw new RuntimeException("loginPermission: arg is not CPSession");
         }

@@ -24,4 +24,8 @@ public class CPChannelBan {
     private int duration;
     // 创建时间
     private LocalDateTime createTime;
+
+    public boolean isValid() {
+        return !LocalDateTime.now().isAfter(createTime.plusSeconds(duration));
+    }
 }

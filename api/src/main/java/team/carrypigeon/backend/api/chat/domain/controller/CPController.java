@@ -11,8 +11,8 @@ public interface CPController {
     /**
      * 处理方法
      *
-     * @param data    具体的请求携带的数据
      * @param session 聊天会话，包含上下文信息和数据通道
+     * @param data    具体的请求携带的数据
      */
-    CPResponse process(JsonNode data, CPSession session);
+    CPResponse process(CPSession session, JsonNode data);
 }

@@ -22,7 +22,7 @@ public class CPControllerPostProcessor implements BeanPostProcessor {
         CPControllerTag annotation = bean.getClass().getAnnotation(CPControllerTag.class);
         if (annotation != null&& bean instanceof CPController controller) {
             userMap.put(annotation.value(), controller);
-            log.debug("注册请求controller：{}，对应的处理类为{}",annotation.value(),bean.getClass().getName());
+            log.debug("注册请求controller:{},对应的处理类为{}",annotation.value(),bean.getClass().getName());
         }
         return bean;
     }

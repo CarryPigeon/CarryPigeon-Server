@@ -41,7 +41,7 @@ public class CPChannelCreateController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         //TODO 读取配置文件查看是否允许创建私有通道
 
         // 获取参数
@@ -51,7 +51,6 @@ public class CPChannelCreateController implements CPController {
         } catch (JsonProcessingException e) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
         }
-
         // 创建通道
         CPChannel cpChannel = new CPChannel();
         cpChannel.setId(IdUtil.generateId())

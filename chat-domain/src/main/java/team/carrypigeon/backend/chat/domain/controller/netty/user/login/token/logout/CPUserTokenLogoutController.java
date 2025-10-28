@@ -30,7 +30,7 @@ public class CPUserTokenLogoutController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 解析参数
         CPUserTokenLogoutVO cpUserTokenLogoutVO;
         try {

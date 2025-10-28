@@ -41,7 +41,7 @@ public class CPUserRegisterController implements CPController {
     }
 
     @Override
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 参数校验
         CPUserRegisterVO vo;
         try {

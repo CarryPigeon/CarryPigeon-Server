@@ -45,7 +45,7 @@ public class CPChannelCreateBanController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 校验参数
         CPChannelCreateBanVO cpChannelCreateBanVO;
         try {

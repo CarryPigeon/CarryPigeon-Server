@@ -31,7 +31,7 @@ public class CPUserGetProfileController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(JsonNode data, CPSession session) {
+    public CPResponse process(CPSession session, JsonNode data) {
         // 参数解析
         CPUserGetProfileVO cpUserGetProfileVO;
         try {

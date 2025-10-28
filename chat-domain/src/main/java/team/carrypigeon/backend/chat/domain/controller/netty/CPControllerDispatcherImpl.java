@@ -41,7 +41,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             if (!controllers.containsKey(route.getRoute())){
                 return new CPResponse(route.getId(),404,mapper.convertValue(Map.of("msg","no such route"), JsonNode.class));
             }
-            CPResponse response = controllers.get(route.getRoute()).process(route.getData(), session);
+            CPResponse response = controllers.get(route.getRoute()).process(session, route.getData());
             if (response == null) return null;
             response.setId(route.getId());
             return  response;
