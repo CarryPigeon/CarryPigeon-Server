@@ -60,6 +60,10 @@
             <groupId>CarryPigeon</groupId>
             <artifactId>chat-domain</artifactId>
         </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>external-service</artifactId>
+        </dependency>
 
     </dependencies>
 

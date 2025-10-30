@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class CPChannelListApplicationResult {
     private int count;
     private CPChannelListApplicationResultItem[] applications;

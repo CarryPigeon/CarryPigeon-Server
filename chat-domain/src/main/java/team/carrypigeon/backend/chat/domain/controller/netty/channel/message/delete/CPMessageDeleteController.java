@@ -35,8 +35,8 @@ public class CPMessageDeleteController extends CPControllerAbstract<CPMessageDel
     private final ChannelMessageDao channelMessageDao;
     private final CPNotificationService notificationService;
 
-    public CPMessageDeleteController(ObjectMapper objectMapper, Class<CPMessageDeleteVO> clazz, ChannelMemberDao channelMemberDao, ChannelMessageDao channelMessageDao, CPNotificationService notificationService) {
-        super(objectMapper, clazz);
+    public CPMessageDeleteController(ObjectMapper objectMapper, ChannelMemberDao channelMemberDao, ChannelMessageDao channelMessageDao, CPNotificationService notificationService) {
+        super(objectMapper, CPMessageDeleteVO.class);
         this.channelMemberDao = channelMemberDao;
         this.channelMessageDao = channelMessageDao;
         this.notificationService = notificationService;
@@ -79,7 +79,7 @@ public class CPMessageDeleteController extends CPControllerAbstract<CPMessageDel
     }
 
     @Override
-    protected void notify(CPSession session, CPMessageDeleteVO vo, Map<String, Object> context) {
+    protected void notify(CPSession session, CPMessageDeleteVO data, Map<String, Object> context) {
         CPMessage message = (CPMessage)context.get("message");
         CPNotification notification = new CPNotification();
         notification.setRoute("/core/message");

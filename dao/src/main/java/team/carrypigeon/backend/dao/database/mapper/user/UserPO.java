@@ -5,6 +5,9 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+import team.carrypigeon.backend.api.bo.domain.user.CPUser;
+import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 
 import java.time.LocalDateTime;
 
@@ -15,6 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Accessors(chain = true)
 @TableName("user")
 public class UserPO {
     // 用户唯一id
@@ -34,4 +38,29 @@ public class UserPO {
     private LocalDateTime birthday;
     // 用户的注册时间
     private LocalDateTime registerTime;
+
+    public CPUser toBo() {
+        return new CPUser()
+                .setId(id)
+                .setUsername(username)
+                .setAvatar(avatar)
+                .setEmail(email)
+                .setSex(CPUserSexEnum.valueOf(sex))
+                .setBrief(brief)
+                .setBirthday(birthday)
+                .setRegisterTime(registerTime);
+    }
+
+    public static UserPO fromBo(CPUser user) {
+        return new UserPO()
+                .setId(user.getId())
+                .setUsername(user.getUsername())
+                .setAvatar(user.getAvatar())
+                .setEmail(user.getEmail())
+                .setSex(user.getSex().getValue())
+                .setBrief(user.getBrief())
+                .setBirthday(user.getBirthday())
+                .setRegisterTime(user.getRegisterTime());
+    }
+
 }

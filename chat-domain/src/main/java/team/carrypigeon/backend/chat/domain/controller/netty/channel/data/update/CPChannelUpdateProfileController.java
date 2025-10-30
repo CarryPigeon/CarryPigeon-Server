@@ -6,6 +6,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
@@ -16,6 +17,7 @@ import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -26,15 +28,14 @@ import java.util.Set;
  * @author midreamsheep
  * */
 @CPControllerTag("/core/channel/profile/update")
-public class CPChannelUpdateProfileController implements CPController {
+public class CPChannelUpdateProfileController extends CPControllerAbstract<CPChannelUpdateProfileVO> {
 
-    private final ObjectMapper objectMapper;
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
     private final CPNotificationService cpNotificationService;
 
     public CPChannelUpdateProfileController(ObjectMapper objectMapper, ChannelDao channelDao, ChannelMemberDao channelMemberDao, CPNotificationService cpNotificationService) {
-        this.objectMapper = objectMapper;
+        super(objectMapper, CPChannelUpdateProfileVO.class);
         this.channelDao = channelDao;
         this.channelMemberDao = channelMemberDao;
         this.cpNotificationService = cpNotificationService;
@@ -43,46 +44,52 @@ public class CPChannelUpdateProfileController implements CPController {
     @Override
     @LoginPermission
     public CPResponse process(CPSession session, JsonNode data) {
-        // 解析数据
-        CPChannelUpdateProfileVO cpChannelUpdateProfileVO;
-        try {
-            cpChannelUpdateProfileVO = objectMapper.treeToValue(data, CPChannelUpdateProfileVO.class);
-        } catch (Exception e) {
-            return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
-        }
+
+
+    }
+
+    @Override
+    @LoginPermission
+    protected CPResponse check(CPSession session, CPChannelUpdateProfileVO data, Map<String, Object> context) {
         // 获取通道
-        CPChannel channel = channelDao.getById(cpChannelUpdateProfileVO.getCid());
+        CPChannel channel = channelDao.getById(data.getCid());
         if (channel == null) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("channel not found");
         }
-
         // 权限校验
         if(channel.getOwner() != session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class)){
             return CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("you are not the owner of this channel");
         }
+        context.put("channel", channel);
+        return null;
+    }
 
+    @Override
+    protected CPResponse process0(CPSession session, CPChannelUpdateProfileVO data, Map<String, Object> context) {
+        CPChannel channel = (CPChannel)context.get("channel");
         // 更新数据
-        channel.setName(cpChannelUpdateProfileVO.getName())
-                .setBrief(cpChannelUpdateProfileVO.getBrief())
-                .setAvatar(cpChannelUpdateProfileVO.getAvatar())
-                .setOwner(cpChannelUpdateProfileVO.getOwner());
+        channel.setName(data.getName())
+                .setBrief(data.getBrief())
+                .setAvatar(data.getAvatar())
+                .setOwner(data.getOwner());
         if(!channelDao.save(channel)){
             return CPResponse.ERROR_RESPONSE.copy().setTextData("error saving channel");
         }
 
+        // 返回成功
+        return CPResponse.SUCCESS_RESPONSE.copy();
+    }
+
+    @Override
+    protected void notify(CPSession session, CPChannelUpdateProfileVO data, Map<String, Object> context) {
         // 通知所有群成员
         Set<Long> uids = new HashSet<>();
-        for (CPChannelMember cpChannelMember : channelMemberDao.getAllMember(cpChannelUpdateProfileVO.getCid())) {
-            if (cpChannelMember.getUid() != channel.getOwner()){
-                uids.add(cpChannelMember.getUid());
-            }
+        for (CPChannelMember cpChannelMember : channelMemberDao.getAllMember(data.getCid())) {
+            uids.add(cpChannelMember.getUid());
         }
-
+        uids.remove(data.getOwner());
         // 发送通知
         CPNotification notification = new CPNotification().setRoute("/core/channel/profile/get");
         cpNotificationService.sendNotification(uids, notification);
-
-        // 返回成功
-        return CPResponse.SUCCESS_RESPONSE.copy();
     }
 }

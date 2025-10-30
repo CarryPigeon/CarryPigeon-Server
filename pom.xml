@@ -105,6 +105,11 @@
                 <artifactId>application-starter</artifactId>
                 <version>1.0.0</version>
             </dependency>
+            <dependency>
+                <groupId>CarryPigeon</groupId>
+                <artifactId>external-service</artifactId>
+                <version>1.0.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <build>

@@ -5,12 +5,15 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
+import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@Accessors(chain = true)
 @TableName("channel")
 public class ChannelPO {
     // 通道id
@@ -26,4 +29,25 @@ public class ChannelPO {
     private Long avatar;
     // 通道创建时间
     private LocalDateTime createTime;
+
+    public CPChannel toBo() {
+        return new CPChannel()
+                .setId(id)
+                .setName(name)
+                .setOwner(owner)
+                .setBrief(brief)
+                .setAvatar(avatar)
+                .setCreateTime(createTime);
+    }
+
+    public static ChannelPO fromBo(CPChannel cpChannel) {
+        return new ChannelPO()
+                .setId(cpChannel.getId())
+                .setName(cpChannel.getName())
+                .setOwner(cpChannel.getOwner())
+                .setBrief(cpChannel.getBrief())
+                .setAvatar(cpChannel.getAvatar())
+                .setCreateTime(cpChannel.getCreateTime());
+    }
 }
+

@@ -30,8 +30,8 @@ public class CPMessageListController extends CPControllerAbstract<CPMessageListV
     private final ChannelMessageDao channelMessageDao;
     private final ChannelMemberDao channelMemberDao;
 
-    public CPMessageListController(ObjectMapper objectMapper, Class<CPMessageListVO> clazz, ChannelMessageDao channelMessageDao, ChannelMemberDao channelMemberDao) {
-        super(objectMapper, clazz);
+    public CPMessageListController(ObjectMapper objectMapper, ChannelMessageDao channelMessageDao, ChannelMemberDao channelMemberDao) {
+        super(objectMapper, CPMessageListVO.class);
         this.channelMessageDao = channelMessageDao;
         this.channelMemberDao = channelMemberDao;
     }

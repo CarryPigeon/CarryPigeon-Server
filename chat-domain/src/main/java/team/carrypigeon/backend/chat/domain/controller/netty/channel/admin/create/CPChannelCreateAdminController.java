@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
@@ -17,6 +18,7 @@ import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -27,15 +29,14 @@ import java.util.Set;
  * @author midreamsheep
  * */
 @CPControllerTag("/core/channel/admin/create")
-public class CPChannelCreateAdminController implements CPController {
+public class CPChannelCreateAdminController extends CPControllerAbstract<CPChannelCreateAdminVO> {
 
-    private final ObjectMapper objectMapper;
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
     private final CPNotificationService cpNotificationService;
 
     public CPChannelCreateAdminController(ObjectMapper objectMapper, ChannelDao channelDao, ChannelMemberDao channelMemberDao, CPNotificationService cpNotificationService) {
-        this.objectMapper = objectMapper;
+        super(objectMapper,CPChannelCreateAdminVO.class);
         this.channelDao = channelDao;
         this.channelMemberDao = channelMemberDao;
         this.cpNotificationService = cpNotificationService;
@@ -43,17 +44,9 @@ public class CPChannelCreateAdminController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(CPSession session, JsonNode data) {
-        // 解析参数
-        CPChannelCreateAdminVO cpChannelCreateAdminVO;
-        try {
-            cpChannelCreateAdminVO = objectMapper.treeToValue(data, CPChannelCreateAdminVO.class);
-        } catch (Exception e) {
-            return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
-        }
-
+    protected CPResponse check(CPSession session, CPChannelCreateAdminVO data, Map<String, Object> context) {
         // 获取频道
-        CPChannel cpChannel = channelDao.getById(cpChannelCreateAdminVO.getCid());
+        CPChannel cpChannel = channelDao.getById(data.getCid());
         if (cpChannel == null) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("channel not found");
         }
@@ -64,17 +57,30 @@ public class CPChannelCreateAdminController implements CPController {
         }
 
         // 获取用户
-        CPChannelMember member = channelMemberDao.getMember(cpChannelCreateAdminVO.getUid(), cpChannelCreateAdminVO.getCid());
+        CPChannelMember member = channelMemberDao.getMember(data.getUid(), data.getCid());
         if (member == null) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("user not found");
         }
 
+        context.put("member", member);
+        context.put("cpChannel", cpChannel);
+        return null;
+    }
+
+    @Override
+    protected CPResponse process0(CPSession session, CPChannelCreateAdminVO data, Map<String, Object> context) {
+        CPChannelMember member = (CPChannelMember) context.get("member");
         // 创建管理员
         member.setAuthority(CPChannelMemberAuthorityEnum.ADMIN);
         if (!channelMemberDao.save(member)) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("error saving member");
         }
+        return CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new CPChannelCreateAdminResult()));
+    }
 
+    @Override
+    protected void notify(CPSession session, CPChannelCreateAdminVO data, Map<String, Object> context) {
+        CPChannel cpChannel = (CPChannel) context.get("cpChannel");
         // 通知所有人
         CPNotification notification = new CPNotification().setRoute("/core/channel/member/list");
         Set<Long> uids = new HashSet<>();
@@ -83,10 +89,6 @@ public class CPChannelCreateAdminController implements CPController {
                 uids.add(cpChannelMember.getUid());
             }
         }
-
         cpNotificationService.sendNotification(uids, notification);
-
-        // 返回结果
-        return CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new CPChannelCreateAdminResult()));
     }
 }

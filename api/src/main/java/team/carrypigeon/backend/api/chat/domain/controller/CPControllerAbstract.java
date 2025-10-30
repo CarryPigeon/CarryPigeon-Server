@@ -80,10 +80,10 @@ public abstract class CPControllerAbstract<T> implements CPController{
      * 用于处理后的通知处理，用于对监听相关数据状态的会话进行通知操作<br/>
      * 比如发送文本消息或者通道信息发生变动<br/>
      * @param session 用户会话
-     * @param vo 请求数据
+     * @param data 请求数据
      * @param context 上下文数据
      * */
-    protected void notify(CPSession session, T vo, Map<String, Object> context){/*可以留空*/}
+    protected void notify(CPSession session, T data, Map<String, Object> context){/*可以留空*/}
 
 
 }

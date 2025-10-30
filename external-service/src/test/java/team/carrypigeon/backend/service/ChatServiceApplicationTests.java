@@ -1,4 +1,4 @@
-package tean.carrypigeon.backend.service;
+package team.carrypigeon.backend.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

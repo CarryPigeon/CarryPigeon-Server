@@ -31,8 +31,8 @@ public class CPChannelDeleteMemberController extends CPControllerAbstract<CPChan
 
     private final CPNotificationService notificationService;
 
-    public CPChannelDeleteMemberController(ObjectMapper objectMapper, Class<CPChannelDeleteMemberVO> clazz, ChannelMemberDao channelMemberDao, CPNotificationService notificationService) {
-        super(objectMapper, clazz);
+    public CPChannelDeleteMemberController(ObjectMapper objectMapper, ChannelMemberDao channelMemberDao, CPNotificationService notificationService) {
+        super(objectMapper, CPChannelDeleteMemberVO.class);
         this.channelMemberDao = channelMemberDao;
         this.notificationService = notificationService;
     }
@@ -68,9 +68,9 @@ public class CPChannelDeleteMemberController extends CPControllerAbstract<CPChan
     }
 
     @Override
-    protected void notify(CPSession session, CPChannelDeleteMemberVO vo, Map<String, Object> context) {
+    protected void notify(CPSession session, CPChannelDeleteMemberVO data, Map<String, Object> context) {
         // 获取通道成员列表
-        CPChannelMember[] members = channelMemberDao.getAllMember(vo.getCid());
+        CPChannelMember[] members = channelMemberDao.getAllMember(data.getCid());
         Set<Long> uids = new HashSet<>();
         for (CPChannelMember member : members) {
             uids.add(member.getUid());

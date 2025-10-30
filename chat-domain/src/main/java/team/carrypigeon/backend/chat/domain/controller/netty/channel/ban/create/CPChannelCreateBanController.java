@@ -1,12 +1,11 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.ban.create;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPController;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
@@ -19,6 +18,7 @@ import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -29,15 +29,14 @@ import java.util.Set;
  * @author midreamsheep
  */
 @CPControllerTag("/core/channel/ban/create")
-public class CPChannelCreateBanController implements CPController {
+public class CPChannelCreateBanController extends CPControllerAbstract<CPChannelCreateBanVO> {
 
-    private final ObjectMapper objectMapper;
     private final ChannelBanDAO channelBanDAO;
     private final ChannelMemberDao channelMemberDao;
     private final CPNotificationService cpNotificationService;
 
     public CPChannelCreateBanController(ObjectMapper objectMapper, ChannelBanDAO channelBanDAO, ChannelMemberDao channelMemberDao, CPNotificationService cpNotificationService) {
-        this.objectMapper = objectMapper;
+        super(objectMapper, CPChannelCreateBanVO.class);
         this.channelBanDAO = channelBanDAO;
         this.channelMemberDao = channelMemberDao;
         this.cpNotificationService = cpNotificationService;
@@ -45,45 +44,49 @@ public class CPChannelCreateBanController implements CPController {
 
     @Override
     @LoginPermission
-    public CPResponse process(CPSession session, JsonNode data) {
-        // 校验参数
-        CPChannelCreateBanVO cpChannelCreateBanVO;
-        try {
-            cpChannelCreateBanVO = objectMapper.treeToValue(data, CPChannelCreateBanVO.class);
-        } catch (Exception e) {
-            return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
-        }
+    protected CPResponse check(CPSession session, CPChannelCreateBanVO data, Map<String, Object> context) {
         // 判断是否为成员且为管理员
-        CPChannelMember member = channelMemberDao.getMember(session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class), cpChannelCreateBanVO.getCid());
+        CPChannelMember member = channelMemberDao.getMember(session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class), data.getCid());
         if (member == null || member.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             return CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("you are not a member of this channel or you are not an admin");
         }
         // 判断被禁言用户是否为成员且为非管理员
-        CPChannelMember targetMember = channelMemberDao.getMember(cpChannelCreateBanVO.getUid(), cpChannelCreateBanVO.getCid());
+        CPChannelMember targetMember = channelMemberDao.getMember(data.getUid(), data.getCid());
         if (targetMember == null || targetMember.getAuthority() == CPChannelMemberAuthorityEnum.ADMIN) {
             return CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("user is not a member of this channel or is an admin");
         }
+        context.put("member", member);
+        return null;
+    }
 
+    @Override
+    protected CPResponse process0(CPSession session, CPChannelCreateBanVO data, Map<String, Object> context) {
+        CPChannelMember member = (CPChannelMember) context.get("member");
         //判断禁言表中是否已存在
-        CPChannelBan cpChannelBan = channelBanDAO.getByChannelIdAndUserId(cpChannelCreateBanVO.getCid(), cpChannelCreateBanVO.getUid());
+        CPChannelBan cpChannelBan = channelBanDAO.getByChannelIdAndUserId(data.getCid(), data.getUid());
         // 没有则创建禁言
         if (cpChannelBan == null) {
             cpChannelBan = new CPChannelBan();
             cpChannelBan.setId(IdUtil.generateId())
-                    .setCid(cpChannelCreateBanVO.getCid())
-                    .setUid(cpChannelCreateBanVO.getUid());
+                    .setCid(data.getCid())
+                    .setUid(data.getUid());
         }
 
         // 设置禁言信息
         cpChannelBan.setAid(member.getUid())
                 .setCreateTime(TimeUtil.getCurrentLocalTime())
-                .setDuration(cpChannelCreateBanVO.getDuration());
+                .setDuration(data.getDuration());
 
         // 保存禁言
         if (!channelBanDAO.save(cpChannelBan)) {
             return CPResponse.ERROR_RESPONSE.copy().setTextData("error saving channel ban");
         }
+        return CPResponse.SUCCESS_RESPONSE.copy();
+    }
 
+    @Override
+    protected void notify(CPSession session, CPChannelCreateBanVO data, Map<String, Object> context) {
+        CPChannelMember member = (CPChannelMember) context.get("member");
         // 通知频道成员
         Set<Long> uids = new HashSet<>();
         for (CPChannelMember cpChannelMember : channelMemberDao.getAllMember(member.getCid())) {
@@ -96,7 +99,5 @@ public class CPChannelCreateBanController implements CPController {
         CPNotification notification = new CPNotification().setRoute("/core/channel/ban/list");
         cpNotificationService.sendNotification(uids, notification);
 
-        // 返回成功
-        return CPResponse.SUCCESS_RESPONSE.copy();
     }
 }

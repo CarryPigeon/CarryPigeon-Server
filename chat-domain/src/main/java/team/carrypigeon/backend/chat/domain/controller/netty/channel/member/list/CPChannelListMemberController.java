@@ -27,8 +27,8 @@ public class CPChannelListMemberController extends CPControllerAbstract<CPChanne
 
     private final ChannelMemberDao channelMemberDao;
 
-    public CPChannelListMemberController(ObjectMapper objectMapper, Class<CPChannelListMemberVO> clazz, ChannelMemberDao channelMemberDao) {
-        super(objectMapper, clazz);
+    public CPChannelListMemberController(ObjectMapper objectMapper, ChannelMemberDao channelMemberDao) {
+        super(objectMapper, CPChannelListMemberVO.class);
         this.channelMemberDao = channelMemberDao;
     }
 

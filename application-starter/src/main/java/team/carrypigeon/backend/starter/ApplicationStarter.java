@@ -27,7 +27,7 @@ public class ApplicationStarter {
         // 输出日志，通知项目启动
         log.info("Application is starting...");
         // 启动容器注入服务并获取对应上下文
-        ApplicationContext context = new SpringApplication(ApplicationStarter.class).run(args);
+        new SpringApplication(ApplicationStarter.class).run(args);
         // 输出日志，通知springboot初始化完成
         log.info("spring context ready.");
     }

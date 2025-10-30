@@ -8,6 +8,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
@@ -17,6 +18,8 @@ import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
+import java.util.Map;
+
 /**
  * 创建通道的接口<br/>
  * 请求url:/core/channel/create<br/>
@@ -25,32 +28,26 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * @author midreamsheep
  * */
 @CPControllerTag("/core/channel/create")
-public class CPChannelCreateController implements CPController {
-
-    private final ObjectMapper objectMapper;
+public class CPChannelCreateController extends CPControllerAbstract<CPChannelCreateVO> {
 
     private final ChannelDao channelDao;
-
     private final ChannelMemberDao channelMemberDao;
 
     public CPChannelCreateController(ObjectMapper objectMapper, ChannelDao channelDao, ChannelMemberDao channelMemberDao) {
-        this.objectMapper = objectMapper;
+        super(objectMapper, CPChannelCreateVO.class);
         this.channelDao = channelDao;
         this.channelMemberDao = channelMemberDao;
     }
 
     @Override
     @LoginPermission
-    public CPResponse process(CPSession session, JsonNode data) {
+    protected CPResponse check(CPSession session, CPChannelCreateVO data, Map<String, Object> context) {
         //TODO 读取配置文件查看是否允许创建私有通道
+        return null;
+    }
 
-        // 获取参数
-        CPChannelCreateVO vo;
-        try {
-            vo = objectMapper.treeToValue(data, CPChannelCreateVO.class);
-        } catch (JsonProcessingException e) {
-            return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
-        }
+    @Override
+    protected CPResponse process0(CPSession session, CPChannelCreateVO data, Map<String, Object> context) {
         // 创建通道
         CPChannel cpChannel = new CPChannel();
         cpChannel.setId(IdUtil.generateId())

@@ -46,6 +46,10 @@
             <groupId>CarryPigeon</groupId>
             <artifactId>dao</artifactId>
         </dependency>
+        <dependency>
+            <groupId>CarryPigeon</groupId>
+            <artifactId>external-service</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

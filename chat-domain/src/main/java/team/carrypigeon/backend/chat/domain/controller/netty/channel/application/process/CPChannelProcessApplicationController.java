@@ -95,7 +95,7 @@ public class CPChannelProcessApplicationController extends CPControllerAbstract<
     }
 
     @Override
-    protected void notify(CPSession session, CPChannelProcessApplicationVO vo, Map<String, Object> context) {
+    protected void notify(CPSession session, CPChannelProcessApplicationVO data, Map<String, Object> context) {
         // 从上下文获取数据
         CPChannelApplication application = (CPChannelApplication) context.get("application");
         // 通知所有管理员
@@ -109,7 +109,7 @@ public class CPChannelProcessApplicationController extends CPControllerAbstract<
         CPNotification notification = new CPNotification().setRoute("/core/channel/application/list");
         cpNotificationService.sendNotification(admins, notification);
         // 如果是拒绝则直接返回
-        if(vo.getResult()==2){
+        if(data.getResult()==2){
             return;
         }
         notification = new CPNotification().setRoute("/core/channel/member/list");

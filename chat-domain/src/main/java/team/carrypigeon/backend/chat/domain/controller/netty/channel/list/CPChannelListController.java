@@ -6,6 +6,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.controller.CPController;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
@@ -15,6 +16,7 @@ import team.carrypigeon.backend.chat.domain.permission.login.LoginPermission;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 拉取通道的接口<br/>
@@ -24,21 +26,25 @@ import java.util.List;
  * @author midreamsheep
  * */
 @CPControllerTag("/core/channel/list")
-public class CPChannelListController implements CPController {
+public class CPChannelListController extends CPControllerAbstract<CPChannelListVO> {
 
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
-    private final ObjectMapper objectMapper;
 
     public CPChannelListController(ChannelDao channelDao, ChannelMemberDao channelMemberDao, ObjectMapper objectMapper) {
+        super(objectMapper, CPChannelListVO.class);
         this.channelDao = channelDao;
         this.channelMemberDao = channelMemberDao;
-        this.objectMapper = objectMapper;
     }
 
     @Override
     @LoginPermission
-    public CPResponse process(CPSession session, JsonNode data) {
+    protected CPResponse check(CPSession session, CPChannelListVO data, Map<String, Object> context) {
+        return null;
+    }
+
+    @Override
+    protected CPResponse process0(CPSession session, CPChannelListVO data, Map<String, Object> context) {
         // 获取用户
         long userId = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID,Long.class);
         // 获取固有通道

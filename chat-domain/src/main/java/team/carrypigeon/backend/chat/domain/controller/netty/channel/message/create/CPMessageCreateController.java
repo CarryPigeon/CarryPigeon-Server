@@ -42,8 +42,8 @@ public class CPMessageCreateController extends CPControllerAbstract<CPMessageCre
     private final CPMessageParserService messageParserService;
     private final CPNotificationService notificationService;
 
-    public CPMessageCreateController(ObjectMapper objectMapper, Class<CPMessageCreateVO> clazz, ObjectMapper objectMapper1, ChannelMemberDao channelMemberDao, ChannelBanDAO channelBanDAO, ChannelMessageDao messageDao, CPMessageParserService messageParserService, CPNotificationService notificationService) {
-        super(objectMapper, clazz);
+    public CPMessageCreateController(ObjectMapper objectMapper, ObjectMapper objectMapper1, ChannelMemberDao channelMemberDao, ChannelBanDAO channelBanDAO, ChannelMessageDao messageDao, CPMessageParserService messageParserService, CPNotificationService notificationService) {
+        super(objectMapper, CPMessageCreateVO.class);
         this.objectMapper = objectMapper1;
         this.channelMemberDao = channelMemberDao;
         this.channelBanDAO = channelBanDAO;
@@ -96,13 +96,13 @@ public class CPMessageCreateController extends CPControllerAbstract<CPMessageCre
     }
 
     @Override
-    protected void notify(CPSession session, CPMessageCreateVO vo, Map<String, Object> context) {
+    protected void notify(CPSession session, CPMessageCreateVO data, Map<String, Object> context) {
         // 获取已经解析的消息
         CPMessageData messageData = (CPMessageData) context.get("messageData");
         CPMessage message = (CPMessage) context.get("messageData");
         // 获取待通知的成员
         Set<Long> uids = new HashSet<>();
-        for (CPChannelMember member : channelMemberDao.getAllMember(vo.getCid())) {
+        for (CPChannelMember member : channelMemberDao.getAllMember(data.getCid())) {
             uids.add(member.getUid());
         }
         // 删除发送者
@@ -113,7 +113,7 @@ public class CPMessageCreateController extends CPControllerAbstract<CPMessageCre
         CPMessageNotificationData cpMessageNotificationData = new CPMessageNotificationData();
         cpMessageNotificationData.setSContent(messageData.getSContent())
                 .setUid(message.getUid())
-                .setCid(vo.getCid())
+                .setCid(data.getCid())
                 .setSendTime(TimeUtil.LocalDateTimeToMillis(message.getSendTime()));
         notification.setData(objectMapper.valueToTree(cpMessageNotificationData));
         // 发送消息

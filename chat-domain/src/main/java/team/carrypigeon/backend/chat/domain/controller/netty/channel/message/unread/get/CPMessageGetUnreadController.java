@@ -28,8 +28,8 @@ public class CPMessageGetUnreadController extends CPControllerAbstract<CPMessage
     private final ChannelMessageDao channelMessageDao;
     private final ChannelMemberDao channelMemberDao;
 
-    public CPMessageGetUnreadController(ObjectMapper objectMapper, Class<CPMessageGetUnreadVO> clazz, ChannelMessageDao channelMessageDao, ChannelMemberDao channelMemberDao) {
-        super(objectMapper, clazz);
+    public CPMessageGetUnreadController(ObjectMapper objectMapper, ChannelMessageDao channelMessageDao, ChannelMemberDao channelMemberDao) {
+        super(objectMapper, CPMessageGetUnreadVO.class);
         this.channelMessageDao = channelMessageDao;
         this.channelMemberDao = channelMemberDao;
     }
