@@ -14,8 +14,7 @@ import java.lang.annotation.Target;
  * */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Component
 public @interface CPControllerTag {
-    @AliasFor(annotation = Component.class)
-    String value();
+    String path();
+    Class<?> clazz();
 }

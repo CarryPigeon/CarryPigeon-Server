@@ -18,6 +18,7 @@ import org.apache.logging.log4j.core.util.JsonUtils;
 @AllArgsConstructor
 @Accessors(chain = true)
 public class CPResponse{
+    public static final CPResponse SERVER_ERROR = new CPResponse(-1,500,null);
     /**
      * 返回值id，用于客户端标识为哪个请求的响应
      * */

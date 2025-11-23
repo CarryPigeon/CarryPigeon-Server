@@ -4,6 +4,7 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.util.ByteUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yomahub.liteflow.core.FlowExecutor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.EventExecutor;
@@ -30,14 +31,12 @@ import static team.carrypigeon.backend.connection.attribute.ConnectionAttributes
  * 3. 负责将数据包解密后托付给分发器进行进一步的处理<br/>
  * @author midreamsheep
  * */
-@AllArgsConstructor
 @Slf4j
+@AllArgsConstructor
 public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
 
-    private CPControllerDispatcher cpControllerDispatcher;
-    private ObjectMapper objectMapper;
-
-
+    private final CPControllerDispatcher cpControllerDispatcher;
+    private final ObjectMapper objectMapper;
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, byte[] msg) {
         // 解密数据
@@ -48,24 +47,20 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         System.arraycopy(msg,0,nonce,0,12);
         System.arraycopy(msg,12,aad,0,20);
         System.arraycopy(msg,32,cipherText,0,msg.length-32);
-
         // 获取当前会话
         CPSession session = ctx.channel().attr(SESSIONS).get();
-
         // 通过状态机
-        if (session.getAttributeValue(ConnectionAttributes.ENCRYPTION_STATE,Boolean.class)) {
+        if (!session.getAttributeValue(ConnectionAttributes.ENCRYPTION_STATE,Boolean.class)) {
             // 等待非对称加密公钥
             receiveAsymmetry(session, new String(cipherText));
             return;
         }
-
         // 校验aad值是否正确，否则直接返回并中断连接
         if(!checkAAD(session,aad)){
             log.error("aad check failed,closing the connection...");
             session.close();
             return;
         }
-
         // 提交任务
         try (EventExecutor executor = ctx.executor()) {
             executor.execute(()->{
@@ -82,7 +77,6 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
                 if (isEmpty){
                     return;
                 }
-
                 // 解密数据
                 String pack;
                 try {
@@ -147,9 +141,10 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
             CPAESKeyPack aesPack = new CPAESKeyPack();
             aesPack.setKey(Base64.encode(ECCUtil.encrypt(session.getAttributeValue(ConnectionAttributes.ENCRYPTION_KEY,String.class),ECCUtil.rebuildPublicKey(cpKeyMessage.getKey()))));
             aesPack.setId(cpKeyMessage.getId());
-            aesPack.setId(session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID,Long.class));
-
+            aesPack.setSessionId(session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID,Long.class));
             session.write(objectMapper.writeValueAsString(aesPack),false);
+            // 设置状态
+            session.setAttributeValue(ConnectionAttributes.ENCRYPTION_STATE,true);
         } catch (Exception e) {
             log.error(e.getMessage(),e);
         }
@@ -176,7 +171,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         // 获取会话id
         long sessionID = ByteUtil.bytesToLong(aad, 4, ByteOrder.BIG_ENDIAN);
         // 判断会话id是否一致
-        if (sessionID!=session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID,Long.class)){
+        if (sessionID!= session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class)){
             log.error("session id id error");
             return false;
         }

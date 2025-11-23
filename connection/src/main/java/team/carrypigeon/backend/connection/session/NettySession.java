@@ -53,7 +53,7 @@ public class NettySession implements CPSession {
         // 包序列自增
         setAttributeValue(ConnectionAttributes.LOCAL_PACKAGE_ID, getAttributeValue(ConnectionAttributes.LOCAL_PACKAGE_ID, Integer.class) + 1);
         // 填充会话id
-        System.arraycopy(ByteUtil.longToBytes(getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class)),0,aad,4,12);
+        System.arraycopy(ByteUtil.longToBytes(getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class)),0,aad,4,8);
         // 填充时间戳
         System.arraycopy(ByteUtil.longToBytes(System.currentTimeMillis()),0,aad,16,4);
 

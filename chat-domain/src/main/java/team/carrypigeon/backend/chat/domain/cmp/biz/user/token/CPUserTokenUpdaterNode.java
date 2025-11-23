@@ -1,0 +1,49 @@
+package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
+
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.slot.DefaultContext;
+import lombok.AllArgsConstructor;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
+import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.CPReturnException;
+import team.carrypigeon.backend.common.time.TimeUtil;
+
+/**
+ * 用户更新token节点<br/>
+ * 入参:<br/>
+ * 1. UserToken:{@link CPUserToken}<br/>
+ * 2. UserToken_Token:String? <br/>
+ * 3. UserToken_ExpiredTime:Long? <br/>
+ * 出参：无
+ * @author midreamsheep
+ * */
+@AllArgsConstructor
+@LiteflowComponent("CPUserTokenUpdater")
+public class CPUserTokenUpdaterNode extends CPNodeComponent {
+
+    private final UserTokenDao userTokenDao;
+
+    @Override
+    protected void process(CPSession session, DefaultContext context) throws Exception {
+        CPUserToken userToken = context.getData("UserToken");
+        if (userToken == null){
+            argsError(context);
+        }
+        String token = context.getData("UserToken_Token");
+        if (token != null){
+            userToken.setToken(token);
+        }
+        Long expiredTime = context.getData("UserToken_ExpiredTime");
+        if (expiredTime != null){
+            userToken.setExpiredTime(TimeUtil.MillisToLocalDateTime(expiredTime));
+        }
+        if (!userTokenDao.save(userToken)){
+            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("update user token error"));
+            throw new CPReturnException();
+        }
+
+    }
+}

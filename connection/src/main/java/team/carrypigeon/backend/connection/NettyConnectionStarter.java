@@ -33,9 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class NettyConnectionStarter implements ConnectionStarter {
 
     private final CPControllerDispatcher cpControllerDispatcher;
-
     private final ObjectMapper objectMapper;
-
     private final ConnectionConfig config;
 
     @Autowired

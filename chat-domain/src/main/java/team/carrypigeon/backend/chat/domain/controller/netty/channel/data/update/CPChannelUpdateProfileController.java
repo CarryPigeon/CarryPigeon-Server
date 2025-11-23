@@ -43,13 +43,6 @@ public class CPChannelUpdateProfileController extends CPControllerAbstract<CPCha
 
     @Override
     @LoginPermission
-    public CPResponse process(CPSession session, JsonNode data) {
-
-
-    }
-
-    @Override
-    @LoginPermission
     protected CPResponse check(CPSession session, CPChannelUpdateProfileVO data, Map<String, Object> context) {
         // 获取通道
         CPChannel channel = channelDao.getById(data.getCid());
