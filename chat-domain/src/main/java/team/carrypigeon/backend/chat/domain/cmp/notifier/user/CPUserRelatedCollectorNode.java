@@ -7,7 +7,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 
 import java.util.HashSet;
 import java.util.Set;

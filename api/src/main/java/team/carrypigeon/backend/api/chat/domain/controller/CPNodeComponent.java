@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.cmp;
+package team.carrypigeon.backend.api.chat.domain.controller;
 
 import com.yomahub.liteflow.core.NodeComponent;
 import com.yomahub.liteflow.slot.DefaultContext;

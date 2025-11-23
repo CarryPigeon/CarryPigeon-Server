@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.application.create;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
@@ -8,7 +7,6 @@ import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelAppli
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerAbstract;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
@@ -33,7 +31,11 @@ import java.util.Set;
  * 返回参数: {@link CPChannelCreateApplicationResult}
  * @author midreamsheep
  * */
-@CPControllerTag("/core/channel/application/create")
+@CPControllerTag(
+        path = "/core/channel/application/create",
+        voClazz = CPChannelCreateApplicationVO.class,
+        resultClazz = CPChannelCreateApplicationResult.class
+)
 public class CPChannelCreateApplicationController extends CPControllerAbstract<CPChannelCreateApplicationVO> {
 
     private final ChannelDao channelDao;

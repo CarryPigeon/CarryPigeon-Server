@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.controller.netty.channel.create;
+package team.carrypigeon.backend.chat.domain.controller.netty.channel.data.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
@@ -12,15 +12,16 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
- * 创建频道的返回参数Node<br/>
- * 入参：ChannelInfo:{@link CPChannel}<br/>
- * 出餐；response:{@link CPResponse}
+ * 获取通道信息结果节点<br/>
+ * 入参:ChannelInfo{@link CPChannel}<br/>
+ * 出参:response:{@link CPResponse}
  * @author midreamsheep
  * */
 @AllArgsConstructor
-public class CPChannelCreateResult implements CPControllerResult {
+public class CPChannelGetProfileResultNode implements CPControllerResult {
 
     private final ObjectMapper objectMapper;
 
@@ -31,14 +32,25 @@ public class CPChannelCreateResult implements CPControllerResult {
             argsError(context);
             return;
         }
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new Result().setCid(channelInfo.getId()))));
+        Result result = new Result();
+        result.setName(channelInfo.getName())
+                .setOwner(channelInfo.getOwner())
+                .setBrief(channelInfo.getBrief())
+                .setAvatar(channelInfo.getAvatar())
+                .setCreateTime(TimeUtil.LocalDateTimeToMillis(channelInfo.getCreateTime()));
+        context.setData("response",CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
     }
 
     @Data
-    @AllArgsConstructor
     @NoArgsConstructor
+    @AllArgsConstructor
     @Accessors(chain = true)
     private static class Result{
-        private long cid;
+        private String name;
+        private long owner;
+        private String brief;
+        private long avatar;
+        private long createTime;
     }
+
 }

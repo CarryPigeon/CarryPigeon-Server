@@ -8,8 +8,8 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 
 /**
  * 用于更新频道成员信息的Node<br/>

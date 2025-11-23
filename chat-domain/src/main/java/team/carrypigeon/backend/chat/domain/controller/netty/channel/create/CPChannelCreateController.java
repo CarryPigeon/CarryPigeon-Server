@@ -10,6 +10,6 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  * @author midreamsheep
  * */
 @CPControllerTag(
-    path = "/core/channel/create", clazz = CPChannelCreateVO.class
+    path = "/core/channel/create", voClazz = CPChannelCreateVO.class
 )
 public class CPChannelCreateController{}

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.login.token.logout;
 
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDefaultResult;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 
 /**
@@ -10,6 +11,6 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  * @author midreamsheep
  *  */
 @CPControllerTag(
-        path = "/core/user/login/token/logout",clazz = CPUserTokenLogoutVO.class
+        path = "/core/user/login/token/logout", voClazz = CPUserTokenLogoutVO.class, resultClazz = CPControllerDefaultResult.class
 )
 public class CPUserTokenLogoutController {}

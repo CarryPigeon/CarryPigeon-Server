@@ -4,8 +4,9 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.common.json.JsonNodeUtil;
 
 import java.util.Objects;
@@ -16,13 +17,14 @@ import java.util.Objects;
  * @author midreamsheep
  * */
 @LiteflowComponent("CPUserRegisterResult")
-public class CPUserRegisterResultNode extends CPNodeComponent {
+public class CPUserRegisterResult implements CPControllerResult {
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) {
         CPUserToken userToken = context.getData("UserToken");
         if (userToken == null){
             argsError(context);
+            return;
         }
         context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(JsonNodeUtil.createJsonNode("token", Objects.requireNonNull(userToken).getToken())));
     }

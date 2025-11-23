@@ -24,4 +24,4 @@ minio:
 connection:
   port: 7609
 liteflow:
-  rule-source: config/flow.xml
+  rule-source: config/*.xml

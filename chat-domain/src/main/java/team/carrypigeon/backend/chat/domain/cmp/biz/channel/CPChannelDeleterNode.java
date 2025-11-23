@@ -5,22 +5,25 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
+import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 
 /**
- * 用于保存通道信息的Node<br/>
+ * 用于删除通道的Node<br/>
  * 入参: ChannelInfo:{@link CPChannel}<br/>
  * 出参: 无<br/>
  * @author midreamsheep
  * */
 @AllArgsConstructor
-@LiteflowComponent("CPChannelSaver")
-public class CPChannelSaverNode extends CPNodeComponent {
+@LiteflowComponent("CPChannelDeleter")
+public class CPChannelDeleterNode extends CPNodeComponent {
 
     private final ChannelDao channelDao;
+    private final ChannelMemberDao channelMemberDao;
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
@@ -28,9 +31,16 @@ public class CPChannelSaverNode extends CPNodeComponent {
         if (channelInfo == null){
             argsError(context);
         }
-        if (!channelDao.save(channelInfo)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("save channel error"));
+        if (!channelDao.delete(channelInfo)){
+            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel"));
             throw new CPReturnException();
         }
+        for (CPChannelMember channelMember : channelMemberDao.getAllMember(channelInfo.getId())) {
+            if (!channelMemberDao.delete(channelMember)){
+                context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel member"));
+                throw new CPReturnException();
+            }
+        }
+
     }
 }

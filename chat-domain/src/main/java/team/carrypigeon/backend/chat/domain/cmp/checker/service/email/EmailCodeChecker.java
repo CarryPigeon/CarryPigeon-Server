@@ -6,8 +6,8 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 
 /**
  * 邮箱验证码检查器</br>

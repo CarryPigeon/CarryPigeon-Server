@@ -1,0 +1,48 @@
+<flow>
+    <!--创建管理员-->
+    <chain name="/core/channel/admin/create">
+        THEN(
+        /**判断用户是否登录**/
+        UserLoginChecker,
+        /**重命名参数**/
+        RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+        /**获取频道信息**/
+        CPChannelSelector.bind("key","id"),
+        /**权限校验,判断是不是所有者**/
+        CPChannelOwnerChecker,
+        /**获取成员信息**/
+        CPChannelMemberSelectorNode.bind("key","CidWithUid"),
+        /**获取用户信息**/
+        CPChannelMemberAuthoritySetter.bind("key","admin"),
+        /**保存成员信息**/
+        CPChannelMemberSaver,
+        /**获取所有成员**/
+        CPChannelMemberCollector,
+        /**通知所有成员**/
+        CPNotifier.bind("route","/core/channel/member/list")
+        )
+    </chain>
+    <!--删除管理员-->
+    <chain name="/core/channel/admin/create">
+        THEN(
+        /**判断用户是否登录**/
+        UserLoginChecker,
+        /**重命名参数**/
+        RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+        /**获取频道信息**/
+        CPChannelSelector.bind("key","id"),
+        /**权限校验,判断是不是所有者**/
+        CPChannelOwnerChecker,
+        /**获取成员信息**/
+        CPChannelMemberSelectorNode.bind("key","CidWithUid"),
+        /**获取用户信息**/
+        CPChannelMemberAuthoritySetter.bind("key","member"),
+        /**保存成员信息**/
+        CPChannelMemberSaver,
+        /**获取所有成员**/
+        CPChannelMemberCollector,
+        /**通知所有成员**/
+        CPNotifier.bind("route","/core/channel/member/list")
+        )
+    </chain>
+</flow>

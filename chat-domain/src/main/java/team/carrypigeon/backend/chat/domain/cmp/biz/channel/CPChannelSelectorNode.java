@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 
 /**
  * 用于从数据库获取通道数据的Node<br/>

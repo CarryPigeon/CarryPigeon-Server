@@ -7,8 +7,8 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 
 /**
  * 用于从数据库查询token<br/>

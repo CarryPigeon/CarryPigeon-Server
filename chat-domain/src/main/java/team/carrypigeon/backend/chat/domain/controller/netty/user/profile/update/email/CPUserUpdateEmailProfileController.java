@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.profile.update.email;
 
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDefaultResult;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 
 /**
@@ -9,6 +10,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  * */
 @CPControllerTag(
         path = "/core/user/profile/update/email",
-        clazz = CPUserUpdateEmailProfileVO.class
+        voClazz = CPUserUpdateEmailProfileVO.class,
+        resultClazz = CPControllerDefaultResult.class
 )
 public class CPUserUpdateEmailProfileController{}

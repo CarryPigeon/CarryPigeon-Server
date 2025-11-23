@@ -7,8 +7,8 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 
 /**
  * 用于通过用户id获取数据库结构的selector<br/>

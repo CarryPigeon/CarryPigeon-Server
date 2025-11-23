@@ -14,9 +14,7 @@
             /**保存用户**/
             CPUserSaver,
             /**创建用户token**/
-            CPUserTokenCreator,
-            /**组建请求返回值**/
-            CPUserRegisterResult
+            CPUserTokenCreator
         );
     </chain>
     <!--获取用户信息请求-->
@@ -25,9 +23,7 @@
             /**判断是否登录**/
             UserLoginChecker,
             /**通过id获取用户信息**/
-            CPUserSelector.bind("key","id"),
-            /**返回用户信息**/
-            CPUserGetProfileResult
+            CPUserSelector.bind("key","id")
         );
     </chain>
     <!--修改用户信息-->
@@ -35,8 +31,6 @@
         THEN(
             /**判断是否登录**/
             UserLoginChecker,
-            /**获取当前会话id**/
-            CPSessionUserIdGet,
             /**重命名参数**/
             RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
             /**查询用户信息**/
@@ -78,9 +72,7 @@
             /**用户查询**/
             CPUserSelector.bind("key","email"),
             /**用户token创建**/
-            CPUserTokenCreator,
-            /**返回用户token**/
-            CPUserEmailLoginResult
+            CPUserTokenCreator
         )
     </chain>
     <!--用户token登录-->
@@ -89,7 +81,7 @@
             /**获取token**/
             CPUserTokenSelector.bind("key","token"),
             /**用户token校验**/
-            CPUserTokenUidGet,
+            CPUserTokenUidGetter,
             /**用户获取**/
             CPUserSelector.bind("key","id"),
             /**用户token更新**/
@@ -97,9 +89,7 @@
             /**数据持久化**/
             CPUserTokenSaver,
             /**将用户注册进上下文**/
-            CPSessionRegister,
-            /**返回token数据**/
-            CPUserTokenLoginResult
+            CPSessionRegister
         )
     </chain>
     <!--用户登出（删除token）-->
@@ -111,29 +101,6 @@
             CPUserTokenSelector.bind("key","token"),
             /**用户token删除**/
             CPUserTokenDeleter
-        )
-    </chain>
-    <!--创建频道请求-->
-    <chain name="/core/channel/create">
-        THEN(
-            /**判断用户是否登录**/
-            UserLoginChecker,
-            /**获取用户id**/
-            CPSessionUserIdGet,
-            /**重命名参数**/
-            RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
-            /**查询用户**/
-            CPUserSelector.bind("key","id"),
-            /**创建频道信息**/
-            CPChannelCreator,
-            /**创建用户信息**/
-            CPChannelMemberCreator,
-            /**重设用户权限**/
-            CPChannelMemberAuthoritySetter.bind("key","admin"),
-            /**保存**/
-            CPChannelSaver,CPChannelMemberSaver,
-            /**返回创建结果**/
-            CPChannelCreateResult
         )
     </chain>
 </flow>

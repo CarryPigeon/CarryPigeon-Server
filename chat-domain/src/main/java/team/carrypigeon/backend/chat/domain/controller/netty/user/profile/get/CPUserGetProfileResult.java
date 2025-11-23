@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.profile.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,8 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -19,19 +18,18 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * @author midreamsheep
  * */
 @AllArgsConstructor
-@LiteflowComponent("CPUserGetProfileResult")
-public class CPUserGetProfileResultNode extends CPNodeComponent {
+public class CPUserGetProfileResult implements CPControllerResult {
 
     private final ObjectMapper objectMapper;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) {
         // 获取绑定数据
-        CPUser userInfo = getBindData("UserInfo",CPUser.class);
+        CPUser userInfo = context.getData("UserInfo");
         if (userInfo == null){
             argsError(context);
+            return;
         }
-        assert userInfo != null;
         Result result = new Result()
                 .setUsername(userInfo.getUsername())
                 .setAvatar(userInfo.getAvatar())

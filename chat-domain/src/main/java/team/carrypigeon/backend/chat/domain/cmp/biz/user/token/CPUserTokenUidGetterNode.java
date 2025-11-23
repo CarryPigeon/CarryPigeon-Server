@@ -5,7 +5,7 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 
 /**
  * 获取用户token的uid<br/>
@@ -14,8 +14,8 @@ import team.carrypigeon.backend.chat.domain.cmp.CPNodeComponent;
  * @author midreamsheep
  * */
 @AllArgsConstructor
-@LiteflowComponent("CPUserTokenUidGet")
-public class CPUserTokenUidGetNode extends CPNodeComponent {
+@LiteflowComponent("CPUserTokenUidGetter")
+public class CPUserTokenUidGetterNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
         CPUserToken userToken = context.getData("UserToken");
