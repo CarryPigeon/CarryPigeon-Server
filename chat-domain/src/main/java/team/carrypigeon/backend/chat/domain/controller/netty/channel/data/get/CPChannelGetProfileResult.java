@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.data.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,7 +10,6 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -20,13 +18,10 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * 出参:response:{@link CPResponse}
  * @author midreamsheep
  * */
-@AllArgsConstructor
-public class CPChannelGetProfileResultNode implements CPControllerResult {
-
-    private final ObjectMapper objectMapper;
+public class CPChannelGetProfileResult implements CPControllerResult {
 
     @Override
-    public void process(CPSession session, DefaultContext context) {
+    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
         CPChannel channelInfo = context.getData("ChannelInfo");
         if (channelInfo == null){
             argsError(context);

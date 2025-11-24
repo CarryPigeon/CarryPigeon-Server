@@ -1,17 +1,14 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.list;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
-import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,13 +22,10 @@ import java.util.Set;
  * 1.response:{@link CPResponse}
  * @author midreamsheep
  * */
-@AllArgsConstructor
 public class CPChannelListResult implements CPControllerResult {
 
-    private final ObjectMapper objectMapper;
-
     @Override
-    public void process(CPSession session, DefaultContext context) {
+    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
         Set<CPChannel> channels = context.getData("channels");
         if (channels == null){
             argsError( context);

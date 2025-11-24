@@ -1,8 +1,11 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.application.list;
 
+import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.info.PageInfo;
 
 /**
  * 获取通道申请列表的参数
@@ -11,8 +14,18 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CPChannelListApplicationVO {
+public class CPChannelListApplicationVO implements CPControllerVO {
     private long cid;
     private int page;
     private int pageSize;
+
+    @Override
+    public boolean insertData(DefaultContext context) {
+        if (page<0||pageSize<0||pageSize>50){
+            return false;
+        }
+        context.setData("ChannelInfo_Id", cid);
+        context.setData("PageInfo",new PageInfo(page,pageSize));
+        return true;
+    }
 }

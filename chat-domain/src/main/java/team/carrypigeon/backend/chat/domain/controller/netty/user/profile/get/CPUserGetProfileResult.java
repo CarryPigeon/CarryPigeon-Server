@@ -17,13 +17,10 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * 入参：UserInfo:{@link CPUser}<br/>
  * @author midreamsheep
  * */
-@AllArgsConstructor
 public class CPUserGetProfileResult implements CPControllerResult {
 
-    private final ObjectMapper objectMapper;
-
     @Override
-    public void process(CPSession session, DefaultContext context) {
+    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
         // 获取绑定数据
         CPUser userInfo = context.getData("UserInfo");
         if (userInfo == null){

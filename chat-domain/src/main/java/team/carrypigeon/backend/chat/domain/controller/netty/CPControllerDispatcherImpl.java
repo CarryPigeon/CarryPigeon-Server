@@ -1,17 +1,13 @@
 package team.carrypigeon.backend.chat.domain.controller.netty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
 import com.yomahub.liteflow.slot.DefaultContext;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
@@ -36,13 +32,15 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     private final ObjectMapper mapper;
     private final CPSessionCenterService cpSessionCenterService;
     private final FlowExecutor flowExecutor;
+    private final ObjectMapper objectMapper;
 
-    public CPControllerDispatcherImpl(ObjectMapper mapper, CPSessionCenterService cpSessionCenterService, FlowExecutor flowExecutor, @Qualifier("ControllerAndVOMap") Map<String, Class<?>> controllerAndVOMap, @Qualifier("ControllerAndResultMap") Map<String, Class<?>> controllerAndResultMap) {
+    public CPControllerDispatcherImpl(ObjectMapper mapper, CPSessionCenterService cpSessionCenterService, FlowExecutor flowExecutor, @Qualifier("ControllerAndVOMap") Map<String, Class<?>> controllerAndVOMap, @Qualifier("ControllerAndResultMap") Map<String, Class<?>> controllerAndResultMap, ObjectMapper objectMapper) {
         this.mapper = mapper;
         this.cpSessionCenterService = cpSessionCenterService;
         this.flowExecutor = flowExecutor;
         this.controllerAndVOMap = controllerAndVOMap;
         this.controllerAndResultMap = controllerAndResultMap;
+        this.objectMapper = objectMapper;
     }
 
 
@@ -68,7 +66,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
                 return CPResponse.PATH_NOT_FOUND_RESPONSE.copy();
             }
             CPControllerResult result = (CPControllerResult)mapper.treeToValue(route.getData(), resultClazz);
-            result.process(session, defaultContext);
+            result.process(session, defaultContext,objectMapper );
             // 返回响应值
             CPResponse response = liteflowResponse.getContextBean(DefaultContext.class).getData("response");
             if (response == null){

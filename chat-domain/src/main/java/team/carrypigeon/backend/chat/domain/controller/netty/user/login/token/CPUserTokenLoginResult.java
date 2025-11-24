@@ -15,13 +15,10 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
  * 入参：UserToken:{@link CPUserToken}<br/>
  * @author midreamsheep
  * */
-@AllArgsConstructor
 public class CPUserTokenLoginResult implements CPControllerResult {
 
-    private final ObjectMapper objectMapper;
-
     @Override
-    public void process(CPSession session, DefaultContext context)  {
+    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper)  {
         CPUserToken userToken = context.getData("UserToken");
         if (userToken == null){
             argsError(context);
