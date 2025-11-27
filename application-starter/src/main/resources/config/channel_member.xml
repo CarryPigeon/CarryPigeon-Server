@@ -1,17 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <flow>
-    <!--获取所有群成员-->
+    <!-- 获取所有群成员 -->
     <chain name="/core/channel/member/list">
         THEN(
-        /**判断是否登录**/
+        /** 判断是否登录 **/
         UserLoginChecker,
-        /**重命名参数**/
+        /** 重命名参数 **/
         RenameArg.bind("key","SessionId:ChannelMemberInfo_Uid;ChannelInfo_Id:ChannelMemberInfo_Cid"),
-        /**获取成员信息（即判断是否为群成员）**/
+        /** 获取成员信息（即判断是否为群成员） **/
         CPChannelMemberSelector.bind("key","CidWithUid"),
-        /**获取所有成员**/
+        /** 获取所有成员 **/
         CPChannelMemberLister
         )
     </chain>
-    <!--踢出群成员-->
-
+    <!-- 删除频道成员 -->
+    <chain name="/core/channel/member/delete">
+        THEN(
+        /** 判断是否登录 **/
+        UserLoginChecker,
+        /** 重命名参数，将 SessionId 映射为 UserInfo_Id **/
+        RenameArg.bind("key","SessionId:UserInfo_Id"),
+        /** 获取频道信息 **/
+        CPChannelSelector.bind("key","id"),
+        /** 检查当前用户是否为频道管理员 **/
+        CPChannelAdminChecker,
+        /** 根据 cid 和 uid 获取待删除的成员信息 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 删除成员 **/
+        CPChannelMemberDeleter,
+        /** 收集频道所有成员 **/
+        CPChannelMemberCollector,
+        /** 通知所有成员 **/
+        CPNotifier.bind("route","/core/channel/member/list")
+        )
+    </chain>
 </flow>

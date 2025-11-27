@@ -1,12 +1,27 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.service.email.send;
 
+import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
 
+/**
+ * 发送邮件验证码的请求参数
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CPServiceSendEmailVO {
+public class CPServiceSendEmailVO implements CPControllerVO {
+
     private String email;
+
+    @Override
+    public boolean insertData(DefaultContext context) {
+        if (email == null || email.isEmpty()) {
+            return false;
+        }
+        context.setData("Email", email);
+        return true;
+    }
 }

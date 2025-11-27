@@ -14,5 +14,5 @@ import java.lang.annotation.Target;
 public @interface CPControllerTag {
     String path();
     Class<?> voClazz();
-    Class<?> resultClazz();
+    Class<?> resultClazz() default CPControllerDefaultResult.class;
 }

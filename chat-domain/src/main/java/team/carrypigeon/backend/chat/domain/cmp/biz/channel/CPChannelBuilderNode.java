@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
@@ -18,10 +19,12 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * 6. ChannelInfo_CreateTime:Long<br/>
  * 出参: ChannelInfo:{@link CPChannel}<br/>
  * */
+@Slf4j
 @LiteflowComponent("CPChannelBuilder")
 public class CPChannelBuilderNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
+
         Long channelInfoId = context.getData("ChannelInfo_Id");
         String channelInfoName = context.getData("ChannelInfo_Name");
         Long channelInfoOwner = context.getData("ChannelInfo_Owner");

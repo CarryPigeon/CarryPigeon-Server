@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  * */
 @CPControllerTag(
         path = "/core/user/register",
-        voClazz = CPUserRegisterVO.class
+        voClazz = CPUserRegisterVO.class,
+        resultClazz = CPUserRegisterResult.class
 )
 public class CPUserRegisterController {}

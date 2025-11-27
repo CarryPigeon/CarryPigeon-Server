@@ -14,18 +14,26 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 @LiteflowComponent("RenameArg")
 public class RenameArgNode extends CPNodeComponent {
 
-    private static final String RENAME_ARG_KEY = "RenameArg";
+    /**
+     * LiteFlow 中 bind 使用的参数名。<br/>
+     * 约定所有 Node.bind 的第一个参数均为 "key"。
+     */
+    private static final String BIND_KEY = "key";
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        String bindData = this.getBindData(RENAME_ARG_KEY, String.class);
-        if (bindData == null){
+        // 从组件配置中读取重命名规则，示例："CurId:UserInfo_Id;Email:UserInfo_Email"
+        String bindData = this.getBindData(BIND_KEY, String.class);
+        if (bindData == null) {
             argsError(context);
+            return;
         }
-        assert bindData != null;
         String[] renames = bindData.split(";");
         for (String s : renames) {
             String[] map = s.split(":");
+            if (map.length != 2) {
+                continue;
+            }
             context.setData(map[0], context.getData(map[1]));
         }
     }

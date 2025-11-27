@@ -22,12 +22,20 @@ public class CPControllerPostProcessor implements BeanPostProcessor {
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         CPControllerTag annotation = bean.getClass().getAnnotation(CPControllerTag.class);
-        Class<?> voClazz = annotation.voClazz();
-        Class<?> resultClazz = annotation.resultClazz();
-        if(voClazz.isAssignableFrom(CPControllerVO.class)&& resultClazz.isAssignableFrom(CPControllerResult.class)){
-            ControllerAndVoMap.put(annotation.path(), voClazz);
-            ControllerAndResultMap.put(annotation.path(), resultClazz);
-            log.debug("注册controller:{},对应的VO为{}",annotation.path(),voClazz.getName());
+        // 只处理带有 CPControllerTag 注解的 Bean，避免对其他 Bean 造成影响
+        if (annotation != null) {
+            Class<?> voClazz = annotation.voClazz();
+            Class<?> resultClazz = annotation.resultClazz();
+            // 校验 VO 与 Result 是否实现了约定的接口
+            if (CPControllerVO.class.isAssignableFrom(voClazz)
+                    && CPControllerResult.class.isAssignableFrom(resultClazz)) {
+                ControllerAndVoMap.put(annotation.path(), voClazz);
+                ControllerAndResultMap.put(annotation.path(), resultClazz);
+                log.debug("注册controller:{}, 对应的VO为{}", annotation.path(), voClazz.getName());
+            } else {
+                log.warn("CPControllerTag on {} 配置不合法, voClazz={}, resultClazz={}",
+                        bean.getClass().getName(), voClazz.getName(), resultClazz.getName());
+            }
         }
         return bean;
     }

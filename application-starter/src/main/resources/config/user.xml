@@ -32,7 +32,7 @@
             /**判断是否登录**/
             UserLoginChecker,
             /**重命名参数**/
-            RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+            RenameArg.bind("key","SessionId:UserInfo_Id"),
             /**查询用户信息**/
             CPUserSelector.bind("key","id"),
             /**修改用户信息**/

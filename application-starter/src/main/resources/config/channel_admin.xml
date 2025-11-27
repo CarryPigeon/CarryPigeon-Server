@@ -5,7 +5,7 @@
         /**判断用户是否登录**/
         UserLoginChecker,
         /**重命名参数**/
-        RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+        RenameArg.bind("key","SessionId:UserInfo_Id"),
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/
@@ -28,7 +28,7 @@
         /**判断用户是否登录**/
         UserLoginChecker,
         /**重命名参数**/
-        RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+        RenameArg.bind("key","SessionId:UserInfo_Id"),
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/
