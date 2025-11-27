@@ -20,7 +20,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
  * @author midreamsheep
  * */
 @AllArgsConstructor
-@LiteflowComponent("CPChannelMemberSelectorNode")
+@LiteflowComponent("CPChannelMemberSelector")
 public class CPChannelMemberSelectorNode extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;

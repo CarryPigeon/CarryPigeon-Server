@@ -1,0 +1,17 @@
+<flow>
+    <!--获取所有群成员-->
+    <chain name="/core/channel/member/list">
+        THEN(
+        /**判断是否登录**/
+        UserLoginChecker,
+        /**重命名参数**/
+        RenameArg.bind("key","SessionId:ChannelMemberInfo_Uid;ChannelInfo_Id:ChannelMemberInfo_Cid"),
+        /**获取成员信息（即判断是否为群成员）**/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /**获取所有成员**/
+        CPChannelMemberLister
+        )
+    </chain>
+    <!--踢出群成员-->
+
+</flow>

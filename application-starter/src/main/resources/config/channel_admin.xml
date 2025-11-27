@@ -11,7 +11,7 @@
         /**权限校验,判断是不是所有者**/
         CPChannelOwnerChecker,
         /**获取成员信息**/
-        CPChannelMemberSelectorNode.bind("key","CidWithUid"),
+        CPChannelMemberSelector.bind("key","CidWithUid"),
         /**获取用户信息**/
         CPChannelMemberAuthoritySetter.bind("key","admin"),
         /**保存成员信息**/
@@ -34,7 +34,7 @@
         /**权限校验,判断是不是所有者**/
         CPChannelOwnerChecker,
         /**获取成员信息**/
-        CPChannelMemberSelectorNode.bind("key","CidWithUid"),
+        CPChannelMemberSelector.bind("key","CidWithUid"),
         /**获取用户信息**/
         CPChannelMemberAuthoritySetter.bind("key","member"),
         /**保存成员信息**/

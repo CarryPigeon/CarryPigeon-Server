@@ -12,5 +12,4 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 @CPControllerTag(
         path = "/core/channel/profile/get", voClazz = CPChannelGetProfileVO.class,resultClazz = CPChannelGetProfileResult.class
 )
-public class CPChannelGetProfileController {
-}
+public class CPChannelGetProfileController{}

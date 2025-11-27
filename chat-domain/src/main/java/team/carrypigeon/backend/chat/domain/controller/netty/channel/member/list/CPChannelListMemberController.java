@@ -22,7 +22,9 @@ import java.util.Map;
  * 访问返回:{@link CPChannelListMemberResult}<br/>
  * @author midreamsheep
  */
-@CPControllerTag("/core/channel/member/list")
+@CPControllerTag(
+        path = "/core/channel/member/list",voClazz = CPChannelListMemberVO.class,resultClazz = CPChannelListMemberResult.class
+)
 public class CPChannelListMemberController extends CPControllerAbstract<CPChannelListMemberVO> {
 
     private final ChannelMemberDao channelMemberDao;
