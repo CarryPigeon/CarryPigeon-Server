@@ -1,6 +1,12 @@
 package team.carrypigeon.backend.chat.domain.service.file;
 
-import io.minio.*;
+import io.minio.GetObjectArgs;
+import io.minio.MinioClient;
+import io.minio.PutObjectArgs;
+import io.minio.RemoveObjectArgs;
+import io.minio.StatObjectArgs;
+import io.minio.StatObjectResponse;
+import io.minio.errors.ErrorResponseException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -17,52 +23,60 @@ public class FileService {
     public FileService(MinioClient minioClient) {
         this.minioClient = minioClient;
     }
-/*
-
-    */
-/**
-     * 流式文件上传
-     * *//*
-
-    public boolean uploadFile(InputStream steam, CPFileBO file) throws Exception {
-        if (file == null || file.getName().isEmpty()) {
-            throw new IllegalArgumentException("对象名称不能为空");
-        }
-        // 创建SHA256摘要
-        MessageDigest sha256Digest = MessageDigest.getInstance("SHA-256");
-        // 使用DigestInputStream包装文件输入流
-        try (DigestInputStream digestInputStream = new DigestInputStream(
-                steam, sha256Digest)) {
-            // 上传文件
-            minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(bucketName)
-                            .object(file.getId() + ".meta")
-                            .stream(digestInputStream, file.getSize(), -1)
-                            .build()
-            );
-            // 计算SHA256值
-            byte[] digest = sha256Digest.digest();
-            // 转换为十六进制字符串
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : digest) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) {
-                    hexString.append('0');
-                }
-                hexString.append(hex);
-            }
-            if (!hexString.toString().equals(file.getSha256())) {
-                deleteFile(file.getId() + ".meta");
-                return false;
-            }
-            return true;
-        }
-    }
-*/
 
     /**
-     * 下载文件
+     * Upload file to MinIO only if an object with the same name and size does not exist.
+     *
+     * @param objectName  target object name in bucket
+     * @param stream      file data stream
+     * @param size        file size in bytes
+     * @param contentType mime type, may be null
+     * @return true if a new object is uploaded, false if a duplicate is detected
+     */
+    public boolean uploadIfNotExists(String objectName, InputStream stream, long size, String contentType) throws Exception {
+        try {
+            StatObjectResponse stat = minioClient.statObject(
+                    StatObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName)
+                            .build()
+            );
+            if (stat != null && stat.size() == size) {
+                // object with same size already exists, treat as duplicate
+                return false;
+            }
+        } catch (ErrorResponseException e) {
+            // 404 or 304 indicates object not found, continue to upload
+            String code = e.errorResponse().code();
+            if (!"NoSuchKey".equals(code) && !"NoSuchObject".equals(code)) {
+                throw e;
+            }
+        }
+        PutObjectArgs.Builder builder = PutObjectArgs.builder()
+                .bucket(bucketName)
+                .object(objectName)
+                .stream(stream, size, -1);
+        if (contentType != null && !contentType.isEmpty()) {
+            builder.contentType(contentType);
+        }
+        minioClient.putObject(builder.build());
+        return true;
+    }
+
+    /**
+     * Get basic metadata of an object.
+     */
+    public StatObjectResponse statFile(String objectName) throws Exception {
+        return minioClient.statObject(
+                StatObjectArgs.builder()
+                        .bucket(bucketName)
+                        .object(objectName)
+                        .build()
+        );
+    }
+
+    /**
+     * Download file stream.
      */
     public InputStream downloadFile(String objectName) throws Exception {
         return minioClient.getObject(
@@ -74,7 +88,7 @@ public class FileService {
     }
 
     /**
-     * 删除文件
+     * Delete file from bucket.
      */
     public void deleteFile(String objectName) throws Exception {
         minioClient.removeObject(

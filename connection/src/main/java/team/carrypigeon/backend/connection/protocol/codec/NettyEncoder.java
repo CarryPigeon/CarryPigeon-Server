@@ -7,7 +7,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public class NettyEncoder extends MessageToByteEncoder<byte[]> {
 
     @Override
-    protected void encode(ChannelHandlerContext channelHandlerContext, byte[] bytes, ByteBuf byteBuf) throws Exception {
+    protected void encode(ChannelHandlerContext channelHandlerContext, byte[] bytes, ByteBuf byteBuf) {
         byteBuf.writeShort((short)bytes.length);
         byteBuf.writeBytes(bytes);
     }

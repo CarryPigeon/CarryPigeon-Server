@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.dao.database.impl.channel;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
@@ -20,11 +22,13 @@ public class ChannelDaoImpl implements ChannelDao {
     }
 
     @Override
+    @Cacheable(cacheNames = "channelById", key = "#id")
     public CPChannel getById(long id) {
         return Optional.ofNullable(channelMapper.selectById(id)).map(ChannelPO::toBo).orElse(null);
     }
 
     @Override
+    @Cacheable(cacheNames = "channelFixed", key = "'all'")
     public CPChannel[] getAllFixed() {
         LambdaQueryWrapper<ChannelPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ChannelPO::getOwner, -1);
@@ -35,11 +39,13 @@ public class ChannelDaoImpl implements ChannelDao {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean save(CPChannel channel) {
         return channelMapper.insertOrUpdate(ChannelPO.fromBo(channel));
     }
 
     @Override
+    @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean delete(CPChannel cpChannel) {
         return channelMapper.deleteById(cpChannel.getId())!=0;
     }

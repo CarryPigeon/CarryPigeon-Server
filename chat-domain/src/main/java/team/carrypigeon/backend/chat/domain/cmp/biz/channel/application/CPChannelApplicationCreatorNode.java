@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
-import org.checkerframework.checker.units.qual.A;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;

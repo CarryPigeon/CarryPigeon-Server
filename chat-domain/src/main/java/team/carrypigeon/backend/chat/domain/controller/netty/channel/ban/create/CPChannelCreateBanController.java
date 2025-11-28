@@ -12,8 +12,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  */
 @CPControllerTag(
         path = "/core/channel/ban/create",
-        voClazz = CPChannelCreateBanVO.class,
-        resultClazz = CPControllerDefaultResult.class
+        voClazz = CPChannelCreateBanVO.class
 )
 public class CPChannelCreateBanController {
 }

@@ -2,6 +2,8 @@ package team.carrypigeon.backend.dao.database.impl.channel.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
@@ -20,11 +22,13 @@ public class ChannelApplicationDaoImpl implements ChannelApplicationDAO {
     }
 
     @Override
+    @Cacheable(cacheNames = "channelApplicationById", key = "#id")
     public CPChannelApplication getById(long id) {
         return Optional.ofNullable(channelApplicationMapper.selectById(id)).map(ChannelApplicationPO::toBo).orElse(null);
     }
 
     @Override
+    @Cacheable(cacheNames = "channelApplicationByUidCid", key = "#uid + ':' + #cid")
     public CPChannelApplication getByUidAndCid(long uid, long cid) {
         LambdaQueryWrapper<ChannelApplicationPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ChannelApplicationPO::getUid, uid).eq(ChannelApplicationPO::getCid, cid);
@@ -40,6 +44,7 @@ public class ChannelApplicationDaoImpl implements ChannelApplicationDAO {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"channelApplicationById", "channelApplicationByUidCid"}, allEntries = true)
     public boolean save(CPChannelApplication channelApplication) {
         return channelApplicationMapper.insertOrUpdate(ChannelApplicationPO.fromBo(channelApplication));
     }

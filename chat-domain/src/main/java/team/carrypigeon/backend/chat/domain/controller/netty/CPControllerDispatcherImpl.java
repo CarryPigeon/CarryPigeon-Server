@@ -6,7 +6,6 @@ import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
@@ -19,6 +18,7 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -39,15 +39,13 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     public CPControllerDispatcherImpl(ObjectMapper mapper,
                                       CPSessionCenterService cpSessionCenterService,
                                       FlowExecutor flowExecutor,
-                                      @Qualifier("ControllerAndVOMap") Map<String, Class<?>> controllerAndVOMap,
-                                      @Qualifier("ControllerAndResultMap") Map<String, Class<?>> controllerAndResultMap,
                                       ObjectMapper objectMapper,
                                       ApplicationContext applicationContext) {
         this.mapper = mapper;
         this.cpSessionCenterService = cpSessionCenterService;
         this.flowExecutor = flowExecutor;
-        this.controllerAndVOMap = controllerAndVOMap;
-        this.controllerAndResultMap = controllerAndResultMap;
+        this.controllerAndVOMap = new HashMap<>();
+        this.controllerAndResultMap = new HashMap<>();
         this.objectMapper = objectMapper;
         this.applicationContext = applicationContext;
         initControllerMapsIfNecessary();
@@ -84,7 +82,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             String path = annotation.path();
             controllerAndVOMap.putIfAbsent(path, voClazz);
             controllerAndResultMap.putIfAbsent(path, resultClazz);
-            log.debug("register controller path:{}, vo:{}, result:{}", path, voClazz.getName(), resultClazz.getName());
+            log.info("register controller path:{}, vo:{}, result:{}", path, voClazz.getName(), resultClazz.getName());
         }
     }
 

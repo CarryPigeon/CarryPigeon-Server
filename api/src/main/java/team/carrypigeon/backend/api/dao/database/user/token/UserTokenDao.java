@@ -35,5 +35,5 @@ public interface UserTokenDao {
      * 删除token数据
      * @param token token数据
      * */
-    boolean delete(String token);
+    boolean delete(CPUserToken token);
 }

@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.dao.database.impl.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
@@ -19,11 +21,13 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    @Cacheable(cacheNames = "userById", key = "#id")
     public CPUser getById(long id) {
         return Optional.ofNullable(userMapper.selectById(id)).map(UserPO::toBo).orElse(null);
     }
 
     @Override
+    @Cacheable(cacheNames = "userByEmail", key = "#email")
     public CPUser getByEmail(String email) {
         LambdaQueryWrapper<UserPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserPO::getEmail, email);
@@ -31,6 +35,7 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
+    @CacheEvict(cacheNames = {"userById", "userByEmail"}, allEntries = true)
     public boolean save(CPUser user) {
         return userMapper.insertOrUpdate(UserPO.fromBo(user));
     }

@@ -12,8 +12,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
  */
 @CPControllerTag(
         path = "/core/service/email/send",
-        voClazz = CPServiceSendEmailVO.class,
-        resultClazz = CPControllerDefaultResult.class
+        voClazz = CPServiceSendEmailVO.class
 )
 public class CPServiceSendEmailController {
 }

@@ -28,7 +28,7 @@ public class CPUserTokenDeleter extends CPNodeComponent {
         if (userToken == null){
             argsError(context);
         }
-        if (!userTokenDao.delete(userToken.getToken())){
+        if (!userTokenDao.delete(userToken)){
             context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting token"));
             throw new CPReturnException();
         }

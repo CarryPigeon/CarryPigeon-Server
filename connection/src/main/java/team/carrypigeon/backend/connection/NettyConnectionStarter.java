@@ -15,7 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.starter.connection.ConnectionConfig;
-import team.carrypigeon.backend.api.starter.connection.ConnectionStarter;
 import team.carrypigeon.backend.connection.handler.ConnectionHandler;
 import team.carrypigeon.backend.connection.protocol.codec.NettyDecoder;
 import team.carrypigeon.backend.connection.protocol.codec.NettyEncoder;
@@ -30,7 +29,7 @@ import java.util.concurrent.TimeUnit;
  * */
 @Component
 @Slf4j
-public class NettyConnectionStarter implements ConnectionStarter {
+public class NettyConnectionStarter {
 
     private final CPControllerDispatcher cpControllerDispatcher;
     private final ObjectMapper objectMapper;
@@ -43,7 +42,6 @@ public class NettyConnectionStarter implements ConnectionStarter {
         this.config = config;
     }
 
-    @Override
     @PostConstruct
     public void run() {
         try{

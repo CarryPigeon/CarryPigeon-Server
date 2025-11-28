@@ -45,23 +45,21 @@
             CPNotifier.bind("route","/core/user/profile/get")
         );
     </chain>
-    <!--修改用户邮箱-->
-    <chain name="/core/user/profile/update/email">
-        THEN(
-            /**判断用户是否登录**/
-            UserLoginChecker,
-            /**判断邮箱是否格式正确**/
-            EmailValidChecker,
-            /**判断验证码是否正确**/
-            EmailCodeChecker,
-            /**获取用户**/
-            CPUserSelector.bind("key","email"),
-            /**更新用户数据**/
-            CPUserUpdater,
-            /**持久化用户信息**/
-            CPUserSaver
-        )
-    </chain>
+	    <!--修改用户邮箱-->
+	    <chain name="/core/user/profile/update/email">
+	        THEN(
+	            /**判断邮箱是否格式正确**/
+	            EmailValidChecker,
+	            /**判断验证码是否正确**/
+	            EmailCodeChecker,
+	            /**获取用户**/
+	            CPUserSelector.bind("key","email"),
+	            /**更新用户数据**/
+	            CPUserUpdater,
+	            /**持久化用户信息**/
+	            CPUserSaver
+	        )
+	    </chain>
     <!--用户登录-->
     <chain name="/core/user/login/email">
         THEN(
