@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 频道申请保存Node<br/>
@@ -25,12 +26,13 @@ public class CPChannelApplicationSavorNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplication = context.getData("ChannelApplicationInfo");
+        CPChannelApplication channelApplication = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
         if (channelApplication==null){
             argsError(context);
         }
         if (!channelApplicationDAO.save(channelApplication)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.setTextData("save channel application error"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.setTextData("save channel application error"));
             throw new CPReturnException();
         }
     }

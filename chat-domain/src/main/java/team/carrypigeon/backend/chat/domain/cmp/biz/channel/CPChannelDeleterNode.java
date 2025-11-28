@@ -11,6 +11,7 @@ import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于删除通道的Node<br/>
@@ -27,17 +28,19 @@ public class CPChannelDeleterNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannel channelInfo = context.getData("ChannelInfo");
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         if (channelInfo == null){
             argsError(context);
         }
         if (!channelDao.delete(channelInfo)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel"));
             throw new CPReturnException();
         }
         for (CPChannelMember channelMember : channelMemberDao.getAllMember(channelInfo.getId())) {
             if (!channelMemberDao.delete(channelMember)){
-                context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel member"));
+                context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                        CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel member"));
                 throw new CPReturnException();
             }
         }

@@ -1,0 +1,77 @@
+package team.carrypigeon.backend.chat.domain.cmp.checker.group;
+
+import com.yomahub.liteflow.annotation.LiteflowComponent;
+import com.yomahub.liteflow.slot.DefaultContext;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
+import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
+
+/**
+ * ???????????????????
+ * ???ChannelInfo_Id:Long; ChannelMemberInfo_Uid:Long<br/>
+ * ???
+ * <ul>
+ *     <li>????????????????????</li>
+ *     <li>??????bind type=soft???? CheckResult</li>
+ * </ul>
+ */
+@Slf4j
+@AllArgsConstructor
+@LiteflowComponent("CPChannelBanChecker")
+public class CPChannelBanCheckerNode extends CPNodeComponent {
+
+    private static final String BIND_TYPE_KEY = "type";
+
+    private final ChannelBanDAO channelBanDAO;
+
+    @Override
+    protected void process(CPSession session, DefaultContext context) throws Exception {
+        String type = getBindData(BIND_TYPE_KEY, String.class);
+        boolean soft = "soft".equalsIgnoreCase(type);
+
+        Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
+        Long uid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID);
+        if (cid == null || uid == null) {
+            log.error("CPChannelBanChecker args error: ChannelInfo_Id or ChannelMemberInfo_Uid is null");
+            argsError(context);
+            return;
+        }
+        CPChannelBan ban = channelBanDAO.getByChannelIdAndUserId(uid, cid);
+        if (ban == null) {
+            // ??????????????
+            if (soft) {
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+            }
+            log.debug("CPChannelBanChecker: no ban record, cid={}, uid={}", cid, uid);
+            return;
+        }
+        if (ban.isValid()) {
+            if (soft) {
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(false, "banned"));
+                log.info("CPChannelBanChecker soft fail: user is banned, cid={}, uid={}, banId={}", cid, uid, ban.getId());
+                return;
+            }
+            log.info("CPChannelBanChecker hard fail: user is banned, cid={}, uid={}, banId={}", cid, uid, ban.getId());
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("user is banned in this channel"));
+            throw new CPReturnException();
+        }
+        // ?????????????
+        boolean deleted = channelBanDAO.delete(ban);
+        if (deleted) {
+            log.debug("CPChannelBanChecker: deleted expired ban, cid={}, uid={}, banId={}", cid, uid, ban.getId());
+        } else {
+            log.warn("CPChannelBanChecker: failed to delete expired ban, cid={}, uid={}, banId={}", cid, uid, ban.getId());
+        }
+        if (soft) {
+            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+        }
+    }
+}

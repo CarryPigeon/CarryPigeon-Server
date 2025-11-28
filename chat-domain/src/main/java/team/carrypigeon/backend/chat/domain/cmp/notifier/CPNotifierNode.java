@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
 
 import java.util.Set;
@@ -29,13 +30,13 @@ public class CPNotifierNode extends CPNodeComponent {
         if (route == null){
             argsError(context);
         }
-        Set<Long> uids = context.getData("Notifier_Uids");
+        Set<Long> uids = context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS);
         if (route == null || uids == null){
             argsError(context);
         }
         CPNotification notification = new CPNotification();
         notification.setRoute(route)
-                .setData(context.getData("Notifier_Data"));
+                .setData(context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_DATA));
         assert uids != null;
         cpNotificationService.sendNotification(uids, notification);
     }

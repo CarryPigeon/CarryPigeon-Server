@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于保存用户信息的Node<br/>
@@ -24,9 +25,10 @@ public class CPUserSaverNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPUser userInfo = context.getData("UserInfo");
+        CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (!userDao.save(userInfo)) {
-            context.setData("response",CPResponse.ERROR_RESPONSE.copy().setTextData("save user error"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("save user error"));
             throw new CPReturnException();
         }
     }

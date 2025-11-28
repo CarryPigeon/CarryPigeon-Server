@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -25,12 +26,12 @@ public class CPChannelBuilderNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
 
-        Long channelInfoId = context.getData("ChannelInfo_Id");
-        String channelInfoName = context.getData("ChannelInfo_Name");
-        Long channelInfoOwner = context.getData("ChannelInfo_Owner");
-        String channelInfoBrief = context.getData("ChannelInfo_Brief");
-        Long channelInfoAvatar = context.getData("ChannelInfo_Avatar");
-        Long channelInfoCreateTime = context.getData("ChannelInfo_CreateTime");
+        Long channelInfoId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
+        String channelInfoName = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_NAME);
+        Long channelInfoOwner = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_OWNER);
+        String channelInfoBrief = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_BRIEF);
+        Long channelInfoAvatar = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_AVATAR);
+        Long channelInfoCreateTime = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_CREATE_TIME);
         if (channelInfoId == null || channelInfoName == null || channelInfoOwner == null || channelInfoBrief == null || channelInfoAvatar == null || channelInfoCreateTime == null){
             argsError(context);
         }
@@ -41,6 +42,6 @@ public class CPChannelBuilderNode extends CPNodeComponent {
                 .setBrief(channelInfoBrief)
                 .setAvatar(channelInfoAvatar)
                 .setCreateTime(TimeUtil.MillisToLocalDateTime(channelInfoCreateTime));
-        context.setData("ChannelInfo",cpChannel);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO, cpChannel);
     }
 }

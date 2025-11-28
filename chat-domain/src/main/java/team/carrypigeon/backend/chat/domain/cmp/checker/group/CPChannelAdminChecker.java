@@ -11,17 +11,18 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * 用于检查用户是否为频道管理员的Node<br/>
- * 入参: <br/>
+ * ???????????????Node<br/>
+ * ??: <br/>
  * 1.ChannelInfo_Id:Long<br/>
  * 2.UserInfo_Id:Long<br/>
- * 出参：
+ * ???
  * <ul>
- *     <li>硬失败模式（默认）：不是管理员时直接返回错误</li>
- *     <li>软失败模式（bind type=soft）：写入 CheckResult</li>
+ *     <li>??????????????????????</li>
+ *     <li>??????bind type=soft???? CheckResult</li>
  * </ul>
  * @author midreamsheep
  */
@@ -39,8 +40,8 @@ public class CPChannelAdminChecker extends CPNodeComponent {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
-        Long channelId = context.getData("ChannelInfo_Id");
-        Long userInfoId = context.getData("UserInfo_Id");
+        Long channelId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
+        Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (channelId == null || userInfoId == null) {
             log.error("CPChannelAdminChecker args error: ChannelInfo_Id or UserInfo_Id is null");
             argsError(context);
@@ -49,26 +50,30 @@ public class CPChannelAdminChecker extends CPNodeComponent {
         CPChannelMember channelMemberInfo = channelMemberDao.getMember(userInfoId, channelId);
         if (channelMemberInfo == null) {
             if (soft) {
-                context.setData("CheckResult", new CheckResult(false, "not in channel"));
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                        new CheckResult(false, "not in channel"));
                 log.info("CPChannelAdminChecker soft fail: user not in channel, uid={}, cid={}", userInfoId, channelId);
                 return;
             }
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("you are not in this channel"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("you are not in this channel"));
             log.info("CPChannelAdminChecker hard fail: user not in channel, uid={}, cid={}", userInfoId, channelId);
             throw new CPReturnException();
         }
         if (channelMemberInfo.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             if (soft) {
-                context.setData("CheckResult", new CheckResult(false, "not admin"));
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                        new CheckResult(false, "not admin"));
                 log.info("CPChannelAdminChecker soft fail: user not admin, uid={}, cid={}", userInfoId, channelId);
                 return;
             }
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("you are not the admin of this channel"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("you are not the admin of this channel"));
             log.info("CPChannelAdminChecker hard fail: user not admin, uid={}, cid={}", userInfoId, channelId);
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData("CheckResult", new CheckResult(true, null));
+            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
             log.debug("CPChannelAdminChecker soft success, uid={}, cid={}", userInfoId, channelId);
         }
     }

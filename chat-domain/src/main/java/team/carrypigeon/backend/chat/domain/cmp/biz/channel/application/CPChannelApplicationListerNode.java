@@ -7,6 +7,8 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.PageInfo;
 
 import java.util.HashSet;
@@ -25,8 +27,8 @@ public class CPChannelApplicationListerNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        Long channelId = context.getData("ChannelInfo_Id");
-        PageInfo pageInfo = context.getData("PageInfo");
+        Long channelId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
+        PageInfo pageInfo = context.getData(CPNodeValueKeyExtraConstants.PAGE_INFO);
         if (channelId == null || pageInfo == null){
             argsError(context);
             return;
@@ -36,6 +38,6 @@ public class CPChannelApplicationListerNode extends CPNodeComponent {
         for (CPChannelApplication application : applications) {
             objects.add(application);
         }
-        context.setData("applications", objects);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_LIST, objects);
     }
 }

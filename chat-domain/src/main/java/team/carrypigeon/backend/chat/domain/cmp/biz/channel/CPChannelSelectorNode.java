@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于从数据库获取通道数据的Node<br/>
@@ -26,7 +27,7 @@ public class CPChannelSelectorNode extends CPNodeComponent {
         String bindData = getBindData("key", String.class);
         switch (bindData){
             case "id":
-                Long id = context.getData("ChannelInfo_Id");
+                Long id = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
                 if (id == null){
                     argsError(context);
                 }
@@ -34,7 +35,7 @@ public class CPChannelSelectorNode extends CPNodeComponent {
                 if (channel == null){
                     argsError(context);
                 }
-                context.setData("ChannelInfo",channel);
+                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO, channel);
                 break;
             case null:
             default:

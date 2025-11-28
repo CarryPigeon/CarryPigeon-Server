@@ -9,16 +9,18 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * 邮箱验证码检查器</br>
- * 验证邮箱验证码是否正确<br/>
- * 入参：Email:String;Email_Code:Long<br/>
- * 出参：
+ * ????????</br>
+ * ???????????<br/>
+ * ???Email:String;Email_Code:Long<br/>
+ * ???
  * <ul>
- *     <li>硬失败模式（默认）：验证码错误时直接返回错误</li>
- *     <li>软失败模式（bind type=soft）：写入 CheckResult</li>
+ *     <li>??????????????????????</li>
+ *     <li>??????bind type=soft???? CheckResult</li>
  * </ul>
  */
 @Slf4j
@@ -35,32 +37,33 @@ public class EmailCodeChecker extends CPNodeComponent {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
-        // 获取参数
-        String email = context.getData("Email");
-        Long code = context.getData("Email_Code");
+        // ????
+        String email = context.getData(CPNodeValueKeyExtraConstants.EMAIL);
+        Long code = context.getData(CPNodeValueKeyExtraConstants.EMAIL_CODE);
         if (email == null || code == null) {
-            // 参数错误视为硬失败
+            // ?????????
             log.error("EmailCodeChecker param error: email or code is null");
-            context.setData("response",
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                     CPResponse.SERVER_ERROR.copy().setTextData("email code param error"));
             throw new CPReturnException();
         }
         String serverCode = cache.getAndDelete(email + ":code");
         if (serverCode == null || !serverCode.equals(code.longValue() + "")) {
             if (soft) {
-                context.setData("CheckResult", new CheckResult(false, "email code error"));
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                        new CheckResult(false, "email code error"));
                 log.info("EmailCodeChecker soft fail: code error, email={}", email);
                 return;
             }
             log.info("EmailCodeChecker hard fail: code error, email={}", email);
-            context.setData("response",
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("email code error"));
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData("CheckResult", new CheckResult(true, null));
+            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
             log.debug("EmailCodeChecker soft success, email={}", email);
         }
-        // 成功执行则不做额外处理
+        // ???????????
     }
 }

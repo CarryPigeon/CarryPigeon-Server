@@ -5,6 +5,7 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 获取申请频道的id的Node<br/>
@@ -16,11 +17,11 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 public class CPChannelApplicationCidGetterNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo = context.getData("ChannelApplicationInfo");
+        CPChannelApplication channelApplicationInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
         if (channelApplicationInfo==null){
             argsError(context);
             return;
         }
-        context.setData("ChannelApplicationInfo_Cid",channelApplicationInfo.getCid());
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_CID, channelApplicationInfo.getCid());
     }
 }

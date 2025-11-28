@@ -8,6 +8,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -28,15 +29,15 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
         // 获取用户信息
-        Long userInfoId = context.getData("UserInfo_Id");
+        Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (userInfoId == null){
             argsError(context);
         }
         // 获取Set<Long>
-        Set<Long> uids = context.getData("Notifier_Uids");
+        Set<Long> uids = context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS);
         if (uids == null){
             uids = new HashSet<>();
-            context.setData("Notifier_Uids",uids);
+            context.setData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS, uids);
         }
         // 获取用户id
         CPChannelMember[] allMemberByUserId = channelMemberDao.getAllMemberByUserId(userInfoId);

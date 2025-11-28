@@ -9,6 +9,8 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 用于从数据库查询token<br/>
@@ -30,20 +32,24 @@ public class CPUserTokenSelectorNode extends CPNodeComponent {
         }
         switch (bindData){
             case "token":
-                CPUserToken userToken = userTokenDao.getByToken(context.getData("UserToken_Token"));
+                CPUserToken userToken = userTokenDao.getByToken(
+                        context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN));
                 if (userToken == null){
-                    context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
+                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                            CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
                     throw new CPReturnException();
                 }
-                context.setData("UserToken", userToken);
+                context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, userToken);
                 break;
             case "id":
-                CPUserToken userTokenId = userTokenDao.getById(context.getData("UserToken_Id"));
+                CPUserToken userTokenId = userTokenDao.getById(
+                        context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_ID));
                 if (userTokenId == null){
-                    context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
+                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                            CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
                     throw new CPReturnException();
                 }
-                context.setData("UserToken", userTokenId);
+                context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, userTokenId);
                 break;
             case null:
                 break;

@@ -7,6 +7,8 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 选择通道申请Node<br/>
@@ -28,17 +30,22 @@ public class CPChannelApplicationSelectorNode extends CPNodeComponent {
             argsError(context);
             return;
         }
-        switch (bindData){
+        switch (bindData) {
             case "id":
-                CPChannelApplication application = channelApplicationDao.getById(getBindData("id", Long.class));
-                if (application == null){
+                Long applicationId = context.getData(CPNodeValueKeyExtraConstants.CHANNEL_APPLICATION_INFO_ID);
+                if (applicationId == null) {
                     argsError(context);
                     return;
                 }
-                context.setData("ChannelApplicationInfo",application);
+                CPChannelApplication application = channelApplicationDao.getById(applicationId);
+                if (application == null) {
+                    argsError(context);
+                    return;
+                }
+                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO, application);
                 break;
             default:
-                argsError( context);
+                argsError(context);
                 break;
         }
     }

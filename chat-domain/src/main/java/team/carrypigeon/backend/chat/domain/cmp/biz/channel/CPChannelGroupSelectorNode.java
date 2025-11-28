@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,7 +30,7 @@ public class CPChannelGroupSelectorNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        Long userId = context.getData("UserInfo_Id");
+        Long userId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (userId == null){
             argsError(context);
         }
@@ -40,6 +41,6 @@ public class CPChannelGroupSelectorNode extends CPNodeComponent {
         for (CPChannelMember channelMember : allUserChannel) {
             result.add(channelDao.getById(channelMember.getCid()));
         }
-        context.setData("channels",result);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_LIST, result);
     }
 }

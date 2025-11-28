@@ -8,15 +8,16 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * 用于检查频道的创建者权限的Node<br/>
- * 入参: ChannelInfo:{@link CPChannel};UserInfo_Id:Long<br/>
- * 出参：
+ * ?????????????Node<br/>
+ * ??: ChannelInfo:{@link CPChannel};UserInfo_Id:Long<br/>
+ * ???
  * <ul>
- *     <li>硬失败模式（默认）：不是 owner 时直接返回错误</li>
- *     <li>软失败模式（bind type=soft）：写入 CheckResult</li>
+ *     <li>???????????? owner ???????</li>
+ *     <li>??????bind type=soft???? CheckResult</li>
  * </ul>
  * @author midreamsheep
  */
@@ -31,8 +32,8 @@ public class CPChannelOwnerChecker extends CPNodeComponent {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
-        CPChannel channelInfo = context.getData("ChannelInfo");
-        Long userInfoId = context.getData("UserInfo_Id");
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
+        Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (channelInfo == null || userInfoId == null) {
             log.error("CPChannelOwnerChecker args error: ChannelInfo or UserInfo_Id is null");
             argsError(context);
@@ -40,16 +41,18 @@ public class CPChannelOwnerChecker extends CPNodeComponent {
         }
         if (channelInfo.getOwner() != userInfoId) {
             if (soft) {
-                context.setData("CheckResult", new CheckResult(false, "not owner"));
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                        new CheckResult(false, "not owner"));
                 log.info("CPChannelOwnerChecker soft fail: user not owner, uid={}, cid={}", userInfoId, channelInfo.getId());
                 return;
             }
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("you are not the owner of this channel"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("you are not the owner of this channel"));
             log.info("CPChannelOwnerChecker hard fail: user not owner, uid={}, cid={}", userInfoId, channelInfo.getId());
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData("CheckResult", new CheckResult(true, null));
+            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
             log.debug("CPChannelOwnerChecker soft success, uid={}, cid={}", userInfoId, channelInfo.getId());
         }
     }

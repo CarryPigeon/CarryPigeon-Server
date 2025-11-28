@@ -8,17 +8,18 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * 判断用户是否登录的校验器<br/>
- * 入参：无<br/>
- * 出参：
+ * ????????????<br/>
+ * ????<br/>
+ * ???
  * <ul>
- *     <li>硬失败模式（默认）：SessionId:Long</li>
- *     <li>软失败模式（bind type=soft）：SessionId:Long（成功时），CheckResult</li>
+ *     <li>??????????SessionId:Long</li>
+ *     <li>??????bind type=soft??SessionId:Long??????CheckResult</li>
  * </ul>
- * type bind: hard|soft, 默认 hard。
+ * type bind: hard|soft, ?? hard?
  * @author midreamsheep
  */
 @Slf4j
@@ -35,21 +36,22 @@ public class UserLoginCheckerNode extends CPNodeComponent {
         Long attributeValue = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
         if (attributeValue == null) {
             if (soft) {
-                // 软失败：仅写入 CheckResult，不中断流程
-                context.setData("CheckResult", new CheckResult(false, "user not login"));
+                // ??????? CheckResult??????
+                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                        new CheckResult(false, "user not login"));
                 log.info("UserLoginChecker soft fail: user not login");
                 return;
             }
-            // 硬失败：直接返回未登录错误
+            // ?????????????
             log.info("UserLoginChecker hard fail: user not login");
-            context.setData("response",
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                     CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("user not login"));
             throw new CPReturnException();
         }
-        // 登录成功，写入 SessionId
-        context.setData("SessionId", attributeValue);
+        // ??????? SessionId
+        context.setData(CPNodeValueKeyBasicConstants.SESSION_ID, attributeValue);
         if (soft) {
-            context.setData("CheckResult", new CheckResult(true, null));
+            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
             log.debug("UserLoginChecker soft success, uid={}", attributeValue);
         }
     }

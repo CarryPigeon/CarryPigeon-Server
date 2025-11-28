@@ -6,6 +6,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -26,14 +27,14 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPUserBuilderNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        Long userInfoId = context.getData("UserInfo_Id");
-        String userInfoUserName = context.getData("UserInfo_UserName");
-        String userInfoBrief = context.getData("UserInfo_Brief");
-        Long userInfoAvatar = context.getData("UserInfo_Avatar");
-        String userInfoEmail = context.getData("UserInfo_Email");
-        Integer userInfoSex = context.getData("UserInfo_Sex");
-        Long userInfoBirthday = context.getData("UserInfo_Birthday");
-        Long userInfoRegisterTime = context.getData("UserInfo_RegisterTime");
+        Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
+        String userInfoUserName = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_USER_NAME);
+        String userInfoBrief = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_BRIEF);
+        Long userInfoAvatar = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_AVATAR);
+        String userInfoEmail = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL);
+        Integer userInfoSex = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_SEX);
+        Long userInfoBirthday = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_BIRTHDAY);
+        Long userInfoRegisterTime = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_REGISTER_TIME);
         if (userInfoId == null || userInfoUserName == null || userInfoBrief == null || userInfoAvatar == null || userInfoEmail == null || userInfoSex == null || userInfoBirthday == null || userInfoRegisterTime == null){
             argsError(context);
         }
@@ -46,6 +47,6 @@ public class CPUserBuilderNode extends CPNodeComponent {
                 .setSex(CPUserSexEnum.valueOf(userInfoSex))
                 .setBirthday(TimeUtil.MillisToLocalDateTime(userInfoBirthday))
                 .setRegisterTime(TimeUtil.MillisToLocalDateTime(userInfoRegisterTime));
-        context.setData("UserInfo",cpUser);
+        context.setData(CPNodeValueKeyBasicConstants.USER_INFO, cpUser);
     }
 }

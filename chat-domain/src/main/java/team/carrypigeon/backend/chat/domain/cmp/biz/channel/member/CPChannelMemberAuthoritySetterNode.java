@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuth
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于设置通道成员权限的Node<br/>
@@ -21,18 +22,19 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 public class CPChannelMemberAuthoritySetterNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelMember channelMember = context.getData("ChannelMemberInfo");
-        CPChannel channelInfo = context.getData("ChannelInfo");
-        String authority = getBindData("key",String.class);
-        Long sessionId = context.getData("SessionId");
+        CPChannelMember channelMember = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
+        String authority = getBindData("key", String.class);
+        Long sessionId = context.getData(CPNodeValueKeyBasicConstants.SESSION_ID);
         if (channelMember == null|| authority == null|| channelInfo == null){
             argsError(context);
         }
         assert channelMember != null;
         switch (authority){
             case "member":
-                if (channelInfo.getOwner()!=sessionId){
-                    context.setData("response", CPResponse.AUTHORITY_ERROR_RESPONSE.setTextData("you are the owner of this channel"));
+                if (channelInfo.getOwner() != sessionId){
+                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                            CPResponse.AUTHORITY_ERROR_RESPONSE.setTextData("you are the owner of this channel"));
                     throw new CPReturnException();
                 }
                 channelMember.setAuthority(CPChannelMemberAuthorityEnum.MEMBER);

@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -27,15 +28,15 @@ public class CPChannelAdminCollector extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannel channel = context.getData("ChannelInfo");
+        CPChannel channel = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         if (channel==null){
             argsError(context);
             return;
         }
-        Set<Long> uids = context.getData("Notifier_Uids");
+        Set<Long> uids = context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS);
         if (uids == null){
             uids = new HashSet<>();
-            context.setData("Notifier_Uids",uids);
+            context.setData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS, uids);
         }
         CPChannelMember[] allMember = channelMemberDao.getAllMember(channel.getId());
         for (CPChannelMember member : allMember) {

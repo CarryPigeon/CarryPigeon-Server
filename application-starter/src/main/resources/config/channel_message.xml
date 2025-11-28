@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- 发送频道消息 -->
+    <chain name="/core/channel/message/create">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelInfo_Id"),
+        /** 校验用户是否在频道中 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 校验用户是否被禁言 **/
+        CPChannelBanChecker,
+        /** 查询频道信息，供后续通知使用 **/
+        CPChannelSelector.bind("key","id"),
+        /** 解析消息体 **/
+        CPMessageParse,
+        /** 构建消息实体 **/
+        CPMessageBuilder,
+        /** 持久化消息 **/
+        CPMessageSaver,
+        /** 收集频道所有成员用于通知 **/
+        CPChannelMemberCollector,
+        /** 构建通知数据 **/
+        CPMessageCreateNotifyBuilder,
+        /** 通知频道内所有成员 **/
+        CPNotifier.bind("route","/core/message")
+        )
+    </chain>
+
+    <!-- 删除频道消息 -->
+    <chain name="/core/channel/message/delete">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 查询消息信息 **/
+        CPMessageSelector,
+        /** 删除权限校验 **/
+        CPMessageDeletePermissionChecker,
+        /** 删除消息 **/
+        CPMessageDeleter,
+        /** 查询频道信息，供后续通知使用 **/
+        CPChannelSelector.bind("key","id"),
+        /** 收集频道所有成员用于通知 **/
+        CPChannelMemberCollector,
+        /** 构建删除消息通知数据 **/
+        CPMessageDeleteNotifyBuilder,
+        /** 通知频道内所有成员 **/
+        CPNotifier.bind("route","/core/message")
+        )
+    </chain>
+
+    <!-- 拉取频道消息列表 -->
+    <chain name="/core/channel/message/list">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelInfo_Id"),
+        /** 校验用户是否在频道中 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 拉取消息列表 **/
+        CPMessageLister
+        )
+    </chain>
+
+    <!-- 获取未读消息数量 -->
+    <chain name="/core/channel/message/unread/get">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelInfo_Id"),
+        /** 校验用户是否在频道中 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 计算未读消息数量 **/
+        CPMessageUnreadCounter
+        )
+    </chain>
+</flow>
+

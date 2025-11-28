@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -20,8 +21,8 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelMemberCreatorNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannel channelInfo = context.getData("ChannelInfo");
-        Long userId = context.getData("UserInfo_Id");
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
+        Long userId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (channelInfo == null|| userId == null){
             argsError(context);
         }
@@ -33,6 +34,6 @@ public class CPChannelMemberCreatorNode extends CPNodeComponent {
                 .setName("")
                 .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
                 .setJoinTime(TimeUtil.getCurrentLocalTime());
-        context.setData("ChannelMember",channelMemberInfo);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo);
     }
 }

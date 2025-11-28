@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于更新频道成员信息的Node<br/>
@@ -27,20 +28,21 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelMember channelMemberInfo = context.getData("ChannelMemberInfo");
+        CPChannelMember channelMemberInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
         if (channelMemberInfo == null){
             argsError(context);
         }
-        String channelMemberInfoName = context.getData("ChannelMemberInfo_Name");
+        String channelMemberInfoName = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_NAME);
         if (channelMemberInfoName != null){
             channelMemberInfo.setName(channelMemberInfoName);
         }
-        Integer channelMemberInfoAuthority = context.getData("ChannelMemberInfo_Authority");
+        Integer channelMemberInfoAuthority = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_AUTHORITY);
         if (channelMemberInfoAuthority != null){
             channelMemberInfo.setAuthority(CPChannelMemberAuthorityEnum.valueOf(channelMemberInfoAuthority));
         }
         if (!channelMemberDao.save(channelMemberInfo)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("update channel member error"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("update channel member error"));
             throw new CPReturnException();
         }
     }

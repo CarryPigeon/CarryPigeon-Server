@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 获取用户token的uid<br/>
@@ -18,10 +20,10 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 public class CPUserTokenUidGetterNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData("UserToken");
+        CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
         if (userToken == null){
             argsError(context);
         }
-        context.setData("UserInfo_Id",userToken.getUid());
+        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_ID, userToken.getUid());
     }
 }

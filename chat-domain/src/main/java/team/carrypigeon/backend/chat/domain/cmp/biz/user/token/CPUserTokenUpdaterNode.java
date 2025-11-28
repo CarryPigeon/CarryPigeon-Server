@@ -9,6 +9,8 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -28,20 +30,21 @@ public class CPUserTokenUpdaterNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData("UserToken");
+        CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
         if (userToken == null){
             argsError(context);
         }
-        String token = context.getData("UserToken_Token");
+        String token = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN);
         if (token != null){
             userToken.setToken(token);
         }
-        Long expiredTime = context.getData("UserToken_ExpiredTime");
+        Long expiredTime = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_EXPIRED_TIME);
         if (expiredTime != null){
             userToken.setExpiredTime(TimeUtil.MillisToLocalDateTime(expiredTime));
         }
         if (!userTokenDao.save(userToken)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("update user token error"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("update user token error"));
             throw new CPReturnException();
         }
 

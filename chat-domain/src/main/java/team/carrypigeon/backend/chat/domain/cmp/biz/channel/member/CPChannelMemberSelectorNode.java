@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 用于选择通道成员的Node<br/>
@@ -33,29 +34,31 @@ public class CPChannelMemberSelectorNode extends CPNodeComponent {
         }
         switch (bindData){
             case "id":
-                Long channelMemberInfoId = context.getData("ChannelMemberInfo_Id");
+                Long channelMemberInfoId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_ID);
                 if (channelMemberInfoId == null){
                     argsError(context);
                 }
                 CPChannelMember channelMemberInfo = channelMemberDao.getById(channelMemberInfoId);
                 if (channelMemberInfo == null){
-                    context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
+                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                            CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
                     throw new CPReturnException();
                 }
-                context.setData("ChannelMemberInfo", channelMemberInfo);
+                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo);
                 break;
             case "CidWithUid":
-                Long cid = context.getData("ChannelMemberInfo_Cid");
-                Long uid = context.getData("ChannelMemberInfo_Uid");
+                Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID);
+                Long uid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID);
                 if (cid == null || uid == null) {
                     argsError(context);
                 }
                 CPChannelMember channelMemberInfo2 = channelMemberDao.getMember(uid, cid);
                 if (channelMemberInfo2 == null){
-                    context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
+                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                            CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
                     throw new CPReturnException();
                 }
-                context.setData("ChannelMemberInfo", channelMemberInfo2);
+                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo2);
                 break;
             case null:
             default:

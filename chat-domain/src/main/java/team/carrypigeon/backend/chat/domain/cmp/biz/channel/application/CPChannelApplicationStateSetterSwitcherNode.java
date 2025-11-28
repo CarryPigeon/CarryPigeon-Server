@@ -6,6 +6,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeSwitchComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 频道申请状态设置Node<br/>
@@ -19,8 +20,8 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPNodeSwitchComponent
 public class CPChannelApplicationStateSetterSwitcherNode extends CPNodeSwitchComponent {
     @Override
     protected String process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo = context.getData("ChannelApplicationInfo");
-        Integer state = context.getData("ChannelApplicationInfo_State");
+        CPChannelApplication channelApplicationInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
+        Integer state = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_STATE);
         if (channelApplicationInfo==null|| state==null){
             argsError(context);
         }

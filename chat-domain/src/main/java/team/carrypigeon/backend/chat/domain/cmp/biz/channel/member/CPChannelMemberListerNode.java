@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 import java.util.HashSet;
 
@@ -25,7 +26,7 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        Long cid = context.getData("ChannelMemberInfo_Cid");
+        Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID);
         if (cid == null){
             argsError(context);
             return;
@@ -35,6 +36,6 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
         for (CPChannelMember member : allMember) {
             objects.add(member);
         }
-        context.setData("members", objects);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_LIST, objects);
     }
 }

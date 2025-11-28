@@ -9,14 +9,15 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
- * 用于通过用户id获取数据库结构的selector<br/>
- * 查询的模板有通过id查询与通过邮箱查询，在使用时应该给key分别绑定id与email<br/>
- * 1. id查询的入参：UserInfo_Id:Long<br/>
- * 2. email查询的入参：UserInfo_Email:String<br/>
- * 3. 默认查询则通过日志报错 TODO <br/>
- * 出参: UserInfo:CPUser<br/>
+ * 鐢ㄤ簬閫氳繃鐢ㄦ埛id鑾峰彇鏁版嵁搴撶粨鏋勭殑selector<br/>
+ * 鏌ヨ鐨勬ā鏉挎湁閫氳繃id鏌ヨ涓庨€氳繃閭鏌ヨ锛屽湪浣跨敤鏃跺簲璇ョ粰key鍒嗗埆缁戝畾id涓巈mail<br/>
+ * 1. id鏌ヨ鐨勫叆鍙傦細UserInfo_Id:Long<br/>
+ * 2. email鏌ヨ鐨勫叆鍙傦細UserInfo_Email:String<br/>
+ * 3. 榛樿鏌ヨ鍒欓€氳繃鏃ュ織鎶ラ敊 TODO <br/>
+ * 鍑哄弬: UserInfo:CPUser<br/>
  * @author midreamsheep
  * */
 @AllArgsConstructor
@@ -27,12 +28,12 @@ public class CPUserSelectorNode extends CPNodeComponent {
 
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
-        // 获取绑定数据
+        // 鑾峰彇缁戝畾鏁版嵁
         String key = getBindData("key",String.class);
         if (key == null){
             argsError(context);
         }
-        // 通过绑定数据获取数据
+        // 閫氳繃缁戝畾鏁版嵁鑾峰彇鏁版嵁
         CPUser userInfo = null;
         switch (key){
             case "id":
@@ -55,10 +56,11 @@ public class CPUserSelectorNode extends CPNodeComponent {
                 break;
         }
         if (userInfo == null){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("user not found"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("user not found"));
             throw new CPReturnException();
         }
-        // 参数放入上下文
-        context.setData("UserInfo",userInfo);
+        // 鍙傛暟鏀惧叆涓婁笅鏂?        context.setData(CPNodeValueKeyBasicConstants.USER_INFO, userInfo);
     }
 }
+

@@ -10,6 +10,8 @@ import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -28,7 +30,7 @@ public class CPUUserTokenCreatorNode extends CPNodeComponent {
     @Override
     protected void process(CPSession session, DefaultContext context) throws Exception {
         // 查询数据
-        CPUser userInfo = context.getData("UserInfo");
+        CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (userInfo == null){
             argsError(context);
         }
@@ -40,9 +42,10 @@ public class CPUUserTokenCreatorNode extends CPNodeComponent {
                 .setToken(IdUtil.generateToken())
                 .setExpiredTime(TimeUtil.getCurrentLocalTime().plusDays(30));
         if (!userTokenDao.save(cpUserToken)){
-            context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("save user token error"));
+            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                    CPResponse.ERROR_RESPONSE.copy().setTextData("save user token error"));
             throw new CPReturnException();
         }
-        context.setData("UserToken",cpUserToken);
+        context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, cpUserToken);
     }
 }
