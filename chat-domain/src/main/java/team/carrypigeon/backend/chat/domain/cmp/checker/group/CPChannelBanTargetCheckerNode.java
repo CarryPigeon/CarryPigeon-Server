@@ -13,13 +13,13 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ???????????????
- * ?????????????????????<br/>
- * ???ChannelMemberInfo:{@link CPChannelMember}<br/>
- * ???
+ * 校验封禁目标是否合法的节点。<br/>
+ * 用于阻止对频道管理员执行封禁操作。<br/>
+ * 输入：ChannelMemberInfo:{@link CPChannelMember}<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>???????????????????????</li>
- *     <li>??????bind type=soft???? CheckResult</li>
+ *     <li>hard 模式：当目标为管理员时直接返回错误</li>
+ *     <li>soft 模式（bind type=soft）：仅将结果写入 {@link CheckResult}</li>
  * </ul>
  */
 @Slf4j
@@ -29,7 +29,7 @@ public class CPChannelBanTargetCheckerNode extends CPNodeComponent {
     private static final String BIND_TYPE_KEY = "type";
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 

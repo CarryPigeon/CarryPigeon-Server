@@ -37,7 +37,7 @@
 
 ### 2.1 route及其请求参数与响应参数规范
 
-请你分析源代码中通过实现接口与抽象类的实现形式代码获取请求的具体信息，然后重构为最新的`liteflow`实现范式
+我所需要的route已经实现，请查看各个被@CPControllerTag标记的类，其path对应的是路由，voClazz为请求参数，resultClazz为响应参数
 
 ### 2.2 voClazz规范
 
@@ -176,7 +176,8 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 
 校验器组件的结构较为灵活，可根据参数校验的具体需求进行自定义
 
-例如检验邮箱是否合法，检验用户是否在指定的群聊中，用户是否已经登录
+校验器组件都绑定有type参数，其定义了校验器的方法
+
 
 ### 3.4 通知组件
 

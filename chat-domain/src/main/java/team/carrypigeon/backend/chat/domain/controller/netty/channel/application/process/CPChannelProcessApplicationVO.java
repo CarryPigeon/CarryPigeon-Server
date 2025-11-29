@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 通道处理申请的请求参数
@@ -19,8 +21,8 @@ public class CPChannelProcessApplicationVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData("ChannelApplicationInfo_Id", aid);
-        context.setData("ChannelApplicationInfo_State", result);
+        context.setData(CPNodeValueKeyExtraConstants.CHANNEL_APPLICATION_INFO_ID, aid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_STATE, result);
         return true;
     }
 }

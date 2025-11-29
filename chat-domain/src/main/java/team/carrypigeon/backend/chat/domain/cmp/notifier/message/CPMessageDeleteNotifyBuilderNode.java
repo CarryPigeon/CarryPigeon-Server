@@ -25,7 +25,7 @@ public class CPMessageDeleteNotifyBuilderNode extends CPNodeComponent {
     private final ObjectMapper objectMapper;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
         if (message == null) {
             log.error("CPMessageDeleteNotifyBuilder args error: MessageInfo is null");

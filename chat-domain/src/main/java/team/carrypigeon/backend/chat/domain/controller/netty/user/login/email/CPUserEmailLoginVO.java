@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 用户邮箱登录请求数据
@@ -20,9 +22,9 @@ public class CPUserEmailLoginVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData("Email", email);
-        context.setData("Email_Code", code);
-        context.setData("UserInfo_Email", email);
+        context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);
+        context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, code);
+        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL, email);
         return true;
     }
 }

@@ -25,7 +25,7 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID);
         if (cid == null){
             argsError(context);

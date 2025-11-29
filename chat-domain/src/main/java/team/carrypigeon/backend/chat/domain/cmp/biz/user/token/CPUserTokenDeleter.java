@@ -25,7 +25,7 @@ public class CPUserTokenDeleter extends CPNodeComponent {
     private final UserTokenDao userTokenDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
         if (userToken == null){
             argsError(context);

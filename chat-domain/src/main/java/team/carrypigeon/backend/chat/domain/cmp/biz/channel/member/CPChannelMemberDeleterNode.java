@@ -27,7 +27,7 @@ public class CPChannelMemberDeleterNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelMember member = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
         if (member == null) {
             log.error("CPChannelMemberDeleter args error: ChannelMemberInfo is null");

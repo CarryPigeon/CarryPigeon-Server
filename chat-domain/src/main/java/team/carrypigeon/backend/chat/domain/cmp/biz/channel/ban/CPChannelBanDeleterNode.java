@@ -25,7 +25,7 @@ public class CPChannelBanDeleterNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelBan ban = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_INFO);
         if (ban == null) {
             log.error("CPChannelBanDeleter args error: ChannelBanInfo is null");

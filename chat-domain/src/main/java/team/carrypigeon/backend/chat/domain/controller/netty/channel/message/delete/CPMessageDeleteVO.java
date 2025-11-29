@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 删除消息的请求参数
@@ -21,7 +22,7 @@ public class CPMessageDeleteVO implements CPControllerVO {
         if (mid <= 0) {
             return false;
         }
-        context.setData("MessageInfo_Id", mid);
+        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_INFO_ID, mid);
         return true;
     }
 }

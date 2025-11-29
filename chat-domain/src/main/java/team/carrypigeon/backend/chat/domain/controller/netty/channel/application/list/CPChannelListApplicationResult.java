@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.util.ArrayList;
@@ -23,7 +25,8 @@ public class CPChannelListApplicationResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        Set<CPChannelApplication> applications = context.getData("applications");
+        Set<CPChannelApplication> applications = context.getData(
+                CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_LIST);
         if (applications == null){
             argsError( context);
             return;
@@ -39,7 +42,11 @@ public class CPChannelListApplicationResult implements CPControllerResult {
                     .setApplyTime(TimeUtil.LocalDateTimeToMillis(application.getApplyTime()));
             result.add(cpChannelListApplicationResultItem);
         }
-        context.setData("response",objectMapper.valueToTree(new Result(applications.size(),result.toArray(new CPChannelListApplicationResultItem[0]))));
+        CPChannelListApplicationResultItem[] items =
+                result.toArray(new CPChannelListApplicationResultItem[0]);
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy()
+                        .setData(objectMapper.valueToTree(new Result(applications.size(), items))));
     }
 
     @Data

@@ -29,7 +29,7 @@ public class CPChannelGroupSelectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long userId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (userId == null){
             argsError(context);

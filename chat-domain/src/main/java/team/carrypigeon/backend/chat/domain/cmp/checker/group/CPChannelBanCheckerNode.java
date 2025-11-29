@@ -14,12 +14,12 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ???????????????????
- * ???ChannelInfo_Id:Long; ChannelMemberInfo_Uid:Long<br/>
- * ???
+ * 检查当前用户在频道内是否处于封禁状态。<br/>
+ * 输入：ChannelInfo_Id:Long; ChannelMemberInfo_Uid:Long<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>????????????????????</li>
- *     <li>??????bind type=soft???? CheckResult</li>
+ *     <li>存在有效封禁：hard 模式直接返回错误，soft 模式在 {@link CheckResult} 中标记失败</li>
+ *     <li>封禁已过期：自动删除封禁记录，并视为校验通过</li>
  * </ul>
  */
 @Slf4j
@@ -32,7 +32,7 @@ public class CPChannelBanCheckerNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
@@ -45,7 +45,7 @@ public class CPChannelBanCheckerNode extends CPNodeComponent {
         }
         CPChannelBan ban = channelBanDAO.getByChannelIdAndUserId(uid, cid);
         if (ban == null) {
-            // ??????????????
+            // 用户未被封禁，直接通过
             if (soft) {
                 context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
             }
@@ -63,7 +63,7 @@ public class CPChannelBanCheckerNode extends CPNodeComponent {
                     CPResponse.ERROR_RESPONSE.copy().setTextData("user is banned in this channel"));
             throw new CPReturnException();
         }
-        // ?????????????
+        // 封禁已过期，尝试删除旧记录
         boolean deleted = channelBanDAO.delete(ban);
         if (deleted) {
             log.debug("CPChannelBanChecker: deleted expired ban, cid={}, uid={}, banId={}", cid, uid, ban.getId());

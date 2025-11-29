@@ -27,7 +27,7 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
 
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         // 获取用户信息
         Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
         if (userInfoId == null){

@@ -9,14 +9,13 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * 读取 {@link CheckResult} 的节点。
+ * 读取 {@link CheckResult} 的节点，用于将检查结果转换为 LiteFlow 分支标签。<br/>
  * <p>
  * bind 配置：<br/>
  * - key=state（默认）：根据 CheckResult.state 返回 "success" 或 "fail" 标签；<br/>
- * - key=msg：返回 CheckResult.msg 作为标签。
- * <p>
+ * - key=msg：返回 CheckResult.msg 作为标签。<br/>
  * 入参：CheckResult:{@link CheckResult}<br/>
- * 出参：无，返回值用于 LiteFlow 分支标签。
+ * 出参：无（返回值作为 LiteFlow 分支标签使用）<br/>
  */
 @Slf4j
 @LiteflowComponent("CheckerResultReader")
@@ -32,7 +31,7 @@ public class CheckerResultReaderNode extends CPNodeSwitchComponent {
         if (result == null) {
             log.error("CheckerResultReader: CheckResult is null in context");
             argsError(context);
-            // argsError 会抛异常，这里返回值不会被使用
+            // argsError 会抛出异常，这里的返回值不会被使用
             return null;
         }
         String mode = getBindData(BIND_KEY, String.class);

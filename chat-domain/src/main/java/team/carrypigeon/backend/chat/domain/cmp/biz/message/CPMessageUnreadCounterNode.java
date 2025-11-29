@@ -29,7 +29,7 @@ public class CPMessageUnreadCounterNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         Long startTime = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_UNREAD_START_TIME);
         Long uid = context.getData(CPNodeValueKeyBasicConstants.SESSION_ID);

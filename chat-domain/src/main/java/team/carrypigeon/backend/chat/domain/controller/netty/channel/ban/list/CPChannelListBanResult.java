@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 import java.util.List;
 
@@ -19,13 +20,15 @@ public class CPChannelListBanResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        List<CPChannelListBanResultItem> items = context.getData("ChannelBanItems");
+        List<CPChannelListBanResultItem> items =
+                context.getData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_ITEMS);
         if (items == null) {
             argsError(context);
             return;
         }
         Result result = new Result(items.size(), items.toArray(new CPChannelListBanResultItem[0]));
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
     }
 
     @Data
@@ -36,4 +39,3 @@ public class CPChannelListBanResult implements CPControllerResult {
         private CPChannelListBanResultItem[] bans;
     }
 }
-

@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class CPChannelListMemberResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        Set<CPChannelMember> members = context.getData("members");
+        Set<CPChannelMember> members = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_LIST);
         if (members == null){
             argsError(context);
             return;
@@ -39,7 +40,11 @@ public class CPChannelListMemberResult implements CPControllerResult {
                     .setJoinTime(TimeUtil.LocalDateTimeToMillis(member.getJoinTime()));
             memberList.add(cpChannelListMemberResultItem);
         }
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new Result(memberList.size(),memberList.toArray(new CPChannelListMemberResultItem[0])))));
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy().setData(
+                        objectMapper.valueToTree(
+                                new Result(memberList.size(), memberList.toArray(new CPChannelListMemberResultItem[0]))
+                        )));
     }
 
     @Data

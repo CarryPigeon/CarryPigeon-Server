@@ -16,13 +16,15 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 import team.carrypigeon.backend.chat.domain.service.message.CPMessageParserService;
 
 /**
- * ?????????
- * ???
- *  - MessageInfo_Domain:String  ???????? Core:Text
- *  - MessageInfo_Data:JsonNode  ??????
- * ???
- *  - MessageData:{@link CPMessageData}
- * ???/??????type=hard|soft??? hard??
+ * 将原始消息域 + 数据解析为业务层 {@link CPMessageData}。<br/>
+ * 输入：<br/>
+ *  - MessageInfo_Domain:String  消息域，例如 Core:Text<br/>
+ *  - MessageInfo_Data:JsonNode  消息原始 JSON 数据<br/>
+ * 输出：<br/>
+ *  - MessageData:{@link CPMessageData}<br/>
+ * 行为：<br/>
+ *  - bind 参数 type=hard|soft，soft 表示解析失败只写入 {@link CheckResult} 而不中断流程，<br/>
+ *    hard（默认）表示解析失败会返回错误响应并终止流程。
  */
 @Slf4j
 @AllArgsConstructor
@@ -34,7 +36,7 @@ public class CPMessageParseNode extends CPNodeComponent {
     private final CPMessageParserService cpMessageParserService;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 

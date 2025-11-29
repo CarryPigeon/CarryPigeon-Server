@@ -25,7 +25,7 @@ public class CPNotifierNode extends CPNodeComponent {
     private final CPNotificationService cpNotificationService;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String route = getBindData("route", String.class);
         if (route == null){
             argsError(context);

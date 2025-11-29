@@ -14,13 +14,13 @@ import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
- * ?????? {@link CPMessageData} ??????? {@link CPMessage}?
- * ???
- *  - MessageData:{@link CPMessageData}
- *  - ChannelInfo_Id:Long
- *  - ChannelMemberInfo_Uid:Long
- * ???
- *  - MessageInfo:{@link CPMessage}
+ * 将 {@link CPMessageData} 组装为可持久化的 {@link CPMessage} 实体。<br/>
+ * 输入：<br/>
+ *  - MessageData:{@link CPMessageData}<br/>
+ *  - ChannelInfo_Id:Long  消息所属频道 id<br/>
+ *  - ChannelMemberInfo_Uid:Long  发送消息的用户 id<br/>
+ * 输出：<br/>
+ *  - MessageInfo:{@link CPMessage}  构建完成的消息实体
  */
 @Slf4j
 @AllArgsConstructor
@@ -28,7 +28,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPMessageBuilderNode extends CPNodeComponent {
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessageData messageData = context.getData(CPNodeValueKeyExtraConstants.MESSAGE_DATA);
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         Long uid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID);

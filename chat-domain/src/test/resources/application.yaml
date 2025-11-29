@@ -1,0 +1,8 @@
+liteflow:
+  rule-source: config/*.xml
+minio:
+  endpoint: http://localhost:9005
+  bucketName: carrygieon
+  accessKey: minioadmin
+  secretKey: minioadmin
+

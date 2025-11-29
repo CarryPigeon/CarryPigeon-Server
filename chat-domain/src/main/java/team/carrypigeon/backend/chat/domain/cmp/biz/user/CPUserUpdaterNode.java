@@ -25,7 +25,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserUpdater")
 public class CPUserUpdaterNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPUser user = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (user == null){
             argsError(context);

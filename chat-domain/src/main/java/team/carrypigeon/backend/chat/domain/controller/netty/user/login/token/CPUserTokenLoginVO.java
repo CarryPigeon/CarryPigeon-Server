@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 用户通过token登录的参数
@@ -19,7 +20,7 @@ public class CPUserTokenLoginVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData("UserToken_Token", token);
+        context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN, token);
         return true;
     }
 }

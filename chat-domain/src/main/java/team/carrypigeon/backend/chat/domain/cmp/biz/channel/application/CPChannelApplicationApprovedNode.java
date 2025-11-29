@@ -20,7 +20,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelApplicationApproved")
 public class CPChannelApplicationApprovedNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelApplication channelApplicationInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
         if (channelApplicationInfo == null){
             argsError(context);

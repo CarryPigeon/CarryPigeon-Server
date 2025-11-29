@@ -1,14 +1,14 @@
 package team.carrypigeon.backend.chat.domain.cmp.basic;
 
 /**
- * Common keys used when reading/writing data in LiteFlow {@link com.yomahub.liteflow.slot.DefaultContext}.
+ * LiteFlow {@link com.yomahub.liteflow.slot.DefaultContext} 中使用的公共 key 常量。
  * <p>
  * 命名规范：
  * <ul>
- *     <li>实体对象：UserInfo / ChannelInfo / ChannelMemberInfo / ChannelApplicationInfo / MessageInfo / ChannelBanInfo / FileInfo</li>
- *     <li>实体字段：{EntityName}_FieldName，例如 UserInfo_Id、ChannelMemberInfo_Uid</li>
- *     <li>集合：{EntityName}List，例如 ChannelMemberInfoList</li>
- *     <li>其它辅助字段（如 SessionId / Notifier_*）采用语义化命名。</li>
+ *   <li>实体对象：UserInfo / ChannelInfo / ChannelMemberInfo / ChannelApplicationInfo / MessageInfo / ChannelBanInfo / FileInfo</li>
+ *   <li>实体字段：{EntityName}_FieldName，例如 UserInfo_Id、ChannelMemberInfo_Uid</li>
+ *   <li>集合：{EntityName}List，例如 ChannelMemberInfoList</li>
+ *   <li>其他辅助字段（如 SessionId / Notifier_*）使用语义化命名。</li>
  * </ul>
  */
 public final class CPNodeValueKeyBasicConstants {
@@ -17,6 +17,9 @@ public final class CPNodeValueKeyBasicConstants {
     }
 
     // -------- Session / Checker --------
+
+    /** CPSession: 当前会话对象 */
+    public static final String SESSION = "session";
 
     /** Long: 当前登录用户的 id */
     public static final String SESSION_ID = "SessionId";
@@ -146,7 +149,7 @@ public final class CPNodeValueKeyBasicConstants {
     /** Long: 消息 id */
     public static final String MESSAGE_INFO_ID = "MessageInfo_Id";
 
-    /** String: 消息域，例如 Core:Text */
+    /** String: 消息领域，例如 Core:Text */
     public static final String MESSAGE_INFO_DOMAIN = "MessageInfo_Domain";
 
     /** JsonNode: 消息原始数据 */

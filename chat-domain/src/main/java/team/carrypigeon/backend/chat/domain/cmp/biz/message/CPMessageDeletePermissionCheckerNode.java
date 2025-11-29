@@ -34,7 +34,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
         Long operatorUid = context.getData(CPNodeValueKeyBasicConstants.SESSION_ID);
         if (message == null || operatorUid == null) {

@@ -20,7 +20,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelCreator")
 public class CPChannelCreatorNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (userInfo == null){
             argsError(context);

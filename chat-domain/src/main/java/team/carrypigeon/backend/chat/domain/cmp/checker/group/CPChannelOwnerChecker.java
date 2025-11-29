@@ -12,12 +12,12 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ?????????????Node<br/>
- * ??: ChannelInfo:{@link CPChannel};UserInfo_Id:Long<br/>
- * ???
+ * 校验当前用户是否为频道 owner 的节点。<br/>
+ * 输入：ChannelInfo:{@link CPChannel}; UserInfo_Id:Long<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>???????????? owner ???????</li>
- *     <li>??????bind type=soft???? CheckResult</li>
+ *     <li>hard 模式：当前用户不是 owner 时直接写入错误响应并中断</li>
+ *     <li>soft 模式（bind type=soft）：仅将结果写入 {@link CheckResult}</li>
  * </ul>
  * @author midreamsheep
  */
@@ -28,7 +28,7 @@ public class CPChannelOwnerChecker extends CPNodeComponent {
     private static final String BIND_TYPE_KEY = "type";
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 

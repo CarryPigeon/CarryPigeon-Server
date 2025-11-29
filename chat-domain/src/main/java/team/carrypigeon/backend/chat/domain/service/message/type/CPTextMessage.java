@@ -33,7 +33,7 @@ public class CPTextMessage implements CPMessageData {
     public CPTextMessage() {
     }
 
-    private CPTextMessage(String sContent, JsonNode data) {
+    public CPTextMessage(String sContent, JsonNode data) {
         this.sContent = sContent;
         this.data = data;
     }

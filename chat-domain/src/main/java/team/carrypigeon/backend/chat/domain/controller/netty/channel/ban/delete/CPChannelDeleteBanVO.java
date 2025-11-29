@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 解除频道封禁的请求参数
@@ -24,9 +25,9 @@ public class CPChannelDeleteBanVO implements CPControllerVO {
             return false;
         }
         // 频道
-        context.setData("ChannelInfo_Id", cid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
         // 目标用户
-        context.setData("ChannelBan_TargetUid", uid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_TARGET_UID, uid);
         return true;
     }
 }

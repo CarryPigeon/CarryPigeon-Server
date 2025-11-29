@@ -20,7 +20,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserTokenRefresh")
 public class CPUserTokenRefreshNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
         if (userToken == null){
             argsError(context);

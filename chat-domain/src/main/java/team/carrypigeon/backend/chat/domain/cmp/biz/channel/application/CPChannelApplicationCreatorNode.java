@@ -28,7 +28,7 @@ public class CPChannelApplicationCreatorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         // 获取用户id
         Long uid = context.getData(CPNodeValueKeyBasicConstants.SESSION_ID);
         CPChannel cpChannel = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);

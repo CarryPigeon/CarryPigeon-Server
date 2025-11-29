@@ -24,7 +24,7 @@ public class CPChannelMemberSaverNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelMember channelMemberInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
         if (channelMemberInfo == null){
             argsError(context);

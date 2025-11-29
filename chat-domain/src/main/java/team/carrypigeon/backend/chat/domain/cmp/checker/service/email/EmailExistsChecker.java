@@ -8,18 +8,17 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ?????????<br/>
- * ???Email:String<br/>
- * ???
+ * 校验邮箱是否已被注册的节点。<br/>
+ * 输入：Email:String<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>????????????????????</li>
- *     <li>??????bind type=soft???? CheckResult</li>
+ *     <li>hard 模式：邮箱已存在时直接返回错误响应</li>
+ *     <li>soft 模式（bind type=soft）：仅将结果写入 {@link CheckResult}</li>
  * </ul>
  * @author midreamsheep
  */
@@ -33,7 +32,7 @@ public class EmailExistsChecker extends CPNodeComponent {
     private final team.carrypigeon.backend.api.dao.database.user.UserDao userDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 

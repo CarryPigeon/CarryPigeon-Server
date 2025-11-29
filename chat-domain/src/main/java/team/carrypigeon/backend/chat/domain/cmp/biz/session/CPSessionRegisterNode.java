@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 /**
@@ -21,8 +22,8 @@ public class CPSessionRegisterNode extends CPNodeComponent {
 
     private final CPSessionCenterService cpSessionCenterService;
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
-        CPUser user = getBindData("UserInfo", CPUser.class);
+    public void process(CPSession session, DefaultContext context) throws Exception {
+        CPUser user = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (user == null){
             argsError(context);
         }

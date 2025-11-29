@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 创建频道的返回参数Node<br/>
@@ -21,12 +22,14 @@ public class CPChannelCreateResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        CPChannel channelInfo = context.getData("ChannelInfo");
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         if (channelInfo == null){
             argsError(context);
             return;
         }
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new Result().setCid(channelInfo.getId()))));
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy()
+                        .setData(objectMapper.valueToTree(new Result().setCid(channelInfo.getId()))));
     }
 
     @Data

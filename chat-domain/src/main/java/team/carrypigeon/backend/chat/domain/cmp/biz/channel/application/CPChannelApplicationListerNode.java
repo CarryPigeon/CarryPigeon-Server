@@ -26,7 +26,7 @@ public class CPChannelApplicationListerNode extends CPNodeComponent {
     private final ChannelApplicationDAO channelApplicationDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long channelId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         PageInfo pageInfo = context.getData(CPNodeValueKeyExtraConstants.PAGE_INFO);
         if (channelId == null || pageInfo == null){

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 创建频道管理员的请求参数
@@ -19,9 +20,9 @@ public class CPChannelCreateAdminVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData("ChannelInfo_Id", cid);
-        context.setData("ChannelMemberInfo_Uid", uid);
-        context.setData("ChannelMemberInfo_Cid", cid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID, uid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID, cid);
         return true;
     }
 }

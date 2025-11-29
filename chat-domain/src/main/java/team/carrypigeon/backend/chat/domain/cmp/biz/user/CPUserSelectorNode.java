@@ -12,14 +12,12 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
- * 鐢ㄤ簬閫氳繃鐢ㄦ埛id鑾峰彇鏁版嵁搴撶粨鏋勭殑selector<br/>
- * 鏌ヨ鐨勬ā鏉挎湁閫氳繃id鏌ヨ涓庨€氳繃閭鏌ヨ锛屽湪浣跨敤鏃跺簲璇ョ粰key鍒嗗埆缁戝畾id涓巈mail<br/>
- * 1. id鏌ヨ鐨勫叆鍙傦細UserInfo_Id:Long<br/>
- * 2. email鏌ヨ鐨勫叆鍙傦細UserInfo_Email:String<br/>
- * 3. 榛樿鏌ヨ鍒欓€氳繃鏃ュ織鎶ラ敊 TODO <br/>
- * 鍑哄弬: UserInfo:CPUser<br/>
- * @author midreamsheep
- * */
+ * 根据用户 id 或邮箱从数据库中查询用户信息的 Selector 节点。<br/>
+ * 查询模式通过 bind 参数 key 指定："id" / "email"。<br/>
+ * 1. id 查询入参：UserInfo_Id:Long<br/>
+ * 2. email 查询入参：UserInfo_Email:String<br/>
+ * 出参：UserInfo:{@link CPUser}<br/>
+ */
 @AllArgsConstructor
 @LiteflowComponent("CPUserSelector")
 public class CPUserSelectorNode extends CPNodeComponent {
@@ -27,25 +25,25 @@ public class CPUserSelectorNode extends CPNodeComponent {
     private final UserDao userDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
-        // 鑾峰彇缁戝畾鏁版嵁
-        String key = getBindData("key",String.class);
-        if (key == null){
+    public void process(CPSession session, DefaultContext context) throws Exception {
+        // 从绑定参数中读取查询 key
+        String key = getBindData("key", String.class);
+        if (key == null) {
             argsError(context);
         }
-        // 閫氳繃缁戝畾鏁版嵁鑾峰彇鏁版嵁
+        // 根据 key 从 DAO 查询用户信息
         CPUser userInfo = null;
-        switch (key){
+        switch (key) {
             case "id":
-                Long id = getBindData("UserInfo_Id",Long.class);
-                if (id == null){
+                Long id = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
+                if (id == null) {
                     argsError(context);
                 }
                 userInfo = userDao.getById(id);
                 break;
             case "email":
-                String email = getBindData("UserInfo_Email",String.class);
-                if (email == null){
+                String email = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL);
+                if (email == null) {
                     argsError(context);
                 }
                 userInfo = userDao.getByEmail(email);
@@ -55,12 +53,12 @@ public class CPUserSelectorNode extends CPNodeComponent {
                 argsError(context);
                 break;
         }
-        if (userInfo == null){
+        if (userInfo == null) {
             context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("user not found"));
             throw new CPReturnException();
         }
-        // 鍙傛暟鏀惧叆涓婁笅鏂?        context.setData(CPNodeValueKeyBasicConstants.USER_INFO, userInfo);
+        // 将查询到的用户写入上下文
+        context.setData(CPNodeValueKeyBasicConstants.USER_INFO, userInfo);
     }
 }
-

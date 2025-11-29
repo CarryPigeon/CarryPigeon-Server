@@ -24,7 +24,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelBuilder")
 public class CPChannelBuilderNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
 
         Long channelInfoId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         String channelInfoName = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_NAME);

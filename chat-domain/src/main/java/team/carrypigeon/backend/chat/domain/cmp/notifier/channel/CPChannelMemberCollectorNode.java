@@ -25,7 +25,7 @@ import java.util.Set;
 public class CPChannelMemberCollectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         Set<Long> uids = context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS);
         if (channelInfo==null){

@@ -14,13 +14,13 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 import java.time.LocalDateTime;
 
 /**
- * ????????????<br/>
- * ???
- *  - ChannelInfo_Id:Long
- *  - MessageList_StartTime:Long(millis)
- *  - MessageList_Count:Integer
- * ???
- *  - Messages:CPMessage[]
+ * 按时间倒序拉取频道历史消息列表。<br/>
+ * 输入：<br/>
+ *  - ChannelInfo_Id:Long  目标频道 id<br/>
+ *  - MessageList_StartTime:Long(millis)  起始时间，空或非法时使用当前时间<br/>
+ *  - MessageList_Count:Integer  拉取条数上限<br/>
+ * 输出：<br/>
+ *  - Messages:CPMessage[]  查询到的消息数组，未命中时为空数组
  */
 @Slf4j
 @AllArgsConstructor
@@ -30,7 +30,7 @@ public class CPMessageListerNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         Long startTime = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_LIST_START_TIME);
         Integer count = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_LIST_COUNT);

@@ -27,7 +27,7 @@ public class CPChannelAdminCollector extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannel channel = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         if (channel==null){
             argsError(context);

@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -22,7 +23,7 @@ public class CPUserGetProfileResult implements CPControllerResult {
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
         // 获取绑定数据
-        CPUser userInfo = context.getData("UserInfo");
+        CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (userInfo == null){
             argsError(context);
             return;
@@ -34,7 +35,8 @@ public class CPUserGetProfileResult implements CPControllerResult {
                 .setSex(userInfo.getSex().getValue())
                 .setBrief(userInfo.getBrief())
                 .setBirthday(TimeUtil.LocalDateTimeToMillis(userInfo.getBirthday()));
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
     }
 
     @Data

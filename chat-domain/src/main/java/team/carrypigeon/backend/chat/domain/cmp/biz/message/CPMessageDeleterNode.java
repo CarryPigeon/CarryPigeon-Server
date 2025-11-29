@@ -25,7 +25,7 @@ public class CPMessageDeleterNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
         if (message == null) {
             log.error("CPMessageDeleter args error: MessageInfo is null");

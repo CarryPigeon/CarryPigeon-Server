@@ -10,13 +10,13 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.service.file.FileTokenService;
 
 /**
- * ????????? token ????<br/>
+ * 生成文件上传 / 下载操作的一次性 token 的节点。<br/>
  * bind: key=UPLOAD|DOWNLOAD<br/>
- * ???<br/>
- *  - SessionId:Long?? UserLoginChecker ???<br/>
- *  - FileInfo_Id:String????????UPLOAD ??????<br/>
- * ???<br/>
- *  - FileToken:String
+ * 输入：<br/>
+ *  - SessionId:Long  当前登录用户 id，由登录校验节点写入<br/>
+ *  - FileInfo_Id:String  需要进行 UPLOAD/DOWNLOAD 的文件标识<br/>
+ * 输出：<br/>
+ *  - FileToken:String  一次性文件操作 token
  */
 @Slf4j
 @AllArgsConstructor
@@ -26,7 +26,7 @@ public class CPFileTokenCreatorNode extends CPNodeComponent {
     private final FileTokenService fileTokenService;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String op = getBindData("key", String.class);
         if (op == null || op.isEmpty()) {
             argsError(context);
@@ -38,7 +38,7 @@ public class CPFileTokenCreatorNode extends CPNodeComponent {
             return;
         }
         String fileId = context.getData(CPNodeValueKeyBasicConstants.FILE_INFO_ID);
-        // ?? 5 ?????
+        // 默认 5 分钟有效期
         long ttlSec = 300L;
         String token = fileTokenService.createToken(uid, op, fileId, ttlSec);
         context.setData(CPNodeValueKeyBasicConstants.FILE_TOKEN, token);

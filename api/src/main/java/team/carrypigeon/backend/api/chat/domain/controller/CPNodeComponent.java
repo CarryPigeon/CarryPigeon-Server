@@ -17,7 +17,7 @@ public abstract class CPNodeComponent extends NodeComponent {
         process(session,context);
     }
 
-    protected abstract void process(CPSession session,DefaultContext context) throws Exception;
+    public abstract void process(CPSession session, DefaultContext context) throws Exception;
 
     protected void argsError(DefaultContext context) throws CPReturnException{
         context.setData("response", CPResponse.ERROR_RESPONSE.copy().setTextData("error args"));

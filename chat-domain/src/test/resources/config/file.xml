@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- ????????? token -->
+    <chain name="/core/file/upload/token/apply">
+        THEN(
+        /** ???????? **/
+        UserLoginChecker,
+        /** ?????? token **/
+        CPFileTokenCreator.bind("key","UPLOAD")
+        )
+    </chain>
+
+    <!-- ????????? token -->
+    <chain name="/core/file/download/token/apply">
+        THEN(
+        /** ???????? **/
+        UserLoginChecker,
+        /** ?????? token??? FileInfo_Id **/
+        CPFileTokenCreator.bind("key","DOWNLOAD")
+        )
+    </chain>
+</flow>

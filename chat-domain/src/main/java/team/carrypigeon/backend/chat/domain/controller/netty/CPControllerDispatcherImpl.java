@@ -16,14 +16,15 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
 import team.carrypigeon.backend.api.connection.protocol.CPPacket;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * controller分发器，用于对请求根据路径分发到具体的处理器处理
- * */
+ * Controller 分发器，根据路由将请求分发到具体的处理器进行处理。
+ */
 @Component
 @Slf4j
 public class CPControllerDispatcherImpl implements CPControllerDispatcher {
@@ -52,9 +53,9 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     }
 
     /**
-     * 初始化 controller 与 VO/Result 的映射关系。
-     * 如果 CPControllerPostProcessor 已经填充了 map，这里不会覆盖；
-     * 否则会基于 {@link CPControllerTag} 注解进行一次扫描补全。
+     * 初始化 controller 与 VO/Result 的映射关系。<br/>
+     * 如果 CPControllerPostProcessor 已经填充过 map，则这里不会覆盖；<br/>
+     * 否则会基于 {@link CPControllerTag} 注解进行一次扫描补充。
      */
     private void initControllerMapsIfNecessary() {
         if (!controllerAndVOMap.isEmpty() && !controllerAndResultMap.isEmpty()) {
@@ -92,8 +93,8 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             CPPacket route = mapper.readValue(msg, CPPacket.class);
             // 新建一个默认上下文
             DefaultContext defaultContext = new DefaultContext();
-            // 将 session 写入上下文，供所有 CPNodeComponent 使用
-            defaultContext.setData("session", session);
+            // 将 session 写入上下文，供各个 CPNodeComponent 使用
+            defaultContext.setData(CPNodeValueKeyBasicConstants.SESSION, session);
 
             Class<?> voClazz = controllerAndVOMap.get(route.getRoute());
             if (voClazz == null) {
@@ -122,14 +123,16 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             // 后置处理，组装 response
             result.process(session, defaultContext, objectMapper);
 
-            CPResponse response = liteflowResponse.getContextBean(DefaultContext.class).getData("response");
+            CPResponse response = liteflowResponse.getContextBean(DefaultContext.class)
+                    .getData(CPNodeValueKeyBasicConstants.RESPONSE);
             if (response == null) {
                 response = CPResponse.SUCCESS_RESPONSE.copy();
             }
             response.setId(route.getId());
             return response;
         } catch (JsonProcessingException e) {
-            log.error("json处理错误，json字符串:{}", msg);
+            // JSON 解析失败，记录原始报文
+            log.error("json 处理错误，json 字符串={}", msg);
             log.error(e.getMessage(), e);
         }
         return CPResponse.ERROR_RESPONSE.copy();
@@ -143,4 +146,3 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
         }
     }
 }
-

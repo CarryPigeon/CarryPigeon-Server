@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 获取频道信息请求参数
@@ -18,7 +19,7 @@ public class CPChannelGetProfileVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData("ChannelInfo_Id",cid);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
         return true;
     }
 }

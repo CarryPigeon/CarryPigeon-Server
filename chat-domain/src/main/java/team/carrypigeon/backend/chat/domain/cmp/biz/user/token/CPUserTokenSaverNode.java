@@ -25,7 +25,7 @@ public class CPUserTokenSaverNode extends CPNodeComponent {
     private final UserTokenDao userTokenDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
         if (!userTokenDao.save(userToken)){
             context.setData(CPNodeValueKeyBasicConstants.RESPONSE,

@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 发送邮件验证码的请求参数
@@ -21,7 +22,7 @@ public class CPServiceSendEmailVO implements CPControllerVO {
         if (email == null || email.isEmpty()) {
             return false;
         }
-        context.setData("Email", email);
+        context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);
         return true;
     }
 }

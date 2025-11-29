@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 获取未读消息数量的请求参数
@@ -23,9 +24,8 @@ public class CPMessageGetUnreadVO implements CPControllerVO {
         if (cid <= 0) {
             return false;
         }
-        context.setData("ChannelInfo_Id", cid);
-        context.setData("MessageUnread_StartTime", startTime);
+        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_UNREAD_START_TIME, startTime);
         return true;
     }
 }
-

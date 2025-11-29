@@ -28,7 +28,7 @@ public class CPChannelBanListerNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         if (cid == null) {
             log.error("CPChannelBanLister args error: ChannelInfo_Id is null");

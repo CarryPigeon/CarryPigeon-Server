@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.basic;
 
 /**
- * Extra key constants used by LiteFlow nodes when reading/writing data
- * in {@link com.yomahub.liteflow.slot.DefaultContext}.
+ * LiteFlow 节点在 {@link com.yomahub.liteflow.slot.DefaultContext} 中读写数据时
+ * 使用的补充型 key 常量。
  * <p>
- * These keys complement {@link CPNodeValueKeyBasicConstants} for:
+ * 这些 key 对 {@link CPNodeValueKeyBasicConstants} 做补充，主要用于：
  * <ul>
- *     <li>Message parsing helper objects</li>
- *     <li>UserToken related context data</li>
- *     <li>Email verification related context data</li>
- *     <li>Generic helper objects such as PageInfo</li>
+ *   <li>消息解析辅助对象</li>
+ *   <li>UserToken 相关上下文数据</li>
+ *   <li>邮箱验证码相关上下文数据</li>
+ *   <li>通用辅助对象（如 PageInfo）</li>
  * </ul>
  */
 public final class CPNodeValueKeyExtraConstants {
@@ -54,4 +54,3 @@ public final class CPNodeValueKeyExtraConstants {
     /** PageInfo: 分页信息对象 */
     public static final String PAGE_INFO = "PageInfo";
 }
-

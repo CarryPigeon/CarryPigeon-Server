@@ -30,7 +30,7 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
     private final ObjectMapper objectMapper;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
         CPMessageData messageData = context.getData(CPNodeValueKeyExtraConstants.MESSAGE_DATA);
         if (message == null || messageData == null) {

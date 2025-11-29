@@ -15,14 +15,14 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ???????????????Node<br/>
- * ??: <br/>
- * 1.ChannelInfo_Id:Long<br/>
- * 2.UserInfo_Id:Long<br/>
- * ???
+ * 校验当前用户是否为频道管理员的节点。<br/>
+ * 输入：<br/>
+ * 1. ChannelInfo_Id:Long<br/>
+ * 2. UserInfo_Id:Long<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>??????????????????????</li>
- *     <li>??????bind type=soft???? CheckResult</li>
+ *     <li>hard 模式：校验失败时写入错误响应并中断流程</li>
+ *     <li>soft 模式（bind type=soft）：仅写入 {@link CheckResult}，不抛异常</li>
  * </ul>
  * @author midreamsheep
  */
@@ -36,7 +36,7 @@ public class CPChannelAdminChecker extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 

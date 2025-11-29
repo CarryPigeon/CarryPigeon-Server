@@ -25,7 +25,7 @@ public class CPChannelApplicationSavorNode extends CPNodeComponent {
     private final ChannelApplicationDAO channelApplicationDAO;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelApplication channelApplication = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
         if (channelApplication==null){
             argsError(context);

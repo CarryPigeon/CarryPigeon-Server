@@ -24,7 +24,7 @@ public class CPChannelApplicationSelectorNode extends CPNodeComponent {
     private final ChannelApplicationDAO channelApplicationDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String bindData = getBindData("key", String.class);
         if (bindData == null){
             argsError(context);

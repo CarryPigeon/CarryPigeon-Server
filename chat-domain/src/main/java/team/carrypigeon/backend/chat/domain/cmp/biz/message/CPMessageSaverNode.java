@@ -13,9 +13,9 @@ import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
- * ????????<br/>
- * ???MessageInfo:{@link CPMessage}<br/>
- * ????
+ * 将消息持久化到数据库的节点。<br/>
+ * 输入：MessageInfo:{@link CPMessage}<br/>
+ * 输出：无；保存失败时抛出 {@link CPReturnException} 并设置错误响应。
  */
 @Slf4j
 @AllArgsConstructor
@@ -25,7 +25,7 @@ public class CPMessageSaverNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
         if (message == null) {
             log.error("CPMessageSaver args error: MessageInfo is null");

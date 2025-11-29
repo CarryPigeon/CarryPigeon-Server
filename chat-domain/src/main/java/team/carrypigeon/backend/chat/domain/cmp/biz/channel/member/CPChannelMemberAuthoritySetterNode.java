@@ -21,7 +21,7 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 @LiteflowComponent("CPChannelMemberAuthoritySetter")
 public class CPChannelMemberAuthoritySetterNode extends CPNodeComponent {
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         CPChannelMember channelMember = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
         CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         String authority = getBindData("key", String.class);

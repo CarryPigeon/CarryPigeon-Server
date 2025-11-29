@@ -28,7 +28,7 @@ public class CPUUserTokenCreatorNode extends CPNodeComponent {
     private final UserTokenDao userTokenDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         // 查询数据
         CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
         if (userInfo == null){

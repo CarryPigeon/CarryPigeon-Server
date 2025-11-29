@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 
 /**
  * 请求下载文件 token 的参数。
@@ -25,8 +26,7 @@ public class CPFileDownloadTokenApplyVO implements CPControllerVO {
         if (fileId == null || fileId.isEmpty()) {
             return false;
         }
-        context.setData("FileInfo_Id", fileId);
+        context.setData(CPNodeValueKeyBasicConstants.FILE_INFO_ID, fileId);
         return true;
     }
 }
-

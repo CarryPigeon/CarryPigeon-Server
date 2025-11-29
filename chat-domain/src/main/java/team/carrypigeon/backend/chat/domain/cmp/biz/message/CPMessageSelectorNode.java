@@ -27,7 +27,7 @@ public class CPMessageSelectorNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long mid = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO_ID);
         if (mid == null) {
             log.error("CPMessageSelector args error: MessageInfo_Id is null");

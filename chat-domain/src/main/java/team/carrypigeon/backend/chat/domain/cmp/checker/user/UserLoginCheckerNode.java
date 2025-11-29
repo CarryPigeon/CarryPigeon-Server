@@ -12,14 +12,16 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
- * ????????????<br/>
- * ????<br/>
- * ???
+ * 会话登录状态检查组件。<br/>
+ * 从会话属性中读取当前登录用户 id。<br/>
+ * 输入：<br/>
+ *  - 无（从 session 属性中读取）<br/>
+ * 输出：<br/>
  * <ul>
- *     <li>??????????SessionId:Long</li>
- *     <li>??????bind type=soft??SessionId:Long??????CheckResult</li>
+ *     <li>SessionId:Long 当前登录用户 id</li>
+ *     <li>soft 模式（bind type=soft）下，还会写入 {@link CheckResult}</li>
  * </ul>
- * type bind: hard|soft, ?? hard?
+ * type bind: hard|soft，默认 hard。
  * @author midreamsheep
  */
 @Slf4j
@@ -29,26 +31,26 @@ public class UserLoginCheckerNode extends CPNodeComponent {
     private static final String BIND_TYPE_KEY = "type";
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
         Long attributeValue = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
         if (attributeValue == null) {
             if (soft) {
-                // ??????? CheckResult??????
+                // 未登录：soft 模式下仅写入 CheckResult，不中断流程
                 context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
                         new CheckResult(false, "user not login"));
                 log.info("UserLoginChecker soft fail: user not login");
                 return;
             }
-            // ?????????????
+            // 未登录：hard 模式下直接返回权限错误
             log.info("UserLoginChecker hard fail: user not login");
             context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                     CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("user not login"));
             throw new CPReturnException();
         }
-        // ??????? SessionId
+        // 写入 SessionId，供后续节点使用
         context.setData(CPNodeValueKeyBasicConstants.SESSION_ID, attributeValue);
         if (soft) {
             context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));

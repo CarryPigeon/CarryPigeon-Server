@@ -10,6 +10,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -22,7 +23,7 @@ public class CPChannelGetProfileResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        CPChannel channelInfo = context.getData("ChannelInfo");
+        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
         if (channelInfo == null){
             argsError(context);
             return;
@@ -33,7 +34,8 @@ public class CPChannelGetProfileResult implements CPControllerResult {
                 .setBrief(channelInfo.getBrief())
                 .setAvatar(channelInfo.getAvatar())
                 .setCreateTime(TimeUtil.LocalDateTimeToMillis(channelInfo.getCreateTime()));
-        context.setData("response",CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
     }
 
     @Data

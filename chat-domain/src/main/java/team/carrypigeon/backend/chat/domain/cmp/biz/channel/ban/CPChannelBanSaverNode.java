@@ -28,7 +28,7 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    protected void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, DefaultContext context) throws Exception {
         Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
         Long targetUid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_TARGET_UID);
         Integer duration = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_DURATION);
