@@ -32,9 +32,17 @@ public class CPNotificationService {
     }
 
     public boolean sendNotification(Collection<Long> uids, CPNotification notification) {
+        if (uids == null || uids.isEmpty()) {
+            log.debug("sendNotification called with empty uids, notificationType={}",
+                    notification == null ? null : notification.getClass().getSimpleName());
+            return true;
+        }
         for (long uid : uids) {
             List<CPSession> sessions = cpSessionCenterService.getSessions(uid);
-            if (sessions == null) continue;
+            if (sessions == null || sessions.isEmpty()) {
+                log.debug("sendNotification skip, no active session, uid={}", uid);
+                continue;
+            }
             for (CPSession session : sessions) {
                 CPResponse cpResponse = new CPResponse();
                 cpResponse.setId(-1)
@@ -43,7 +51,7 @@ public class CPNotificationService {
                 try {
                     session.write(objectMapper.writeValueAsString(cpResponse));
                 } catch (JsonProcessingException e) {
-                    log.error("发送通知失败");
+                    log.error("sendNotification failed, uid={}", uid, e);
                 }
             }
         }

@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.dao.database.impl.channel;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import team.carrypigeon.backend.dao.database.mapper.channel.ChannelPO;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class ChannelDaoImpl implements ChannelDao {
 
@@ -24,29 +26,59 @@ public class ChannelDaoImpl implements ChannelDao {
     @Override
     @Cacheable(cacheNames = "channelById", key = "#id")
     public CPChannel getById(long id) {
-        return Optional.ofNullable(channelMapper.selectById(id)).map(ChannelPO::toBo).orElse(null);
+        log.debug("ChannelDaoImpl#getById - cid={}", id);
+        CPChannel result = Optional.ofNullable(channelMapper.selectById(id))
+                .map(ChannelPO::toBo)
+                .orElse(null);
+        if (result == null) {
+            log.debug("ChannelDaoImpl#getById - channel not found, cid={}", id);
+        }
+        return result;
     }
 
     @Override
     @Cacheable(cacheNames = "channelFixed", key = "'all'")
     public CPChannel[] getAllFixed() {
+        log.debug("ChannelDaoImpl#getAllFixed - query fixed channels");
         LambdaQueryWrapper<ChannelPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(ChannelPO::getOwner, -1);
         List<ChannelPO> list = channelMapper.selectList(queryWrapper);
-        return list.stream()
+        CPChannel[] result = list.stream()
                 .map(ChannelPO::toBo)
                 .toArray(CPChannel[]::new);
+        log.debug("ChannelDaoImpl#getAllFixed - resultCount={}", result.length);
+        return result;
     }
 
     @Override
     @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean save(CPChannel channel) {
-        return channelMapper.insertOrUpdate(ChannelPO.fromBo(channel));
+        if (channel == null) {
+            log.error("ChannelDaoImpl#save called with null channel");
+            return false;
+        }
+        boolean success = channelMapper.insertOrUpdate(ChannelPO.fromBo(channel));
+        if (success) {
+            log.debug("ChannelDaoImpl#save success, cid={}, owner={}", channel.getId(), channel.getOwner());
+        } else {
+            log.warn("ChannelDaoImpl#save failed, cid={}, owner={}", channel.getId(), channel.getOwner());
+        }
+        return success;
     }
 
     @Override
     @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean delete(CPChannel cpChannel) {
-        return channelMapper.deleteById(cpChannel.getId())!=0;
+        if (cpChannel == null) {
+            log.error("ChannelDaoImpl#delete called with null channel");
+            return false;
+        }
+        boolean success = channelMapper.deleteById(cpChannel.getId())!=0;
+        if (success) {
+            log.debug("ChannelDaoImpl#delete success, cid={}", cpChannel.getId());
+        } else {
+            log.warn("ChannelDaoImpl#delete failed, cid={}", cpChannel.getId());
+        }
+        return success;
     }
 }

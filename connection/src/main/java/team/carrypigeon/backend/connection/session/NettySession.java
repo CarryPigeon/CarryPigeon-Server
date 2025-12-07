@@ -63,7 +63,7 @@ public class NettySession implements CPSession {
             try {
                 aesData = AESUtil.encryptWithAAD(msg, aad, Base64.decode(getAttributeValue(ConnectionAttributes.ENCRYPTION_KEY, String.class)));
             } catch (Exception e) {
-                log.error("not expected errpr: aes加密失败");
+                log.error("unexpected error: AES encrypt failed");
                 log.error(e.getMessage(),e);
                 close();
                 return;

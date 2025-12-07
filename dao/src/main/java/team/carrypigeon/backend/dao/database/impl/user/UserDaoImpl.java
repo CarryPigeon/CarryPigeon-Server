@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.dao.database.impl.user;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import team.carrypigeon.backend.dao.database.mapper.user.UserPO;
 
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class UserDaoImpl implements UserDao {
 
@@ -23,20 +25,44 @@ public class UserDaoImpl implements UserDao {
     @Override
     @Cacheable(cacheNames = "userById", key = "#id")
     public CPUser getById(long id) {
-        return Optional.ofNullable(userMapper.selectById(id)).map(UserPO::toBo).orElse(null);
+        log.debug("UserDaoImpl#getById - id={}", id);
+        CPUser result = Optional.ofNullable(userMapper.selectById(id))
+                .map(UserPO::toBo)
+                .orElse(null);
+        if (result == null) {
+            log.debug("UserDaoImpl#getById - user not found, id={}", id);
+        }
+        return result;
     }
 
     @Override
     @Cacheable(cacheNames = "userByEmail", key = "#email")
     public CPUser getByEmail(String email) {
+        log.debug("UserDaoImpl#getByEmail - email={}", email);
         LambdaQueryWrapper<UserPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserPO::getEmail, email);
-        return Optional.ofNullable(userMapper.selectOne(queryWrapper)).map(UserPO::toBo).orElse(null);
+        CPUser result = Optional.ofNullable(userMapper.selectOne(queryWrapper))
+                .map(UserPO::toBo)
+                .orElse(null);
+        if (result == null) {
+            log.debug("UserDaoImpl#getByEmail - user not found, email={}", email);
+        }
+        return result;
     }
 
     @Override
     @CacheEvict(cacheNames = {"userById", "userByEmail"}, allEntries = true)
     public boolean save(CPUser user) {
-        return userMapper.insertOrUpdate(UserPO.fromBo(user));
+        if (user == null) {
+            log.error("UserDaoImpl#save called with null user");
+            return false;
+        }
+        boolean success = userMapper.insertOrUpdate(UserPO.fromBo(user));
+        if (success) {
+            log.debug("UserDaoImpl#save success, uid={}", user.getId());
+        } else {
+            log.warn("UserDaoImpl#save failed, uid={}", user.getId());
+        }
+        return success;
     }
 }

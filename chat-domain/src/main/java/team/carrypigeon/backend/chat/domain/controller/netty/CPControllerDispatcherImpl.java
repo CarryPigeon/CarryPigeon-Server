@@ -6,6 +6,7 @@ import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
@@ -89,8 +90,17 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
 
     @Override
     public CPResponse process(String msg, CPSession session) {
+        long startTime = System.currentTimeMillis();
         try {
             CPPacket route = mapper.readValue(msg, CPPacket.class);
+            // 将关键上下文写入 MDC，便于在整条日志链路中追踪
+            MDC.put("packetId", String.valueOf(route.getId()));
+            MDC.put("route", route.getRoute());
+            Long uidAttr = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
+            if (uidAttr != null) {
+                MDC.put("uid", String.valueOf(uidAttr));
+            }
+            log.debug("receive packet, id={}, route={}", route.getId(), route.getRoute());
             // 新建一个默认上下文
             DefaultContext defaultContext = new DefaultContext();
             // 将 session 写入上下文，供各个 CPNodeComponent 使用
@@ -98,18 +108,27 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
 
             Class<?> voClazz = controllerAndVOMap.get(route.getRoute());
             if (voClazz == null) {
+                log.warn("route not found for path {}, id={}", route.getRoute(), route.getId());
                 return CPResponse.PATH_NOT_FOUND_RESPONSE.copy();
             }
             CPControllerVO vo = (CPControllerVO) mapper.treeToValue(route.getData(), voClazz);
             // 前置处理，将请求参数写入 context
             if (!vo.insertData(defaultContext)) {
+                log.warn("insertData returned false, route={}, id={}", route.getRoute(), route.getId());
                 return CPResponse.ERROR_RESPONSE.copy().setTextData("error args");
             }
 
             LiteflowResponse liteflowResponse = flowExecutor.execute2Resp(route.getRoute(), null, defaultContext);
+            if (!liteflowResponse.isSuccess()) {
+                log.error("liteflow chain execute failed, route={}, id={}, message={}",
+                        route.getRoute(), route.getId(), liteflowResponse.getMessage());
+            } else {
+                log.debug("liteflow chain execute success, route={}, id={}", route.getRoute(), route.getId());
+            }
 
             Class<?> resultClazz = controllerAndResultMap.get(route.getRoute());
             if (resultClazz == null) {
+                log.warn("result class not found for path {}, id={}", route.getRoute(), route.getId());
                 return CPResponse.PATH_NOT_FOUND_RESPONSE.copy();
             }
 
@@ -129,11 +148,22 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
                 response = CPResponse.SUCCESS_RESPONSE.copy();
             }
             response.setId(route.getId());
+            long cost = System.currentTimeMillis() - startTime;
+            log.debug("return response, id={}, route={}, code={}, cost={}ms",
+                    route.getId(), route.getRoute(), response.getCode(), cost);
+            if (cost > 500) {
+                log.warn("slow request detected, id={}, route={}, cost={}ms",
+                        route.getId(), route.getRoute(), cost);
+            }
             return response;
         } catch (JsonProcessingException e) {
             // JSON 解析失败，记录原始报文
-            log.error("json 处理错误，json 字符串={}", msg);
+            long cost = System.currentTimeMillis() - startTime;
+            log.error("json 处理错误，json 字符串={}，cost={}ms", msg, cost);
             log.error(e.getMessage(), e);
+        } finally {
+            // 清理 MDC，避免数据泄露到后续请求
+            MDC.clear();
         }
         return CPResponse.ERROR_RESPONSE.copy();
     }
@@ -143,6 +173,9 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
         Long attributeValue = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
         if (attributeValue != null) {
             cpSessionCenterService.removeSession(attributeValue, session);
+            log.info("session closed, uid={}", attributeValue);
+        } else {
+            log.debug("session closed without CHAT_DOMAIN_USER_ID attribute");
         }
     }
 }

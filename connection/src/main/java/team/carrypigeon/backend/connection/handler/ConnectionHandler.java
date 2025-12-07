@@ -51,6 +51,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         // 通过状态机
         if (!session.getAttributeValue(ConnectionAttributes.ENCRYPTION_STATE,Boolean.class)) {
             // 等待非对称加密公钥
+            log.info("receive ECC key exchange message, remoteAddress={}", ctx.channel().remoteAddress());
             receiveAsymmetry(session, new String(cipherText));
             return;
         }
@@ -74,8 +75,10 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
                 }
                 // 如果为空则判定为心跳包，不做处理直接返回
                 if (isEmpty){
+                    log.debug("receive heartbeat packet, remoteAddress={}", ctx.channel().remoteAddress());
                     return;
                 }
+                log.debug("receive encrypted packet, length={}, remoteAddress={}", cipherText.length, ctx.channel().remoteAddress());
                 // 解密数据
                 String pack;
                 try {
@@ -106,6 +109,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         // 回调监听事件
+        log.info("connection inactive, remoteAddress={}", ctx.channel().remoteAddress());
         cpControllerDispatcher.channelInactive(ctx.channel().attr(SESSIONS).get());
         super.channelInactive(ctx);
     }
@@ -117,6 +121,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         // 创建session会话
         ctx.channel().attr(SESSIONS).set(new NettySession(ctx));
+        log.info("new connection active, remoteAddress={}", ctx.channel().remoteAddress());
         super.channelActive(ctx);
     }
 
@@ -144,8 +149,11 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
             session.write(objectMapper.writeValueAsString(aesPack),false);
             // 设置状态
             session.setAttributeValue(ConnectionAttributes.ENCRYPTION_STATE,true);
+            log.info("ECC key exchange success, sessionId={}, requestId={}",
+                    session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class),
+                    cpKeyMessage.getId());
         } catch (Exception e) {
-            log.error(e.getMessage(),e);
+            log.error("asymmetric key exchange error", e);
         }
     }
 

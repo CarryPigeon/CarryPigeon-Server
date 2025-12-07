@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.service.session;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
@@ -13,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * carrypigeon聊天会话中心服务，用于存储用户id与会话的映射关系
  * @author midreamsheep
  * */
+@Slf4j
 @Service
 public class CPSessionCenterService {
     private final Map<Long, List<CPSession>> SESSION_MAP = new ConcurrentHashMap<>();
@@ -24,15 +26,15 @@ public class CPSessionCenterService {
      * */
     public void addSession(long uid, CPSession session){
         if (session == null) {
+            log.warn("CPSessionCenterService#addSession called with null session, uid={}", uid);
             return;
         }
-        if (!SESSION_MAP.containsKey(uid)){
-            List<CPSession> sessions = new CopyOnWriteArrayList<>();
+        SESSION_MAP.compute(uid, (k, v) -> {
+            List<CPSession> sessions = (v == null) ? new CopyOnWriteArrayList<>() : v;
             sessions.add(session);
-            SESSION_MAP.put(uid, sessions);
-        }else {
-            SESSION_MAP.get(uid).add(session);
-        }
+            log.debug("CPSessionCenterService#addSession - uid={}, currentSessionCount={}", uid, sessions.size());
+            return sessions;
+        });
     }
 
     /**
@@ -43,6 +45,7 @@ public class CPSessionCenterService {
     public void removeSession(long uid, CPSession session){
         SESSION_MAP.computeIfPresent(uid, (k, v) -> {
             v.remove(session);
+            log.debug("CPSessionCenterService#removeSession - uid={}, remainingSessionCount={}", uid, v.size());
             return v;
         });
     }
@@ -61,6 +64,13 @@ public class CPSessionCenterService {
      * */
     @Scheduled(cron = "0 0 3 * * ?")
     public void clean() {
+        int before = SESSION_MAP.size();
         SESSION_MAP.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        int after = SESSION_MAP.size();
+        if (before != after) {
+            log.info("CPSessionCenterService#clean - removedEmptyEntries={}, remainingSize={}", before - after, after);
+        } else {
+            log.debug("CPSessionCenterService#clean - no empty entries to clean, size={}", after);
+        }
     }
 }

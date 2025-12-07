@@ -17,7 +17,11 @@ public enum CPChannelMemberAuthorityEnum {
         return switch (authority) {
             case 0 -> MEMBER;
             case 1 -> ADMIN;
-            default -> throw new IllegalArgumentException("Channel member authority parse:Invalid authority: " + authority);
+            default -> {
+                // 记录非法权限值，便于排查调用方错误
+                log.error("Channel member authority parse failed, invalid authority: {}", authority);
+                throw new IllegalArgumentException("Channel member authority parse:Invalid authority: " + authority);
+            }
         };
     }
 }

@@ -7,11 +7,13 @@ import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
 import io.minio.StatObjectResponse;
 import io.minio.errors.ErrorResponseException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 
+@Slf4j
 @Service
 public class FileService {
 
@@ -43,15 +45,18 @@ public class FileService {
             );
             if (stat != null && stat.size() == size) {
                 // object with same size already exists, treat as duplicate
+                log.debug("FileService#uploadIfNotExists - duplicate detected, bucket={}, objectName={}, size={}", bucketName, objectName, size);
                 return false;
             }
         } catch (ErrorResponseException e) {
             // 404 or 304 indicates object not found, continue to upload
             String code = e.errorResponse().code();
             if (!"NoSuchKey".equals(code) && !"NoSuchObject".equals(code)) {
+                log.error("FileService#uploadIfNotExists - statObject unexpected error, bucket={}, objectName={}", bucketName, objectName, e);
                 throw e;
             }
         }
+        log.debug("FileService#uploadIfNotExists - uploading, bucket={}, objectName={}, size={}", bucketName, objectName, size);
         PutObjectArgs.Builder builder = PutObjectArgs.builder()
                 .bucket(bucketName)
                 .object(objectName)
@@ -67,6 +72,7 @@ public class FileService {
      * Get basic metadata of an object.
      */
     public StatObjectResponse statFile(String objectName) throws Exception {
+        log.debug("FileService#statFile - bucket={}, objectName={}", bucketName, objectName);
         return minioClient.statObject(
                 StatObjectArgs.builder()
                         .bucket(bucketName)
@@ -79,6 +85,7 @@ public class FileService {
      * Download file stream.
      */
     public InputStream downloadFile(String objectName) throws Exception {
+        log.debug("FileService#downloadFile - bucket={}, objectName={}", bucketName, objectName);
         return minioClient.getObject(
                 GetObjectArgs.builder()
                         .bucket(bucketName)
@@ -91,6 +98,7 @@ public class FileService {
      * Delete file from bucket.
      */
     public void deleteFile(String objectName) throws Exception {
+        log.debug("FileService#deleteFile - bucket={}, objectName={}", bucketName, objectName);
         minioClient.removeObject(
                 RemoveObjectArgs.builder()
                         .bucket(bucketName)

@@ -19,7 +19,11 @@ public enum CPUserSexEnum {
             case 0 -> UNKNOWN;
             case 1 -> MALE;
             case 2 -> FEMALE;
-            default -> throw new IllegalArgumentException("User sex parse:Invalid value: " + value);
+            default -> {
+                // 记录非法枚举值，便于排查调用方错误
+                log.error("User sex parse failed, invalid value: {}", value);
+                throw new IllegalArgumentException("User sex parse:Invalid value: " + value);
+            }
         };
     }
 }
