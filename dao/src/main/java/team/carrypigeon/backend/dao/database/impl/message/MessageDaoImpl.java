@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.dao.database.impl.message;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import team.carrypigeon.backend.dao.database.mapper.message.MessagePO;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class MessageDaoImpl implements ChannelMessageDao {
 

@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
@@ -21,7 +22,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPUserTokenRefreshNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
+        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
         }

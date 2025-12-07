@@ -30,15 +30,15 @@ public class CPUserTokenUpdaterNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
+        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
         }
-        String token = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN);
+        String token = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_TOKEN);
         if (token != null){
             userToken.setToken(token);
         }
-        Long expiredTime = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_EXPIRED_TIME);
+        Long expiredTime = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_EXPIRED_TIME);
         if (expiredTime != null){
             userToken.setExpiredTime(TimeUtil.MillisToLocalDateTime(expiredTime));
         }

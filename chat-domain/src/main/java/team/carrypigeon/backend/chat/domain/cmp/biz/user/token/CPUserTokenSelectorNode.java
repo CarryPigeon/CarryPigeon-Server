@@ -33,23 +33,23 @@ public class CPUserTokenSelectorNode extends CPNodeComponent {
         switch (bindData){
             case "token":
                 CPUserToken userToken = userTokenDao.getByToken(
-                        context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN));
+                        context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_TOKEN));
                 if (userToken == null){
                     context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                             CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
                     throw new CPReturnException();
                 }
-                context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, userToken);
+                context.setData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO, userToken);
                 break;
             case "id":
                 CPUserToken userTokenId = userTokenDao.getById(
-                        context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN_ID));
+                        context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_ID));
                 if (userTokenId == null){
                     context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
                             CPResponse.ERROR_RESPONSE.copy().setTextData("token does not exists"));
                     throw new CPReturnException();
                 }
-                context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, userTokenId);
+                context.setData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO, userTokenId);
                 break;
             case null:
                 break;

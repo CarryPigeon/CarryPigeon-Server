@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstan
 public class CPUserTokenUidGetterNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeValueKeyExtraConstants.USER_TOKEN);
+        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
         }

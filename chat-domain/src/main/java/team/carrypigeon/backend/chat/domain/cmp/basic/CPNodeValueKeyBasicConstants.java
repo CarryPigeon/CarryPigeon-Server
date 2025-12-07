@@ -61,6 +61,20 @@ public final class CPNodeValueKeyBasicConstants {
     /** Long: 用户头像 id */
     public static final String USER_INFO_AVATAR = "UserInfo_Avatar";
 
+    // -------- UserToken --------
+
+    /** CPUserToken: 用户登录 Token 实体 */
+    public static final String USER_TOKEN_INFO = "UserTokenInfo";
+
+    /** Long: 用户 Token 主键 id */
+    public static final String USER_TOKEN_INFO_ID = "UserTokenInfo_Id";
+
+    /** String: Token 字符串值 */
+    public static final String USER_TOKEN_INFO_TOKEN = "UserTokenInfo_Token";
+
+    /** Long: Token 过期时间戳（毫秒） */
+    public static final String USER_TOKEN_INFO_EXPIRED_TIME = "UserTokenInfo_ExpiredTime";
+
     // -------- ChannelInfo --------
 
     /** CPChannel: 当前上下文中的频道实体 */

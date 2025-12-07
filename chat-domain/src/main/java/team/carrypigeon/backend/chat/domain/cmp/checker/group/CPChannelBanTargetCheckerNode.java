@@ -6,9 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.chat.domain.cmp.base.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 

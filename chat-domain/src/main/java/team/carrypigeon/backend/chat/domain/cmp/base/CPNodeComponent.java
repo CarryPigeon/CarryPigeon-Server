@@ -1,8 +1,9 @@
-package team.carrypigeon.backend.api.chat.domain.controller;
+package team.carrypigeon.backend.chat.domain.cmp.base;
 
 import com.yomahub.liteflow.core.NodeComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 
 public abstract class CPNodeComponent extends NodeComponent {

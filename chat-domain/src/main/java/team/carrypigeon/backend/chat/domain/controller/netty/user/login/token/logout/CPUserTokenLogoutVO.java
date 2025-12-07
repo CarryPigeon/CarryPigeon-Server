@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 @Data
@@ -14,7 +15,7 @@ public class CPUserTokenLogoutVO implements CPControllerVO {
     private String token;
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN_TOKEN, token);
+        context.setData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_TOKEN, token);
         return true;
     }
 }

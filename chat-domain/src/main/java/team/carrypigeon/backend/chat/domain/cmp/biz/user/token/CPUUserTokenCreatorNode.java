@@ -46,6 +46,6 @@ public class CPUUserTokenCreatorNode extends CPNodeComponent {
                     CPResponse.ERROR_RESPONSE.copy().setTextData("save user token error"));
             throw new CPReturnException();
         }
-        context.setData(CPNodeValueKeyExtraConstants.USER_TOKEN, cpUserToken);
+        context.setData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO, cpUserToken);
     }
 }
