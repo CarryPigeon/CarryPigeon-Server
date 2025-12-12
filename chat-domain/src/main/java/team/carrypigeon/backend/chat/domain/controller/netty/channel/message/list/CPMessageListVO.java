@@ -5,7 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 
 /**
  * 拉取消息列表的请求参数
@@ -25,9 +26,9 @@ public class CPMessageListVO implements CPControllerVO {
         if (cid <= 0 || count <= 0 || count > 50) {
             return false;
         }
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
-        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_LIST_START_TIME, startTime);
-        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_LIST_COUNT, count);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeMessageKeys.MESSAGE_LIST_START_TIME, startTime);
+        context.setData(CPNodeMessageKeys.MESSAGE_LIST_COUNT, count);
         return true;
     }
 }

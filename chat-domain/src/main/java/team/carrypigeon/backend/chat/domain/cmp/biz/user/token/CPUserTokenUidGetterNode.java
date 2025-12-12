@@ -5,9 +5,9 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 
 /**
  * 获取用户token的uid<br/>
@@ -20,10 +20,10 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstan
 public class CPUserTokenUidGetterNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
+        CPUserToken userToken = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
         }
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_ID, userToken.getUid());
+        context.setData(CPNodeUserKeys.USER_INFO_ID, userToken.getUid());
     }
 }

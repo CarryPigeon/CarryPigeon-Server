@@ -17,7 +17,7 @@ import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.controller.netty.user.login.email.CPUserEmailLoginVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.user.login.token.CPUserTokenLoginVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.user.login.token.logout.CPUserTokenLogoutVO;
@@ -98,7 +98,7 @@ public class UserControllerFlowTest {
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
         Assert.assertFalse(resp.isSuccess());
-        CPResponse response = context.getData(CPNodeValueKeyBasicConstants.RESPONSE);
+        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
         Assert.assertNotNull(response);
         Assert.assertEquals(100, response.getCode());
     }
@@ -123,7 +123,7 @@ public class UserControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
         Assert.assertFalse(resp.isSuccess());
 
-        CPResponse response = context.getData(CPNodeValueKeyBasicConstants.RESPONSE);
+        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
         Assert.assertNotNull(response);
         Assert.assertEquals(100, response.getCode());
     }
@@ -144,7 +144,7 @@ public class UserControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
         Assert.assertFalse(resp.isSuccess());
 
-        CPResponse response = context.getData(CPNodeValueKeyBasicConstants.RESPONSE);
+        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
         Assert.assertNotNull(response);
         Assert.assertEquals(100, response.getCode());
     }
@@ -188,7 +188,7 @@ public class UserControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/profile/get", null, context);
         Assert.assertFalse(resp.isSuccess());
 
-        CPResponse response = context.getData(CPNodeValueKeyBasicConstants.RESPONSE);
+        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
         Assert.assertNotNull(response);
         Assert.assertEquals(300, response.getCode());
     }

@@ -5,8 +5,8 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -26,32 +26,32 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPUserUpdaterNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUser user = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
+        CPUser user = context.getData(CPNodeUserKeys.USER_INFO);
         if (user == null){
             argsError(context);
         }
         assert user != null;
-        String username = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_USER_NAME);
+        String username = context.getData(CPNodeUserKeys.USER_INFO_USER_NAME);
         if (username != null){
             user.setUsername(username);
         }
-        String brief = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_BRIEF);
+        String brief = context.getData(CPNodeUserKeys.USER_INFO_BRIEF);
         if (brief != null){
             user.setBrief(brief);
         }
-        Long avatar = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_AVATAR);
+        Long avatar = context.getData(CPNodeUserKeys.USER_INFO_AVATAR);
         if (avatar != null){
             user.setAvatar(avatar);
         }
-        String email = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL);
+        String email = context.getData(CPNodeUserKeys.USER_INFO_EMAIL);
         if (email != null){
             user.setEmail(email);
         }
-        Integer sex = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_SEX);
+        Integer sex = context.getData(CPNodeUserKeys.USER_INFO_SEX);
         if (sex != null){
             user.setSex(CPUserSexEnum.valueOf(sex));
         }
-        Long birthday = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_BIRTHDAY);
+        Long birthday = context.getData(CPNodeUserKeys.USER_INFO_BIRTHDAY);
         if (birthday != null){
             user.setBirthday(TimeUtil.MillisToLocalDateTime(birthday));
         }

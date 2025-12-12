@@ -3,8 +3,6 @@ package team.carrypigeon.backend.chat.domain.cmp.basic;
 /**
  * LiteFlow 节点在 {@link com.yomahub.liteflow.slot.DefaultContext} 中读写数据时
  * 使用的补充型 key 常量。
- * <p>
- * 这些 key 对 {@link CPNodeValueKeyBasicConstants} 做补充，主要用于：
  * <ul>
  *   <li>消息解析辅助对象</li>
  *   <li>UserToken 相关上下文数据</li>

@@ -3,13 +3,11 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
+import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 
 /**
  * 用于选择通道成员的Node<br/>
@@ -22,48 +20,36 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
  * */
 @AllArgsConstructor
 @LiteflowComponent("CPChannelMemberSelector")
-public class CPChannelMemberSelectorNode extends CPNodeComponent {
+public class CPChannelMemberSelectorNode extends AbstractSelectorNode<CPChannelMember> {
 
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        String bindData = getBindData("key", String.class);
-        if (bindData == null){
-            argsError(context);
-        }
-        switch (bindData){
+    protected CPChannelMember doSelect(String mode, DefaultContext context) throws Exception {
+        switch (mode){
             case "id":
-                Long channelMemberInfoId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_ID);
-                if (channelMemberInfoId == null){
-                    argsError(context);
-                }
-                CPChannelMember channelMemberInfo = channelMemberDao.getById(channelMemberInfoId);
-                if (channelMemberInfo == null){
-                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                            CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
-                    throw new CPReturnException();
-                }
-                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo);
-                break;
+                Long channelMemberInfoId =
+                        requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, Long.class);
+                return channelMemberDao.getById(channelMemberInfoId);
             case "CidWithUid":
-                Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID);
-                Long uid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID);
-                if (cid == null || uid == null) {
-                    argsError(context);
-                }
-                CPChannelMember channelMemberInfo2 = channelMemberDao.getMember(uid, cid);
-                if (channelMemberInfo2 == null){
-                    context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                            CPResponse.ERROR_RESPONSE.copy().setTextData("channel member not found"));
-                    throw new CPReturnException();
-                }
-                context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo2);
-                break;
-            case null:
+                Long cid =
+                        requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, Long.class);
+                Long uid =
+                        requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, Long.class);
+                return channelMemberDao.getMember(uid, cid);
             default:
                 argsError(context);
-                break;
+                return null;
         }
+    }
+
+    @Override
+    protected String getResultKey() {
+        return CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO;
+    }
+
+    @Override
+    protected void handleNotFound(String mode, DefaultContext context) throws CPReturnException {
+        businessError(context, "channel member not found");
     }
 }

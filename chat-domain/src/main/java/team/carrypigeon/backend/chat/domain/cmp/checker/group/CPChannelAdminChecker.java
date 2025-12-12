@@ -8,10 +8,13 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
@@ -31,7 +34,7 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @LiteflowComponent("CPChannelAdminChecker")
 public class CPChannelAdminChecker extends CPNodeComponent {
 
-    private static final String BIND_TYPE_KEY = "type";
+    private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
 
     private final ChannelMemberDao channelMemberDao;
 
@@ -40,8 +43,8 @@ public class CPChannelAdminChecker extends CPNodeComponent {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
-        Long channelId = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
-        Long userInfoId = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
+        Long channelId = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
+        Long userInfoId = context.getData(CPNodeUserKeys.USER_INFO_ID);
         if (channelId == null || userInfoId == null) {
             log.error("CPChannelAdminChecker args error: ChannelInfo_Id or UserInfo_Id is null");
             argsError(context);
@@ -50,30 +53,30 @@ public class CPChannelAdminChecker extends CPNodeComponent {
         CPChannelMember channelMemberInfo = channelMemberDao.getMember(userInfoId, channelId);
         if (channelMemberInfo == null) {
             if (soft) {
-                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                context.setData(CPNodeCommonKeys.CHECK_RESULT,
                         new CheckResult(false, "not in channel"));
                 log.info("CPChannelAdminChecker soft fail: user not in channel, uid={}, cid={}", userInfoId, channelId);
                 return;
             }
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("you are not in this channel"));
             log.info("CPChannelAdminChecker hard fail: user not in channel, uid={}, cid={}", userInfoId, channelId);
             throw new CPReturnException();
         }
         if (channelMemberInfo.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             if (soft) {
-                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                context.setData(CPNodeCommonKeys.CHECK_RESULT,
                         new CheckResult(false, "not admin"));
                 log.info("CPChannelAdminChecker soft fail: user not admin, uid={}, cid={}", userInfoId, channelId);
                 return;
             }
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("you are not the admin of this channel"));
             log.info("CPChannelAdminChecker hard fail: user not admin, uid={}, cid={}", userInfoId, channelId);
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+            context.setData(CPNodeCommonKeys.CHECK_RESULT, new CheckResult(true, null));
             log.debug("CPChannelAdminChecker soft success, uid={}, cid={}", userInfoId, channelId);
         }
     }

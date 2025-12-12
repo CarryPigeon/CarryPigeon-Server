@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
@@ -30,14 +30,14 @@ public class CPUserRegisterVO implements CPControllerVO {
             context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, code);
             // 插入用户基础数据
             long id = IdUtil.generateId();
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_ID, id);
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL, email);
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_REGISTER_TIME, TimeUtil.getCurrentTime());
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_SEX, CPUserSexEnum.UNKNOWN.getValue());
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_BRIEF, "");
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_BIRTHDAY, TimeUtil.getCurrentTime());
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_AVATAR, -1L);
-            context.setData(CPNodeValueKeyBasicConstants.USER_INFO_USER_NAME, (id + "").substring(0, 8));
+            context.setData(CPNodeUserKeys.USER_INFO_ID, id);
+            context.setData(CPNodeUserKeys.USER_INFO_EMAIL, email);
+            context.setData(CPNodeUserKeys.USER_INFO_REGISTER_TIME, TimeUtil.getCurrentTime());
+            context.setData(CPNodeUserKeys.USER_INFO_SEX, CPUserSexEnum.UNKNOWN.getValue());
+            context.setData(CPNodeUserKeys.USER_INFO_BRIEF, "");
+            context.setData(CPNodeUserKeys.USER_INFO_BIRTHDAY, TimeUtil.getCurrentTime());
+            context.setData(CPNodeUserKeys.USER_INFO_AVATAR, -1L);
+            context.setData(CPNodeUserKeys.USER_INFO_USER_NAME, (id + "").substring(0, 8));
             return true;
         }
         return false;

@@ -1,16 +1,12 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractSaveNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 
 /**
  * 将消息持久化到数据库的节点。<br/>
@@ -20,26 +16,43 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 @Slf4j
 @AllArgsConstructor
 @LiteflowComponent("CPMessageSaver")
-public class CPMessageSaverNode extends CPNodeComponent {
+public class CPMessageSaverNode extends AbstractSaveNode<CPMessage> {
 
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
-        if (message == null) {
-            log.error("CPMessageSaver args error: MessageInfo is null");
-            argsError(context);
-            return;
-        }
-        if (!channelMessageDao.save(message)) {
-            log.error("CPMessageSaver failed to save message, mid={}, cid={}, uid={}",
-                    message.getId(), message.getCid(), message.getUid());
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("save message error"));
-            throw new CPReturnException();
-        }
+    protected String getContextKey() {
+        return CPNodeMessageKeys.MESSAGE_INFO;
+    }
+
+    @Override
+    protected Class<CPMessage> getEntityClass() {
+        return CPMessage.class;
+    }
+
+    @Override
+    protected boolean doSave(CPMessage entity) {
+        return channelMessageDao.save(entity);
+    }
+
+    @Override
+    protected String getErrorMessage() {
+        return "save message error";
+    }
+
+    @Override
+    protected void afterSuccess(CPMessage entity, com.yomahub.liteflow.slot.DefaultContext context) {
         log.debug("CPMessageSaver success, mid={}, cid={}, uid={}",
-                message.getId(), message.getCid(), message.getUid());
+                entity.getId(), entity.getCid(), entity.getUid());
+    }
+
+    @Override
+    protected void onFailure(CPMessage entity, com.yomahub.liteflow.slot.DefaultContext context) {
+        if (entity != null) {
+            log.error("CPMessageSaver failed to save message, mid={}, cid={}, uid={}",
+                    entity.getId(), entity.getCid(), entity.getUid());
+        } else {
+            log.error("CPMessageSaver failed to save message: entity is null");
+        }
     }
 }

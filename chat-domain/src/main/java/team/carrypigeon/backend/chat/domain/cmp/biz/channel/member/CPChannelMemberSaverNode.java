@@ -1,15 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractSaveNode;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 
 /**
  * 用于保存频道成员的Node<br/>
@@ -19,20 +15,27 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
  * */
 @AllArgsConstructor
 @LiteflowComponent("CPChannelMemberSaver")
-public class CPChannelMemberSaverNode extends CPNodeComponent {
+public class CPChannelMemberSaverNode extends AbstractSaveNode<CPChannelMember> {
 
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelMember channelMemberInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
-        if (channelMemberInfo == null){
-            argsError(context);
-        }
-        if (!channelMemberDao.save(channelMemberInfo)){
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("save channel member error"));
-            throw new CPReturnException();
-        }
+    protected String getContextKey() {
+        return CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO;
+    }
+
+    @Override
+    protected Class<CPChannelMember> getEntityClass() {
+        return CPChannelMember.class;
+    }
+
+    @Override
+    protected boolean doSave(CPChannelMember entity) {
+        return channelMemberDao.save(entity);
+    }
+
+    @Override
+    protected String getErrorMessage() {
+        return "save channel member error";
     }
 }

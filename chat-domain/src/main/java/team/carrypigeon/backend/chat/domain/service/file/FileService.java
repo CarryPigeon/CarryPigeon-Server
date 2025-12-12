@@ -69,6 +69,21 @@ public class FileService {
     }
 
     /**
+     * Upload file to MinIO without any de-duplication logic.
+     */
+    public void upload(String objectName, InputStream stream, long size, String contentType) throws Exception {
+        log.debug("FileService#upload - bucket={}, objectName={}, size={}", bucketName, objectName, size);
+        PutObjectArgs.Builder builder = PutObjectArgs.builder()
+                .bucket(bucketName)
+                .object(objectName)
+                .stream(stream, size, -1);
+        if (contentType != null && !contentType.isEmpty()) {
+            builder.contentType(contentType);
+        }
+        minioClient.putObject(builder.build());
+    }
+
+    /**
      * Get basic metadata of an object.
      */
     public StatObjectResponse statFile(String objectName) throws Exception {

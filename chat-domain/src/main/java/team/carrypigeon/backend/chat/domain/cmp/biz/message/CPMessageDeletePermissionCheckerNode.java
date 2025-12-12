@@ -8,11 +8,12 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.time.LocalDateTime;
@@ -35,8 +36,8 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
-        Long operatorUid = context.getData(CPNodeValueKeyBasicConstants.SESSION_ID);
+        CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
+        Long operatorUid = context.getData(CPNodeCommonKeys.SESSION_ID);
         if (message == null || operatorUid == null) {
             log.error("CPMessageDeletePermissionChecker args error: message or operatorUid is null");
             argsError(context);
@@ -52,7 +53,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
         if (now.isAfter(sendTime.plusSeconds(DELETE_WINDOW_SECONDS))) {
             log.info("CPMessageDeletePermissionChecker fail: delete timeout, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("message delete timeout"));
             throw new CPReturnException();
         }
@@ -67,7 +68,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
         if (member == null || member.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             log.info("CPMessageDeletePermissionChecker fail: no permission, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("no permission to delete message"));
             throw new CPReturnException();
         }

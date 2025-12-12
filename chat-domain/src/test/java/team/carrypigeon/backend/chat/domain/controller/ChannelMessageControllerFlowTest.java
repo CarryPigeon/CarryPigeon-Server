@@ -15,15 +15,18 @@ import org.springframework.test.context.junit4.SpringRunner;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.create.CPMessageCreateVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.delete.CPMessageDeleteVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.list.CPMessageListVO;
+import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.update.CPMessageReadStateUpdateVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.unread.get.CPMessageGetUnreadVO;
 import team.carrypigeon.backend.chat.domain.support.ChatDomainTestConfig;
 import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
@@ -39,6 +42,8 @@ import java.time.LocalDateTime;
  * - /core/channel/message/delete
  * - /core/channel/message/list
  * - /core/channel/message/unread/get
+ * - /core/channel/message/read/state/update
+ * - /core/channel/message/read/state/get
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
@@ -55,6 +60,9 @@ public class ChannelMessageControllerFlowTest {
 
     @Autowired
     private ChannelMessageDao channelMessageDao;
+
+    @Autowired
+    private ChannelReadStateDao channelReadStateDao;
 
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
@@ -251,9 +259,97 @@ public class ChannelMessageControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/unread/get", null, context);
         Assert.assertTrue(resp.isSuccess());
 
-        Long unread = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_UNREAD_COUNT);
+        Long unread = context.getData(CPNodeMessageKeys.MESSAGE_UNREAD_COUNT);
         Assert.assertNotNull(unread);
         Assert.assertTrue(unread >= 1);
+    }
+
+    @Test
+    public void testChannelMessageReadStateUpdate_success() {
+        long uid = 1000L;
+        long cid = 2000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(uid)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        CPChannelMember member = new CPChannelMember()
+                .setId(1L)
+                .setUid(uid)
+                .setCid(cid)
+                .setName("")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(member);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
+
+        DefaultContext context = new DefaultContext();
+        context.setData("session", session);
+
+        long lastReadTimeMillis = System.currentTimeMillis();
+        CPMessageReadStateUpdateVO vo = new CPMessageReadStateUpdateVO(cid, lastReadTimeMillis);
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/read/state/update", null, context);
+        Assert.assertTrue(resp.isSuccess());
+
+        CPChannelReadState state = channelReadStateDao.getByUidAndCid(uid, cid);
+        Assert.assertNotNull(state);
+        Assert.assertEquals(uid, state.getUid());
+        Assert.assertEquals(cid, state.getCid());
+        Assert.assertTrue(state.getLastReadTime() > 0);
+    }
+
+    @Test
+    public void testChannelMessageReadStateGet_success() {
+        long uid = 1000L;
+        long cid = 2000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(uid)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        CPChannelMember member = new CPChannelMember()
+                .setId(1L)
+                .setUid(uid)
+                .setCid(cid)
+                .setName("")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(member);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
+
+        DefaultContext context = new DefaultContext();
+        context.setData("session", session);
+
+        // 初次获取，若没有记录，应返回 lastReadTime = 0
+        team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.get.CPMessageReadStateGetVO vo =
+                new team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.get.CPMessageReadStateGetVO(cid);
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/read/state/get", null, context);
+        Assert.assertTrue(resp.isSuccess());
+
+        CPChannelReadState state = context.getData(
+                team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO);
+        Assert.assertNotNull(state);
+        Assert.assertEquals(uid, state.getUid());
+        Assert.assertEquals(cid, state.getCid());
+        Assert.assertEquals(0L, state.getLastReadTime());
     }
 }
 

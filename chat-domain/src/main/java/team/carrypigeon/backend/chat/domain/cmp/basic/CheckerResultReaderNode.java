@@ -4,8 +4,9 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeSwitchComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeSwitchComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
@@ -21,13 +22,13 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @LiteflowComponent("CheckerResultReader")
 public class CheckerResultReaderNode extends CPNodeSwitchComponent {
 
-    private static final String BIND_KEY = "key";
+    private static final String BIND_KEY = CPNodeBindKeys.KEY;
     private static final String MODE_STATE = "state";
     private static final String MODE_MSG = "msg";
 
     @Override
     protected String process(CPSession session, DefaultContext context) throws Exception {
-        CheckResult result = context.getData(CPNodeValueKeyBasicConstants.CHECK_RESULT);
+        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
         if (result == null) {
             log.error("CheckerResultReader: CheckResult is null in context");
             argsError(context);

@@ -7,14 +7,14 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Set;
 
 /**
  * 通道数据获取组件<br/>
@@ -33,7 +33,7 @@ public class CPChannelCollectorNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        Long uid = context.getData(CPNodeValueKeyBasicConstants.USER_INFO_ID);
+        Long uid = context.getData(CPNodeUserKeys.USER_INFO_ID);
         if (uid == null){
             argsError( context);
             return;
@@ -45,7 +45,7 @@ public class CPChannelCollectorNode extends CPNodeComponent {
             cpChannels.add(channelDao.getById(member.getCid()));
         }
         cpChannels.addAll(Arrays.asList(allFixed));
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_LIST,cpChannels);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_LIST,cpChannels);
         log.debug("CPChannelCollector success, uid={},size={}", uid,cpChannels.size());
     }
 }

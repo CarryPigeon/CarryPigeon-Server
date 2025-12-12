@@ -43,7 +43,7 @@ public class ECCUtil {
             keyPairGenerator = KeyPairGenerator.getInstance(ALGORITHM, PROVIDER);
             keyPairGenerator.initialize(ecSpec, new SecureRandom());
         } catch (InvalidAlgorithmParameterException | NoSuchAlgorithmException | NoSuchProviderException e) {
-            log.error("unexpected Exception:{}",e.getMessage(),e);
+            log.error("unexpected exception while generating ECC key pair: {}", e.getMessage(), e);
             throw new RuntimeException(e);
         }
         return keyPairGenerator.generateKeyPair();
@@ -62,7 +62,7 @@ public class ECCUtil {
             return cipher.doFinal(plainText.getBytes());
         } catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException |
                  IllegalBlockSizeException | BadPaddingException e) {
-            log.error("unexpected Exception:{}",e.getMessage(),e);
+            log.error("unexpected exception while encrypting with ECC: {}", e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }

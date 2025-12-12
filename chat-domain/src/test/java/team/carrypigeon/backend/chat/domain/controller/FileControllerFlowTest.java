@@ -14,7 +14,7 @@ import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.chat.domain.controller.netty.file.CPFileDownloadTokenApplyVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.file.CPFileUploadTokenApplyVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeFileKeys;
 import team.carrypigeon.backend.chat.domain.support.ChatDomainTestConfig;
 import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
 import team.carrypigeon.backend.chat.domain.support.TestSession;
@@ -60,7 +60,7 @@ public class FileControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/file/upload/token/apply", null, context);
         Assert.assertTrue(resp.isSuccess());
 
-        String token = context.getData(CPNodeValueKeyBasicConstants.FILE_TOKEN);
+        String token = context.getData(CPNodeFileKeys.FILE_TOKEN);
         Assert.assertNotNull(token);
     }
 
@@ -81,7 +81,7 @@ public class FileControllerFlowTest {
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/file/download/token/apply", null, context);
         Assert.assertTrue(resp.isSuccess());
 
-        String token = context.getData(CPNodeValueKeyBasicConstants.FILE_TOKEN);
+        String token = context.getData(CPNodeFileKeys.FILE_TOKEN);
         Assert.assertNotNull(token);
     }
 }

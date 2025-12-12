@@ -509,6 +509,27 @@ Result shape:
   "count": 10
 }
 ```
+
+#### 3.3.5 Update channel read state
+
+- Route: `/core/channel/message/read/state/update`
+- VO: `CPMessageReadStateUpdateVO`:
+
+```json
+{
+  "cid": 12345,
+  "lastReadTime": 1700000000000
+}
+```
+
+- Behaviour:
+  - Requires login.
+  - User must be a member of the channel.
+  - Server persists the latest read position per `(uid, cid)` in `CPChannelReadState`
+    and only moves the stored position forward (older timestamps are ignored).
+  - Used to keep read/unread state in sync across multiple clients for the same user.
+
+- Success: default result (`CPControllerDefaultResult`), `code = 200`.
 ### 3.4 File routes
 
 #### 3.4.1 Apply upload token

@@ -32,7 +32,8 @@
         /**判断是否为管理员**/
         CPChannelAdminChecker,
         /**处理申请**/
-        SWITCH(ChannelApplicationStateSetterSwitcher).to(
+        ChannelApplicationStateSetterSwitcher,
+        SWITCH(CheckerResultReader.bind("key","msg")).to(
             THEN(
                 CPChannelApplicationApproved,
                 CPChannelMemberSaver

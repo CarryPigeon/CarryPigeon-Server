@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.basic;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 
 /**
  * 重命名参数节点。<br/>
@@ -15,9 +16,9 @@ public class RenameArgNode extends CPNodeComponent {
 
     /**
      * LiteFlow 中 bind 使用的参数名。<br/>
-     * 约定所有 Node.bind 的第一个参数统一为 "key"。
+     * 约定所有 Node.bind 的第一个参数统一为 {@link CPNodeBindKeys#KEY}。
      */
-    private static final String BIND_KEY = "key";
+    private static final String BIND_KEY = CPNodeBindKeys.KEY;
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {

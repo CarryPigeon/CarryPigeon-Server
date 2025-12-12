@@ -77,5 +77,39 @@
         CPMessageUnreadCounter
         )
     </chain>
+
+    <!-- 更新频道消息已读状态 -->
+    <chain name="/core/channel/message/read/state/update">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+        /** 校验用户是否在频道中 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 更新已读状态 **/
+        CPChannelReadStateUpserter,
+        /** 收集当前用户自身会话对应的 uid **/
+        CPUserSelfCollector,
+        /** 构建已读状态通知数据 **/
+        CPChannelReadStateNotifyBuilder,
+        /** 通知该用户的所有在线会话 **/
+        CPNotifier.bind("route","/core/channel/message/read/state")
+        )
+    </chain>
+
+    <!-- 获取频道消息已读状态 -->
+    <chain name="/core/channel/message/read/state/get">
+        THEN(
+        /** 判断用户是否登录 **/
+        UserLoginChecker,
+        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+        /** 校验用户是否在频道中 **/
+        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 查询已读状态（若不存在则返回默认值） **/
+        CPChannelReadStateSelector
+        )
+    </chain>
 </flow>
 

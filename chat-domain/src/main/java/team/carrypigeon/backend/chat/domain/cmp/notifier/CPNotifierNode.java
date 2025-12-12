@@ -3,10 +3,12 @@ package team.carrypigeon.backend.chat.domain.cmp.notifier;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeNotifierKeys;
 import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
 
 import java.util.Set;
@@ -18,6 +20,7 @@ import java.util.Set;
  * 2. Notifier_Data:JsonNode?(可通过前置的result来进行构建数据)<br/>
  * 出参：无
  * */
+@Slf4j
 @AllArgsConstructor
 @LiteflowComponent("CPNotifier")
 public class CPNotifierNode extends CPNodeComponent {
@@ -26,18 +29,12 @@ public class CPNotifierNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        String route = getBindData("route", String.class);
-        if (route == null){
-            argsError(context);
-        }
-        Set<Long> uids = context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_UIDS);
-        if (route == null || uids == null){
-            argsError(context);
-        }
+        String route = requireBind(context, CPNodeBindKeys.ROUTE, String.class);
+        Set<Long> uids = requireContext(context, CPNodeNotifierKeys.NOTIFIER_UIDS, Set.class);
         CPNotification notification = new CPNotification();
         notification.setRoute(route)
-                .setData(context.getData(CPNodeValueKeyBasicConstants.NOTIFIER_DATA));
-        assert uids != null;
+                .setData(context.getData(CPNodeNotifierKeys.NOTIFIER_DATA));
+        log.debug("CPNotifier: send notification, route={}, uidsCount={}", route, uids.size());
         cpNotificationService.sendNotification(uids, notification);
     }
 }

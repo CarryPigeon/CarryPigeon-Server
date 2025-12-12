@@ -6,7 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 
 /**
  * 创建消息的请求参数<br/>
@@ -27,10 +28,10 @@ public class CPMessageCreateVO implements CPControllerVO {
             return false;
         }
         // 频道基本信息
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
         // 消息原始数据与域，后续由 CPMessageParserService 解析
-        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_INFO_DOMAIN, type);
-        context.setData(CPNodeValueKeyBasicConstants.MESSAGE_INFO_DATA, data);
+        context.setData(CPNodeMessageKeys.MESSAGE_INFO_DOMAIN, type);
+        context.setData(CPNodeMessageKeys.MESSAGE_INFO_DATA, data);
         return true;
     }
 }

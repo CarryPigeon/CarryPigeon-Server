@@ -67,7 +67,7 @@ public class UserTokenDaoImpl implements UserTokenDao {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid","userTokenByToken"}, allEntries = true)
+    @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid"}, allEntries = true)
     public boolean save(CPUserToken userToken) {
         if (userToken == null) {
             log.error("UserTokenDaoImpl#save called with null userToken");
@@ -83,7 +83,7 @@ public class UserTokenDaoImpl implements UserTokenDao {
     }
 
     @Override
-    @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid","userTokenByToken"}, allEntries = true)
+    @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid"}, allEntries = true)
     public boolean delete(CPUserToken userToken) {
         if (userToken == null) {
             log.error("UserTokenDaoImpl#delete called with null userToken");

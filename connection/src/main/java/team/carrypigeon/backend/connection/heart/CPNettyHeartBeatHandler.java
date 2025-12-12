@@ -16,12 +16,12 @@ public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
         if (evt instanceof IdleStateEvent event) {
             switch (event.state()) {
                 case READER_IDLE:
-                    log.debug("读空闲");
+                    log.info("read idle, closing connection, remoteAddress={}", ctx.channel().remoteAddress());
                     // 读空闲则关闭连接
                     ctx.close();
                     break;
                 case WRITER_IDLE:
-                    log.debug("写空闲");
+                    log.debug("write idle, sending heartbeat, remoteAddress={}", ctx.channel().remoteAddress());
                     // 写空闲则发送心跳包
                     CPSession session = ctx.channel().attr(SESSIONS).get();
                     if (session == null){
@@ -31,7 +31,7 @@ public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
                     session.write("",false);
                     break;
                 case ALL_IDLE:
-                    log.debug("读写空闲");
+                    log.info("all idle, closing connection, remoteAddress={}", ctx.channel().remoteAddress());
                     ctx.close();
                     break;
             }

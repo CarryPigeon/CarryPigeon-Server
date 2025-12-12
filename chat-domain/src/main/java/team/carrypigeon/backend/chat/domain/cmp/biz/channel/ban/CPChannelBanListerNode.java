@@ -6,10 +6,11 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.ban.list.CPChannelListBanResultItem;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ public class CPChannelBanListerNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID);
+        Long cid = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
         if (cid == null) {
             log.error("CPChannelBanLister args error: ChannelInfo_Id is null");
             argsError(context);
@@ -58,7 +59,7 @@ public class CPChannelBanListerNode extends CPNodeComponent {
                 }
             }
         }
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_ITEMS, items);
+        context.setData(CPNodeChannelBanKeys.CHANNEL_BAN_ITEMS, items);
         log.debug("CPChannelBanLister success, cid={}, size={}", cid, items.size());
     }
 }

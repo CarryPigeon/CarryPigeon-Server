@@ -6,10 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.base.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
@@ -26,14 +28,14 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @LiteflowComponent("CPChannelBanTargetChecker")
 public class CPChannelBanTargetCheckerNode extends CPNodeComponent {
 
-    private static final String BIND_TYPE_KEY = "type";
+    private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
-        CPChannelMember target = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO);
+        CPChannelMember target = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
         if (target == null) {
             log.error("CPChannelBanTargetChecker args error: ChannelMemberInfo is null");
             argsError(context);
@@ -41,7 +43,7 @@ public class CPChannelBanTargetCheckerNode extends CPNodeComponent {
         }
         if (target.getAuthority() == CPChannelMemberAuthorityEnum.ADMIN) {
             if (soft) {
-                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                context.setData(CPNodeCommonKeys.CHECK_RESULT,
                         new CheckResult(false, "target is admin"));
                 log.info("CPChannelBanTargetChecker soft fail: target is admin, uid={}, cid={}",
                         target.getUid(), target.getCid());
@@ -49,12 +51,12 @@ public class CPChannelBanTargetCheckerNode extends CPNodeComponent {
             }
             log.info("CPChannelBanTargetChecker hard fail: target is admin, uid={}, cid={}",
                     target.getUid(), target.getCid());
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("cannot ban channel admin"));
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+            context.setData(CPNodeCommonKeys.CHECK_RESULT, new CheckResult(true, null));
             log.debug("CPChannelBanTargetChecker soft success, uid={}, cid={}",
                     target.getUid(), target.getCid());
         }

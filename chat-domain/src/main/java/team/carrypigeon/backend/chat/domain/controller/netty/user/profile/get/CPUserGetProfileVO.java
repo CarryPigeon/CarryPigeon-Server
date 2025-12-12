@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
 /**
  * 用户获取用户信息请求参数
@@ -17,7 +17,7 @@ public class CPUserGetProfileVO implements CPControllerVO {
     private long uid;
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_ID, uid);
+        context.setData(CPNodeUserKeys.USER_INFO_ID, uid);
         return true;
     }
 }

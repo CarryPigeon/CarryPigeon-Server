@@ -5,6 +5,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
@@ -42,6 +43,10 @@ public class InMemoryDatabase {
     private final Map<String, CPChannelBan> channelBansByUidCid = new HashMap<>();
 
     private final Map<Long, CPMessage> messages = new HashMap<>();
+
+    private final Map<Long, CPChannelReadState> channelReadStates = new HashMap<>();
+    // (uid,cid) -> read state
+    private final Map<String, CPChannelReadState> channelReadStatesByUidCid = new HashMap<>();
 
     public long nextId() {
         return idGenerator.getAndIncrement();
@@ -254,6 +259,37 @@ public class InMemoryDatabase {
         return true;
     }
 
+    // -------- ChannelReadState --------
+
+    private String readStateKey(long uid, long cid) {
+        return uid + ":" + cid;
+    }
+
+    public void saveChannelReadState(CPChannelReadState state) {
+        if (state.getId() == 0L) {
+            state.setId(nextId());
+        }
+        channelReadStates.put(state.getId(), state);
+        channelReadStatesByUidCid.put(readStateKey(state.getUid(), state.getCid()), state);
+    }
+
+    public CPChannelReadState getChannelReadStateById(long id) {
+        return channelReadStates.get(id);
+    }
+
+    public CPChannelReadState getChannelReadStateByUidAndCid(long uid, long cid) {
+        return channelReadStatesByUidCid.get(readStateKey(uid, cid));
+    }
+
+    public boolean deleteChannelReadState(CPChannelReadState state) {
+        if (state == null) {
+            return false;
+        }
+        channelReadStates.remove(state.getId());
+        channelReadStatesByUidCid.remove(readStateKey(state.getUid(), state.getCid()));
+        return true;
+    }
+
     // -------- Message --------
 
     public void saveMessage(CPMessage message) {
@@ -306,5 +342,7 @@ public class InMemoryDatabase {
         channelBans.clear();
         channelBansByUidCid.clear();
         messages.clear();
+        channelReadStates.clear();
+        channelReadStatesByUidCid.clear();
     }
 }

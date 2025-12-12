@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.basic;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 
 /**
  * 清理参数节点。<br/>
@@ -15,7 +16,7 @@ public class CleanerArgNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        String bindData = getBindData("key", String.class);
+        String bindData = getBindData(CPNodeBindKeys.KEY, String.class);
         if (bindData == null) {
             argsError(context);
             return;

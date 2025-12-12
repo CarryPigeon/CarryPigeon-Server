@@ -36,7 +36,7 @@ public class AESUtil {
             keyGen.init(KEY_LENGTH_BIT); // 128位密钥
             return keyGen.generateKey();
         }catch (NoSuchAlgorithmException e){
-            log.error("unexpected Exception:{}",e.getMessage(),e);
+            log.error("unexpected exception while generating AES key: {}", e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }

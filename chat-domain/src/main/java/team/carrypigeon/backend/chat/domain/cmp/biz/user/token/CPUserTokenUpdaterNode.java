@@ -7,10 +7,10 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
@@ -30,20 +30,20 @@ public class CPUserTokenUpdaterNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
+        CPUserToken userToken = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
         }
-        String token = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_TOKEN);
+        String token = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN);
         if (token != null){
             userToken.setToken(token);
         }
-        Long expiredTime = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO_EXPIRED_TIME);
+        Long expiredTime = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO_EXPIRED_TIME);
         if (expiredTime != null){
             userToken.setExpiredTime(TimeUtil.MillisToLocalDateTime(expiredTime));
         }
         if (!userTokenDao.save(userToken)){
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("update user token error"));
             throw new CPReturnException();
         }

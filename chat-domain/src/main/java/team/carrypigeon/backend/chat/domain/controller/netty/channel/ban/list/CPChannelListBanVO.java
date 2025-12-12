@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 
 /**
  * 获取频道封禁列表的请求参数。
@@ -28,7 +28,7 @@ public class CPChannelListBanVO implements CPControllerVO {
             return false;
         }
         // 写入频道标识，供后续节点查询封禁记录
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
         return true;
     }
 }

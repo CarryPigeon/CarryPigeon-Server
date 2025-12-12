@@ -5,9 +5,10 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
@@ -25,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 public class EmailValidChecker extends CPNodeComponent {
 
     private static final String EMAIL_VALID_CHECKER_PARAM = "Email";
-    private static final String BIND_TYPE_KEY = "type";
+    private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
@@ -42,18 +43,18 @@ public class EmailValidChecker extends CPNodeComponent {
         }
         if (!email.matches("^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")) {
             if (soft) {
-                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                context.setData(CPNodeCommonKeys.CHECK_RESULT,
                         new CheckResult(false, "email error"));
                 log.info("EmailValidChecker soft fail: invalid email format, email={}", email);
                 return;
             }
             log.info("EmailValidChecker hard fail: invalid email format, email={}", email);
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.ERROR_RESPONSE.copy().setTextData("email error"));
             throw new CPReturnException();
         }
         if (soft) {
-            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+            context.setData(CPNodeCommonKeys.CHECK_RESULT, new CheckResult(true, null));
             log.debug("EmailValidChecker soft success, email={}", email);
         }
     }

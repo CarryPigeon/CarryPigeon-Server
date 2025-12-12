@@ -4,13 +4,11 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
 
 /**
  * Delete a channel ban record.
@@ -20,25 +18,41 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 @Slf4j
 @AllArgsConstructor
 @LiteflowComponent("CPChannelBanDeleter")
-public class CPChannelBanDeleterNode extends CPNodeComponent {
+public class CPChannelBanDeleterNode extends AbstractDeleteNode<CPChannelBan> {
 
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelBan ban = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_BAN_INFO);
-        if (ban == null) {
-            log.error("CPChannelBanDeleter args error: ChannelBanInfo is null");
-            argsError(context);
-            return;
-        }
-        if (!channelBanDAO.delete(ban)) {
+    protected String getContextKey() {
+        return CPNodeChannelBanKeys.CHANNEL_BAN_INFO;
+    }
+
+    @Override
+    protected Class<CPChannelBan> getEntityClass() {
+        return CPChannelBan.class;
+    }
+
+    @Override
+    protected boolean doDelete(CPChannelBan ban) {
+        return channelBanDAO.delete(ban);
+    }
+
+    @Override
+    protected String getErrorMessage() {
+        return "error deleting channel ban";
+    }
+
+    @Override
+    protected void onFailure(CPChannelBan ban, DefaultContext context) throws CPReturnException {
+        if (ban != null) {
             log.error("CPChannelBanDeleter delete failed, banId={}, cid={}, uid={}",
                     ban.getId(), ban.getCid(), ban.getUid());
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("error deleting channel ban"));
-            throw new CPReturnException();
         }
+        businessError(context, "error deleting channel ban");
+    }
+
+    @Override
+    protected void afterSuccess(CPChannelBan ban, DefaultContext context) {
         log.info("CPChannelBanDeleter success, banId={}, cid={}, uid={}",
                 ban.getId(), ban.getCid(), ban.getUid());
     }

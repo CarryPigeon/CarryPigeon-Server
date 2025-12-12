@@ -164,7 +164,7 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 
 1. `xxxSelectorNode` - 数据库查询组件，用于从数据库中查询一个实体对象出来，其可酌情包含多种查询模式，例如[CPChannelMemberSelectorNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/channel/member/CPChannelMemberSelectorNode.java)
 2. `xxxUpdatorNode` - 根据上下的数据更新上下文中指定对象的数据，例如[CPChannelUpdaterNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/channel/CPChannelUpdaterNode.java)
-3. `xxxCreatorNode` - 根据上下文的特殊数据构建指定的对象的数据，例如[CPUUserTokenCreatorNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/user/token/CPUUserTokenCreatorNode.java)
+3. `xxxCreatorNode` - 根据上下文的特殊数据构建指定的对象的数据，例如[CPUserTokenCreatorNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/user/token/CPUserTokenCreatorNode.java)
 4. `xxxBuidlerNode` - 根据上下文的原始数据构建指定的对象的数据，例如[CPUserBuilderNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/user/CPUserBuilderNode.java)
 5. `xxxSavorNode` - 根据上下文的数据保存指定的对象数据，例如[CPUserSavorNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/user/CPUserSavorNode.java)
 6. `xxx{FieldName}GetterNode` - 根据上下文的数据获取`{FieldName}`字段的信息，例如[CPChannelApplicationCidGetterNode.java](src/main/java/team/carrypigeon/backend/chat/domain/cmp/biz/channel/application/CPChannelApplicationCidGetterNode.java)

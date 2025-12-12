@@ -1,10 +1,11 @@
-package team.carrypigeon.backend.api.chat.domain.controller;
+package team.carrypigeon.backend.api.chat.domain.node;
 
 import com.yomahub.liteflow.core.NodeSwitchComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 /**
  * LiteFlow 分支节点基类。
@@ -19,7 +20,7 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
         // 获取 LiteFlow 默认上下文
         DefaultContext context = this.getContextBean(DefaultContext.class);
         // 从上下文中获取当前会话 CPSession
-        CPSession session = context.getData(CPNodeValueKeyBasicConstants.SESSION);
+        CPSession session = context.getData(CPNodeCommonKeys.SESSION);
         // 委托子类执行业务并返回分支标签
         return process(session, context);
     }
@@ -41,7 +42,7 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
      */
     protected void argsError(DefaultContext context) throws CPReturnException {
         context.setData(
-                CPNodeValueKeyBasicConstants.RESPONSE,
+                CPNodeCommonKeys.RESPONSE,
                 CPResponse.ERROR_RESPONSE.copy().setTextData("error args")
         );
         throw new CPReturnException();

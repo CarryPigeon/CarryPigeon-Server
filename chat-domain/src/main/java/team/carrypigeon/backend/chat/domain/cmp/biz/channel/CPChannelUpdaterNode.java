@@ -4,8 +4,8 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 
 /**
  * 用于更新通道的Node<br/>
@@ -22,23 +22,23 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 public class CPChannelUpdaterNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannel channelInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO);
+        CPChannel channelInfo = context.getData(CPNodeChannelKeys.CHANNEL_INFO);
         if (channelInfo == null){
             argsError(context);
         }
-        String channelInfoName = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_NAME);
+        String channelInfoName = context.getData(CPNodeChannelKeys.CHANNEL_INFO_NAME);
         if (channelInfoName != null){
             channelInfo.setName(channelInfoName);
         }
-        Long channelInfoOwner = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_OWNER);
+        Long channelInfoOwner = context.getData(CPNodeChannelKeys.CHANNEL_INFO_OWNER);
         if (channelInfoOwner != null){
             channelInfo.setOwner(channelInfoOwner);
         }
-        String channelInfoBrief = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_BRIEF);
+        String channelInfoBrief = context.getData(CPNodeChannelKeys.CHANNEL_INFO_BRIEF);
         if (channelInfoBrief != null){
             channelInfo.setBrief(channelInfoBrief);
         }
-        Long channelInfoAvatar = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_AVATAR);
+        Long channelInfoAvatar = context.getData(CPNodeChannelKeys.CHANNEL_INFO_AVATAR);
         if (channelInfoAvatar != null){
             channelInfo.setAvatar(channelInfoAvatar);
         }

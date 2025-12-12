@@ -8,11 +8,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
+import team.carrypigeon.backend.api.dao.database.file.FileInfoDao;
 import team.carrypigeon.backend.chat.domain.service.file.FileService;
 import team.carrypigeon.backend.chat.domain.service.file.FileTokenService;
+import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.io.InputStream;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 
 @RestController
@@ -22,10 +26,12 @@ public class MinioController {
 
     private final FileService fileService;
     private final FileTokenService fileTokenService;
+    private final FileInfoDao fileInfoDao;
 
-    public MinioController(FileService fileService, FileTokenService fileTokenService) {
+    public MinioController(FileService fileService, FileTokenService fileTokenService, FileInfoDao fileInfoDao) {
         this.fileService = fileService;
         this.fileTokenService = fileTokenService;
+        this.fileInfoDao = fileInfoDao;
     }
 
     /**
@@ -43,16 +49,29 @@ public class MinioController {
             return ResponseEntity.badRequest().body("file is empty");
         }
         try {
-            // compute sha256 and size
-            MessageDigest sha256Digest = MessageDigest.getInstance("SHA-256");
-            long size = 0L;
-            try (InputStream digestInputStream = file.getInputStream()) {
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = digestInputStream.read(buffer)) != -1) {
-                    sha256Digest.update(buffer, 0, bytesRead);
-                    size += bytesRead;
+            // 生成文件ID，采用全局雪花ID
+            long fileId = IdUtil.generateId();
+            String fileIdStr = Long.toString(fileId);
+            String objectName = fileIdStr;
+            String contentType = file.getContentType();
+            long size = file.getSize();
+            if (size <= 0) {
+                // 极端情况下 size 不可用时，退化为两遍读取：第一遍统计长度
+                long counted = 0L;
+                try (InputStream in = file.getInputStream()) {
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    while ((bytesRead = in.read(buffer)) != -1) {
+                        counted += bytesRead;
+                    }
                 }
+                size = counted;
+            }
+
+            // 边上传边计算 sha256
+            MessageDigest sha256Digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream uploadStream = new DigestInputStream(file.getInputStream(), sha256Digest)) {
+                fileService.upload(objectName, uploadStream, size, contentType);
             }
             byte[] digest = sha256Digest.digest();
             StringBuilder hex = new StringBuilder();
@@ -64,15 +83,36 @@ public class MinioController {
                 hex.append(h);
             }
             String sha256 = hex.toString();
-            String objectName = sha256;
-            String contentType = file.getContentType();
-            try (InputStream uploadStream = file.getInputStream()) {
-                boolean uploaded = fileService.uploadIfNotExists(objectName, uploadStream, size, contentType);
-                log.info("file upload, token={}, uid={}, objectName={}, uploaded={}, size={}, sha256={}",
-                        token, fileToken.getUid(), objectName, uploaded, size, sha256);
+
+            // 上传完成后，通过 sha256 + size 在数据库中检查是否已有文件
+            CPFileInfo existing = fileInfoDao.getBySha256AndSize(sha256, size);
+            if (existing != null) {
+                // 已存在相同文件：删除刚上传的对象，返回已有 fileId
+                try {
+                    fileService.deleteFile(objectName);
+                    log.info("duplicate file detected, delete newly uploaded object. newObjectName={}, existingFileId={}",
+                            objectName, existing.getId());
+                } catch (Exception e) {
+                    log.warn("failed to delete duplicated object from minio, objectName={}", objectName, e);
+                }
+                return ResponseEntity.ok(Long.toString(existing.getId()));
             }
-            // return the sha256 as file id
-            return ResponseEntity.ok(sha256);
+
+            // 不存在则插入新的文件信息记录
+            CPFileInfo info = new CPFileInfo()
+                    .setId(fileId)
+                    .setSha256(sha256)
+                    .setSize(size)
+                    .setObjectName(objectName)
+                    .setContentType(contentType)
+                    .setCreateTime(TimeUtil.getCurrentLocalTime());
+            boolean saved = fileInfoDao.save(info);
+            if (!saved) {
+                log.error("failed to save file info, fileId={}", fileId);
+                return ResponseEntity.status(500).body("save file info fail");
+            }
+            // 返回新的 fileId
+            return ResponseEntity.ok(fileIdStr);
         } catch (Exception e) {
             log.error("file upload error", e);
             return ResponseEntity.status(500).body("upload fail");
@@ -88,10 +128,11 @@ public class MinioController {
         if (fileToken == null || fileToken.getOp() == null || !"DOWNLOAD".equalsIgnoreCase(fileToken.getOp())) {
             return ResponseEntity.status(403).build();
         }
-        String objectName = fileToken.getFileId();
-        if (objectName == null || objectName.isEmpty()) {
+        String fileId = fileToken.getFileId();
+        if (fileId == null || fileId.isEmpty()) {
             return ResponseEntity.status(404).build();
         }
+        String objectName = fileId;
         try {
             StatObjectResponse stat = fileService.statFile(objectName);
             String contentType = stat.contentType();
@@ -112,7 +153,7 @@ public class MinioController {
                 }
             };
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + objectName)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + fileId)
                     .contentType(MediaType.parseMediaType(finalContentType))
                     .body(body);
         } catch (Exception e) {

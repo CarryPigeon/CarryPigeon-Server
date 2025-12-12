@@ -10,8 +10,8 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 
 /**
  * 用户邮箱登录响应数据<br/>
@@ -21,12 +21,12 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 
     @Override
     public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
-        CPUserToken userToken = context.getData(CPNodeValueKeyBasicConstants.USER_TOKEN_INFO);
+        CPUserToken userToken = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
             return;
         }
-        context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+        context.setData(CPNodeCommonKeys.RESPONSE,
                 CPResponse.SUCCESS_RESPONSE.copy()
                         .setData(objectMapper.valueToTree(new Result(userToken.getToken()))));
     }

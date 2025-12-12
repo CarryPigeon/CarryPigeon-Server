@@ -5,10 +5,11 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
@@ -28,7 +29,7 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @LiteflowComponent("UserLoginChecker")
 public class UserLoginCheckerNode extends CPNodeComponent {
 
-    private static final String BIND_TYPE_KEY = "type";
+    private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
@@ -39,21 +40,21 @@ public class UserLoginCheckerNode extends CPNodeComponent {
         if (attributeValue == null) {
             if (soft) {
                 // 未登录：soft 模式下仅写入 CheckResult，不中断流程
-                context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT,
+                context.setData(CPNodeCommonKeys.CHECK_RESULT,
                         new CheckResult(false, "user not login"));
                 log.info("UserLoginChecker soft fail: user not login");
                 return;
             }
             // 未登录：hard 模式下直接返回权限错误
             log.info("UserLoginChecker hard fail: user not login");
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
+            context.setData(CPNodeCommonKeys.RESPONSE,
                     CPResponse.AUTHORITY_ERROR_RESPONSE.copy().setTextData("user not login"));
             throw new CPReturnException();
         }
         // 写入 SessionId，供后续节点使用
-        context.setData(CPNodeValueKeyBasicConstants.SESSION_ID, attributeValue);
+        context.setData(CPNodeCommonKeys.SESSION_ID, attributeValue);
         if (soft) {
-            context.setData(CPNodeValueKeyBasicConstants.CHECK_RESULT, new CheckResult(true, null));
+            context.setData(CPNodeCommonKeys.CHECK_RESULT, new CheckResult(true, null));
             log.debug("UserLoginChecker soft success, uid={}", attributeValue);
         }
     }

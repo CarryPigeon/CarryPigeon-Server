@@ -4,13 +4,11 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 
 /**
  * 删除消息的组件。<br/>
@@ -20,25 +18,41 @@ import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstan
 @Slf4j
 @AllArgsConstructor
 @LiteflowComponent("CPMessageDeleter")
-public class CPMessageDeleterNode extends CPNodeComponent {
+public class CPMessageDeleterNode extends AbstractDeleteNode<CPMessage> {
 
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeValueKeyBasicConstants.MESSAGE_INFO);
-        if (message == null) {
-            log.error("CPMessageDeleter args error: MessageInfo is null");
-            argsError(context);
-            return;
-        }
-        if (!channelMessageDao.delete(message)) {
+    protected String getContextKey() {
+        return CPNodeMessageKeys.MESSAGE_INFO;
+    }
+
+    @Override
+    protected Class<CPMessage> getEntityClass() {
+        return CPMessage.class;
+    }
+
+    @Override
+    protected boolean doDelete(CPMessage message) {
+        return channelMessageDao.delete(message);
+    }
+
+    @Override
+    protected String getErrorMessage() {
+        return "delete message error";
+    }
+
+    @Override
+    protected void onFailure(CPMessage message, DefaultContext context) throws CPReturnException {
+        if (message != null) {
             log.error("CPMessageDeleter delete failed, mid={}, cid={}, uid={}",
                     message.getId(), message.getCid(), message.getUid());
-            context.setData(CPNodeValueKeyBasicConstants.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("delete message error"));
-            throw new CPReturnException();
         }
+        businessError(context, "delete message error");
+    }
+
+    @Override
+    protected void afterSuccess(CPMessage message, DefaultContext context) {
         log.info("CPMessageDeleter success, mid={}, cid={}, uid={}",
                 message.getId(), message.getCid(), message.getUid());
     }

@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
@@ -22,7 +22,7 @@ public class CPChannelProcessApplicationVO implements CPControllerVO {
     @Override
     public boolean insertData(DefaultContext context) {
         context.setData(CPNodeValueKeyExtraConstants.CHANNEL_APPLICATION_INFO_ID, aid);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO_STATE, result);
+        context.setData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_STATE, result);
         return true;
     }
 }

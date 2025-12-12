@@ -5,7 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 
 /**
  * 删除群成员的请求参数
@@ -24,10 +25,10 @@ public class CPChannelDeleteMemberVO implements CPControllerVO {
             return false;
         }
         // 设置频道信息
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
         // 寰呭垹闄ゆ垚鍛樹俊鎭?
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID, cid);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_UID, uid);
+        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, cid);
+        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, uid);
         return true;
     }
 }

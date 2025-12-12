@@ -5,9 +5,9 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 
 import java.util.HashSet;
 
@@ -26,7 +26,7 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        Long cid = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_CID);
+        Long cid = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID);
         if (cid == null){
             argsError(context);
             return;
@@ -36,6 +36,6 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
         for (CPChannelMember member : allMember) {
             objects.add(member);
         }
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO_LIST, objects);
+        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_LIST, objects);
     }
 }

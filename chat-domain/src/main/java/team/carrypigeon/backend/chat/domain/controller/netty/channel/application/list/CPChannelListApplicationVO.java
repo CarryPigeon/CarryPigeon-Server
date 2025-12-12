@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.chat.domain.cmp.info.PageInfo;
 
@@ -26,7 +26,7 @@ public class CPChannelListApplicationVO implements CPControllerVO {
         if (page<0||pageSize<0||pageSize>50){
             return false;
         }
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
         context.setData(CPNodeValueKeyExtraConstants.PAGE_INFO, new PageInfo(page, pageSize));
         return true;
     }

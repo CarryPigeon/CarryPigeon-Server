@@ -6,8 +6,9 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -21,10 +22,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelCreatorNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUser userInfo = context.getData(CPNodeValueKeyBasicConstants.USER_INFO);
-        if (userInfo == null){
-            argsError(context);
-        }
+        requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
         CPChannel channelInfo = new CPChannel();
         channelInfo.setId(IdUtil.generateId())
                 .setName(IdUtil.generateId()+"")
@@ -32,6 +30,6 @@ public class CPChannelCreatorNode extends CPNodeComponent {
                 .setBrief("")
                 .setCreateTime(TimeUtil.getCurrentLocalTime())
                 .setAvatar(-1);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO, channelInfo);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO, channelInfo);
     }
 }

@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
 /**
  * 更新用户信息请求参数
@@ -23,11 +23,11 @@ public class CPUserUpdateProfileVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_USER_NAME, username);
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_AVATAR, avatar);
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_SEX, sex);
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_BRIEF, brief);
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_BIRTHDAY, birthday);
+        context.setData(CPNodeUserKeys.USER_INFO_USER_NAME, username);
+        context.setData(CPNodeUserKeys.USER_INFO_AVATAR, avatar);
+        context.setData(CPNodeUserKeys.USER_INFO_SEX, sex);
+        context.setData(CPNodeUserKeys.USER_INFO_BRIEF, brief);
+        context.setData(CPNodeUserKeys.USER_INFO_BIRTHDAY, birthday);
         return true;
     }
 }

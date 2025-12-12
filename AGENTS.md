@@ -1,27 +1,51 @@
-# AGENTS Guidelines
-## 0. 阅读须知
+# Repository Guidelines
 
-- 本指南适用于介绍整个项目的整体结构，子模块另有 AGENTS.md 详细介绍其功能。
-- 坚持“强制优先、结果导向、可审计”，所有流程需可追溯。e
-- 若与本指南冲突的用户显式指令出现，必须遵循并在前置说明记录偏差原因。
+## Project Structure & Modules
+- Root is a Maven multi-module Spring Boot backend (`pom.xml`, Java 21).
+- Core modules:
+  - `api/`: protocol types (`CPPacket`, `CPResponse`) and public routes (see `doc/api.md`).
+  - `chat-domain/`: Netty controllers and business logic.
+  - `dao/`: persistence layer and database access.
+  - `common/`: shared utilities and base models.
+  - `connection/`: TCP/Netty transport, encryption, heartbeats.
+  - `external-service/`: integrations (e.g., email).
+  - `application-starter/`: runnable Spring Boot app, main class `team.carrypigeon.backend.starter.ApplicationStarter`.
+  - `distribution/`: packaging / distribution artifacts.
+- Tests live under `*/src/test/**`.
 
-## 1. 项目目录
+## Build, Test & Run
+- Build all modules:
+  - `mvn clean install`
+- Run the application locally:
+  - `mvn -pl application-starter -am spring-boot:run`
+- Run tests (skipped by default in the root POM):
+  - `mvn test -DskipTests=false`
 
-该项目采取模块化划分用于解耦不同的模块，本项目的设计哲学是除了少数的几个核心模块例如`core`、`application-starter`、`common`等外都可替代
+## Coding Style & Naming
+- Language: Java 21, Spring Boot 3.5.x, Lombok, Log4j2.
+- Use 4-space indentation, Unix line endings, and UTF-8 encoding.
+- Package pattern: `team.carrypigeon.backend.<module>[.<feature>]`.
+- Follow existing naming:
+  - Protocol/VO/result: `CP*VO`, `CP*Result`, `CP*ResultItem`.
+  - Controllers annotated with `@CPControllerTag(path = "/core/...")`.
+- Prefer constructor or builder-based initialization over public field mutation.
 
-其可替代性的实现依赖springboot的依赖注入，即在启动时指定不同的jar包可以为项目注入不同的具体的实现类，其中核心的实现类写在了`api`模块内
+## Testing Guidelines
+- Framework: JUnit 5 (`org.junit.jupiter.api`), Spring Boot test starter.
+- Co-locate tests next to the module under `src/test/java`.
+- Name test classes `<Name>Tests` and methods `methodName_condition_expected()`.
+- For business logic, test both success and error codes (`CPResponse.code` 100/200/300/404/500).
 
-- 根目录为所有模块的根目录，仅用于管理模块间的依赖关系，不应该有任何具体的代码
-- `api` - 接口模块，模块内定义了不同模块相互调用的接口与基础的实体类，其他模块可依赖此模块
-- `application-starter` - 启动模块，启动时指定不同的jar包为项目注入不同的具体实现类，其中相关的配置文件也通过该模块的[application.yaml](application-starter/src/main/resources/application.yaml)定义
-- `common` - 工具模块，存放一些通用的工具类，例如`IdUtil`、`TimeUtil`
-- `connection` - 连接模块，用于管理服务端与客户端的连接，其只处理连接与响应，不处理具体的业务逻辑
-- `chat-domain` - 业务模块，聊天业务的具体实现类，用于实现具体的聊天服务
-- `dao` - 数据访问模块，用于访问数据库
-- `external-service` - 外部服务模块，用于调用外部服务
-- `distribution` - 用于编译的辅助类，已经写好，不应该被再次修改或读取
+## Commit & Pull Request Guidelines
+- Use Conventional Commit style; the repo primarily uses `feat: ...`.
+  - Examples: `feat: add channel ban list API`, `fix: handle invalid token login`.
+- Keep commits focused and buildable.
+- PRs should include:
+  - Clear description, motivation, and scope.
+  - Links to related issues or docs (e.g., sections in `doc/api.md`).
+  - Notes on config changes (ports, security settings) and how you tested.
 
-## 2. 适用范围与优先级
-- 你只需要看各级模块中的`pom.xml`文件与`src`目录，你不应该关注其他任何目录
-- 模块之间的依赖关系，请查看`pom.xml`文件
-- 模块之间的优先级，请查看`pom.xml`文件
+## Security & Configuration
+- Sensitive settings (ports, keys, email configs) should come from Spring Boot configuration, not hard-coded.
+- When adding routes or connection features, verify they respect the ECC + AES handshake and `CPResponse` error conventions described in `doc/api.md`.
+

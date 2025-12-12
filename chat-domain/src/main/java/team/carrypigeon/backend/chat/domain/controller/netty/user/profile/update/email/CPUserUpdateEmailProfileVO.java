@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 @Data
@@ -19,7 +19,7 @@ public class CPUserUpdateEmailProfileVO implements CPControllerVO {
     public boolean insertData(DefaultContext context) {
         context.setData(CPNodeValueKeyExtraConstants.EMAIL, newEmail);
         context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, code);
-        context.setData(CPNodeValueKeyBasicConstants.USER_INFO_EMAIL, newEmail);
+        context.setData(CPNodeUserKeys.USER_INFO_EMAIL, newEmail);
         return true;
     }
 }

@@ -17,7 +17,7 @@ import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
 import team.carrypigeon.backend.api.connection.protocol.CPPacket;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 import java.util.HashMap;
@@ -104,7 +104,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             // 新建一个默认上下文
             DefaultContext defaultContext = new DefaultContext();
             // 将 session 写入上下文，供各个 CPNodeComponent 使用
-            defaultContext.setData(CPNodeValueKeyBasicConstants.SESSION, session);
+            defaultContext.setData(CPNodeCommonKeys.SESSION, session);
 
             Class<?> voClazz = controllerAndVOMap.get(route.getRoute());
             if (voClazz == null) {
@@ -143,7 +143,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             result.process(session, defaultContext, objectMapper);
 
             CPResponse response = liteflowResponse.getContextBean(DefaultContext.class)
-                    .getData(CPNodeValueKeyBasicConstants.RESPONSE);
+                    .getData(CPNodeCommonKeys.RESPONSE);
             if (response == null) {
                 response = CPResponse.SUCCESS_RESPONSE.copy();
             }

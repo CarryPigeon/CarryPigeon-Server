@@ -6,8 +6,9 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPNodeComponent;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -21,7 +22,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelApplicationApprovedNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo = context.getData(CPNodeValueKeyBasicConstants.CHANNEL_APPLICATION_INFO);
+        CPChannelApplication channelApplicationInfo = context.getData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
         if (channelApplicationInfo == null){
             argsError(context);
             return;
@@ -34,6 +35,6 @@ public class CPChannelApplicationApprovedNode extends CPNodeComponent {
                 .setName("")
                 .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
                 .setJoinTime(TimeUtil.getCurrentLocalTime());
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_MEMBER_INFO, channelMemberInfo);
+        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, channelMemberInfo);
     }
 }

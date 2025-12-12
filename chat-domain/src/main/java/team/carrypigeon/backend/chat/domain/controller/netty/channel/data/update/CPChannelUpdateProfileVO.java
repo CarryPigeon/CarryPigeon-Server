@@ -5,7 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 
 /**
  * 更新通道数据的参数类<br/>
@@ -23,11 +23,11 @@ public class CPChannelUpdateProfileVO implements CPControllerVO {
 
     @Override
     public boolean insertData(DefaultContext context) {
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_ID, cid);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_NAME, name);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_OWNER, owner);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_BRIEF, brief);
-        context.setData(CPNodeValueKeyBasicConstants.CHANNEL_INFO_AVATAR, avatar);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_NAME, name);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_OWNER, owner);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_BRIEF, brief);
+        context.setData(CPNodeChannelKeys.CHANNEL_INFO_AVATAR, avatar);
         return true;
     }
 }

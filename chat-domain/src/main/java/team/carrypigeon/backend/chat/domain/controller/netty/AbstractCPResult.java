@@ -6,7 +6,7 @@ import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyBasicConstants;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 /**
  * Netty 结果处理抽象基类。
@@ -24,7 +24,7 @@ public abstract class AbstractCPResult implements CPControllerResult {
         if (body != null) {
             response.setData(objectMapper.valueToTree(body));
         }
-        context.setData(CPNodeValueKeyBasicConstants.RESPONSE, response);
+        context.setData(CPNodeCommonKeys.RESPONSE, response);
     }
 
     /**
@@ -32,7 +32,7 @@ public abstract class AbstractCPResult implements CPControllerResult {
      */
     protected void writeError(DefaultContext context, String message) {
         CPResponse response = CPResponse.ERROR_RESPONSE.copy().setTextData(message);
-        context.setData(CPNodeValueKeyBasicConstants.RESPONSE, response);
+        context.setData(CPNodeCommonKeys.RESPONSE, response);
     }
 
     /**
@@ -43,7 +43,7 @@ public abstract class AbstractCPResult implements CPControllerResult {
         ObjectNode node = objectMapper.createObjectNode();
         node.put(fieldName, fieldValue);
         CPResponse response = CPResponse.SUCCESS_RESPONSE.copy().setData(node);
-        context.setData(CPNodeValueKeyBasicConstants.RESPONSE, response);
+        context.setData(CPNodeCommonKeys.RESPONSE, response);
     }
 
     @Override

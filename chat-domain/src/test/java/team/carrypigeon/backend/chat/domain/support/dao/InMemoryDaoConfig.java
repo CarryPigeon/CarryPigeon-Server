@@ -5,6 +5,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
@@ -13,6 +14,7 @@ import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
@@ -257,6 +259,36 @@ public class InMemoryDaoConfig {
         @Override
         public boolean delete(CPMessage message) {
             return db.deleteMessage(message);
+        }
+    }
+
+    @Component
+    public static class InMemoryChannelReadStateDao implements ChannelReadStateDao {
+        private final InMemoryDatabase db;
+
+        public InMemoryChannelReadStateDao(InMemoryDatabase db) {
+            this.db = db;
+        }
+
+        @Override
+        public CPChannelReadState getById(long id) {
+            return db.getChannelReadStateById(id);
+        }
+
+        @Override
+        public CPChannelReadState getByUidAndCid(long uid, long cid) {
+            return db.getChannelReadStateByUidAndCid(uid, cid);
+        }
+
+        @Override
+        public boolean save(CPChannelReadState state) {
+            db.saveChannelReadState(state);
+            return true;
+        }
+
+        @Override
+        public boolean delete(CPChannelReadState state) {
+            return db.deleteChannelReadState(state);
         }
     }
 
