@@ -2,10 +2,8 @@
     <!--创建管理员-->
     <chain name="/core/channel/admin/create">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/
@@ -25,10 +23,8 @@
     <!--删除管理员-->
     <chain name="/core/channel/admin/delete">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/

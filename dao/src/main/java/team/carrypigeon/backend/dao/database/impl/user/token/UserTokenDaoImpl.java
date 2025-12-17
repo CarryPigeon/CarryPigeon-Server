@@ -24,7 +24,7 @@ public class UserTokenDaoImpl implements UserTokenDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "userTokenByToken", key = "#token")
+    @Cacheable(cacheNames = "userTokenByToken", key = "#token", unless = "#result == null")
     public CPUserToken getByToken(String token) {
         // 为避免泄露敏感信息，这里不直接打印 token 内容，仅记录长度
         log.debug("UserTokenDaoImpl#getByToken - tokenLength={}", token == null ? 0 : token.length());
@@ -40,7 +40,7 @@ public class UserTokenDaoImpl implements UserTokenDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "userTokenByUid", key = "#id")
+    @Cacheable(cacheNames = "userTokenByUid", key = "#id", unless = "#result == null")
     public CPUserToken getById(long id) {
         log.debug("UserTokenDaoImpl#getById - id={}", id);
         CPUserToken result = Optional.ofNullable(userTokenMapper.selectById(id))

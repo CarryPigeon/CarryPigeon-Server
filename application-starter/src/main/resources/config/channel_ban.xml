@@ -3,10 +3,8 @@
     <!-- 创建频道封禁 -->
     <chain name="/core/channel/ban/create">
         THEN(
-        /** 判断用户是否登录 **/
-        UserLoginChecker,
-        /** 将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
+        UserLoginGuard,
         /** 查询频道信息 **/
         CPChannelSelector.bind("key","id"),
         /** 校验当前用户是否为频道管理员 **/
@@ -27,10 +25,8 @@
     <!-- 删除频道封禁 -->
     <chain name="/core/channel/ban/delete">
         THEN(
-        /** 判断用户是否登录 **/
-        UserLoginChecker,
-        /** 将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
+        UserLoginGuard,
         /** 查询频道信息 **/
         CPChannelSelector.bind("key","id"),
         /** 校验当前用户是否为频道管理员 **/
@@ -49,15 +45,12 @@
     <!-- 获取频道封禁列表 -->
     <chain name="/core/channel/ban/list">
         THEN(
-        /** 判断用户是否登录 **/
-        UserLoginChecker,
-        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
-        RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelInfo_Id"),
-        /** 确认当前用户在频道中 **/
-        CPChannelMemberSelector.bind("key","CidWithUid"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
+        /** 参数重命名 + 成员存在校验 **/
+        MemberGuard,
         /** 拉取封禁列表 **/
         CPChannelBanLister
         )
     </chain>
 </flow>
-

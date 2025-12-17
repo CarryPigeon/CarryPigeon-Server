@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.login.token;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 
 /**
@@ -19,7 +19,7 @@ public class CPUserTokenLoginVO implements CPControllerVO {
     private String token;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, token);
         return true;
     }

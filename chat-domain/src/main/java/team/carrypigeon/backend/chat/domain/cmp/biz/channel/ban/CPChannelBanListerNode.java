@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.ban;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.ban.list.CPChannelListBanResultItem;
@@ -29,14 +29,16 @@ public class CPChannelBanListerNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         Long cid = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
         if (cid == null) {
             log.error("CPChannelBanLister args error: ChannelInfo_Id is null");
             argsError(context);
             return;
         }
-        CPChannelBan[] bans = channelBanDAO.getByChannelId(cid);
+        CPChannelBan[] bans = select(context,
+                buildSelectKey("channel_ban", "cid", cid),
+                () -> channelBanDAO.getByChannelId(cid));
         List<CPChannelListBanResultItem> items = new ArrayList<>();
         if (bans != null) {
             for (CPChannelBan ban : bans) {

@@ -9,7 +9,10 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.security.*;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
@@ -92,5 +95,17 @@ public class ECCUtil {
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM, PROVIDER);
         return keyFactory.generatePublic(spec);
+    }
+
+    /**
+     * 重建私钥
+     * @param privateKeyBase64 私钥Base64（PKCS#8）
+     * @return 私钥
+     */
+    public static PrivateKey rebuildPrivateKey(String privateKeyBase64) throws Exception {
+        byte[] privateKeyBytes = Base64.getDecoder().decode(privateKeyBase64);
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance(ALGORITHM, PROVIDER);
+        return keyFactory.generatePrivate(spec);
     }
 }

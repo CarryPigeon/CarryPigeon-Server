@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
@@ -25,13 +25,11 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        Long cid = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID);
-        if (cid == null){
-            argsError(context);
-            return;
-        }
-        CPChannelMember[] allMember = channelMemberDao.getAllMember(cid);
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        Long cid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, Long.class);
+        CPChannelMember[] allMember = select(context,
+                buildSelectKey("channel_member", "cid", cid),
+                () -> channelMemberDao.getAllMember(cid));
         HashSet<CPChannelMember> objects = new HashSet<>();
         for (CPChannelMember member : allMember) {
             objects.add(member);

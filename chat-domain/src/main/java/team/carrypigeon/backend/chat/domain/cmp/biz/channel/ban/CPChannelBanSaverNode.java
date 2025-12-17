@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.ban;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
@@ -31,7 +31,7 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         Long cid = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
         Long targetUid = context.getData(CPNodeChannelBanKeys.CHANNEL_BAN_TARGET_UID);
         Integer duration = context.getData(CPNodeChannelBanKeys.CHANNEL_BAN_DURATION);
@@ -42,7 +42,9 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
             argsError(context);
             return;
         }
-        CPChannelBan ban = channelBanDAO.getByChannelIdAndUserId(targetUid, cid);
+        CPChannelBan ban = select(context,
+                buildSelectKey("channel_ban", java.util.Map.of("cid", cid, "uid", targetUid)),
+                () -> channelBanDAO.getByChannelIdAndUserId(targetUid, cid));
         if (ban == null) {
             ban = new CPChannelBan()
                     .setId(IdUtil.generateId())
@@ -55,7 +57,7 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
         if (!channelBanDAO.save(ban)) {
             log.error("CPChannelBanSaver save failed, cid={}, uid={}", cid, targetUid);
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("error saving channel ban"));
+                    CPResponse.error("error saving channel ban"));
             throw new CPReturnException();
         }
         context.setData(CPNodeChannelBanKeys.CHANNEL_BAN_INFO, ban);

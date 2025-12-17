@@ -24,7 +24,7 @@ public class ChannelDaoImpl implements ChannelDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelById", key = "#id")
+    @Cacheable(cacheNames = "channelById", key = "#id", unless = "#result == null")
     public CPChannel getById(long id) {
         log.debug("ChannelDaoImpl#getById - cid={}", id);
         CPChannel result = Optional.ofNullable(channelMapper.selectById(id))

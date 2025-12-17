@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.cmp.notifier.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeNotifierKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
@@ -28,12 +28,9 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
 
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         // 获取用户信息
-        Long userInfoId = context.getData(CPNodeUserKeys.USER_INFO_ID);
-        if (userInfoId == null){
-            argsError(context);
-        }
+        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
         // 获取Set<Long>
         Set<Long> uids = context.getData(CPNodeNotifierKeys.NOTIFIER_UIDS);
         if (uids == null){
@@ -41,9 +38,14 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
             context.setData(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
         }
         // 获取用户id
-        CPChannelMember[] allMemberByUserId = channelMemberDao.getAllMemberByUserId(userInfoId);
+        CPChannelMember[] allMemberByUserId = select(context,
+                buildSelectKey("channel_member", "uid", userInfoId),
+                () -> channelMemberDao.getAllMemberByUserId(userInfoId));
         for (CPChannelMember cpChannelMember : allMemberByUserId) {
-            CPChannelMember[] allMember = channelMemberDao.getAllMember(cpChannelMember.getCid());
+            long cid = cpChannelMember.getCid();
+            CPChannelMember[] allMember = select(context,
+                    buildSelectKey("channel_member", "cid", cid),
+                    () -> channelMemberDao.getAllMember(cid));
             for (CPChannelMember member : allMember) {
                 uids.add(member.getUid());
             }

@@ -79,7 +79,8 @@ public class CPUserEmailLoginResult implements CPControllerResult {
             argsError(context);
             return;
         }
-        context.setData("response", CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(new Result(userToken.getToken()))));
+        context.setData("response",
+                CPResponse.success().setData(objectMapper.valueToTree(new Result(userToken.getToken()))));
     }
 
     @Data
@@ -93,7 +94,7 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 ```
 
 其应该实现CPControllerResult接口，其会有一个process方法，result应该在context中根据上下文中的数据组成一个响应值
-以response为上下文的key值，以CPResponse的成功响应的示例的副本并传入特定的data为value值
+以response为上下文的key值，以CPResponse.success() 创建的新实例并传入特定的data为value值
 
 如果该请求的响应值为默认响应值，则可直接定义为`resultClazz = CPControllerDefaultResult.class`
 
@@ -107,10 +108,11 @@ public class CPUserEmailLoginResult implements CPControllerResult {
     <!--更新频道数据-->
     <chain name="/core/channel/profile/update">
         THEN(
+        RenameScript = {"SessionId":"UserInfo_Id"},
         /**判断用户是否登录**/
         UserLoginChecker,
         /**重命名参数**/
-        RenameArg.bind("RenameArg","SessionId:UserInfo_Id"),
+        RenameArg.data(RenameScript),
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验**/

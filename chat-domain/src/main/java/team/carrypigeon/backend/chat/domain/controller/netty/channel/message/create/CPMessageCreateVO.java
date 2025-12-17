@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.message.create;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 
@@ -23,7 +23,7 @@ public class CPMessageCreateVO implements CPControllerVO {
     private JsonNode data;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         if (type == null || type.isEmpty() || cid <= 0 || data == null) {
             return false;
         }

@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
@@ -26,15 +26,17 @@ public class CPMessageSelectorNode extends AbstractSelectorNode<CPMessage> {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    protected String readMode(DefaultContext context) {
+    protected String readMode(CPFlowContext context) {
         // 不依赖 bind，固定按 id 查询
         return "id";
     }
 
     @Override
-    protected CPMessage doSelect(String mode, DefaultContext context) throws Exception {
+    protected CPMessage doSelect(String mode, CPFlowContext context) throws Exception {
         Long mid = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO_ID, Long.class);
-        return channelMessageDao.getById(mid);
+        return select(context,
+                buildSelectKey("message", "id", mid),
+                () -> channelMessageDao.getById(mid));
     }
 
     @Override
@@ -43,14 +45,14 @@ public class CPMessageSelectorNode extends AbstractSelectorNode<CPMessage> {
     }
 
     @Override
-    protected void handleNotFound(String mode, DefaultContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
         // 与原实现保持一致：message 不存在视为业务错误
         log.debug("CPMessageSelector: message not found");
         businessError(context, "message not found");
     }
 
     @Override
-    protected void afterSuccess(String mode, CPMessage entity, DefaultContext context) {
+    protected void afterSuccess(String mode, CPMessage entity, CPFlowContext context) {
         // 写入关联的频道 id，并打印日志
         context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, entity.getCid());
         log.debug("CPMessageSelector success, mid={}, cid={}, uid={}",

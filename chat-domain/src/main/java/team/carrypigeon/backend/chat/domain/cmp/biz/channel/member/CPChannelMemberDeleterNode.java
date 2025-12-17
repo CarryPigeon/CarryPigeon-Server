@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
@@ -50,7 +50,7 @@ public class CPChannelMemberDeleterNode extends AbstractDeleteNode<CPChannelMemb
     }
 
     @Override
-    protected void onFailure(CPChannelMember member, DefaultContext context) throws CPReturnException {
+    protected void onFailure(CPChannelMember member, CPFlowContext context) throws CPReturnException {
         if (member != null && member.getAuthority() == CPChannelMemberAuthorityEnum.ADMIN) {
             log.info("CPChannelMemberDeleter refuse to delete admin, uid={}, cid={}",
                     member.getUid(), member.getCid());
@@ -65,7 +65,7 @@ public class CPChannelMemberDeleterNode extends AbstractDeleteNode<CPChannelMemb
     }
 
     @Override
-    protected void afterSuccess(CPChannelMember member, DefaultContext context) {
+    protected void afterSuccess(CPChannelMember member, CPFlowContext context) {
         log.info("CPChannelMemberDeleter success, uid={}, cid={}", member.getUid(), member.getCid());
     }
 }

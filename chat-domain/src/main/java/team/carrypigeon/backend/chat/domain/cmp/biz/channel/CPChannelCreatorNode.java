@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
-import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.common.id.IdUtil;
@@ -21,7 +21,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelCreator")
 public class CPChannelCreatorNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
         CPChannel channelInfo = new CPChannel();
         channelInfo.setId(IdUtil.generateId())

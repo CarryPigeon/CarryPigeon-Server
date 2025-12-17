@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
@@ -22,15 +22,19 @@ public class CPUserTokenSelectorNode extends AbstractSelectorNode<CPUserToken> {
     private final UserTokenDao userTokenDao;
 
     @Override
-    protected CPUserToken doSelect(String mode, DefaultContext context) throws Exception {
+    protected CPUserToken doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode){
             case "token":
                 String token =
                         requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, String.class);
-                return userTokenDao.getByToken(token);
+                return select(context,
+                        buildSelectKey("user_token", "token", token),
+                        () -> userTokenDao.getByToken(token));
             case "id":
                 Long id = requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_ID, Long.class);
-                return userTokenDao.getById(id);
+                return select(context,
+                        buildSelectKey("user_token", "id", id),
+                        () -> userTokenDao.getById(id));
             default:
                 argsError(context);
                 return null;
@@ -43,7 +47,7 @@ public class CPUserTokenSelectorNode extends AbstractSelectorNode<CPUserToken> {
     }
 
     @Override
-    protected void handleNotFound(String mode, DefaultContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
         businessError(context, "token does not exists");
     }
 }

@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,6 +14,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelAppli
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -77,7 +77,7 @@ public class ChannelApplicationControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelCreateApplicationVO vo = new CPChannelCreateApplicationVO(cid, "join please");
@@ -110,7 +110,7 @@ public class ChannelApplicationControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelCreateApplicationVO vo = new CPChannelCreateApplicationVO(cid, "join");
@@ -158,7 +158,7 @@ public class ChannelApplicationControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, ownerUid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         // result=1 -> approved
@@ -213,7 +213,7 @@ public class ChannelApplicationControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, ownerUid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         // result=2 -> rejected
@@ -267,7 +267,7 @@ public class ChannelApplicationControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, ownerUid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelListApplicationVO vo = new CPChannelListApplicationVO(cid, 0, 10);
@@ -277,4 +277,3 @@ public class ChannelApplicationControllerFlowTest {
         Assert.assertTrue(resp.isSuccess());
     }
 }
-

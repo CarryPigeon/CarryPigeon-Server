@@ -25,7 +25,7 @@ public class MessageDaoImpl implements ChannelMessageDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "messageById", key = "#id")
+    @Cacheable(cacheNames = "messageById", key = "#id", unless = "#result == null")
     public CPMessage getById(long id) {
         log.debug("MessageDaoImpl#getById - id={}", id);
         CPMessage result = Optional.ofNullable(messageMapper.selectById(id))

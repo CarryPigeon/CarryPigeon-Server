@@ -36,7 +36,7 @@ public abstract class CPControllerAbstract<T> implements CPController{
         try {
             vo = objectMapper.treeToValue(data, VOClazz);
         } catch (JsonProcessingException e) {
-            return CPResponse.ERROR_RESPONSE.copy().setTextData("error parsing request data");
+            return CPResponse.error("error parsing request data");
         }
         // 校验数据
         CPResponse checkResponse = check(session, vo,context);

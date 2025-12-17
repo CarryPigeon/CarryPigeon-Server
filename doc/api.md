@@ -40,22 +40,50 @@ Implemented by:
 
 The backend uses an ECC+AES scheme to protect business packets.
 
-1. Client -> Server: send ECC public key
-   - Plain JSON, mapped to `connection.security.CPECCKeyPack`:
+#### 1.3.1 Server-side ECC key pair
+
+- On startup, the server loads or generates an ECC key pair:
+  - If `connection.ecc-public-key` and `connection.ecc-private-key` (Base64) are present in configuration,
+    the server rebuilds the key pair from them.
+  - Otherwise, a new key pair is generated at runtime and the Base64 strings are logged (so you can persist them later).
+- The public key **is not** sent over Netty; clients must obtain it via a secure out-of-band channel.
+
+#### 1.3.2 Handshake flow: client uploads AES key
+
+1. Client: generate a random AES session key
+   - Encode the raw AES key bytes with Base64 -> `aesKeyBase64`
+   - Encrypt `aesKeyBase64` with the server ECC public key via `ECCUtil.encrypt`
+   - Wrap into `connection.security.CPAESKeyPack`:
      - `id`: long, client-generated request id
-     - `key`: string, Base64-encoded ECC public key
+     - `sessionId`: long, optional, current session id (can be 0 for now)
+     - `key`: string, Base64-encoded ECIES ciphertext of `aesKeyBase64`
+   - Send this JSON over the 2-byte-length frame as a plaintext handshake packet.
 
-2. Server: generate AES session key
-   - `AESUtil.generateKey()` generates a random AES key
-   - Encrypted with the client public key via `ECCUtil.encrypt`
-   - Wrapped into `connection.security.CPAESKeyPack`:
-     - `id`: copied from the ECC key pack
-     - `sessionId`: long, server-generated session id
-     - `key`: string, Base64-encoded encrypted AES key
+2. Server: decrypt AES session key
+   - `ConnectionHandler` parses the payload as `CPAESKeyPack`
+   - Decrypts `key` using the server ECC private key via `ECCUtil.decrypt`
+   - The decrypted string is the original `aesKeyBase64` provided by the client
+   - Stores it into the Netty session attribute `ConnectionAttributes.ENCRYPTION_KEY`
+   - Marks `ConnectionAttributes.ENCRYPTION_STATE = true`
 
-3. Server -> Client: send AES key pack
-   - Still plain JSON over the same 2-byte-length framing
-   - Client decrypts the AES key using its ECC private key and stores it as the session key
+3. Server -> Client: handshake confirmation
+   - After successfully storing the AES key, the server sends a small notification packet **encrypted with this AES key**:
+     - It is a `CPResponse` with:
+       - `id = -1`
+       - `code = 0`
+       - `data` is a `CPNotification` JSON:
+
+       ```json
+       {
+         "route": "handshake",
+         "data": {
+           "sessionId": 123456789   // optional, for debugging
+         }
+       }
+       ```
+
+   - If the client can decrypt this response and see `route = "handshake"`,
+     it means the AES session key has been correctly established and both sides can now start normal business traffic.
 
 4. Subsequent business packets: AES-GCM frames
 
@@ -149,11 +177,22 @@ public class CPResponse {
     private int code;    // status code
     private JsonNode data; // response body
 
-    public static CPResponse ERROR_RESPONSE   = new CPResponse(-1, 100, null);
-    public static CPResponse SUCCESS_RESPONSE = new CPResponse(-1, 200, null);
-    public static CPResponse AUTHORITY_ERROR_RESPONSE = new CPResponse(-1, 300, null);
-    public static CPResponse PATH_NOT_FOUND_RESPONSE  = new CPResponse(-1, 404, null);
-    public static CPResponse SERVER_ERROR    = new CPResponse(-1, 500, null);
+    // 常用模板（不会直接修改这些静态实例）
+    public static final CPResponse ERROR_RESPONSE   = new CPResponse(-1, 100, null);
+    public static final CPResponse SUCCESS_RESPONSE = new CPResponse(-1, 200, null);
+    public static final CPResponse AUTHORITY_ERROR_RESPONSE = new CPResponse(-1, 300, null);
+    public static final CPResponse PATH_NOT_FOUND_RESPONSE  = new CPResponse(-1, 404, null);
+    public static final CPResponse SERVER_ERROR    = new CPResponse(-1, 500, null);
+
+    // 推荐的工厂方法（每次返回一个新的实例）
+    public static CPResponse error();
+    public static CPResponse error(String message);
+    public static CPResponse success();
+    public static CPResponse authorityError();
+    public static CPResponse authorityError(String message);
+    public static CPResponse pathNotFound();
+    public static CPResponse serverError();
+    public static CPResponse serverError(String message);
 }
 ```
 
@@ -612,4 +651,3 @@ On the client side, typical handling is:
 
 - For complex result structures (applications, bans, etc.), refer to the corresponding
   `*Result` and `*ResultItem` classes in `chat-domain` for exact field definitions.
-

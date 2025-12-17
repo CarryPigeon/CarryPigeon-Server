@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -14,6 +13,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
@@ -80,7 +80,7 @@ public class ChannelControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelCreateVO vo = new CPChannelCreateVO();
@@ -135,7 +135,7 @@ public class ChannelControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelDeleteVO vo = new CPChannelDeleteVO(cid);
@@ -185,7 +185,7 @@ public class ChannelControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelListVO vo = new CPChannelListVO();
@@ -212,7 +212,7 @@ public class ChannelControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelGetProfileVO vo = new CPChannelGetProfileVO(cid);
@@ -250,7 +250,7 @@ public class ChannelControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelUpdateProfileVO vo = new CPChannelUpdateProfileVO(cid, "newName", uid, "newBrief", 2L);
@@ -266,4 +266,3 @@ public class ChannelControllerFlowTest {
         Assert.assertEquals(2L, updated.getAvatar());
     }
 }
-

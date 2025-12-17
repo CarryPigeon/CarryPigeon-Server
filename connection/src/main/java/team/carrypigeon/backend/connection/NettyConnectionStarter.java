@@ -12,15 +12,17 @@ import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.starter.connection.ConnectionConfig;
 import team.carrypigeon.backend.connection.handler.ConnectionHandler;
+import team.carrypigeon.backend.connection.heart.CPNettyHeartBeatHandler;
 import team.carrypigeon.backend.connection.protocol.codec.NettyDecoder;
 import team.carrypigeon.backend.connection.protocol.codec.NettyEncoder;
-import team.carrypigeon.backend.connection.heart.CPNettyHeartBeatHandler;
+import team.carrypigeon.backend.connection.security.EccServerKeyHolder;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -30,21 +32,31 @@ import java.util.concurrent.TimeUnit;
  * @author midreamsheep
  * */
 @Component
-@Slf4j
 public class NettyConnectionStarter {
+
+    private static final Logger log = LoggerFactory.getLogger(NettyConnectionStarter.class);
 
     private final CPControllerDispatcher cpControllerDispatcher;
     private final ObjectMapper objectMapper;
     private final ConnectionConfig config;
+    private final EccServerKeyHolder eccServerKeyHolder;
 
     @Autowired
-    public NettyConnectionStarter(CPControllerDispatcher cpControllerDispatcher, ObjectMapper objectMapper, ConnectionConfig config) {
+    public NettyConnectionStarter(CPControllerDispatcher cpControllerDispatcher,
+                                  ObjectMapper objectMapper,
+                                  ConnectionConfig config,
+                                  EccServerKeyHolder eccServerKeyHolder) {
         this.cpControllerDispatcher = cpControllerDispatcher;
         this.objectMapper = objectMapper;
         this.config = config;
+        this.eccServerKeyHolder = eccServerKeyHolder;
     }
 
     @PostConstruct
+    public void start() {
+        new Thread(this::run).start();
+    }
+
     public void run() {
         // 创建线程池提前，确保 finally 中一定能够 shutdown
         NioEventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -70,7 +82,11 @@ public class NettyConnectionStarter {
                             pipeline.addLast(new IdleStateHandler(13, 10, 20, TimeUnit.SECONDS));
                             pipeline.addLast(new CPNettyHeartBeatHandler());
                             // 业务处理，绑定到业务线程池
-                            pipeline.addLast(bizGroup, new ConnectionHandler(cpControllerDispatcher, objectMapper));
+                            pipeline.addLast(bizGroup, new ConnectionHandler(
+                                    cpControllerDispatcher,
+                                    objectMapper,
+                                    eccServerKeyHolder.getPrivateKey()
+                            ));
                         }
                     });
             ChannelFuture channelFuture = bootstrap.bind().sync();

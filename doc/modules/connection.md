@@ -31,8 +31,8 @@
     - `AeadAad`：封装 AES-GCM 的 AAD 结构（包序号、sessionId、时间戳）。
 
 - `security`
-  - `CPAESKeyPack`：服务端发给客户端的 AES 密钥包（握手阶段）；
-  - `CPECCKeyPack`：客户端发给服务端的 ECC 公钥包。
+  - `CPAESKeyPack`：握手阶段客户端与服务端之间传递 AES 会话密钥的载体（当前版本为“客户端上传密钥”方案，仅由客户端发送）；
+  - `CPECCKeyPack`：兼容保留的 ECC 公钥包结构（当前握手流程已不再使用，代码中仅用于向后兼容）。
 
 - `protocol/encryption`
   - `encryption/aes`：
@@ -91,41 +91,58 @@
 
 ### 3.1 握手流程
 
-握手阶段不使用 AES 加密，直接发送/接收 JSON：
+握手阶段不使用 AES 加密，直接发送/接收 JSON。当前版本采用“客户端上传 AES 密钥”的方式：
 
-1. **客户端 → 服务端：发送 ECC 公钥**
+1. **服务端启动时的 ECC 密钥对**
 
-```json
-{
-  "id": 1,
-  "key": "<Base64-encoded-ECC-public-key>"
-}
-```
+   - 由 `EccServerKeyHolder` 管理：
+     - 优先从配置项 `connection.ecc-public-key` / `connection.ecc-private-key` 读取 Base64 编码的公私钥；
+     - 若没有配置，则在内存中生成新的 ECC 密钥对，并在日志中打印 Base64 字符串，方便持久化到配置。
+   - 公钥通过部署/打包等安全途径分发给客户端，握手过程中不再通过 Netty 传播。
 
-映射为 `CPECCKeyPack`，服务端保存 `id`，生成 ECC 密钥对。
+2. **客户端 → 服务端：发送 AES 会话密钥包**
 
-2. **服务端：生成 AES 会话密钥**
-   - 使用 `AESUtil.generateKey()` 生成随机 AES key；
-   - 使用 `ECCUtil.encrypt` 使用客户端公钥加密 AES key。
+   客户端侧逻辑：
 
-3. **服务端 → 客户端：发送 AES 密钥包**
+   - 本地生成随机 AES 会话密钥；
+   - 对原始密钥字节做 Base64 编码得到 `aesKeyBase64`；
+   - 使用服务器 ECC 公钥对 `aesKeyBaseBase64` 做 ECIES 加密，得到 `encryptedBytes`；
+   - 再对 `encryptedBytes` 做 Base64 编码得到 `encryptedKeyBase64`；
+   - 封装为 `CPAESKeyPack`：
 
-```json
-{
-  "id": 1,
-  "sessionId": 123456789,
-  "key": "<Base64-encoded-encrypted-AES-key>"
-}
-```
+   ```json
+   {
+     "id": 1,
+     "sessionId": 0,
+     "key": "<encryptedKeyBase64>"
+   }
+   ```
 
-映射为 `CPAESKeyPack`，其中：
+3. **服务端：解密并保存 AES 会话密钥**
 
-- `id`：对应客户端发来的 `CPECCKeyPack.id`；
-- `sessionId`：服务端生成的会话 id（用于 AAD）；
-- `key`：用客户端 ECC 公钥加密后的 AES 密钥。
+   - `ConnectionHandler.receiveAsymmetry` 中：
+     - 使用 ECC 私钥解密 `CPAESKeyPack.key`，得到原始 `aesKeyBase64`；
+     - 将 `aesKeyBase64` 写入当前 `CPSession` 的 `ENCRYPTION_KEY` 属性；
+     - 标记 `ENCRYPTION_STATE = true`。
 
-4. **客户端：解密 AES 密钥并保存**
-   - 后续所有业务请求使用此对称密钥进行 AES-GCM 加密。
+4. **服务端 → 客户端：握手成功通知**
+
+   - 解密成功后，服务端会构造一个 `CPNotification{route="handshake", data={sessionId}}`，并包装在 `CPResponse` 中：
+
+   ```json
+   {
+     "id": -1,
+     "code": 0,
+     "data": {
+       "route": "handshake",
+       "data": {
+         "sessionId": 123456789
+       }
+     }
+   }
+   ```
+
+   - 这条消息已经使用刚协商成功的 AES 密钥加密发送。客户端如果能成功解密并看到 `route="handshake"`，即可认为握手完成。
 
 ### 3.2 业务加密帧结构
 
@@ -176,7 +193,8 @@
 
 1. 握手阶段：
    - 根据当前连接是否已有 AES 密钥区分握手/业务阶段；
-   - 接收 `CPECCKeyPack`，生成 AES 密钥并发送 `CPAESKeyPack`。
+   - 接收客户端发送的 `CPAESKeyPack`（内含使用服务器 ECC 公钥加密的 AES 会话密钥），使用 ECC 私钥解密后写入会话状态；
+   - 使用刚协商好的 AES 密钥发送一条 `route="handshake"` 的加密通知，告知客户端握手成功。
 
 2. 业务阶段：
    - 从 payload 中拆分 `nonce` / `aad` / `cipherText`；
@@ -260,7 +278,7 @@
 
 - 与 `api`：
   - 使用 `CPPacket` / `CPResponse` / `CPSession` 等协议与会话抽象；
-  - 使用 `CPAESKeyPack` / `CPECCKeyPack` 等握手数据结构。
+  - 使用 `CPAESKeyPack` 等握手数据结构（当前版本为客户端上传 AES 密钥的方案，`CPECCKeyPack` 仅保留用于兼容）。
 
 - 与 `chat-domain`：
   - 通过 `CPControllerDispatcherImpl` 将业务 JSON 转交给 chat-domain；
@@ -271,4 +289,3 @@
   - `NettyConnectionStarter` 可由 Spring Boot 配置类或入口类触发启动。
 
 通过将连接与协议逻辑集中在 `connection` 模块，业务模块可以专注于处理 JSON 层的业务，而无需关心底层加密与网络细节。 
-

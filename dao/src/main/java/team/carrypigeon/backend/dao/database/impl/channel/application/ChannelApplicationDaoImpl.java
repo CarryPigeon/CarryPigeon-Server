@@ -25,7 +25,7 @@ public class ChannelApplicationDaoImpl implements ChannelApplicationDAO {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelApplicationById", key = "#id")
+    @Cacheable(cacheNames = "channelApplicationById", key = "#id", unless = "#result == null")
     public CPChannelApplication getById(long id) {
         log.debug("ChannelApplicationDaoImpl#getById - id={}", id);
         CPChannelApplication result = Optional.ofNullable(channelApplicationMapper.selectById(id))
@@ -38,7 +38,7 @@ public class ChannelApplicationDaoImpl implements ChannelApplicationDAO {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelApplicationByUidCid", key = "#uid + ':' + #cid")
+    @Cacheable(cacheNames = "channelApplicationByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelApplication getByUidAndCid(long uid, long cid) {
         log.debug("ChannelApplicationDaoImpl#getByUidAndCid - uid={}, cid={}", uid, cid);
         LambdaQueryWrapper<ChannelApplicationPO> queryWrapper = new LambdaQueryWrapper<>();

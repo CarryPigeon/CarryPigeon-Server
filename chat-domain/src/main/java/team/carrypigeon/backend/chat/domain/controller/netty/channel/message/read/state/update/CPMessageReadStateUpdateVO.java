@@ -1,10 +1,9 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.update;
-
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys;
 
 /**
@@ -22,7 +21,7 @@ public class CPMessageReadStateUpdateVO implements CPControllerVO {
     private long lastReadTime;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         if (cid <= 0 || lastReadTime <= 0) {
             return false;
         }

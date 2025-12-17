@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -29,20 +29,30 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<java.util.L
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected String readMode(DefaultContext context) {
+    protected String readMode(CPFlowContext context) {
         // 不依赖 bind，固定为 all
         return "all";
     }
 
     @Override
-    protected List<CPChannel> doSelect(String mode, DefaultContext context) throws Exception {
+    protected List<CPChannel> doSelect(String mode, CPFlowContext context) throws Exception {
         Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
-        CPChannel[] allFixedChannel = channelDao.getAllFixed();
-        CPChannelMember[] allUserChannel = channelMemberDao.getAllMemberByUserId(userId);
+        CPChannel[] allFixedChannel = select(context,
+                buildSelectKey("channel", "fixed", "all"),
+                channelDao::getAllFixed);
+        CPChannelMember[] allUserChannel = select(context,
+                buildSelectKey("channel_member", "uid", userId),
+                () -> channelMemberDao.getAllMemberByUserId(userId));
         List<CPChannel> result = new ArrayList<>(allFixedChannel.length + allUserChannel.length);
         Collections.addAll(result, allFixedChannel);
         for (CPChannelMember channelMember : allUserChannel) {
-            result.add(channelDao.getById(channelMember.getCid()));
+            long cid = channelMember.getCid();
+            CPChannel channel = select(context,
+                    buildSelectKey("channel", "id", cid),
+                    () -> channelDao.getById(cid));
+            if (channel != null) {
+                result.add(channel);
+            }
         }
         return result;
     }
@@ -53,7 +63,7 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<java.util.L
     }
 
     @Override
-    protected void handleNotFound(String mode, DefaultContext context) {
+    protected void handleNotFound(String mode, CPFlowContext context) {
         // 理论上不会为 null，保持空实现即可
     }
 }

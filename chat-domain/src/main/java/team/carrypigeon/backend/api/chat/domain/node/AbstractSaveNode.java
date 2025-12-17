@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.node;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 
 /**
  * 通用的“保存实体”类型 LiteFlow 节点基类。
@@ -18,7 +18,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 public abstract class AbstractSaveNode<T> extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         T entity = requireContext(context, getContextKey(), getEntityClass());
         if (!doSave(entity)) {
             onFailure(entity, context);
@@ -52,15 +52,14 @@ public abstract class AbstractSaveNode<T> extends CPNodeComponent {
     /**
      * 保存成功后的回调，可用于记录日志，默认空实现。
      */
-    protected void afterSuccess(T entity, DefaultContext context) throws Exception {
+    protected void afterSuccess(T entity, CPFlowContext context) throws Exception {
         // no-op
     }
 
     /**
      * 保存失败（返回 false）时的回调，可用于记录日志，默认空实现。
      */
-    protected void onFailure(T entity, DefaultContext context) throws Exception {
+    protected void onFailure(T entity, CPFlowContext context) throws Exception {
         // no-op
     }
 }
-

@@ -2,11 +2,11 @@ package team.carrypigeon.backend.chat.domain.cmp.notifier.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.message.CPMessageData;
 import team.carrypigeon.backend.api.connection.notification.CPMessageNotificationData;
@@ -31,7 +31,7 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
     private final ObjectMapper objectMapper;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
         CPMessageData messageData = context.getData(CPNodeValueKeyExtraConstants.MESSAGE_DATA);
         if (message == null || messageData == null) {
@@ -43,7 +43,9 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
                 ? TimeUtil.LocalDateTimeToMillis(message.getSendTime())
                 : TimeUtil.getCurrentTime();
         CPMessageNotificationData data = new CPMessageNotificationData()
+                .setType("create")
                 .setSContent(messageData.getSContent())
+                .setMid(message.getId())
                 .setCid(message.getCid())
                 .setUid(message.getUid())
                 .setSendTime(sendTimeMillis);

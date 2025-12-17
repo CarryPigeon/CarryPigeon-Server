@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
@@ -30,7 +30,7 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 public class CPChannelApplicationStateSetterSwitcherNode extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelApplication channelApplicationInfo =
                 context.getData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
         Integer state = context.getData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_STATE);

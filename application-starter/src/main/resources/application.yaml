@@ -37,6 +37,8 @@ minio:
 
 connection:
   port: 7609
+  ecc-private-key: MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgU75tMS9EejjHU2YU1RFqktAFPlGsLqXgJ0lGMwuWgSugCgYIKoZIzj0DAQehRANCAAQZeLMnhTR2Ry4mbzOYsmRJ2mj1cJU/O3lLnzvQCd1aKDHIr0YdUQ+P1KiLORPPPD5XlbvAcry2tQUXLaIYBw0i
+  ecc-public-key: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEGXizJ4U0dkcuJm8zmLJkSdpo9XCVPzt5S5870AndWigxyK9GHVEPj9SoizkTzzw+V5W7wHK8trUFFy2iGAcNIg==
 
 liteflow:
   rule-source: config/*.xml

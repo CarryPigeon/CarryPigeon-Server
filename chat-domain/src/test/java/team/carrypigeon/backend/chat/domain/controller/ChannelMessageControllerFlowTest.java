@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -17,6 +16,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
@@ -26,6 +26,7 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.create.CPMessageCreateVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.delete.CPMessageDeleteVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.list.CPMessageListVO;
+import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.get.CPMessageGetVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.update.CPMessageReadStateUpdateVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.message.unread.get.CPMessageGetUnreadVO;
 import team.carrypigeon.backend.chat.domain.support.ChatDomainTestConfig;
@@ -42,6 +43,7 @@ import java.time.LocalDateTime;
  * - /core/channel/message/delete
  * - /core/channel/message/list
  * - /core/channel/message/unread/get
+ * - /core/channel/message/get
  * - /core/channel/message/read/state/update
  * - /core/channel/message/read/state/get
  */
@@ -101,7 +103,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         // 构造最简单的文本消息
@@ -153,7 +155,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPMessageDeleteVO vo = new CPMessageDeleteVO(message.getId());
@@ -201,7 +203,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         long nowMillis = System.currentTimeMillis();
@@ -210,6 +212,102 @@ public class ChannelMessageControllerFlowTest {
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/list", null, context);
         Assert.assertTrue(resp.isSuccess());
+    }
+
+    @Test
+    public void testChannelMessageGet_success() {
+        long uid = 1000L;
+        long cid = 2000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(uid)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        CPChannelMember member = new CPChannelMember()
+                .setId(1L)
+                .setUid(uid)
+                .setCid(cid)
+                .setName("")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(member);
+
+        CPMessage message = new CPMessage()
+                .setId(10L)
+                .setUid(uid)
+                .setCid(cid)
+                .setDomain("Core:Text")
+                .setData(objectMapper.createObjectNode().put("text", "hello"))
+                .setSendTime(LocalDateTime.now());
+        channelMessageDao.save(message);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
+
+        CPFlowContext context = new CPFlowContext();
+        context.setData("session", session);
+
+        CPMessageGetVO vo = new CPMessageGetVO(message.getId());
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/get", null, context);
+        Assert.assertTrue(resp.isSuccess());
+
+        CPMessage result = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(message.getId(), result.getId());
+    }
+
+    @Test
+    public void testChannelMessageGet_notInChannel_shouldFail() {
+        long uid = 1000L;
+        long otherUid = 2000L;
+        long cid = 2000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(otherUid)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        // 仅将消息所属用户加入频道，当前会话用户不在频道中
+        CPChannelMember member = new CPChannelMember()
+                .setId(1L)
+                .setUid(otherUid)
+                .setCid(cid)
+                .setName("")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(member);
+
+        CPMessage message = new CPMessage()
+                .setId(10L)
+                .setUid(otherUid)
+                .setCid(cid)
+                .setDomain("Core:Text")
+                .setData(objectMapper.createObjectNode().put("text", "hello"))
+                .setSendTime(LocalDateTime.now());
+        channelMessageDao.save(message);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
+
+        CPFlowContext context = new CPFlowContext();
+        context.setData("session", session);
+
+        CPMessageGetVO vo = new CPMessageGetVO(message.getId());
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/get", null, context);
+        Assert.assertFalse(resp.isSuccess());
     }
 
     @Test
@@ -249,7 +347,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         long startMillis = System.currentTimeMillis() - 10 * 60 * 1000L;
@@ -290,7 +388,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         long lastReadTimeMillis = System.currentTimeMillis();
@@ -333,7 +431,7 @@ public class ChannelMessageControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         // 初次获取，若没有记录，应返回 lastReadTime = 0
@@ -352,4 +450,3 @@ public class ChannelMessageControllerFlowTest {
         Assert.assertEquals(0L, state.getLastReadTime());
     }
 }
-

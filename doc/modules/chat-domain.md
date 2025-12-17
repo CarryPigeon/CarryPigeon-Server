@@ -126,7 +126,7 @@ context.setData(CPNodeCommonKeys.RESPONSE,
 <chain name="/core/channel/message/read/state/update">
     THEN(
     UserLoginChecker,
-    RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     CPChannelMemberSelector.bind("key","CidWithUid"),
     CPChannelReadStateUpserter,
     CPUserSelfCollector,
@@ -273,4 +273,3 @@ context.setData(CPNodeCommonKeys.RESPONSE,
    - 对于会影响多个用户的操作（如消息发送、读状态变更），应通过通知链路保证多端一致性。
 
 结合本文件与 `AGENTS.md`，你可以较为完整地理解并扩展 `chat-domain` 模块中的业务逻辑。 
-

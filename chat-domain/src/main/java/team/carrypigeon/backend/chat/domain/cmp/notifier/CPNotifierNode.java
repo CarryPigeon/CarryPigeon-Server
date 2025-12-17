@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.notifier;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.notification.CPNotification;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.api.connection.notification.CPNotification;
+import team.carrypigeon.backend.api.notification.CPNotificationSender;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeNotifierKeys;
-import team.carrypigeon.backend.chat.domain.service.notification.CPNotificationService;
 
 import java.util.Set;
 
@@ -25,16 +25,16 @@ import java.util.Set;
 @LiteflowComponent("CPNotifier")
 public class CPNotifierNode extends CPNodeComponent {
 
-    private final CPNotificationService cpNotificationService;
+    private final CPNotificationSender notificationSender;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         String route = requireBind(context, CPNodeBindKeys.ROUTE, String.class);
         Set<Long> uids = requireContext(context, CPNodeNotifierKeys.NOTIFIER_UIDS, Set.class);
         CPNotification notification = new CPNotification();
         notification.setRoute(route)
                 .setData(context.getData(CPNodeNotifierKeys.NOTIFIER_DATA));
         log.debug("CPNotifier: send notification, route={}, uidsCount={}", route, uids.size());
-        cpNotificationService.sendNotification(uids, notification);
+        notificationSender.sendNotification(uids, notification);
     }
 }

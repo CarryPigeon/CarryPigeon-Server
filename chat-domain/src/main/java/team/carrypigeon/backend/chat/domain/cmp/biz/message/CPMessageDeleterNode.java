@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
@@ -43,7 +43,7 @@ public class CPMessageDeleterNode extends AbstractDeleteNode<CPMessage> {
     }
 
     @Override
-    protected void onFailure(CPMessage message, DefaultContext context) throws CPReturnException {
+    protected void onFailure(CPMessage message, CPFlowContext context) throws CPReturnException {
         if (message != null) {
             log.error("CPMessageDeleter delete failed, mid={}, cid={}, uid={}",
                     message.getId(), message.getCid(), message.getUid());
@@ -52,7 +52,7 @@ public class CPMessageDeleterNode extends AbstractDeleteNode<CPMessage> {
     }
 
     @Override
-    protected void afterSuccess(CPMessage message, DefaultContext context) {
+    protected void afterSuccess(CPMessage message, CPFlowContext context) {
         log.info("CPMessageDeleter success, mid={}, cid={}, uid={}",
                 message.getId(), message.getCid(), message.getUid());
     }

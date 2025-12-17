@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
+import team.carrypigeon.backend.api.notification.CPNotificationSender;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 import java.util.Collection;
@@ -20,7 +21,7 @@ import java.util.List;
  * */
 @Slf4j
 @Service
-public class CPNotificationService {
+public class CPNotificationService implements CPNotificationSender {
 
     private final CPSessionCenterService cpSessionCenterService;
 
@@ -31,6 +32,7 @@ public class CPNotificationService {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public boolean sendNotification(Collection<Long> uids, CPNotification notification) {
         if (uids == null || uids.isEmpty()) {
             log.debug("sendNotification called with empty uids, notificationType={}",

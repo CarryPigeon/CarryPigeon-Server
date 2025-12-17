@@ -150,7 +150,7 @@ public class MessageReadAuditNode extends CPNodeComponent {
     /** 判断用户是否登录 **/
     UserLoginChecker,
     /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
-    RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     /** 校验用户是否在频道中 **/
     CPChannelMemberSelector.bind("key","CidWithUid"),
     /** 更新已读状态 **/
@@ -342,4 +342,3 @@ mvn -pl plugins/dist-read-state-dao -am package
 - 查看 `plugin-api-reference.md`：了解更多可用的服务端 API 与扩展点；
 - 查看 `plugin-security-and-sandbox.md`：在生产环境前审视安全性和隔离问题；
 - 将你的最佳实践和常见问题整理回 `doc/plugins/`，形成团队内部的插件开发规范。 
-

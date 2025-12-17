@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
@@ -21,12 +21,9 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelApplicationApproved")
 public class CPChannelApplicationApprovedNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo = context.getData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
-        if (channelApplicationInfo == null){
-            argsError(context);
-            return;
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPChannelApplication channelApplicationInfo =
+                requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO, CPChannelApplication.class);
         CPChannelMember channelMemberInfo = new CPChannelMember();
         channelMemberInfo
                 .setId(IdUtil.generateId())

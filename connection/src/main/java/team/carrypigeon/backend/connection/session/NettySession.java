@@ -2,7 +2,8 @@ package team.carrypigeon.backend.connection.session;
 
 import cn.hutool.core.codec.Base64;
 import io.netty.channel.ChannelHandlerContext;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
@@ -17,8 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Netty 会话实现，对 {@link ChannelHandlerContext} 进行封装，
  * 提供属性存取与加密写出能力。
  */
-@Slf4j
 public class NettySession implements CPSession {
+
+    private static final Logger log = LoggerFactory.getLogger(NettySession.class);
 
     // netty channel 上下文，用于进行数据的读写
     private final ChannelHandlerContext context;

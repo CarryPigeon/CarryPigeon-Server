@@ -2,10 +2,8 @@
     <!--创建管理员-->
     <chain name="/core/channel/admin/create">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/
@@ -16,6 +14,8 @@
         CPChannelMemberAuthoritySetter.bind("key","admin"),
         /**保存成员信息**/
         CPChannelMemberSaver,
+        /** 构建成员权限变动（设为管理员）通知数据 **/
+        CPChannelMemberChangeNotifyBuilder.bind("key","admin_add"),
         /**获取所有成员**/
         CPChannelMemberCollector,
         /**通知所有成员**/
@@ -25,10 +25,8 @@
     <!--删除管理员-->
     <chain name="/core/channel/admin/delete">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验,判断是不是所有者**/
@@ -39,6 +37,8 @@
         CPChannelMemberAuthoritySetter.bind("key","member"),
         /**保存成员信息**/
         CPChannelMemberSaver,
+        /** 构建成员权限变动（取消管理员）通知数据 **/
+        CPChannelMemberChangeNotifyBuilder.bind("key","admin_remove"),
         /**获取所有成员**/
         CPChannelMemberCollector,
         /**通知所有成员**/

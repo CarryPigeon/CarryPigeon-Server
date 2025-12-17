@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.service.email;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
@@ -27,14 +27,14 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @Slf4j
 @AllArgsConstructor
 @LiteflowComponent("EmailCodeChecker")
-public class EmailCodeChecker extends CPNodeComponent {
+public class EmailCodeChecker extends AbstractCheckerNode {
 
     private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
 
     private final CPCache cache;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
@@ -45,7 +45,7 @@ public class EmailCodeChecker extends CPNodeComponent {
             // 参数缺失，直接返回服务器错误
             log.error("EmailCodeChecker param error: email or code is null");
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.SERVER_ERROR.copy().setTextData("email code param error"));
+                    CPResponse.serverError("email code param error"));
             throw new CPReturnException();
         }
         String serverCode = cache.getAndDelete(email + ":code");
@@ -58,7 +58,7 @@ public class EmailCodeChecker extends CPNodeComponent {
             }
             log.info("EmailCodeChecker hard fail: code error, email={}", email);
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("email code error"));
+                    CPResponse.error("email code error"));
             throw new CPReturnException();
         }
         if (soft) {

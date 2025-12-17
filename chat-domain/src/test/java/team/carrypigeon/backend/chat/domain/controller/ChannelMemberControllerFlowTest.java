@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,9 +12,12 @@ import org.springframework.test.context.junit4.SpringRunner;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
+import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
+import team.carrypigeon.backend.chat.domain.controller.netty.channel.member.get.CPChannelGetMemberVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.member.delete.CPChannelDeleteMemberVO;
 import team.carrypigeon.backend.chat.domain.controller.netty.channel.member.list.CPChannelListMemberVO;
 import team.carrypigeon.backend.chat.domain.support.ChatDomainTestConfig;
@@ -30,6 +32,7 @@ import java.time.LocalDateTime;
  * 覆盖：
  * - /core/channel/member/list
  * - /core/channel/member/delete
+ * - /core/channel/member/get
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
@@ -78,7 +81,7 @@ public class ChannelMemberControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, uid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelListMemberVO vo = new CPChannelListMemberVO(cid);
@@ -86,6 +89,57 @@ public class ChannelMemberControllerFlowTest {
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/list", null, context);
         Assert.assertTrue(resp.isSuccess());
+    }
+
+    @Test
+    public void testChannelMemberGet_success() {
+        long selfUid = 1000L;
+        long targetUid = 2000L;
+        long cid = 3000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(9999L)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        CPChannelMember selfMember = new CPChannelMember()
+                .setId(1L)
+                .setUid(selfUid)
+                .setCid(cid)
+                .setName("")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(selfMember);
+
+        CPChannelMember targetMember = new CPChannelMember()
+                .setId(2L)
+                .setUid(targetUid)
+                .setCid(cid)
+                .setName("target")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(targetMember);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, selfUid);
+
+        CPFlowContext context = new CPFlowContext();
+        context.setData("session", session);
+
+        CPChannelGetMemberVO vo = new CPChannelGetMemberVO(cid, targetUid);
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/get", null, context);
+        Assert.assertTrue(resp.isSuccess());
+
+        CPChannelMember result = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
+        Assert.assertNotNull(result);
+        Assert.assertEquals(targetUid, result.getUid());
+        Assert.assertEquals(cid, result.getCid());
     }
 
     @Test
@@ -124,7 +178,7 @@ public class ChannelMemberControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, adminUid);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPChannelDeleteMemberVO vo = new CPChannelDeleteMemberVO(cid, targetUid);
@@ -136,5 +190,42 @@ public class ChannelMemberControllerFlowTest {
         CPChannelMember after = channelMemberDao.getMember(targetUid, cid);
         Assert.assertNull(after);
     }
-}
 
+    @Test
+    public void testChannelMemberGet_notInChannel_shouldFail() {
+        long selfUid = 1000L;
+        long targetUid = 2000L;
+        long cid = 3000L;
+
+        CPChannel channel = new CPChannel()
+                .setId(cid)
+                .setName("test")
+                .setOwner(9999L)
+                .setBrief("")
+                .setAvatar(-1L)
+                .setCreateTime(LocalDateTime.now());
+        channelDao.save(channel);
+
+        // 仅保存目标成员，当前会话用户不在频道中
+        CPChannelMember targetMember = new CPChannelMember()
+                .setId(2L)
+                .setUid(targetUid)
+                .setCid(cid)
+                .setName("target")
+                .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
+                .setJoinTime(LocalDateTime.now());
+        channelMemberDao.save(targetMember);
+
+        TestSession session = new TestSession();
+        session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, selfUid);
+
+        CPFlowContext context = new CPFlowContext();
+        context.setData("session", session);
+
+        CPChannelGetMemberVO vo = new CPChannelGetMemberVO(cid, targetUid);
+        Assert.assertTrue(vo.insertData(context));
+
+        LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/get", null, context);
+        Assert.assertFalse(resp.isSuccess());
+    }
+}

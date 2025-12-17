@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- 发送邮箱验证码 -->
+    <chain name="/core/service/email/send">
+        THEN(
+            /** 校验邮箱格式 **/
+            EmailValidChecker,
+            /** 基于 remoteIp + email 的简单限流 **/
+            EmailRateLimitChecker
+            /** TODO: 如需真实发送验证码邮件，可在此处追加发送与缓存写入节点 **/
+        );
+    </chain>
+</flow>
+

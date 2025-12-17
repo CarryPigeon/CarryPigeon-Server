@@ -23,7 +23,7 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "userById", key = "#id")
+    @Cacheable(cacheNames = "userById", key = "#id", unless = "#result == null")
     public CPUser getById(long id) {
         log.debug("UserDaoImpl#getById - id={}", id);
         CPUser result = Optional.ofNullable(userMapper.selectById(id))
@@ -36,7 +36,7 @@ public class UserDaoImpl implements UserDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "userByEmail", key = "#email")
+    @Cacheable(cacheNames = "userByEmail", key = "#email", unless = "#result == null")
     public CPUser getByEmail(String email) {
         log.debug("UserDaoImpl#getByEmail - email={}", email);
         LambdaQueryWrapper<UserPO> queryWrapper = new LambdaQueryWrapper<>();

@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.read;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys;
@@ -30,7 +30,7 @@ public class CPChannelReadStateSelectorNode extends CPNodeComponent {
     private final ChannelReadStateDao channelReadStateDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         Long uid = context.getData(CPNodeCommonKeys.SESSION_ID);
         Long cid = context.getData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_CID);
         if (uid == null || cid == null) {
@@ -38,7 +38,9 @@ public class CPChannelReadStateSelectorNode extends CPNodeComponent {
             argsError(context);
             return;
         }
-        CPChannelReadState state = channelReadStateDao.getByUidAndCid(uid, cid);
+        CPChannelReadState state = select(context,
+                buildSelectKey("channel_read_state", java.util.Map.of("cid", cid, "uid", uid)),
+                () -> channelReadStateDao.getByUidAndCid(uid, cid));
         if (state == null) {
             state = new CPChannelReadState()
                     .setUid(uid)
@@ -52,4 +54,3 @@ public class CPChannelReadStateSelectorNode extends CPNodeComponent {
         context.setData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO, state);
     }
 }
-

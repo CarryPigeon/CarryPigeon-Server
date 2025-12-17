@@ -31,28 +31,33 @@
    - 端口：`connection.port`（默认示例为 `7609`，具体见运维配置）。
 
 2. **握手阶段（ECC + AES）**
-   - 客户端生成 ECC 密钥对；
-   - 向服务器发送 JSON 格式的 `CPECCKeyPack`：
+   - 客户端通过安全途径拿到服务器 ECC 公钥（例如配置中预置、公钥 Pinning）；
+   - 本地生成随机 AES 会话密钥，并按以下结构发送 JSON 格式的 `CPAESKeyPack`：
 
 ```json
 {
   "id": 1,
-  "key": "<Base64-encoded-ECC-public-key>"
+  "sessionId": 0,
+  "key": "<Base64-encoded-ECIES(aes_key_base64)>"
 }
 ```
 
-   - 服务器返回 JSON 格式的 `CPAESKeyPack`：
+   - 服务器使用 ECC 私钥解密 `key` 字段得到原始 AES 密钥字符串，并在握手成功后发送一条加密的 `CPResponse`：
 
 ```json
 {
-  "id": 1,
-  "sessionId": 123456789,
-  "key": "<Base64-encoded-encrypted-AES-key>"
+  "id": -1,
+  "code": 0,
+  "data": {
+    "route": "handshake",
+    "data": {
+      "sessionId": 123456789
+    }
+  }
 }
 ```
 
-   - 客户端使用自己的 ECC 私钥解密 `key` 字段，得到 AES 会话密钥；
-   - 记住 `sessionId`，后续业务包需要写入 AAD。
+   - 机器人端解密这条响应并看到 `route="handshake"` 即可认为握手成功，并从 `data.sessionId` 记录 `sessionId`，后续业务包需要写入 AAD。
 
 3. **业务阶段（AES-GCM + AAD）**
    - 之后所有请求的 payload 为：
@@ -283,6 +288,7 @@ payload 类型：`CPMessageNotificationData`：
 {
   "route": "/core/message",
   "data": {
+    "type": "create",
     "sContent": "short text summary",
     "cid": 12345,
     "uid": 67890,
@@ -291,7 +297,17 @@ payload 类型：`CPMessageNotificationData`：
 }
 ```
 
-- 新消息通知与删除消息通知都会使用 `/core/message` route，只是 `sContent` 不同（例如 `"message deleted"`）。
+字段说明：
+
+- `type`：
+  - `"create"`：新消息
+  - `"delete"`：删除消息
+- `sContent`：消息摘要／提示文本（删除时通常为 `"message deleted"`）
+- `cid`：频道 id
+- `uid`：消息发送者 id
+- `sendTime`：消息发送时间（毫秒时间戳）
+
+- 新消息通知与删除消息通知都会使用 `/core/message` route。
 
 机器人典型处理：
 
@@ -313,6 +329,12 @@ payload 类型：`CPChannelReadStateNotificationData`：
   }
 }
 ```
+
+字段说明：
+
+- `cid`：频道 id
+- `uid`：用户 id
+- `lastReadTime`：最新读到的时间（毫秒时间戳）
 
 机器人用途示例：
 
@@ -355,4 +377,3 @@ payload 类型：`CPChannelReadStateNotificationData`：
 - [ ] 在日志中记录关键字段（uid/cid/route/id），便于排查问题。
 
 通过遵守上述约定，你可以将机器人端视为普通客户端的一种，实现稳定、可观测且易于维护的自动化业务流程。 
-

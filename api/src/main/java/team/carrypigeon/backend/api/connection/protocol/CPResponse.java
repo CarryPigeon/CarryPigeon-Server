@@ -36,27 +36,84 @@ public class CPResponse{
      * 错误数据的标准响应值
      * */
     @JsonIgnore
-    public static CPResponse ERROR_RESPONSE = new CPResponse(-1,100,null);
+    public static final CPResponse ERROR_RESPONSE = new CPResponse(-1,100,null);
 
     /**
      * 成功数据标准响应值
      * */
     @JsonIgnore
-    public static CPResponse SUCCESS_RESPONSE = new CPResponse(-1,200,null);
+    public static final CPResponse SUCCESS_RESPONSE = new CPResponse(-1,200,null);
 
     /**
      * 权限校验错误
      * */
     @JsonIgnore
-    public static CPResponse AUTHORITY_ERROR_RESPONSE = new CPResponse(-1,300,null);
+    public static final CPResponse AUTHORITY_ERROR_RESPONSE = new CPResponse(-1,300,null);
     /**
      * 路径不存在response
      * */
     @JsonIgnore
-    public static CPResponse PATH_NOT_FOUND_RESPONSE = new CPResponse(-1,404,null);
+    public static final CPResponse PATH_NOT_FOUND_RESPONSE = new CPResponse(-1,404,null);
+
+    /**
+     * 工厂方法：创建一个新的错误响应模板（code=100，id=-1，data=null）。
+     */
+    public static CPResponse error() {
+        return new CPResponse(-1, 100, null);
+    }
+
+    /**
+     * 工厂方法：创建一个带错误消息的错误响应。
+     */
+    public static CPResponse error(String message) {
+        return error().setTextData(message);
+    }
+
+    /**
+     * 工厂方法：创建一个新的成功响应模板（code=200，id=-1，data=null）。
+     */
+    public static CPResponse success() {
+        return new CPResponse(-1, 200, null);
+    }
+
+    /**
+     * 工厂方法：创建一个新的权限错误响应模板（code=300，id=-1，data=null）。
+     */
+    public static CPResponse authorityError() {
+        return new CPResponse(-1, 300, null);
+    }
+
+    /**
+     * 工厂方法：创建一个带错误消息的权限错误响应。
+     */
+    public static CPResponse authorityError(String message) {
+        return authorityError().setTextData(message);
+    }
+
+    /**
+     * 工厂方法：创建一个新的路径不存在响应模板（code=404，id=-1，data=null）。
+     */
+    public static CPResponse pathNotFound() {
+        return new CPResponse(-1, 404, null);
+    }
+
+    /**
+     * 工厂方法：创建一个新的服务器错误响应模板（code=500，id=-1，data=null）。
+     */
+    public static CPResponse serverError() {
+        return new CPResponse(-1, 500, null);
+    }
+
+    /**
+     * 工厂方法：创建一个带错误消息的服务器错误响应。
+     */
+    public static CPResponse serverError(String message) {
+        return serverError().setTextData(message);
+    }
     /**
      * 主要用于copy错误与正确的响应修改id标识
      * */
+    @Deprecated
     public CPResponse copy() {
         CPResponse clone = new CPResponse();
         clone.setId(this.id);

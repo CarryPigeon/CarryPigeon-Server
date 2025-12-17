@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.message.CPMessageData;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
@@ -30,7 +30,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPMessageBuilderNode extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPMessageData messageData =
                 requireContext(context, CPNodeValueKeyExtraConstants.MESSAGE_DATA, CPMessageData.class);
         Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);

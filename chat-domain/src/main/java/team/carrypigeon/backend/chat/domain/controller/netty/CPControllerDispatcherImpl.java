@@ -2,22 +2,24 @@ package team.carrypigeon.backend.chat.domain.controller.netty;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.api.bo.connection.CPConnectionAttributes;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerTag;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowConnectionInfo;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.connection.protocol.CPPacket;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.flow.FlowTxExecutor;
 import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterService;
 
 import java.util.HashMap;
@@ -34,18 +36,18 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
     private final Map<String, Class<?>> controllerAndResultMap;
     private final ObjectMapper mapper;
     private final CPSessionCenterService cpSessionCenterService;
-    private final FlowExecutor flowExecutor;
+    private final FlowTxExecutor flowTxExecutor;
     private final ObjectMapper objectMapper;
     private final ApplicationContext applicationContext;
 
     public CPControllerDispatcherImpl(ObjectMapper mapper,
                                       CPSessionCenterService cpSessionCenterService,
-                                      FlowExecutor flowExecutor,
+                                      FlowTxExecutor flowTxExecutor,
                                       ObjectMapper objectMapper,
                                       ApplicationContext applicationContext) {
         this.mapper = mapper;
         this.cpSessionCenterService = cpSessionCenterService;
-        this.flowExecutor = flowExecutor;
+        this.flowTxExecutor = flowTxExecutor;
         this.controllerAndVOMap = new HashMap<>();
         this.controllerAndResultMap = new HashMap<>();
         this.objectMapper = objectMapper;
@@ -101,24 +103,26 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
                 MDC.put("uid", String.valueOf(uidAttr));
             }
             log.debug("receive packet, id={}, route={}", route.getId(), route.getRoute());
-            // 新建一个默认上下文
-            DefaultContext defaultContext = new DefaultContext();
+            // 新建一个带链路查询缓存的上下文
+            CPFlowContext context = new CPFlowContext();
+            // 将连接信息写入上下文，供各个 Node 做限流等控制
+            context.setConnectionInfo(buildConnectionInfo(session));
             // 将 session 写入上下文，供各个 CPNodeComponent 使用
-            defaultContext.setData(CPNodeCommonKeys.SESSION, session);
+            context.setData(CPNodeCommonKeys.SESSION, session);
 
             Class<?> voClazz = controllerAndVOMap.get(route.getRoute());
             if (voClazz == null) {
                 log.warn("route not found for path {}, id={}", route.getRoute(), route.getId());
-                return CPResponse.PATH_NOT_FOUND_RESPONSE.copy();
+                return CPResponse.pathNotFound();
             }
             CPControllerVO vo = (CPControllerVO) mapper.treeToValue(route.getData(), voClazz);
             // 前置处理，将请求参数写入 context
-            if (!vo.insertData(defaultContext)) {
-                log.warn("insertData returned false, route={}, id={}", route.getRoute(), route.getId());
-                return CPResponse.ERROR_RESPONSE.copy().setTextData("error args");
+            if (!vo.insertData(context)) {
+                log.warn("insertData returned false (invalid request args), route={}, id={}", route.getRoute(), route.getId());
+                return CPResponse.error("invalid request args");
             }
 
-            LiteflowResponse liteflowResponse = flowExecutor.execute2Resp(route.getRoute(), null, defaultContext);
+            LiteflowResponse liteflowResponse = flowTxExecutor.executeWithTx(route.getRoute(), context);
             if (!liteflowResponse.isSuccess()) {
                 log.error("liteflow chain execute failed, route={}, id={}, message={}",
                         route.getRoute(), route.getId(), liteflowResponse.getMessage());
@@ -129,7 +133,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             Class<?> resultClazz = controllerAndResultMap.get(route.getRoute());
             if (resultClazz == null) {
                 log.warn("result class not found for path {}, id={}", route.getRoute(), route.getId());
-                return CPResponse.PATH_NOT_FOUND_RESPONSE.copy();
+                return CPResponse.pathNotFound();
             }
 
             CPControllerResult result;
@@ -137,15 +141,15 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
                 result = (CPControllerResult) resultClazz.getDeclaredConstructor().newInstance();
             } catch (ReflectiveOperationException e) {
                 log.error("failed to construct CPControllerResult for route {}", route.getRoute(), e);
-                return CPResponse.SERVER_ERROR.copy().setId(route.getId());
+                return CPResponse.serverError().setId(route.getId());
             }
             // 后置处理，组装 response
-            result.process(session, defaultContext, objectMapper);
+            result.process(session, context, objectMapper);
 
-            CPResponse response = liteflowResponse.getContextBean(DefaultContext.class)
+            CPResponse response = liteflowResponse.getContextBean(CPFlowContext.class)
                     .getData(CPNodeCommonKeys.RESPONSE);
             if (response == null) {
-                response = CPResponse.SUCCESS_RESPONSE.copy();
+                response = CPResponse.success();
             }
             response.setId(route.getId());
             long cost = System.currentTimeMillis() - startTime;
@@ -165,7 +169,7 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
             // 清理 MDC，避免数据泄露到后续请求
             MDC.clear();
         }
-        return CPResponse.ERROR_RESPONSE.copy();
+        return CPResponse.error();
     }
 
     @Override
@@ -177,5 +181,26 @@ public class CPControllerDispatcherImpl implements CPControllerDispatcher {
         } else {
             log.debug("session closed without CHAT_DOMAIN_USER_ID attribute");
         }
+    }
+
+    /**
+     * 从 {@link CPSession} 提取连接相关信息，构造 {@link CPFlowConnectionInfo}。
+     * <p>
+     * 如果底层未写入对应属性，则返回的字段可能为 null。
+     */
+    private CPFlowConnectionInfo buildConnectionInfo(CPSession session) {
+        if (session == null) {
+            return null;
+        }
+        String remoteAddress = session.getAttributeValue(CPConnectionAttributes.REMOTE_ADDRESS, String.class);
+        String remoteIp = session.getAttributeValue(CPConnectionAttributes.REMOTE_IP, String.class);
+        Integer remotePort = session.getAttributeValue(CPConnectionAttributes.REMOTE_PORT, Integer.class);
+        if (remoteAddress == null && remoteIp == null && remotePort == null) {
+            return null;
+        }
+        return new CPFlowConnectionInfo()
+                .setRemoteAddress(remoteAddress)
+                .setRemoteIp(remoteIp)
+                .setRemotePort(remotePort);
     }
 }

@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.cmp.notifier.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -32,17 +32,23 @@ public class CPChannelCollectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        Long uid = context.getData(CPNodeUserKeys.USER_INFO_ID);
-        if (uid == null){
-            argsError( context);
-            return;
-        }
-        CPChannelMember[] members = channelMemberDao.getAllMemberByUserId(uid);
-        CPChannel[] allFixed = channelDao.getAllFixed();
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        Long uid = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+        CPChannelMember[] members = select(context,
+                buildSelectKey("channel_member", "uid", uid),
+                () -> channelMemberDao.getAllMemberByUserId(uid));
+        CPChannel[] allFixed = select(context,
+                buildSelectKey("channel", "fixed", "all"),
+                channelDao::getAllFixed);
         HashSet<CPChannel> cpChannels = new HashSet<>();
         for (CPChannelMember member : members) {
-            cpChannels.add(channelDao.getById(member.getCid()));
+            long cid = member.getCid();
+            CPChannel channel = select(context,
+                    buildSelectKey("channel", "id", cid),
+                    () -> channelDao.getById(cid));
+            if (channel != null) {
+                cpChannels.add(channel);
+            }
         }
         cpChannels.addAll(Arrays.asList(allFixed));
         context.setData(CPNodeChannelKeys.CHANNEL_INFO_LIST,cpChannels);

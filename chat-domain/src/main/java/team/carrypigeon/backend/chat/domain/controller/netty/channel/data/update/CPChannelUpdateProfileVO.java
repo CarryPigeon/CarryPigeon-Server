@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.data.update;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 
 /**
@@ -22,7 +22,7 @@ public class CPChannelUpdateProfileVO implements CPControllerVO {
     private long avatar;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
         context.setData(CPNodeChannelKeys.CHANNEL_INFO_NAME, name);
         context.setData(CPNodeChannelKeys.CHANNEL_INFO_OWNER, owner);

@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.ban;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
@@ -43,7 +43,7 @@ public class CPChannelBanDeleterNode extends AbstractDeleteNode<CPChannelBan> {
     }
 
     @Override
-    protected void onFailure(CPChannelBan ban, DefaultContext context) throws CPReturnException {
+    protected void onFailure(CPChannelBan ban, CPFlowContext context) throws CPReturnException {
         if (ban != null) {
             log.error("CPChannelBanDeleter delete failed, banId={}, cid={}, uid={}",
                     ban.getId(), ban.getCid(), ban.getUid());
@@ -52,7 +52,7 @@ public class CPChannelBanDeleterNode extends AbstractDeleteNode<CPChannelBan> {
     }
 
     @Override
-    protected void afterSuccess(CPChannelBan ban, DefaultContext context) {
+    protected void afterSuccess(CPChannelBan ban, CPFlowContext context) {
         log.info("CPChannelBanDeleter success, banId={}, cid={}, uid={}",
                 ban.getId(), ban.getCid(), ban.getUid());
     }

@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
@@ -35,7 +35,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
         Long operatorUid = context.getData(CPNodeCommonKeys.SESSION_ID);
         if (message == null || operatorUid == null) {
@@ -54,7 +54,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
             log.info("CPMessageDeletePermissionChecker fail: delete timeout, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("message delete timeout"));
+                    CPResponse.error("message delete timeout"));
             throw new CPReturnException();
         }
         // 发送者本人可以删除
@@ -64,12 +64,15 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
             return;
         }
         // 非发送者需要检查是否为频道管理员
-        CPChannelMember member = channelMemberDao.getMember(operatorUid, message.getCid());
+        long cid = message.getCid();
+        CPChannelMember member = select(context,
+                buildSelectKey("channel_member", java.util.Map.of("cid", cid, "uid", operatorUid)),
+                () -> channelMemberDao.getMember(operatorUid, cid));
         if (member == null || member.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             log.info("CPMessageDeletePermissionChecker fail: no permission, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("no permission to delete message"));
+                    CPResponse.error("no permission to delete message"));
             throw new CPReturnException();
         }
         log.debug("CPMessageDeletePermissionChecker success: admin delete, mid={}, operatorUid={}",

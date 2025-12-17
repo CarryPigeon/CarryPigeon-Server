@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.message.create;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
@@ -19,7 +19,7 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 public class CPMessageCreateResult implements CPControllerResult {
 
     @Override
-    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
+    public void process(CPSession session, CPFlowContext context, ObjectMapper objectMapper) {
         CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
         if (message == null) {
             argsError(context);
@@ -27,7 +27,7 @@ public class CPMessageCreateResult implements CPControllerResult {
         }
         Result result = new Result(message.getId());
         context.setData(CPNodeCommonKeys.RESPONSE,
-                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+                CPResponse.success().setData(objectMapper.valueToTree(result)));
     }
 
     @Data

@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,6 +9,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.controller.netty.service.email.send.CPServiceSendEmailVO;
 import team.carrypigeon.backend.chat.domain.support.ChatDomainTestConfig;
 import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
@@ -39,7 +39,7 @@ public class ServiceEmailControllerFlowTest {
 
     @Test
     public void testServiceSendEmail_voInsertData() {
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPServiceSendEmailVO vo = new CPServiceSendEmailVO("test@example.com");
@@ -47,16 +47,15 @@ public class ServiceEmailControllerFlowTest {
     }
 
     @Test
-    public void testServiceSendEmail_flowExecute_pathMayNotExist() {
-        DefaultContext context = new DefaultContext();
+    public void testServiceSendEmail_flowExecute_shouldPass() {
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPServiceSendEmailVO vo = new CPServiceSendEmailVO("test@example.com");
         Assert.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/service/email/send", null, context);
-        // 根据当前配置，该路径可能不存在，这里只验证不会抛出异常
         Assert.assertNotNull(resp);
+        Assert.assertTrue(resp.isSuccess());
     }
 }
-

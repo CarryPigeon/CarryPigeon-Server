@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 import team.carrypigeon.backend.common.id.IdUtil;
@@ -20,11 +20,9 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserTokenRefresh")
 public class CPUserTokenRefreshNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUserToken userToken = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO);
-        if (userToken == null){
-            argsError(context);
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPUserToken userToken =
+                requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO, CPUserToken.class);
         userToken.setExpiredTime(TimeUtil.getCurrentLocalTime().plusDays(30));
         userToken.setToken(IdUtil.generateToken());
     }

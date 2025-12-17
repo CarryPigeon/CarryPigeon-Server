@@ -3,10 +3,8 @@
     <!--创建频道请求-->
     <chain name="/core/channel/create">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**查询用户**/
         CPUserSelector.bind("key","id"),
         /**创建频道信息**/
@@ -22,10 +20,8 @@
     <!--删除频道请求-->
     <chain name="/core/channel/delete">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**查询频道**/
         CPChannelSelector.bind("key","id"),
         /**权限校验**/
@@ -41,10 +37,8 @@
     <!--获取用户的所有频道请求-->
     <chain name="/core/channel/list">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取用户所有频道**/
         CPChannelCollector
         )
@@ -61,10 +55,8 @@
     <!--更新频道数据-->
     <chain name="/core/channel/profile/update">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
         /**权限校验**/

@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
@@ -28,11 +28,9 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelMember channelMemberInfo = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
-        if (channelMemberInfo == null){
-            argsError(context);
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPChannelMember channelMemberInfo =
+                requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, CPChannelMember.class);
         String channelMemberInfoName = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_NAME);
         if (channelMemberInfoName != null){
             channelMemberInfo.setName(channelMemberInfoName);
@@ -43,7 +41,7 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
         }
         if (!channelMemberDao.save(channelMemberInfo)){
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("update channel member error"));
+                    CPResponse.error("update channel member error"));
             throw new CPReturnException();
         }
     }

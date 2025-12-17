@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
+import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
@@ -29,7 +29,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
     private final UserTokenDao userTokenDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         // 查询数据
         CPUser userInfo = requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
         // 创建token
@@ -41,7 +41,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
                 .setExpiredTime(TimeUtil.getCurrentLocalTime().plusDays(30));
         if (!userTokenDao.save(cpUserToken)){
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("save user token error"));
+                    CPResponse.error("save user token error"));
             throw new CPReturnException();
         }
         context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO, cpUserToken);

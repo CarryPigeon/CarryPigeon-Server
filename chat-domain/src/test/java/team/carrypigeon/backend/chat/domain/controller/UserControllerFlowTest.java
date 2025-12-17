@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import com.yomahub.liteflow.slot.DefaultContext;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -13,6 +12,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
@@ -34,7 +34,7 @@ import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
  *
  * 测试流程：
  * 1. 通过 DAO / CPCache 预置数据；
- * 2. 构造 DefaultContext 与 TestSession，调用对应 LiteFlow chain；
+ * 2. 构造 CPFlowContext 与 TestSession，调用对应 LiteFlow chain；
  * 3. 校验链路执行结果与数据库状态；
  * 4. 必要时清理内存数据库状态（当前 InMemory 实现每个测试独立实例，不共享状态）。
  */
@@ -70,7 +70,7 @@ public class UserControllerFlowTest {
         int code = 123456;
         cache.set(email + ":code", String.valueOf(code), 300);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
@@ -90,7 +90,7 @@ public class UserControllerFlowTest {
         int code = 123456;
         cache.set(email + ":code", String.valueOf(code), 300);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
@@ -114,7 +114,7 @@ public class UserControllerFlowTest {
         existing.setId(1L).setEmail(email);
         userDao.save(existing);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
@@ -135,7 +135,7 @@ public class UserControllerFlowTest {
         int wrongCode = 222222;
         cache.set(email + ":code", String.valueOf(correctCode), 300);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, wrongCode);
@@ -160,7 +160,7 @@ public class UserControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, user.getId());
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserGetProfileVO vo = new CPUserGetProfileVO(user.getId());
@@ -179,7 +179,7 @@ public class UserControllerFlowTest {
         // 不设置 Session 中的 userId，触发 UserLoginChecker 失败
         TestSession session = new TestSession();
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserGetProfileVO vo = new CPUserGetProfileVO(user.getId());
@@ -204,7 +204,7 @@ public class UserControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, user.getId());
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserUpdateProfileVO vo = new CPUserUpdateProfileVO(
@@ -235,7 +235,7 @@ public class UserControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, user.getId());
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserUpdateEmailProfileVO vo = new CPUserUpdateEmailProfileVO(newEmail, code);
@@ -261,7 +261,7 @@ public class UserControllerFlowTest {
         user.setId(400L).setEmail(email);
         userDao.save(user);
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", new TestSession());
 
         CPUserEmailLoginVO vo = new CPUserEmailLoginVO(email, code);
@@ -285,7 +285,7 @@ public class UserControllerFlowTest {
 
         TestSession session = new TestSession();
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserTokenLoginVO vo = new CPUserTokenLoginVO("TOKEN_500");
@@ -313,7 +313,7 @@ public class UserControllerFlowTest {
         TestSession session = new TestSession();
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, user.getId());
 
-        DefaultContext context = new DefaultContext();
+        CPFlowContext context = new CPFlowContext();
         context.setData("session", session);
 
         CPUserTokenLogoutVO vo = new CPUserTokenLogoutVO("TOKEN_600");

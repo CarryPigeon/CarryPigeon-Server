@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
@@ -25,20 +25,15 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserBuilder")
 public class CPUserBuilderNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        Long userInfoId = context.getData(CPNodeUserKeys.USER_INFO_ID);
-        String userInfoUserName = context.getData(CPNodeUserKeys.USER_INFO_USER_NAME);
-        String userInfoBrief = context.getData(CPNodeUserKeys.USER_INFO_BRIEF);
-        Long userInfoAvatar = context.getData(CPNodeUserKeys.USER_INFO_AVATAR);
-        String userInfoEmail = context.getData(CPNodeUserKeys.USER_INFO_EMAIL);
-        Integer userInfoSex = context.getData(CPNodeUserKeys.USER_INFO_SEX);
-        Long userInfoBirthday = context.getData(CPNodeUserKeys.USER_INFO_BIRTHDAY);
-        Long userInfoRegisterTime = context.getData(CPNodeUserKeys.USER_INFO_REGISTER_TIME);
-        if (userInfoId == null || userInfoUserName == null || userInfoBrief == null
-                || userInfoAvatar == null || userInfoEmail == null
-                || userInfoSex == null || userInfoBirthday == null || userInfoRegisterTime == null) {
-            argsError(context);
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+        String userInfoUserName = requireContext(context, CPNodeUserKeys.USER_INFO_USER_NAME, String.class);
+        String userInfoBrief = requireContext(context, CPNodeUserKeys.USER_INFO_BRIEF, String.class);
+        Long userInfoAvatar = requireContext(context, CPNodeUserKeys.USER_INFO_AVATAR, Long.class);
+        String userInfoEmail = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL, String.class);
+        Integer userInfoSex = requireContext(context, CPNodeUserKeys.USER_INFO_SEX, Integer.class);
+        Long userInfoBirthday = requireContext(context, CPNodeUserKeys.USER_INFO_BIRTHDAY, Long.class);
+        Long userInfoRegisterTime = requireContext(context, CPNodeUserKeys.USER_INFO_REGISTER_TIME, Long.class);
         CPUser cpUser = new CPUser();
         cpUser.setId(userInfoId)
                 .setUsername(userInfoUserName)

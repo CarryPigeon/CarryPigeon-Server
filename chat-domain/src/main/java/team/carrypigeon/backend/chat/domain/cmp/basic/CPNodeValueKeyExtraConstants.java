@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.cmp.basic;
 
 /**
- * LiteFlow 节点在 {@link com.yomahub.liteflow.slot.DefaultContext} 中读写数据时
- * 使用的补充型 key 常量。
+ * LiteFlow 节点在自定义上下文（{@link team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext}，继承自 DefaultContext）
+ * 中读写数据时使用的补充型 key 常量。
  * <ul>
  *   <li>消息解析辅助对象</li>
  *   <li>UserToken 相关上下文数据</li>
@@ -33,6 +33,11 @@ public final class CPNodeValueKeyExtraConstants {
 
     /** Long: 频道申请主键 id */
     public static final String CHANNEL_APPLICATION_INFO_ID = "ChannelApplicationInfo_Id";
+
+    // -------- 频道成员扩展 --------
+
+    /** Long: 目标成员 uid（用于部分需要同时校验自身成员身份和查询目标成员的链路） */
+    public static final String TARGET_MEMBER_UID = "TargetMember_Uid";
 
     // -------- 通用辅助对象 --------
 

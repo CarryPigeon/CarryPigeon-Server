@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
@@ -25,12 +25,8 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserUpdater")
 public class CPUserUpdaterNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPUser user = context.getData(CPNodeUserKeys.USER_INFO);
-        if (user == null){
-            argsError(context);
-        }
-        assert user != null;
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
         String username = context.getData(CPNodeUserKeys.USER_INFO_USER_NAME);
         if (username != null){
             user.setUsername(username);

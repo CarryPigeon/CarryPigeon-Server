@@ -24,7 +24,7 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelBanById", key = "#id")
+    @Cacheable(cacheNames = "channelBanById", key = "#id", unless = "#result == null")
     public CPChannelBan getById(long id) {
         log.debug("ChannelBanDaoImpl#getById - id={}", id);
         CPChannelBan result = Optional.ofNullable(channelBanMapper.selectById(id))
@@ -51,7 +51,7 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelBanByUidCid", key = "#uid + ':' + #cid")
+    @Cacheable(cacheNames = "channelBanByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelBan getByChannelIdAndUserId(long uid, long cid) {
         log.debug("ChannelBanDaoImpl#getByChannelIdAndUserId - uid={}, cid={}", uid, cid);
         LambdaQueryWrapper<ChannelBanPO> channelBanPOQueryWrapper = new LambdaQueryWrapper<>();

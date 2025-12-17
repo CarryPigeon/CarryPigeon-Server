@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.file;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
@@ -28,17 +28,9 @@ public class CPFileTokenCreatorNode extends CPNodeComponent {
     private final FileTokenService fileTokenService;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        String op = getBindData(CPNodeBindKeys.KEY, String.class);
-        if (op == null || op.isEmpty()) {
-            argsError(context);
-            return;
-        }
-        Long uid = context.getData(CPNodeCommonKeys.SESSION_ID);
-        if (uid == null) {
-            argsError(context);
-            return;
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        String op = requireBind(context, CPNodeBindKeys.KEY, String.class);
+        Long uid = requireContext(context, CPNodeCommonKeys.SESSION_ID, Long.class);
         String fileId = context.getData(CPNodeFileKeys.FILE_INFO_ID);
         // 默认 5 分钟有效期
         long ttlSec = 300L;

@@ -26,7 +26,7 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelReadStateById", key = "#id")
+    @Cacheable(cacheNames = "channelReadStateById", key = "#id", unless = "#result == null")
     public CPChannelReadState getById(long id) {
         log.debug("ChannelReadStateDaoImpl#getById - id={}", id);
         CPChannelReadState result = Optional.ofNullable(channelReadStateMapper.selectById(id))
@@ -39,7 +39,7 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelReadStateByUidCid", key = "#uid + ':' + #cid")
+    @Cacheable(cacheNames = "channelReadStateByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelReadState getByUidAndCid(long uid, long cid) {
         log.debug("ChannelReadStateDaoImpl#getByUidAndCid - uid={}, cid={}", uid, cid);
         LambdaQueryWrapper<ChannelReadStatePO> queryWrapper = new LambdaQueryWrapper<>();
@@ -88,4 +88,3 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
         return success;
     }
 }
-

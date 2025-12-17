@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
@@ -25,18 +25,22 @@ public class CPChannelMemberSelectorNode extends AbstractSelectorNode<CPChannelM
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    protected CPChannelMember doSelect(String mode, DefaultContext context) throws Exception {
+    protected CPChannelMember doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode){
             case "id":
                 Long channelMemberInfoId =
                         requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, Long.class);
-                return channelMemberDao.getById(channelMemberInfoId);
+                return select(context,
+                        buildSelectKey("channel_member", "id", channelMemberInfoId),
+                        () -> channelMemberDao.getById(channelMemberInfoId));
             case "CidWithUid":
                 Long cid =
                         requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, Long.class);
                 Long uid =
                         requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, Long.class);
-                return channelMemberDao.getMember(uid, cid);
+                return select(context,
+                        buildSelectKey("channel_member", java.util.Map.of("cid", cid, "uid", uid)),
+                        () -> channelMemberDao.getMember(uid, cid));
             default:
                 argsError(context);
                 return null;
@@ -49,7 +53,7 @@ public class CPChannelMemberSelectorNode extends AbstractSelectorNode<CPChannelM
     }
 
     @Override
-    protected void handleNotFound(String mode, DefaultContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
         businessError(context, "channel member not found");
     }
 }

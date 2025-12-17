@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.member.delete;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 
@@ -20,7 +20,7 @@ public class CPChannelDeleteMemberVO implements CPControllerVO {
     private long uid;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         if (cid <= 0 || uid <= 0) {
             return false;
         }
@@ -32,4 +32,3 @@ public class CPChannelDeleteMemberVO implements CPControllerVO {
         return true;
     }
 }
-

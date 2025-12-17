@@ -24,7 +24,7 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelMemberById", key = "#id")
+    @Cacheable(cacheNames = "channelMemberById", key = "#id", unless = "#result == null")
     public CPChannelMember getById(long id) {
         log.debug("ChannelMemberDaoImpl#getById - id={}", id);
         CPChannelMember result = Optional.ofNullable(channelMemberMapper.selectById(id))
@@ -51,7 +51,7 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
     }
 
     @Override
-    @Cacheable(cacheNames = "channelMemberByUidCid", key = "#uid + ':' + #cid")
+    @Cacheable(cacheNames = "channelMemberByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelMember getMember(long uid, long cid) {
         log.debug("ChannelMemberDaoImpl#getMember - uid={}, cid={}", uid, cid);
         LambdaQueryWrapper<ChannelMemberPO> queryWrapper = new LambdaQueryWrapper<>();

@@ -1,12 +1,14 @@
 package team.carrypigeon.backend.connection.protocol.encryption.aes;
 
-import lombok.extern.slf4j.Slf4j;
-
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -16,6 +18,7 @@ import java.security.SecureRandom;
  * */
 @Slf4j
 public class AESUtil {
+
     // 加密算法:AES_GCM
     private static final String ALGORITHM_AES = "AES";
     private static final String ALGORITHM = "AES/GCM/NoPadding";

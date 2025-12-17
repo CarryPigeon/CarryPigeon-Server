@@ -27,6 +27,7 @@
   - `team.carrypigeon.backend.api.bo.connection.CPSession`
   - `team.carrypigeon.backend.api.connection.notification.CPNotification`
   - `team.carrypigeon.backend.api.connection.notification.CPMessageNotificationData`
+  - `team.carrypigeon.backend.api.connection.notification.CPChannelMemberNotificationData`
   - `team.carrypigeon.backend.api.connection.notification.CPChannelReadStateNotificationData`
 - 协议
   - `team.carrypigeon.backend.api.connection.protocol.CPPacket`
@@ -218,15 +219,22 @@ DAO 接口定义在 `api` 模块，实现由宿主或侵入性插件提供。
 
 ### 5.2 LiteFlow 执行入口（宿主）
 
-包：`team.carrypigeon.backend.chat.domain.controller.netty`
+包：
+- `team.carrypigeon.backend.chat.domain.controller.netty`
+- `team.carrypigeon.backend.chat.domain.flow`
 
 - `CPControllerDispatcherImpl`
   - 宿主 Controller 分发器，会：
     - 解析 `CPPacket`；
     - 找到对应 `@CPControllerTag` 控制器；
-    - 调用 LiteFlow，以 `path` 为链名执行。
+    - 将请求交给 LiteFlow 执行器（见下）。
   - 插件一般不直接使用它，但需要理解：
     - 自己新增的 Controller + LiteFlow 链会自动被这个 Dispatcher 调用。
+
+- `FlowTxExecutor`
+  - LiteFlow 执行器，负责在统一的 Spring 事务中执行指定的 chain：
+    - `LiteflowResponse executeWithTx(String chain, DefaultContext context)`
+  - 宿主会通过它来执行链路，保证一次请求中各个节点对数据库的写操作要么全部成功，要么整体回滚。
 
 ---
 
@@ -256,4 +264,3 @@ DAO 接口定义在 `api` 模块，实现由宿主或侵入性插件提供。
 - `plugin-architecture.md`：从架构视角看扩展点；
 - `plugin-dev-guide.md`：从实战视角一步步写插件；
 - `plugin-security-and-sandbox.md`：上线前检查安全边界和风险。 
-

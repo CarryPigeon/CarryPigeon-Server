@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
 
@@ -16,12 +16,9 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKe
 @LiteflowComponent("CPChannelApplicationCidGetter")
 public class CPChannelApplicationCidGetterNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo = context.getData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
-        if (channelApplicationInfo==null){
-            argsError(context);
-            return;
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPChannelApplication channelApplicationInfo =
+                requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO, CPChannelApplication.class);
         context.setData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_CID, channelApplicationInfo.getCid());
     }
 }

@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.node;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 
 /**
  * 通用的“删除实体”类型 LiteFlow 节点基类。
@@ -11,7 +11,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         T entity = requireContext(context, getContextKey(), getEntityClass());
         if (!doDelete(entity)) {
             onFailure(entity, context);
@@ -45,7 +45,7 @@ public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
     /**
      * 删除成功后的回调，可用于记录日志，默认空实现。
      */
-    protected void afterSuccess(T entity, DefaultContext context) throws Exception {
+    protected void afterSuccess(T entity, CPFlowContext context) throws Exception {
         // no-op
     }
 
@@ -53,7 +53,7 @@ public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
      * 删除失败（返回 false）时的回调。默认实现输出通用错误响应，
      * 子类可覆盖以自定义错误信息或日志。
      */
-    protected void onFailure(T entity, DefaultContext context) throws Exception {
+    protected void onFailure(T entity, CPFlowContext context) throws Exception {
         businessError(context, getErrorMessage());
     }
 }

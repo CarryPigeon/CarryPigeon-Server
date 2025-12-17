@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.login.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 public class CPUserTokenLoginResult implements CPControllerResult {
 
     @Override
-    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper)  {
+    public void process(CPSession session, CPFlowContext context, ObjectMapper objectMapper)  {
         CPUserToken userToken = context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO);
         if (userToken == null){
             argsError(context);
@@ -28,7 +28,7 @@ public class CPUserTokenLoginResult implements CPControllerResult {
         }
         Result result = new Result(userToken.getToken(), userToken.getUid());
         context.setData(CPNodeCommonKeys.RESPONSE,
-                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+                CPResponse.success().setData(objectMapper.valueToTree(result)));
     }
 
     @Data

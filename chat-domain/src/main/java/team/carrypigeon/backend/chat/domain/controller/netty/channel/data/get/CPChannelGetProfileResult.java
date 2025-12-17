@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.channel.data.get;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,6 +8,7 @@ import lombok.experimental.Accessors;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
@@ -23,7 +23,7 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelGetProfileResult implements CPControllerResult {
 
     @Override
-    public void process(CPSession session, DefaultContext context, ObjectMapper objectMapper) {
+    public void process(CPSession session, CPFlowContext context, ObjectMapper objectMapper) {
         CPChannel channelInfo = context.getData(CPNodeChannelKeys.CHANNEL_INFO);
         if (channelInfo == null){
             argsError(context);
@@ -36,7 +36,7 @@ public class CPChannelGetProfileResult implements CPControllerResult {
                 .setAvatar(channelInfo.getAvatar())
                 .setCreateTime(TimeUtil.LocalDateTimeToMillis(channelInfo.getCreateTime()));
         context.setData(CPNodeCommonKeys.RESPONSE,
-                CPResponse.SUCCESS_RESPONSE.copy().setData(objectMapper.valueToTree(result)));
+                CPResponse.success().setData(objectMapper.valueToTree(result)));
     }
 
     @Data

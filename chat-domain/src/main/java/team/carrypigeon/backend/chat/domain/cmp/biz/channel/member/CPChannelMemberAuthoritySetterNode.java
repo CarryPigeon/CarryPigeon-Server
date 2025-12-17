@@ -1,14 +1,14 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
+import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
@@ -24,7 +24,7 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 @LiteflowComponent("CPChannelMemberAuthoritySetter")
 public class CPChannelMemberAuthoritySetterNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelMember channelMember = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
         CPChannel channelInfo = context.getData(CPNodeChannelKeys.CHANNEL_INFO);
         String authority = getBindData(CPNodeBindKeys.KEY, String.class);
@@ -37,7 +37,7 @@ public class CPChannelMemberAuthoritySetterNode extends CPNodeComponent {
             case "member":
                 if (channelInfo.getOwner() != sessionId){
                     context.setData(CPNodeCommonKeys.RESPONSE,
-                            CPResponse.AUTHORITY_ERROR_RESPONSE.setTextData("you are the owner of this channel"));
+                            CPResponse.authorityError("you are the owner of this channel"));
                     throw new CPReturnException();
                 }
                 channelMember.setAuthority(CPChannelMemberAuthorityEnum.MEMBER);

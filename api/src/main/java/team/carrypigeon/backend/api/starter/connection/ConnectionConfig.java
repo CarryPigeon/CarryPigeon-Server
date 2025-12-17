@@ -13,4 +13,16 @@ import org.springframework.context.annotation.Configuration;
 public class ConnectionConfig {
     // 连接端口
     private int port;
+
+    /**
+     * ECC 公钥（Base64 编码的 X.509 格式），可选。
+     * 如未配置，将在服务启动时生成新的密钥对。
+     */
+    private String eccPublicKey;
+
+    /**
+     * ECC 私钥（Base64 编码的 PKCS#8 格式），可选。
+     * 如未配置，将在服务启动时生成新的密钥对。
+     */
+    private String eccPrivateKey;
 }

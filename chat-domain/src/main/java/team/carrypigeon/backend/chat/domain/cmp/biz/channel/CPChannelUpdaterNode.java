@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 
@@ -21,11 +21,8 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 @LiteflowComponent("CPChannelUpdater")
 public class CPChannelUpdaterNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        CPChannel channelInfo = context.getData(CPNodeChannelKeys.CHANNEL_INFO);
-        if (channelInfo == null){
-            argsError(context);
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO, CPChannel.class);
         String channelInfoName = context.getData(CPNodeChannelKeys.CHANNEL_INFO_NAME);
         if (channelInfoName != null){
             channelInfo.setName(channelInfoName);

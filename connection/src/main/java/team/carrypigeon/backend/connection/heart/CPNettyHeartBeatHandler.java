@@ -3,13 +3,15 @@ package team.carrypigeon.backend.connection.heart;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleStateEvent;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 
 import static team.carrypigeon.backend.connection.attribute.ConnectionAttributes.SESSIONS;
 
-@Slf4j
 public class CPNettyHeartBeatHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger log = LoggerFactory.getLogger(CPNettyHeartBeatHandler.class);
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

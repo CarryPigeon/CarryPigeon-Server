@@ -146,7 +146,7 @@ LiteFlow 链配置（示意）：
 <chain name="/core/channel/message/read/state/update">
     THEN(
     UserLoginChecker,
-    RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     CPChannelMemberSelector.bind("key","CidWithUid"),
     CPChannelReadStateUpserter,
     CPUserSelfCollector,
@@ -181,7 +181,7 @@ LiteFlow 链配置（示意）：
 <chain name="/core/channel/message/read/state/get">
     THEN(
     UserLoginChecker,
-    RenameArg.bind("key","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     CPChannelMemberSelector.bind("key","CidWithUid"),
     CPChannelReadStateSelector
     )
@@ -272,4 +272,3 @@ LiteFlow 链配置（示意）：
 - 基于读状态做更加细粒度的“已读回执”（例如每条消息的已读用户列表）。
 
 这些扩展可以在保持当前接口向后兼容的前提下，逐步实现。 
-

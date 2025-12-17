@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.api.chat.domain.controller;
 
-import com.yomahub.liteflow.slot.DefaultContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 
 /**
  * 所有controller的VO接口<br/>
@@ -13,5 +13,5 @@ public interface CPControllerVO {
      * @param context liteflow上下文
      * @return 是否转换成功，不成功的情况可能为数据不合法获取缺少数据
      * */
-    boolean insertData(DefaultContext context);
+    boolean insertData(CPFlowContext context);
 }

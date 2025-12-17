@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.service.email.send;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
@@ -18,7 +18,7 @@ public class CPServiceSendEmailVO implements CPControllerVO {
     private String email;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         if (email == null || email.isEmpty()) {
             return false;
         }

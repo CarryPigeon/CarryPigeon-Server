@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import team.carrypigeon.backend.api.starter.connection.ConnectionConfig;
 import team.carrypigeon.backend.api.starter.connection.ConnectionStarter;
 
@@ -17,6 +18,8 @@ import team.carrypigeon.backend.api.starter.connection.ConnectionStarter;
 @SpringBootApplication
 // 允许定时任务
 @EnableScheduling
+// 启用声明式事务管理
+@EnableTransactionManagement
 // 扫描team.carrypigeon.backend包下的所有类文件
 // 插件相关包命名规范为team.carrypigeon.backend.plugin.{{PluginName}}
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})

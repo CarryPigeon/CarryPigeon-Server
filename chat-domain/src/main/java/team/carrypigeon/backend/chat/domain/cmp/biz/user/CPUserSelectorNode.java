@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
@@ -23,14 +23,18 @@ public class CPUserSelectorNode extends AbstractSelectorNode<CPUser> {
     private final UserDao userDao;
 
     @Override
-    protected CPUser doSelect(String mode, DefaultContext context) throws Exception {
+    protected CPUser doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode) {
             case "id":
                 Long id = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
-                return userDao.getById(id);
+                return select(context,
+                        buildSelectKey("user", "id", id),
+                        () -> userDao.getById(id));
             case "email":
                 String email = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL, String.class);
-                return userDao.getByEmail(email);
+                return select(context,
+                        buildSelectKey("user", "email", email),
+                        () -> userDao.getByEmail(email));
             default:
                 argsError(context);
                 return null;
@@ -43,7 +47,7 @@ public class CPUserSelectorNode extends AbstractSelectorNode<CPUser> {
     }
 
     @Override
-    protected void handleNotFound(String mode, DefaultContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
         businessError(context, "user not found");
     }
 }

@@ -5,20 +5,24 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import team.carrypigeon.backend.api.bo.connection.CPConnectionAttributes;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.controller.CPControllerDispatcher;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
 import team.carrypigeon.backend.connection.protocol.aad.AeadAad;
 import team.carrypigeon.backend.connection.protocol.encryption.aes.AESUtil;
 import team.carrypigeon.backend.connection.protocol.encryption.ecc.ECCUtil;
 import team.carrypigeon.backend.connection.security.CPAESKeyPack;
-import team.carrypigeon.backend.connection.security.CPECCKeyPack;
 import team.carrypigeon.backend.connection.session.NettySession;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.security.PrivateKey;
 
 import static team.carrypigeon.backend.connection.attribute.ConnectionAttributes.SESSIONS;
 
@@ -28,12 +32,24 @@ import static team.carrypigeon.backend.connection.attribute.ConnectionAttributes
  * 2. 负责通过状态机获取数据包的处理状态<br/>
  * 3. 负责将解密后的数据包交给分发器进一步处理<br/>
  * */
-@Slf4j
-@AllArgsConstructor
 public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
+
+    private static final Logger log = LoggerFactory.getLogger(ConnectionHandler.class);
 
     private final CPControllerDispatcher cpControllerDispatcher;
     private final ObjectMapper objectMapper;
+    /**
+     * 服务端 ECC 私钥，用于解密客户端上传的 AES 会话密钥。
+     */
+    private final PrivateKey serverPrivateKey;
+
+    public ConnectionHandler(CPControllerDispatcher cpControllerDispatcher,
+                             ObjectMapper objectMapper,
+                             PrivateKey serverPrivateKey) {
+        this.cpControllerDispatcher = cpControllerDispatcher;
+        this.objectMapper = objectMapper;
+        this.serverPrivateKey = serverPrivateKey;
+    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, byte[] msg) {
@@ -106,39 +122,76 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
      */
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.channel().attr(SESSIONS).set(new NettySession(ctx));
-        log.info("new connection active, remoteAddress={}", ctx.channel().remoteAddress());
+        NettySession session = new NettySession(ctx);
+        // 记录基础连接信息，供上层通过 CPFlowContext 读取
+        Object remote = ctx.channel().remoteAddress();
+        String remoteAddress = remote != null ? remote.toString() : null;
+        String remoteIp = null;
+        Integer remotePort = null;
+        if (remote instanceof InetSocketAddress inetSocketAddress) {
+            if (inetSocketAddress.getAddress() != null) {
+                remoteIp = inetSocketAddress.getAddress().getHostAddress();
+            }
+            remotePort = inetSocketAddress.getPort();
+        }
+        session.setAttributeValue(CPConnectionAttributes.REMOTE_ADDRESS, remoteAddress);
+        if (remoteIp != null) {
+            session.setAttributeValue(CPConnectionAttributes.REMOTE_IP, remoteIp);
+        }
+        if (remotePort != null) {
+            session.setAttributeValue(CPConnectionAttributes.REMOTE_PORT, remotePort);
+        }
+
+        ctx.channel().attr(SESSIONS).set(session);
+        log.info("new connection active, remoteAddress={}", remoteAddress);
         super.channelActive(ctx);
     }
 
     /**
-     * 处理获取到的非对称加密公钥的请求
+     * 处理密钥交换请求：
+     * 客户端使用预先约定的服务端公钥加密 AES 会话密钥，
+     * 将密文通过 {@link CPAESKeyPack} 发送到服务端。
+     * 服务端使用私钥解密得到 AES 密钥，并写入会话属性。
      */
     private void receiveAsymmetry(CPSession session, String msg) {
         try {
-            // 解析数据
-            CPECCKeyPack cpKeyMessage = objectMapper.readValue(msg, CPECCKeyPack.class);
-            if (cpKeyMessage.getId() == 0 || cpKeyMessage.getKey() == null) {
+            // 解析客户端发送的 AES 密钥包
+            CPAESKeyPack aesKeyPack = objectMapper.readValue(msg, CPAESKeyPack.class);
+            if (aesKeyPack.getId() == 0 || aesKeyPack.getKey() == null) {
                 throw new RuntimeException("illegal format");
             }
 
-            // 生成并设置对称密钥
-            session.setAttributeValue(ConnectionAttributes.ENCRYPTION_KEY,
-                    Base64.encode(AESUtil.generateKey().getEncoded()));
+            // 解密得到客户端生成的 AES 会话密钥（Base64 字符串）
+            byte[] encryptedKeyBytes = Base64.decode(aesKeyPack.getKey());
+            String aesKeyBase64 = ECCUtil.decrypt(encryptedKeyBytes, serverPrivateKey);
+            if (aesKeyBase64 == null || aesKeyBase64.isEmpty()) {
+                throw new RuntimeException("empty aes key");
+            }
 
-            // 封装返回包
-            CPAESKeyPack aesPack = new CPAESKeyPack();
-            aesPack.setKey(Base64.encode(ECCUtil.encrypt(
-                    session.getAttributeValue(ConnectionAttributes.ENCRYPTION_KEY, String.class),
-                    ECCUtil.rebuildPublicKey(cpKeyMessage.getKey()))));
-            aesPack.setId(cpKeyMessage.getId());
-            aesPack.setSessionId(session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class));
-            session.write(objectMapper.writeValueAsString(aesPack), false);
+            // 写入会话属性，后续业务数据解密将使用该密钥
+            session.setAttributeValue(ConnectionAttributes.ENCRYPTION_KEY, aesKeyBase64);
+
             // 设置状态
             session.setAttributeValue(ConnectionAttributes.ENCRYPTION_STATE, true);
-            log.info("ECC key exchange success, sessionId={}, requestId={}",
-                    session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class),
-                    cpKeyMessage.getId());
+            Long sessionId = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
+            log.info("AES key exchange success, sessionId={}, requestId={}", sessionId, aesKeyPack.getId());
+
+            // 通过一个 route=handshake 的推送告知客户端握手成功
+            CPNotification notification = new CPNotification();
+            notification.setRoute("handshake");
+            // data 可选，这里附带 sessionId 便于客户端调试
+            ObjectNode dataNode = objectMapper.createObjectNode();
+            if (sessionId != null) {
+                dataNode.put("sessionId", sessionId);
+            }
+            notification.setData(dataNode);
+
+            CPResponse handshakeResp = new CPResponse()
+                    .setId(-1)
+                    .setCode(0)
+                    .setData(objectMapper.valueToTree(notification));
+            // 使用刚协商好的 AES 密钥加密发送，验证链路可用
+            session.write(objectMapper.writeValueAsString(handshakeResp), true);
         } catch (Exception e) {
             Long sessionId = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
             log.error("asymmetric key exchange error, sessionId={}", sessionId, e);

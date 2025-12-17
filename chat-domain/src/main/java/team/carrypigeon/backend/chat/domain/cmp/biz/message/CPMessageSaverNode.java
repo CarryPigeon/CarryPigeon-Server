@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSaveNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
@@ -41,13 +42,13 @@ public class CPMessageSaverNode extends AbstractSaveNode<CPMessage> {
     }
 
     @Override
-    protected void afterSuccess(CPMessage entity, com.yomahub.liteflow.slot.DefaultContext context) {
+    protected void afterSuccess(CPMessage entity, CPFlowContext context) {
         log.debug("CPMessageSaver success, mid={}, cid={}, uid={}",
                 entity.getId(), entity.getCid(), entity.getUid());
     }
 
     @Override
-    protected void onFailure(CPMessage entity, com.yomahub.liteflow.slot.DefaultContext context) {
+    protected void onFailure(CPMessage entity, CPFlowContext context) {
         if (entity != null) {
             log.error("CPMessageSaver failed to save message, mid={}, cid={}, uid={}",
                     entity.getId(), entity.getCid(), entity.getUid());

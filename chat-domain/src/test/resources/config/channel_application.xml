@@ -19,16 +19,15 @@
     <!--处理申请-->
     <chain name="/core/channel/application/process">
         THEN(
-        /**判断用户是否登录**/
-        UserLoginChecker,
-        /**重命名用户信息**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        RenameScriptAppProcessChannel = {"ChannelApplicationInfo_Cid":"ChannelInfo_Id"},
+        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**获取申请信息**/
         CPChannelApplicationSelector.bind("key","id"),
         /**获取通道id信息**/
         CPChannelApplicationCidGetter,
         /**重命名数据**/
-        RenameArg.bind("key","ChannelInfo_Id:ChannelApplicationInfo_Cid"),
+        RenameArg.data(RenameScriptAppProcessChannel),
         /**判断是否为管理员**/
         CPChannelAdminChecker,
         /**处理申请**/
@@ -61,10 +60,8 @@
     <!--获取申请列表-->
     <chain name="/core/channel/application/list">
         THEN(
-        /**检查用户是否登录**/
-        UserLoginChecker,
-        /**重命名参数**/
-        RenameArg.bind("key","UserInfo_Id:SessionId"),
+        /** 检查用户是否登录并将 SessionId 映射为 UserInfo_Id **/
+        UserLoginGuard,
         /**判断是否为管理员**/
         CPChannelAdminChecker,
         /**获取申请列表**/

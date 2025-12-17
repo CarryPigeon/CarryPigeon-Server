@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.message.CPMessageData;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
@@ -40,7 +40,7 @@ public class CPMessageParseNode extends CPNodeComponent {
     private final CPMessageParserService cpMessageParserService;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
         boolean soft = "soft".equalsIgnoreCase(type);
 
@@ -61,7 +61,7 @@ public class CPMessageParseNode extends CPNodeComponent {
             }
             log.warn("CPMessageParse hard fail: unsupported or invalid type, domain={}", domain);
             context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.ERROR_RESPONSE.copy().setTextData("message type error"));
+                    CPResponse.error("message type error"));
             throw new CPReturnException();
         }
         context.setData(CPNodeValueKeyExtraConstants.MESSAGE_DATA, messageData);

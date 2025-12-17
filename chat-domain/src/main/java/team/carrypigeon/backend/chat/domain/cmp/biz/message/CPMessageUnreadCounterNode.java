@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
@@ -31,18 +31,15 @@ public class CPMessageUnreadCounterNode extends CPNodeComponent {
     private final ChannelMessageDao channelMessageDao;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
-        Long cid = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
-        Long startTime = context.getData(CPNodeMessageKeys.MESSAGE_UNREAD_START_TIME);
-        Long uid = context.getData(CPNodeCommonKeys.SESSION_ID);
-        if (cid == null || uid == null || startTime == null) {
-            log.error("CPMessageUnreadCounter args error, cid={}, uid={}, startTime={}",
-                    cid, uid, startTime);
-            argsError(context);
-            return;
-        }
+    public void process(CPSession session, CPFlowContext context) throws Exception {
+        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
+        Long startTime = requireContext(context, CPNodeMessageKeys.MESSAGE_UNREAD_START_TIME, Long.class);
+        Long uid = requireContext(context, CPNodeCommonKeys.SESSION_ID, Long.class);
         LocalDateTime start = TimeUtil.MillisToLocalDateTime(startTime);
-        int count = channelMessageDao.getAfterCount(cid, uid, start);
+        Integer countObj = select(context,
+                buildSelectKey("message_unread_count", java.util.Map.of("cid", cid, "startTime", startTime, "uid", uid)),
+                () -> channelMessageDao.getAfterCount(cid, uid, start));
+        int count = countObj == null ? 0 : countObj;
         context.setData(CPNodeMessageKeys.MESSAGE_UNREAD_COUNT, (long) count);
         log.debug("CPMessageUnreadCounter success, cid={}, uid={}, startTime={}, count={}",
                 cid, uid, startTime, count);

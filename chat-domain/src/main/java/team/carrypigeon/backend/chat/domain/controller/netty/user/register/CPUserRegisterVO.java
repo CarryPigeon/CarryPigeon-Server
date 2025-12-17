@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.controller.netty.user.register;
 
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import team.carrypigeon.backend.api.chat.domain.controller.CPControllerVO;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 import team.carrypigeon.backend.common.id.IdUtil;
@@ -22,7 +22,7 @@ public class CPUserRegisterVO implements CPControllerVO {
     private int code;
 
     @Override
-    public boolean insertData(DefaultContext context) {
+    public boolean insertData(CPFlowContext context) {
         if (email != null && !email.isEmpty() && code != 0) {
             // 插入邮箱数据用于后续校验
             context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);

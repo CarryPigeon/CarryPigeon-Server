@@ -2,11 +2,11 @@ package team.carrypigeon.backend.chat.domain.cmp.notifier.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import com.yomahub.liteflow.slot.DefaultContext;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.notification.CPChannelReadStateNotificationData;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys;
@@ -28,7 +28,7 @@ public class CPChannelReadStateNotifyBuilderNode extends CPNodeComponent {
     private final ObjectMapper objectMapper;
 
     @Override
-    public void process(CPSession session, DefaultContext context) throws Exception {
+    public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelReadState state = context.getData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO);
         if (state == null) {
             log.error("CPChannelReadStateNotifyBuilder args error: ChannelReadStateInfo is null");
@@ -44,4 +44,3 @@ public class CPChannelReadStateNotifyBuilderNode extends CPNodeComponent {
                 state.getUid(), state.getCid(), state.getLastReadTime());
     }
 }
-
