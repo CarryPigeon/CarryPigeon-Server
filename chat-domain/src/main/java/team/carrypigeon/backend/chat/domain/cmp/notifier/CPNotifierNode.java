@@ -34,7 +34,7 @@ public class CPNotifierNode extends CPNodeComponent {
         CPNotification notification = new CPNotification();
         notification.setRoute(route)
                 .setData(context.getData(CPNodeNotifierKeys.NOTIFIER_DATA));
-        log.debug("CPNotifier: send notification, route={}, uidsCount={}", route, uids.size());
+        log.info("CPNotifier: send notification, route={}, uidsCount={}", route, uids.size());
         notificationSender.sendNotification(uids, notification);
     }
 }

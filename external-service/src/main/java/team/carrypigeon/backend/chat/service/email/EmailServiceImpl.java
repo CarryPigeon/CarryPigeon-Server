@@ -18,10 +18,10 @@ public class EmailServiceImpl implements CPEmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String from;
 
-    @Value("${spring.mail.enable}")
+    @Value("${spring.mail.enable:false}")
     private boolean isEnable;
 
     public EmailServiceImpl(JavaMailSender mailSender) {
@@ -34,6 +34,12 @@ public class EmailServiceImpl implements CPEmailService {
             // 邮件功能关闭时打一个调试日志，方便确认配置原因
             log.debug("email send skipped because spring.mail.enable=false, to={}, subject={}", to, subject);
             return;
+        }
+        if (from == null || from.isBlank()) {
+            throw new IllegalStateException("spring.mail.username is required when spring.mail.enable=true");
+        }
+        if (to == null || to.isBlank()) {
+            throw new IllegalArgumentException("to is required");
         }
 
         SimpleMailMessage message = new SimpleMailMessage();

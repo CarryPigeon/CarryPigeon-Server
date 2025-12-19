@@ -7,8 +7,9 @@
             EmailValidChecker,
             /** 基于 remoteIp + email 的简单限流 **/
             EmailRateLimitChecker,
-            /** 生成验证码、写入缓存并发送邮件 **/
+            /** 生成验证码、写入缓存并发送邮件（测试环境使用 InMemoryEmailService） **/
             EmailCodeSender
         );
     </chain>
 </flow>
+

@@ -1,8 +1,10 @@
 liteflow:
   rule-source: config/*.xml
+spring:
+  mail:
+    enable: true
 minio:
   endpoint: http://localhost:9005
   bucketName: carrygieon
   accessKey: minioadmin
   secretKey: minioadmin
-

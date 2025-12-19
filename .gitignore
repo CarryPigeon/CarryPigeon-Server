@@ -39,3 +39,4 @@ build/
 
 service-logs/
 .idea/
+.m2/
