@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
@@ -36,7 +36,7 @@ import java.time.LocalDateTime;
  * - /core/channel/application/process
  * - /core/channel/application/list
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class ChannelApplicationControllerFlowTest {
 
@@ -55,7 +55,7 @@ public class ChannelApplicationControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -81,16 +81,16 @@ public class ChannelApplicationControllerFlowTest {
         context.setData("session", session);
 
         CPChannelCreateApplicationVO vo = new CPChannelCreateApplicationVO(cid, "join please");
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/application/create", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         // 应该有一条 pending 申请
         CPChannelApplication[] apps = channelApplicationDAO.getByCid(cid, 0, 10);
-        Assert.assertEquals(1, apps.length);
-        Assert.assertEquals(uid, apps[0].getUid().longValue());
-        Assert.assertEquals(CPChannelApplicationStateEnum.PENDING, apps[0].getState());
+        Assertions.assertEquals(1, apps.length);
+        Assertions.assertEquals(uid, apps[0].getUid().longValue());
+        Assertions.assertEquals(CPChannelApplicationStateEnum.PENDING, apps[0].getState());
     }
 
     @Test
@@ -114,10 +114,10 @@ public class ChannelApplicationControllerFlowTest {
         context.setData("session", session);
 
         CPChannelCreateApplicationVO vo = new CPChannelCreateApplicationVO(cid, "join");
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/application/create", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
     }
 
     @Test
@@ -163,18 +163,18 @@ public class ChannelApplicationControllerFlowTest {
 
         // result=1 -> approved
         CPChannelProcessApplicationVO vo = new CPChannelProcessApplicationVO(app.getId(), 1);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/application/process", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         // 申请状态应为 APPROVED
         CPChannelApplication afterApp = channelApplicationDAO.getById(app.getId());
-        Assert.assertEquals(CPChannelApplicationStateEnum.APPROVED, afterApp.getState());
+        Assertions.assertEquals(CPChannelApplicationStateEnum.APPROVED, afterApp.getState());
 
         // 申请人应成为频道成员
         CPChannelMember newMember = channelMemberDao.getMember(applicantUid, cid);
-        Assert.assertNotNull(newMember);
+        Assertions.assertNotNull(newMember);
     }
 
     @Test
@@ -218,17 +218,17 @@ public class ChannelApplicationControllerFlowTest {
 
         // result=2 -> rejected
         CPChannelProcessApplicationVO vo = new CPChannelProcessApplicationVO(app.getId(), 2);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/application/process", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelApplication afterApp = channelApplicationDAO.getById(app.getId());
-        Assert.assertEquals(CPChannelApplicationStateEnum.REJECTED, afterApp.getState());
+        Assertions.assertEquals(CPChannelApplicationStateEnum.REJECTED, afterApp.getState());
 
         // 申请人不应被加入成员
         CPChannelMember member = channelMemberDao.getMember(applicantUid, cid);
-        Assert.assertNull(member);
+        Assertions.assertNull(member);
     }
 
     @Test
@@ -271,9 +271,9 @@ public class ChannelApplicationControllerFlowTest {
         context.setData("session", session);
 
         CPChannelListApplicationVO vo = new CPChannelListApplicationVO(cid, 0, 10);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/application/list", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 }

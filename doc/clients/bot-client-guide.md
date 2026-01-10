@@ -37,7 +37,7 @@
 ```json
 {
   "id": 1,
-  "sessionId": 0,
+  "session_id": 0,
   "key": "<Base64-encoded-ECIES(aes_key_base64)>"
 }
 ```
@@ -51,13 +51,13 @@
   "data": {
     "route": "handshake",
     "data": {
-      "sessionId": 123456789
+      "session_id": 123456789
     }
   }
 }
 ```
 
-   - 机器人端解密这条响应并看到 `route="handshake"` 即可认为握手成功，并从 `data.sessionId` 记录 `sessionId`，后续业务包需要写入 AAD。
+   - 机器人端解密这条响应并看到 `route="handshake"` 即可认为握手成功，并从 `data.session_id` 记录 `session_id`，后续业务包需要写入 AAD。
 
 3. **业务阶段（AES-GCM + AAD）**
    - 之后所有请求的 payload 为：
@@ -72,21 +72,21 @@
    - `nonce`：12 字节随机数；全 0 用于心跳；
    - `AAD`：由服务器约定的结构：
      - 4 字节：包序号（int）；
-     - 8 字节：`sessionId`；
+     - 8 字节：`session_id`；
      - 8 字节：包时间戳（毫秒）。
    - `cipherText`：AES-GCM 加密的业务 JSON 文本（下文的 `CPPacket`）。
 
 服务器会校验：
 
 - 包序号递增；
-- sessionId 一致；
+- session_id 一致；
 - 时间戳在合理时间窗口；
 - 解密成功且 JSON 格式正确。
 
 > 建议：  
 > 机器人端实现一个“会话对象”，负责维护：
 > - 当前 AES key；  
-> - 当前 sessionId；  
+> - 当前 session_id；  
 > - 当前包序号（每发一包自增）；  
 > - 心跳与重连逻辑。
 
@@ -215,7 +215,7 @@
 ### 4.4 拉取消息与未读数
 
 - 拉取消息列表：`/core/channel/message/list`
-  - 根据 `startTime` 和 `count` 拉取历史消息；
+  - 根据 `start_time` 和 `count` 拉取历史消息；
 - 获取未读数：`/core/channel/message/unread/get`
   - 传入一个时间戳，统计之后的未读消息数量。
 
@@ -234,7 +234,7 @@
 推荐用法：
 
 1. 机器人启动后：
-   - 对每个关心的 `cid` 调用 `/read/state/get`，拿到 `lastReadTime`；
+   - 对每个关心的 `cid` 调用 `/read/state/get`，拿到 `last_read_time`；
    - 用作初次拉取消息和未读统计的基准。
 
 2. 处理完新消息后：
@@ -245,12 +245,12 @@
   "route": "/core/channel/message/read/state/update",
   "data": {
     "cid": 12345,
-    "lastReadTime": 1700000000000
+    "last_read_time": 1700000000000
   }
 }
 ```
 
-3. 后端会将 `(uid, cid)` 的 `lastReadTime` 更新为较大的值，并广播通知到该用户所有会话。
+3. 后端会将 `(uid, cid)` 的 `last_read_time` 更新为较大的值，并广播通知到该用户所有会话。
 
 ---
 
@@ -325,7 +325,7 @@ payload 类型：`CPChannelReadStateNotificationData`：
   "data": {
     "cid": 12345,
     "uid": 67890,
-    "lastReadTime": 1700000000000
+    "last_read_time": 1700000000000
   }
 }
 ```
@@ -334,7 +334,7 @@ payload 类型：`CPChannelReadStateNotificationData`：
 
 - `cid`：频道 id
 - `uid`：用户 id
-- `lastReadTime`：最新读到的时间（毫秒时间戳）
+- `last_read_time`：最新读到的时间（毫秒时间戳）
 
 机器人用途示例：
 
@@ -353,7 +353,7 @@ payload 类型：`CPChannelReadStateNotificationData`：
 
 2. **异常断连**
    - 捕获 socket 关闭、读写异常；
-   - 清理内部状态（如包序号、sessionId 等）；
+   - 清理内部状态（如包序号、session_id 等）；
    - 重新进行握手与登录。
 
 3. **幂等性**
@@ -366,7 +366,7 @@ payload 类型：`CPChannelReadStateNotificationData`：
 
 在开发机器人端时，可以参考以下清单：
 
-- [ ] 实现握手流程（ECC + AES-GCM），正确处理 sessionId 与包序号；
+- [ ] 实现握手流程（ECC + AES-GCM），正确处理 session_id 与包序号；
 - [ ] 实现 CP 协议编解码（`CPPacket` / `CPResponse`）；
 - [ ] 支持同时处理“请求响应”和“通知”两类消息；
 - [ ] 实现 token 登录，并在连接建立后自动登录；

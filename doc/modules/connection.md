@@ -28,7 +28,7 @@
     - `NettyDecoder`：实现长度前缀帧解析；
     - `NettyEncoder`：实现业务包编码（长度前缀 + payload）。
   - `protocol/aad`：
-    - `AeadAad`：封装 AES-GCM 的 AAD 结构（包序号、sessionId、时间戳）。
+    - `AeadAad`：封装 AES-GCM 的 AAD 结构（包序号、session_id、时间戳）。
 
 - `security`
   - `CPAESKeyPack`：握手阶段客户端与服务端之间传递 AES 会话密钥的载体（当前版本为“客户端上传密钥”方案，仅由客户端发送）；
@@ -113,7 +113,7 @@
    ```json
    {
      "id": 1,
-     "sessionId": 0,
+     "session_id": 0,
      "key": "<encryptedKeyBase64>"
    }
    ```
@@ -127,7 +127,7 @@
 
 4. **服务端 → 客户端：握手成功通知**
 
-   - 解密成功后，服务端会构造一个 `CPNotification{route="handshake", data={sessionId}}`，并包装在 `CPResponse` 中：
+  - 解密成功后，服务端会构造一个 `CPNotification{route="handshake", data={session_id}}`，并包装在 `CPResponse` 中：
 
    ```json
    {
@@ -136,7 +136,7 @@
      "data": {
        "route": "handshake",
        "data": {
-         "sessionId": 123456789
+        "session_id": 123456789
        }
      }
    }
@@ -158,7 +158,7 @@
 - `nonce`：12 字节随机数（AES-GCM nonce），全 0 时表示心跳包；
 - `AAD`：20 字节，由 `AeadAad` 封装：
   - 4 字节：包序号（int, big-endian）；
-  - 8 字节：sessionId（long, big-endian）；
+  - 8 字节：session_id（long, big-endian）；
   - 8 字节：时间戳（long, big-endian, 毫秒）。
 - `cipherText`：AES-GCM 加密后的业务 JSON 文本。
 
@@ -169,16 +169,16 @@
 - 校验长度 == `AeadAad.LENGTH`；
 - 解析出：
   - `packageId`（包序号）；
-  - `sessionId`；
+  - `session_id`；
   - `timestampMillis`。
 - 检查：
   - **包序号**：必须单调递增，相对于 session 中保存的最近包序号；
-  - **sessionId 一致**：与握手时分配的 `PACKAGE_SESSION_ID` 匹配；
+  - **session_id 一致**：与握手时分配的 `PACKAGE_SESSION_ID` 匹配；
   - **时间窗口**：`timestampMillis` 必须在一定时间窗口内（例如 ±3 分钟）。
 
 验证失败时：
 
-- 打印包含 sessionId、远端地址等信息的错误日志；
+- 打印包含 session_id、远端地址等信息的错误日志；
 - 关闭连接，避免继续处理异常流量。
 
 ---
@@ -199,7 +199,7 @@
 2. 业务阶段：
    - 从 payload 中拆分 `nonce` / `aad` / `cipherText`；
    - 处理心跳包（nonce 全 0，不进入业务逻辑）；
-   - 校验 AAD（包序号、sessionId、时间戳）；
+   - 校验 AAD（包序号、session_id、时间戳）；
    - 使用 `AESUtil.decryptWithAAD` 解密业务 JSON；
    - 调用 `CPControllerDispatcher` 处理业务：
      - 将解密后的 JSON 交给 `chat-domain`；
@@ -218,7 +218,7 @@
 
 - 实现 `CPSession` 接口，对业务层提供统一的 `write` 方法；
 - 在 `write` 时：
-  - 构建 AAD（递增的包序号 + sessionId + 当前时间）；
+  - 构建 AAD（递增的包序号 + session_id + 当前时间）；
   - 使用 AES-GCM 加密业务 JSON；
   - 组装 `nonce | aad | cipherText`，交给 `NettyEncoder` 写出；
 - 维护每个会话的本地状态（如本地包序号等）。

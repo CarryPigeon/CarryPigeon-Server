@@ -55,7 +55,7 @@ The backend uses an ECC+AES scheme to protect business packets.
    - Encrypt `aesKeyBase64` with the server ECC public key via `ECCUtil.encrypt`
    - Wrap into `connection.security.CPAESKeyPack`:
      - `id`: long, client-generated request id
-     - `sessionId`: long, optional, current session id (can be 0 for now)
+     - `session_id`: long, optional, current session id (can be 0 for now)
      - `key`: string, Base64-encoded ECIES ciphertext of `aesKeyBase64`
    - Send this JSON over the 2-byte-length frame as a plaintext handshake packet.
 
@@ -77,7 +77,7 @@ The backend uses an ECC+AES scheme to protect business packets.
        {
          "route": "handshake",
          "data": {
-           "sessionId": 123456789   // optional, for debugging
+           "session_id": 123456789   // optional, for debugging
          }
        }
        ```
@@ -240,7 +240,7 @@ Each route is defined by a Netty controller in `chat-domain`, annotated with
 
 Below is a high-level overview of the key routes.
 
-> Field names match VO fields exactly (camelCase).
+> JSON field names use `snake_case` (Jackson `SNAKE_CASE` is enabled server-side).
 
 ### 3.1 User routes
 
@@ -404,7 +404,7 @@ Both return default success result.
   "owner": 12345,
   "brief": "string",
   "avatar": 0,
-  "createTime": 0
+  "create_time": 0
 }
 ```
 
@@ -435,8 +435,8 @@ Both return default success result.
 {
   "count": 2,
   "members": [
-    { "uid": 1, "name": "A", "authority": 0, "joinTime": 0 },
-    { "uid": 2, "name": "B", "authority": 0, "joinTime": 0 }
+    { "uid": 1, "name": "A", "authority": 0, "join_time": 0 },
+    { "uid": 2, "name": "B", "authority": 0, "join_time": 0 }
   ]
 }
 ```
@@ -457,7 +457,7 @@ Result shape:
 {
   "count": 1,
   "applications": [
-    { "id": 1, "uid": 123, "state": 0, "msg": "...", "applyTime": 0 }
+    { "id": 1, "uid": 123, "state": 0, "msg": "...", "apply_time": 0 }
   ]
 }
 ```
@@ -522,7 +522,7 @@ Result shape:
 ```json
 {
   "cid": 12345,
-  "startTime": 0,
+  "start_time": 0,
   "count": 50
 }
 ```
@@ -537,7 +537,7 @@ Result shape:
 ```json
 {
   "cid": 12345,
-  "startTime": 0
+  "start_time": 0
 }
 ```
 
@@ -557,7 +557,7 @@ Result shape:
 ```json
 {
   "cid": 12345,
-  "lastReadTime": 1700000000000
+  "last_read_time": 1700000000000
 }
 ```
 

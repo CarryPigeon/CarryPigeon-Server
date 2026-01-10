@@ -3,9 +3,9 @@ package team.carrypigeon.backend.connection.protocol.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import team.carrypigeon.backend.api.bo.connection.CPSession;
+import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
+import team.carrypigeon.backend.connection.disconnect.DisconnectSupport;
 
 import java.util.List;
 
@@ -19,7 +19,6 @@ import java.util.List;
  *  - 使用 mark/reset 保证半包不破坏 readerIndex；
  *  - 对 length 做上限校验，防止异常大包攻击。
  */
-@Slf4j
 public class NettyDecoder extends ByteToMessageDecoder {
 
     private static final int MAX_FRAME_LENGTH = 64 * 1024; // 64 KB
@@ -34,7 +33,14 @@ public class NettyDecoder extends ByteToMessageDecoder {
 
         int length = in.readUnsignedShort();
         if (length <= 0 || length > MAX_FRAME_LENGTH) {
-            log.error("NettyDecoder length illegal, length={}, remoteAddress={}", length, ctx.channel().remoteAddress());
+            CPSession session = ctx.channel().attr(ConnectionAttributes.SESSIONS).get();
+            DisconnectSupport.markDisconnect(
+                    ctx.channel(),
+                    session,
+                    "frame_length_illegal",
+                    "FrameLengthIllegal",
+                    "length=" + length + ", max=" + MAX_FRAME_LENGTH
+            );
             // 直接关闭连接，避免继续读取异常数据
             ctx.close();
             return;

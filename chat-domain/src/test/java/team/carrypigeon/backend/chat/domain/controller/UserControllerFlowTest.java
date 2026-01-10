@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
@@ -38,7 +38,7 @@ import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
  * 3. 校验链路执行结果与数据库状态；
  * 4. 必要时清理内存数据库状态（当前 InMemory 实现每个测试独立实例，不共享状态）。
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class UserControllerFlowTest {
 
@@ -57,7 +57,7 @@ public class UserControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -74,13 +74,13 @@ public class UserControllerFlowTest {
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPUser saved = userDao.getByEmail(email);
-        Assert.assertNotNull(saved);
+        Assertions.assertNotNull(saved);
         System.out.println( saved);
     }
 
@@ -94,13 +94,13 @@ public class UserControllerFlowTest {
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
         CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(100, response.getCode());
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(100, response.getCode());
     }
 
     @Test
@@ -118,14 +118,14 @@ public class UserControllerFlowTest {
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, code);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
 
         CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(100, response.getCode());
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(100, response.getCode());
     }
 
     @Test
@@ -139,14 +139,14 @@ public class UserControllerFlowTest {
         context.setData("session", new TestSession());
 
         CPUserRegisterVO vo = new CPUserRegisterVO(email, wrongCode);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/register", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
 
         CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(100, response.getCode());
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(100, response.getCode());
     }
 
     // ---------- /core/user/profile/get ----------
@@ -164,10 +164,10 @@ public class UserControllerFlowTest {
         context.setData("session", session);
 
         CPUserGetProfileVO vo = new CPUserGetProfileVO(user.getId());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/profile/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     @Test
@@ -183,14 +183,14 @@ public class UserControllerFlowTest {
         context.setData("session", session);
 
         CPUserGetProfileVO vo = new CPUserGetProfileVO(user.getId());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/profile/get", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
 
         CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        Assert.assertNotNull(response);
-        Assert.assertEquals(300, response.getCode());
+        Assertions.assertNotNull(response);
+        Assertions.assertEquals(300, response.getCode());
     }
 
     // ---------- /core/user/profile/update ----------
@@ -210,14 +210,14 @@ public class UserControllerFlowTest {
         CPUserUpdateProfileVO vo = new CPUserUpdateProfileVO(
                 "newName", 1L, 0, "brief", System.currentTimeMillis()
         );
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/profile/update", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPUser updated = userDao.getById(user.getId());
-        Assert.assertNotNull(updated);
-        Assert.assertEquals("newName", updated.getUsername());
+        Assertions.assertNotNull(updated);
+        Assertions.assertEquals("newName", updated.getUsername());
     }
 
     // ---------- /core/user/profile/update/email ----------
@@ -239,14 +239,14 @@ public class UserControllerFlowTest {
         context.setData("session", session);
 
         CPUserUpdateEmailProfileVO vo = new CPUserUpdateEmailProfileVO(newEmail, code);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/profile/update/email", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPUser updated = userDao.getById(user.getId());
-        Assert.assertNotNull(updated);
-        Assert.assertEquals(newEmail, updated.getEmail());
+        Assertions.assertNotNull(updated);
+        Assertions.assertEquals(newEmail, updated.getEmail());
     }
 
     // ---------- /core/user/login/email ----------
@@ -265,10 +265,10 @@ public class UserControllerFlowTest {
         context.setData("session", new TestSession());
 
         CPUserEmailLoginVO vo = new CPUserEmailLoginVO(email, code);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/login/email", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     // ---------- /core/user/login/token ----------
@@ -289,13 +289,13 @@ public class UserControllerFlowTest {
         context.setData("session", session);
 
         CPUserTokenLoginVO vo = new CPUserTokenLoginVO("TOKEN_500");
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/login/token", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         Long loggedUid = session.getAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, Long.class);
-        Assert.assertEquals(user.getId(), loggedUid.longValue());
+        Assertions.assertEquals(user.getId(), loggedUid.longValue());
     }
 
     // ---------- /core/user/login/token/logout ----------
@@ -317,12 +317,12 @@ public class UserControllerFlowTest {
         context.setData("session", session);
 
         CPUserTokenLogoutVO vo = new CPUserTokenLogoutVO("TOKEN_600");
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/user/login/token/logout", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPUserToken deleted = userTokenDao.getByToken("TOKEN_600");
-        Assert.assertNull(deleted);
+        Assertions.assertNull(deleted);
     }
 }

@@ -16,20 +16,20 @@
 握手流程简要：
 
 1. 服务端启动时加载或生成 ECC 密钥对，公钥通过安全途径分发给客户端；
-2. 客户端本地生成 AES 会话密钥，对其 Base64 文本使用服务器公钥加密后封装为 `CPAESKeyPack { id, sessionId, key }` 发送给服务器；
+2. 客户端本地生成 AES 会话密钥，对其 Base64 文本使用服务器公钥加密后封装为 `CPAESKeyPack { id, session_id, key }` 发送给服务器；
 3. 服务器使用 ECC 私钥解密得到 AES 密钥，保存到会话状态，并发送一条 `route="handshake"` 的加密通知，双方进入加密通信阶段。
 
 ### 1.2 AAD 与重放防护
 
 - 业务包中携带 AAD（`AeadAad`）：
   - 包序号（int）；
-  - sessionId（long）；
+  - session_id（long）；
   - 时间戳（long 毫秒）。
 - 服务端检查：
   - 包序号必须单调递增：
     - 防止重放攻击；
     - 检测乱序包；
-  - sessionId 必须与当前会话一致：
+  - session_id 必须与当前会话一致：
     - 防止跨会话混淆；
   - 时间戳必须在允许窗口内（例如 ±3 分钟）：
     - 防止长时间重放。

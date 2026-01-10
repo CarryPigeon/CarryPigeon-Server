@@ -88,14 +88,14 @@
 ```json
 {
   "cid": 12345,
-  "startTime": 0,
+  "start_time": 0,
   "count": 50
 }
 ```
 
 - `cid`: long，频道 id
-- `startTime`: long，起始时间（毫秒时间戳）  
-  语义：返回 `sendTime <= startTime` 的最新若干条消息；
+- `start_time`: long，起始时间（毫秒时间戳）  
+  语义：返回 `send_time <= start_time` 的最新若干条消息；
 - `count`: int，本次拉取的最大条数，范围 `[1, 50]`。
 
 ### 4.2 响应
@@ -117,16 +117,16 @@
 ```json
 {
   "cid": 12345,
-  "startTime": 1700000000000
+  "start_time": 1700000000000
 }
 ```
 
 - `cid`: long，频道 id
-- `startTime`: long，从该时间点（毫秒）之后统计未读消息数量
+- `start_time`: long，从该时间点（毫秒）之后统计未读消息数量
 
 > 注意：  
 > 未读数统计完全基于 **前端传入的时间戳**，不会自动使用服务端的读状态表。  
-> 典型用法是前端以“最后一次已读时间”作为 `startTime`。
+> 典型用法是前端以“最后一次已读时间”作为 `start_time`。
 
 ### 5.2 响应
 
@@ -157,17 +157,17 @@
 ```json
 {
   "cid": 12345,
-  "lastReadTime": 1700000000000
+  "last_read_time": 1700000000000
 }
 ```
 
 - `cid`: long，频道 id
-- `lastReadTime`: long，最新已读时间（毫秒时间戳）
+- `last_read_time`: long，最新已读时间（毫秒时间戳）
 
 约束：
 
-- 服务端内部维护 `CPChannelReadState(uid, cid, lastReadTime)`；
-- 每次更新时，只有当 `lastReadTime` **大于** 之前记录的值时才会覆盖（只前进不后退）。
+- 服务端内部维护 `CPChannelReadState(uid, cid, lastReadTime)`（对外 JSON 字段为 `last_read_time`）；
+- 每次更新时，只有当 `last_read_time` **大于** 之前记录的值时才会覆盖（只前进不后退）。
 
 ### 6.2 响应
 
@@ -184,17 +184,17 @@
 {
   "cid": 12345,
   "uid": 67890,
-  "lastReadTime": 1700000000000
+  "last_read_time": 1700000000000
 }
 ```
 
 - `cid`: long，频道 id
 - `uid`: long，用户 id
-- `lastReadTime`: long，最新已读时间（毫秒）
+- `last_read_time`: long，最新已读时间（毫秒）
 
 客户端策略建议：
 
-- 所有端收到该通知后，应更新本地缓存的 `(uid, cid)` 对应 `lastReadTime`；
+- 所有端收到该通知后，应更新本地缓存的 `(uid, cid)` 对应 `last_read_time`；
 - 后续调用 `/unread/get` 时，可以以该时间为基准计算未读数。
 
 ---
@@ -227,13 +227,13 @@
 {
   "cid": 12345,
   "uid": 67890,
-  "lastReadTime": 1700000000000
+  "last_read_time": 1700000000000
 }
 ```
 
 语义：
 
-- 若没有记录，则服务端会返回 `lastReadTime = 0`；
+- 若没有记录，则服务端会返回 `last_read_time = 0`；
 - 否则返回最新一次 `/read/state/update` 或内部更新记录的时间。
 
 ### 7.3 与未读数的组合使用建议
@@ -241,13 +241,12 @@
 在多端同步场景下，推荐策略：
 
 1. 新设备上线：
-   - 调用 `/core/channel/message/read/state/get` 拿到 `lastReadTime`；
+   - 调用 `/core/channel/message/read/state/get` 拿到 `last_read_time`；
    - 根据业务需要，加载历史消息列表。
 2. 展示未读数：
-   - 以 `lastReadTime` 作为 `startTime` 调用 `/core/channel/message/unread/get`；
+   - 以 `last_read_time` 作为 `start_time` 调用 `/core/channel/message/unread/get`；
 3. 用户阅读新消息后：
    - 以本地最新阅读时间调用 `/core/channel/message/read/state/update`；
    - 所有设备收到 `/core/channel/message/read/state` 通知后更新本地状态。
 
 这样可以在保持 **服务端作为权威读状态存储** 的前提下，让未读数计算仍然简单地基于“前端传入时间戳”完成。 
-

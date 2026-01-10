@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.connection.security;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * AES 会话密钥包：
  * <ul>
@@ -8,42 +12,12 @@ package team.carrypigeon.backend.connection.security;
  *     <li>key: 使用服务端公钥加密后的 AES 密钥（Base64 文本再 Base64 封装）。</li>
  * </ul>
  */
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class CPAESKeyPack {
 
     private long id;
     private long sessionId;
     private String key;
-
-    public CPAESKeyPack() {
-    }
-
-    public CPAESKeyPack(long id, long sessionId, String key) {
-        this.id = id;
-        this.sessionId = sessionId;
-        this.key = key;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public long getSessionId() {
-        return sessionId;
-    }
-
-    public void setSessionId(long sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
 }

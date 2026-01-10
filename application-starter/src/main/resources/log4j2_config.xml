@@ -140,7 +140,7 @@
 
     <Loggers>
         <!-- 根日志设置 -->
-        <Root level="debug">
+        <Root level="info">
             <AppenderRef ref="allFileAppender" level="all"/>
             <AppenderRef ref="consoleAppender" level="info"/>
             <AppenderRef ref="debugFileAppender" level="debug"/>
@@ -155,16 +155,7 @@
         <Logger name="org.hibernate" level="WARN"/>
         <Logger name="com.baomidou" level="WARN"/>
         <Logger name="io.netty" level="WARN"/>
-        <!--spring日志-->
-<!--        <Logger name="org.springframework" level="debug"/>-->
-<!--        &lt;!&ndash;druid数据源日志&ndash;&gt;
-        <Logger name="druid.sql.Statement" level="warn"/>
-        &lt;!&ndash; mybatis日志 &ndash;&gt;
-        <Logger name="com.mybatis" level="warn"/>
-        <Logger name="org.hibernate" level="warn"/>
-        <Logger name="com.zaxxer.hikari" level="info"/>
-        <Logger name="org.quartz" level="info"/>
-        <Logger name="com.andya.demo" level="debug"/>-->
+        <Logger name="com.yomahub.liteflow" level="OFF"/>
     </Loggers>
 
 </Configuration>

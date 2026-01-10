@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
@@ -34,7 +34,7 @@ import java.time.LocalDateTime;
  * - /core/channel/member/delete
  * - /core/channel/member/get
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class ChannelMemberControllerFlowTest {
 
@@ -50,7 +50,7 @@ public class ChannelMemberControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -85,10 +85,10 @@ public class ChannelMemberControllerFlowTest {
         context.setData("session", session);
 
         CPChannelListMemberVO vo = new CPChannelListMemberVO(cid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/list", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     @Test
@@ -131,15 +131,15 @@ public class ChannelMemberControllerFlowTest {
         context.setData("session", session);
 
         CPChannelGetMemberVO vo = new CPChannelGetMemberVO(cid, targetUid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelMember result = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
-        Assert.assertNotNull(result);
-        Assert.assertEquals(targetUid, result.getUid());
-        Assert.assertEquals(cid, result.getCid());
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(targetUid, result.getUid());
+        Assertions.assertEquals(cid, result.getCid());
     }
 
     @Test
@@ -182,13 +182,13 @@ public class ChannelMemberControllerFlowTest {
         context.setData("session", session);
 
         CPChannelDeleteMemberVO vo = new CPChannelDeleteMemberVO(cid, targetUid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/delete", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelMember after = channelMemberDao.getMember(targetUid, cid);
-        Assert.assertNull(after);
+        Assertions.assertNull(after);
     }
 
     @Test
@@ -223,9 +223,9 @@ public class ChannelMemberControllerFlowTest {
         context.setData("session", session);
 
         CPChannelGetMemberVO vo = new CPChannelGetMemberVO(cid, targetUid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/member/get", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
     }
 }

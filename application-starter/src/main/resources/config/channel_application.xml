@@ -37,10 +37,10 @@
                 CPChannelApplicationApproved,
                 CPChannelMemberSaver,
                 CPChannelMemberChangeNotifyBuilder.bind("key","join")
-            ).tag("approved"),
+            ).id("approved"),
             THEN(
                 DoNothing
-            ).tag("rejected")
+            ).id("rejected")
         ),
         /**保存**/
         CPChannelApplicationSavor,

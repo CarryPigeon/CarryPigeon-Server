@@ -3,6 +3,7 @@ package team.carrypigeon.backend.connection.handler;
 import cn.hutool.core.codec.Base64;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
@@ -14,13 +15,16 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import team.carrypigeon.backend.api.connection.notification.CPNotification;
 import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
+import team.carrypigeon.backend.connection.disconnect.DisconnectSupport;
 import team.carrypigeon.backend.connection.protocol.aad.AeadAad;
 import team.carrypigeon.backend.connection.protocol.encryption.aes.AESUtil;
 import team.carrypigeon.backend.connection.protocol.encryption.ecc.ECCUtil;
 import team.carrypigeon.backend.connection.security.CPAESKeyPack;
 import team.carrypigeon.backend.connection.session.NettySession;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 
@@ -81,10 +85,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         }
 
         // 校验 aad 值是否正确，否则直接返回并中断连接
-        if (!checkAAD(session, aad)) {
-            Long sid = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
-            log.error("aad check failed, closing the connection, remoteAddress={}, sessionId={}",
-                    ctx.channel().remoteAddress(), sid);
+        if (!checkAAD(ctx.channel(), session, aad)) {
             session.close();
             return;
         }
@@ -104,7 +105,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         }
 
         // 3. 分发到业务控制器
-        dispatchToController(session, pack);
+        dispatchToController(ctx, session, pack);
     }
 
     /**
@@ -112,8 +113,27 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
      */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        log.info("connection inactive, remoteAddress={}", ctx.channel().remoteAddress());
-        cpControllerDispatcher.channelInactive(ctx.channel().attr(SESSIONS).get());
+        CPSession session = ctx.channel().attr(SESSIONS).get();
+        if (!DisconnectSupport.isDisconnectLogged(ctx.channel())) {
+            DisconnectSupport.markDisconnectLogged(ctx.channel());
+            DisconnectSupport.DisconnectInfo info = DisconnectSupport.resolveDisconnectInfo(ctx.channel(), session);
+            String remoteAddress = getRemoteAddressForLog(ctx, session);
+            String channelId = ctx.channel().id() == null ? null : ctx.channel().id().asShortText();
+            Long sessionId = session == null ? null : session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
+            Boolean encrypted = session == null ? null : session.getAttributeValue(ConnectionAttributes.ENCRYPTION_STATE, Boolean.class);
+            String reason = info.reason() == null ? "remote_closed" : info.reason();
+            log.info(
+                    "connection disconnected, reason={}, remoteAddress={}, channelId={}, sessionId={}, encrypted={}, causeType={}, causeMessage={}",
+                    reason,
+                    remoteAddress,
+                    channelId,
+                    sessionId,
+                    encrypted,
+                    info.causeType(),
+                    info.causeMessage()
+            );
+        }
+        cpControllerDispatcher.channelInactive(session);
         super.channelInactive(ctx);
     }
 
@@ -147,6 +167,16 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         super.channelActive(ctx);
     }
 
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        CPSession session = ctx.channel().attr(SESSIONS).get();
+        Throwable rootCause = DisconnectSupport.rootCause(cause);
+        String reason = isConnectionReset(rootCause) ? "connection_reset" : "exception";
+        DisconnectSupport.markDisconnect(ctx.channel(), session, reason, rootCause == null ? cause : rootCause);
+
+        ctx.close();
+    }
+
     /**
      * 处理密钥交换请求：
      * 客户端使用预先约定的服务端公钥加密 AES 会话密钥，
@@ -157,7 +187,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         try {
             // 解析客户端发送的 AES 密钥包
             CPAESKeyPack aesKeyPack = objectMapper.readValue(msg, CPAESKeyPack.class);
-            if (aesKeyPack.getId() == 0 || aesKeyPack.getKey() == null) {
+            if ( aesKeyPack.getKey() == null) {
                 throw new RuntimeException("illegal format");
             }
 
@@ -179,9 +209,9 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
             // 通过一个 route=handshake 的推送告知客户端握手成功
             CPNotification notification = new CPNotification();
             notification.setRoute("handshake");
-            // data 可选，这里附带 sessionId 便于客户端调试
             ObjectNode dataNode = objectMapper.createObjectNode();
             if (sessionId != null) {
+                dataNode.put("session_id", sessionId);
                 dataNode.put("sessionId", sessionId);
             }
             notification.setData(dataNode);
@@ -231,10 +261,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
             return AESUtil.decryptWithAAD(cipherText, nonce, aad,
                     Base64.decode(session.getAttributeValue(ConnectionAttributes.ENCRYPTION_KEY, String.class)));
         } catch (Exception e) {
-            Long sid = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
-            log.error("decryption failed, closing the connection, remoteAddress={}, sessionId={}",
-                    ctx.channel().remoteAddress(), sid);
-            log.error(e.getMessage(), e);
+            DisconnectSupport.markDisconnect(ctx.channel(), session, "decrypt_failed", e);
             session.close();
             return null;
         }
@@ -243,7 +270,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
     /**
      * 将明文数据分发到业务控制器并回写响应。
      */
-    private void dispatchToController(CPSession session, String pack) {
+    private void dispatchToController(ChannelHandlerContext ctx, CPSession session, String pack) {
         CPResponse response = cpControllerDispatcher.process(pack, session);
         if (response == null) {
             return;
@@ -251,8 +278,7 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         try {
             session.write(objectMapper.writeValueAsString(response), true);
         } catch (JsonProcessingException e) {
-            Long sid = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
-            log.error("serialize CPResponse failed, sessionId={}", sid, e);
+            DisconnectSupport.markDisconnect(ctx.channel(), session, "serialize_failed", e);
             session.close();
         }
     }
@@ -260,16 +286,16 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
     /**
      * 对 aad 进行校验
      */
-    private boolean checkAAD(CPSession session, byte[] aad) {
+    private boolean checkAAD(Channel channel, CPSession session, byte[] aad) {
         if (aad == null || aad.length != AeadAad.LENGTH) {
-            log.error("aad length error, length={}", aad == null ? null : aad.length);
+            DisconnectSupport.markDisconnect(channel, session, "aad_length_error", "AadLengthError", "length=" + (aad == null ? null : aad.length));
             return false;
         }
         AeadAad aeadAad;
         try {
             aeadAad = AeadAad.decode(aad);
         } catch (IllegalArgumentException e) {
-            log.error("aad decode error: {}", e.getMessage());
+            DisconnectSupport.markDisconnect(channel, session, "aad_decode_error", e);
             return false;
         }
         int packageId = aeadAad.getPackageId();
@@ -279,8 +305,13 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
         Integer lastPackageId = session.getAttributeValue(ConnectionAttributes.PACKAGE_ID, Integer.class);
         Long sessionId = session.getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
         if (lastPackageId != null && packageId <= lastPackageId) {
-            log.error("package sequence error, last={}, current={}, sessionId={}",
-                    lastPackageId, packageId, sessionId);
+            DisconnectSupport.markDisconnect(
+                    channel,
+                    session,
+                    "package_sequence_error",
+                    "PackageSequenceError",
+                    "last=" + lastPackageId + ", current=" + packageId + ", sessionId=" + sessionId
+            );
             return false;
         }
         // 序列通过校验后更新
@@ -288,18 +319,56 @@ public class ConnectionHandler extends SimpleChannelInboundHandler<byte[]> {
 
         // 校验会话 id
         if (sessionId == null || aadSessionId != sessionId) {
-            log.error("session id mismatch, expected={}, actual={}", sessionId, aadSessionId);
+            DisconnectSupport.markDisconnect(
+                    channel,
+                    session,
+                    "session_id_mismatch",
+                    "SessionIdMismatch",
+                    "expected=" + sessionId + ", actual=" + aadSessionId
+            );
             return false;
         }
 
         // 校验时间戳是否在三分钟以内
         long now = System.currentTimeMillis();
         if (now - packageTimestamp > 180000) {
-            log.error("package timestamp error, now={}, packageTimestamp={}, diff={}ms, sessionId={}",
-                    now, packageTimestamp, now - packageTimestamp, sessionId);
+            DisconnectSupport.markDisconnect(
+                    channel,
+                    session,
+                    "package_timestamp_error",
+                    "PackageTimestampError",
+                    "now=" + now + ", packageTimestamp=" + packageTimestamp + ", diffMs=" + (now - packageTimestamp) + ", sessionId=" + sessionId
+            );
             return false;
         }
 
         return true;
+    }
+
+    private static String getRemoteAddressForLog(ChannelHandlerContext ctx, CPSession session) {
+        String remoteAddress = session == null ? null : session.getAttributeValue(CPConnectionAttributes.REMOTE_ADDRESS, String.class);
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+        Object remote = ctx.channel().remoteAddress();
+        return remote == null ? null : remote.toString();
+    }
+
+    private static boolean isConnectionReset(Throwable throwable) {
+        if (throwable == null) {
+            return false;
+        }
+        String message = throwable.getMessage();
+        if (message == null) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        if (lower.contains("connection reset")
+                || lower.contains("reset by peer")
+                || lower.contains("broken pipe")
+                || lower.contains("forcibly closed")) {
+            return (throwable instanceof SocketException) || (throwable instanceof IOException);
+        }
+        return false;
     }
 }

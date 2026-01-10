@@ -7,8 +7,6 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
@@ -34,8 +32,12 @@ public class AESUtil {
      * 生成AES 128为密钥
      */
     public static SecretKey generateKey() {
+        return generateKey(ALGORITHM_AES);
+    }
+
+    static SecretKey generateKey(String algorithm) {
         try {
-            KeyGenerator keyGen = KeyGenerator.getInstance(ALGORITHM_AES);
+            KeyGenerator keyGen = KeyGenerator.getInstance(algorithm);
             keyGen.init(KEY_LENGTH_BIT); // 128位密钥
             return keyGen.generateKey();
         }catch (NoSuchAlgorithmException e){

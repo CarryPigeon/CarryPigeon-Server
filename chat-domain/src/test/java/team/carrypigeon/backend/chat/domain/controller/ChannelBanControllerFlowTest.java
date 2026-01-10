@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
@@ -35,7 +35,7 @@ import java.time.LocalDateTime;
  * - /core/channel/ban/delete
  * - /core/channel/ban/list
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class ChannelBanControllerFlowTest {
 
@@ -54,7 +54,7 @@ public class ChannelBanControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -101,13 +101,13 @@ public class ChannelBanControllerFlowTest {
         context.setData("session", session);
 
         CPChannelCreateBanVO vo = new CPChannelCreateBanVO(cid, targetUid, 60);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/ban/create", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelBan ban = channelBanDAO.getByChannelIdAndUserId(targetUid, cid);
-        Assert.assertNotNull(ban);
+        Assertions.assertNotNull(ban);
     }
 
     @Test
@@ -141,13 +141,13 @@ public class ChannelBanControllerFlowTest {
         context.setData("session", session);
 
         CPChannelCreateBanVO vo = new CPChannelCreateBanVO(cid, adminUid, 60);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/ban/create", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
 
         CPChannelBan ban = channelBanDAO.getByChannelIdAndUserId(adminUid, cid);
-        Assert.assertNull(ban);
+        Assertions.assertNull(ban);
     }
 
     @Test
@@ -190,13 +190,13 @@ public class ChannelBanControllerFlowTest {
         context.setData("session", session);
 
         CPChannelDeleteBanVO vo = new CPChannelDeleteBanVO(ban.getCid(), ban.getUid());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/ban/delete", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelBan deleted = channelBanDAO.getById(ban.getId());
-        Assert.assertNull(deleted);
+        Assertions.assertNull(deleted);
     }
 
     @Test
@@ -238,9 +238,9 @@ public class ChannelBanControllerFlowTest {
         context.setData("session", session);
 
         CPChannelListBanVO vo = new CPChannelListBanVO(cid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/ban/list", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 }

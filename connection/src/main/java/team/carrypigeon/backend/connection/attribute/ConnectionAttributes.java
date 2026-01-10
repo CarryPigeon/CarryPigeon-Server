@@ -20,4 +20,9 @@ public class ConnectionAttributes {
     public static final String PACKAGE_ID = "PackageId";
     // 本地包序列id，用于发送时标记包序号，每次使用需要进行自增，存储的格式为 int
     public static final String LOCAL_PACKAGE_ID = "LocalPackageId";
+
+    // 断连原因与异常信息（由 connection 模块写入，供 channelInactive 输出断连日志使用）
+    public static final String DISCONNECT_REASON = "DisconnectReason";
+    public static final String DISCONNECT_CAUSE_TYPE = "DisconnectCauseType";
+    public static final String DISCONNECT_CAUSE_MESSAGE = "DisconnectCauseMessage";
 }

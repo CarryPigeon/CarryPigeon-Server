@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.connection.attribute.ConnectionAttributes;
+import team.carrypigeon.backend.connection.disconnect.DisconnectSupport;
 import team.carrypigeon.backend.connection.protocol.aad.AeadAad;
 import team.carrypigeon.backend.connection.protocol.encryption.aes.AESData;
 import team.carrypigeon.backend.connection.protocol.encryption.aes.AESUtil;
@@ -21,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NettySession implements CPSession {
 
     private static final Logger log = LoggerFactory.getLogger(NettySession.class);
+    private static final int NONCE_LENGTH = 12;
+    private static final byte[] ZERO_NONCE = new byte[NONCE_LENGTH];
 
     // netty channel 上下文，用于进行数据的读写
     private final ChannelHandlerContext context;
@@ -86,8 +89,8 @@ public class NettySession implements CPSession {
             );
         } catch (Exception e) {
             Long sessionIdForLog = getAttributeValue(ConnectionAttributes.PACKAGE_SESSION_ID, Long.class);
-            log.error("unexpected error: AES encrypt failed, sessionId={}", sessionIdForLog);
-            log.error(e.getMessage(), e);
+            log.error("unexpected error: AES encrypt failed, sessionId={}", sessionIdForLog, e);
+            DisconnectSupport.markDisconnect(context.channel(), this, "encrypt_failed", e);
             close();
             return;
         }
@@ -104,11 +107,11 @@ public class NettySession implements CPSession {
 
     private void writePlain(String msg, byte[] aad) {
         byte[] bytes = msg.getBytes();
-        byte[] data = new byte[bytes.length + aad.length + 12];
+        byte[] data = new byte[bytes.length + aad.length + NONCE_LENGTH];
         // 填入空 nonce（12 字节全 0）
-        System.arraycopy(new byte[12], 0, data, 0, 12);
+        System.arraycopy(ZERO_NONCE, 0, data, 0, NONCE_LENGTH);
         // 填入 aad
-        System.arraycopy(aad, 0, data, 12, aad.length);
+        System.arraycopy(aad, 0, data, NONCE_LENGTH, aad.length);
         // 填入明文
         System.arraycopy(bytes, 0, data, 32, bytes.length);
         context.writeAndFlush(data);

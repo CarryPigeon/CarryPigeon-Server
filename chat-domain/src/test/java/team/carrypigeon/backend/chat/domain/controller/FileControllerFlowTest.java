@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.chat.domain.attribute.CPChatDomainAttributes;
@@ -26,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.support.TestSession;
  * - /core/file/upload/token/apply
  * - /core/file/download/token/apply
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class FileControllerFlowTest {
 
@@ -39,7 +39,7 @@ public class FileControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -55,13 +55,13 @@ public class FileControllerFlowTest {
         context.setData("session", session);
 
         CPFileUploadTokenApplyVO vo = new CPFileUploadTokenApplyVO();
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/file/upload/token/apply", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         String token = context.getData(CPNodeFileKeys.FILE_TOKEN);
-        Assert.assertNotNull(token);
+        Assertions.assertNotNull(token);
     }
 
     @Test
@@ -76,12 +76,12 @@ public class FileControllerFlowTest {
         context.setData("session", session);
 
         CPFileDownloadTokenApplyVO vo = new CPFileDownloadTokenApplyVO(fileId);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/file/download/token/apply", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         String token = context.getData(CPNodeFileKeys.FILE_TOKEN);
-        Assert.assertNotNull(token);
+        Assertions.assertNotNull(token);
     }
 }

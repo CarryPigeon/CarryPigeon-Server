@@ -51,7 +51,7 @@
     - 通知与会话服务（`service`）；
   - 将 DAO 与连接层组合成完整的业务能力。
 - 文档：
-  - 计划：`doc/modules/chat-domain.md`（待补充）
+  - `doc/modules/chat-domain.md`
   - 相关：`doc/features/feature-message-read-state.md`
 
 ---
@@ -64,7 +64,7 @@
   - 实现应用层帧协议、AES/ECC 握手与 AAD 校验；
   - 将解密后的业务 JSON 委托给 `chat-domain` 处理。
 - 文档：
-  - 计划：`doc/modules/connection.md`（待补充）
+  - `doc/modules/connection.md`
   - 相关：`doc/architecture.md` 中的运行时架构说明
 
 ---
@@ -89,7 +89,7 @@
   - 定义 LiteFlow 规则文件（`src/main/resources/config/*.xml`）；
   - 绑定端口、连接数据库和 Redis 等基础设施。
 - 文档：
-  - 计划：`doc/modules/application-starter.md`（待补充）
+  - `doc/modules/application-starter.md`
   - 相关：`doc/overview.md`、`doc/architecture.md`
 
 ---
@@ -117,4 +117,3 @@
   - `doc/plugins/plugin-dev-guide.md`
 
 后续如新增更多模块文档，可在此文件中继续补充导航条目。 
-

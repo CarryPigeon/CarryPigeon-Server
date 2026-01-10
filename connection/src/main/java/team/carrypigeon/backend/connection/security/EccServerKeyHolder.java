@@ -7,12 +7,9 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.api.starter.connection.ConnectionConfig;
 import team.carrypigeon.backend.connection.protocol.encryption.ecc.ECCUtil;
 
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 
 /**
  * 服务端 ECC 密钥对持有者。

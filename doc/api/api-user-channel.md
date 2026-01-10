@@ -273,7 +273,7 @@
   "owner": 10001,
   "brief": "some description",
   "avatar": 0,
-  "createTime": 1700000000000
+  "create_time": 1700000000000
 }
 ```
 
@@ -321,8 +321,8 @@
 {
   "count": 2,
   "members": [
-    { "uid": 1, "name": "A", "authority": 0, "joinTime": 1700000000000 },
-    { "uid": 2, "name": "B", "authority": 0, "joinTime": 1700000000000 }
+    { "uid": 1, "name": "A", "authority": 0, "join_time": 1700000000000 },
+    { "uid": 2, "name": "B", "authority": 0, "join_time": 1700000000000 }
   ]
 }
 ```
@@ -359,7 +359,7 @@
       "uid": 123,
       "state": 0,
       "msg": "hello",
-      "applyTime": 1700000000000
+      "apply_time": 1700000000000
     }
   ]
 }
@@ -404,4 +404,3 @@
 1. 使用 `/core/user/login/email` 或 `/core/user/login/token` 完成登录；
 2. 使用频道相关接口获取/管理频道；
 3. 使用消息相关接口（见 `api-chat-message.md`）进行消息收发、读状态同步和未读统计。 
-

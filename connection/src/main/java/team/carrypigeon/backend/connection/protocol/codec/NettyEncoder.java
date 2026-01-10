@@ -8,7 +8,7 @@ public class NettyEncoder extends MessageToByteEncoder<byte[]> {
 
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, byte[] bytes, ByteBuf byteBuf) {
-        byteBuf.writeShort((short)bytes.length);
+        byteBuf.writeShort(bytes.length);
         byteBuf.writeBytes(bytes);
     }
 }

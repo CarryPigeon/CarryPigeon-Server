@@ -2,9 +2,9 @@
 <flow>
     <!-- 获取单个群成员 -->
     <chain name="/core/channel/member/get">
+        RenameScriptGet1 = '{"SessionId":"ChannelMemberInfo_Uid"}';
+        RenameScriptGet2 = '{"TargetMember_Uid":"ChannelMemberInfo_Uid"}';
         THEN(
-        RenameScriptGet1 = {"SessionId":"ChannelMemberInfo_Uid"},
-        RenameScriptGet2 = {"TargetMember_Uid":"ChannelMemberInfo_Uid"},
         /** 判断是否登录 **/
         UserLoginChecker,
         /** 使用当前 SessionId 校验是否为频道成员 **/
@@ -42,6 +42,8 @@
         CPChannelMemberSelector.bind("key","CidWithUid"),
         /** 删除成员 **/
         CPChannelMemberDeleter,
+        /** 构建成员离开通知数据 **/
+        CPChannelMemberChangeNotifyBuilder.bind("key","leave"),
         /** 收集频道所有成员 **/
         CPChannelMemberCollector,
         /** 通知所有成员 **/

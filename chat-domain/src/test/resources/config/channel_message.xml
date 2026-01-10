@@ -95,7 +95,7 @@
         /** 参数重命名 + 成员存在校验（基于读状态 cid） **/
         ReadGuard,
         /** 更新已读状态 **/
-        CPChannelReadStateUpserter,
+        CPChannelReadStateUpdater,
         /** 收集当前用户自身会话对应的 uid **/
         CPUserSelfCollector,
         /** 构建已读状态通知数据 **/

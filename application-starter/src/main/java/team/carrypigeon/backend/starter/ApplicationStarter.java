@@ -3,12 +3,9 @@ package team.carrypigeon.backend.starter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import team.carrypigeon.backend.api.starter.connection.ConnectionConfig;
-import team.carrypigeon.backend.api.starter.connection.ConnectionStarter;
 
 /**
  * 服务端启动main函数，整个服务端的启动入口，不应该包含任何与业务逻辑相关的代码
@@ -31,8 +28,7 @@ public class ApplicationStarter {
         log.info("Application is starting...");
         // 启动容器注入服务并获取对应上下文
         new SpringApplication(ApplicationStarter.class).run(args);
-        // 输出日志，通知springboot初始化完成
-        log.info("spring context ready.");
+        log.info("Application is running ...");
     }
 
 }

@@ -4,13 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
@@ -47,7 +47,7 @@ import java.time.LocalDateTime;
  * - /core/channel/message/read/state/update
  * - /core/channel/message/read/state/get
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class ChannelMessageControllerFlowTest {
 
@@ -72,7 +72,7 @@ public class ChannelMessageControllerFlowTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -110,13 +110,13 @@ public class ChannelMessageControllerFlowTest {
         ObjectNode data = objectMapper.createObjectNode();
         data.put("text", "hello");
         CPMessageCreateVO vo = new CPMessageCreateVO("Core:Text",cid, data);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/create", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPMessage[] stored = channelMessageDao.getBefore(cid, LocalDateTime.now(), 10);
-        Assert.assertTrue(stored.length >= 1);
+        Assertions.assertTrue(stored.length >= 1);
     }
 
     @Test
@@ -159,13 +159,13 @@ public class ChannelMessageControllerFlowTest {
         context.setData("session", session);
 
         CPMessageDeleteVO vo = new CPMessageDeleteVO(message.getId());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/delete", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPMessage deleted = channelMessageDao.getById(message.getId());
-        Assert.assertNull(deleted);
+        Assertions.assertNull(deleted);
     }
 
     @Test
@@ -208,10 +208,10 @@ public class ChannelMessageControllerFlowTest {
 
         long nowMillis = System.currentTimeMillis();
         CPMessageListVO vo = new CPMessageListVO(cid, nowMillis, 10);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/list", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     @Test
@@ -253,14 +253,14 @@ public class ChannelMessageControllerFlowTest {
         context.setData("session", session);
 
         CPMessageGetVO vo = new CPMessageGetVO(message.getId());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPMessage result = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
-        Assert.assertNotNull(result);
-        Assert.assertEquals(message.getId(), result.getId());
+        Assertions.assertNotNull(result);
+        Assertions.assertEquals(message.getId(), result.getId());
     }
 
     @Test
@@ -304,10 +304,10 @@ public class ChannelMessageControllerFlowTest {
         context.setData("session", session);
 
         CPMessageGetVO vo = new CPMessageGetVO(message.getId());
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/get", null, context);
-        Assert.assertFalse(resp.isSuccess());
+        Assertions.assertFalse(resp.isSuccess());
     }
 
     @Test
@@ -352,14 +352,14 @@ public class ChannelMessageControllerFlowTest {
 
         long startMillis = System.currentTimeMillis() - 10 * 60 * 1000L;
         CPMessageGetUnreadVO vo = new CPMessageGetUnreadVO(cid, startMillis);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/unread/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         Long unread = context.getData(CPNodeMessageKeys.MESSAGE_UNREAD_COUNT);
-        Assert.assertNotNull(unread);
-        Assert.assertTrue(unread >= 1);
+        Assertions.assertNotNull(unread);
+        Assertions.assertTrue(unread >= 1);
     }
 
     @Test
@@ -393,16 +393,16 @@ public class ChannelMessageControllerFlowTest {
 
         long lastReadTimeMillis = System.currentTimeMillis();
         CPMessageReadStateUpdateVO vo = new CPMessageReadStateUpdateVO(cid, lastReadTimeMillis);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/read/state/update", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelReadState state = channelReadStateDao.getByUidAndCid(uid, cid);
-        Assert.assertNotNull(state);
-        Assert.assertEquals(uid, state.getUid());
-        Assert.assertEquals(cid, state.getCid());
-        Assert.assertTrue(state.getLastReadTime() > 0);
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(uid, state.getUid());
+        Assertions.assertEquals(cid, state.getCid());
+        Assertions.assertTrue(state.getLastReadTime() > 0);
     }
 
     @Test
@@ -437,16 +437,16 @@ public class ChannelMessageControllerFlowTest {
         // 初次获取，若没有记录，应返回 lastReadTime = 0
         team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.get.CPMessageReadStateGetVO vo =
                 new team.carrypigeon.backend.chat.domain.controller.netty.channel.message.read.state.get.CPMessageReadStateGetVO(cid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/message/read/state/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannelReadState state = context.getData(
                 team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO);
-        Assert.assertNotNull(state);
-        Assert.assertEquals(uid, state.getUid());
-        Assert.assertEquals(cid, state.getCid());
-        Assert.assertEquals(0L, state.getLastReadTime());
+        Assertions.assertNotNull(state);
+        Assertions.assertEquals(uid, state.getUid());
+        Assertions.assertEquals(cid, state.getCid());
+        Assertions.assertEquals(0L, state.getLastReadTime());
     }
 }

@@ -14,6 +14,8 @@
         CPChannelMemberAuthoritySetter.bind("key","admin"),
         /**保存成员信息**/
         CPChannelMemberSaver,
+        /** 构建成员权限变动（设为管理员）通知数据 **/
+        CPChannelMemberChangeNotifyBuilder.bind("key","admin_add"),
         /**获取所有成员**/
         CPChannelMemberCollector,
         /**通知所有成员**/
@@ -35,6 +37,8 @@
         CPChannelMemberAuthoritySetter.bind("key","member"),
         /**保存成员信息**/
         CPChannelMemberSaver,
+        /** 构建成员权限变动（取消管理员）通知数据 **/
+        CPChannelMemberChangeNotifyBuilder.bind("key","admin_remove"),
         /**获取所有成员**/
         CPChannelMemberCollector,
         /**通知所有成员**/

@@ -18,8 +18,8 @@
     </chain>
     <!--处理申请-->
     <chain name="/core/channel/application/process">
+        RenameScriptAppProcessChannel ='{"ChannelApplicationInfo_Cid":"ChannelInfo_Id"}';
         THEN(
-        RenameScriptAppProcessChannel = {"ChannelApplicationInfo_Cid":"ChannelInfo_Id"},
         /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
         UserLoginGuard,
         /**获取申请信息**/
@@ -35,11 +35,12 @@
         SWITCH(CheckerResultReader.bind("key","msg")).to(
             THEN(
                 CPChannelApplicationApproved,
-                CPChannelMemberSaver
-            ).tag("approved"),
+                CPChannelMemberSaver,
+                CPChannelMemberChangeNotifyBuilder.bind("key","join")
+            ).id("approved"),
             THEN(
                 DoNothing
-            ).tag("rejected")
+            ).id("rejected")
         ),
         /**保存**/
         CPChannelApplicationSavor,

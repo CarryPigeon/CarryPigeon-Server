@@ -43,7 +43,7 @@ public class CPChannelReadState {
 含义：
 
 - 每条记录代表一个 `(uid, cid)` 对的读状态；
-- `lastReadTime` 是该用户在该频道中“已读到”的时间点。
+- 对外字段 `last_read_time`（Java 字段 `lastReadTime`）是该用户在该频道中“已读到”的时间点。
 
 ### 2.2 数据持久化表（建议）
 
@@ -98,12 +98,12 @@ public class CPChannelReadState {
 
 语义：
 
-- 输入：`cid`, `startTime`（毫秒）
-- 输出：`count`（startTime 之后该用户在该频道中的有效消息数量）
+- 输入：`cid`, `start_time`（毫秒）
+- 输出：`count`（`start_time` 之后该用户在该频道中的有效消息数量）
 
 约束：
 
-- 完全基于客户端传入的 `startTime` 计算；
+- 完全基于客户端传入的 `start_time` 计算；
 - 不自动使用服务端的读状态表。
 
 典型用途：
@@ -114,7 +114,7 @@ public class CPChannelReadState {
 
 语义：
 
-- 将 `(uid, cid)` 的 `lastReadTime` 更新为客户端上报值，只允许前进；
+- 将 `(uid, cid)` 的 `last_read_time` 更新为客户端上报值，只允许前进；
 - 成功之后，服务端向所有该用户的在线会话广播一条读状态变更通知。
 
 约束：
@@ -126,8 +126,8 @@ public class CPChannelReadState {
 
 语义：
 
-- 查询服务端记录的 `(uid, cid)` 的 `lastReadTime`；
-- 若不存在记录，则返回 `lastReadTime = 0`。
+- 查询服务端记录的 `(uid, cid)` 的 `last_read_time`；
+- 若不存在记录，则返回 `last_read_time = 0`。
 
 典型用途：
 
@@ -208,11 +208,11 @@ LiteFlow 链配置（示意）：
 {
   "cid": 12345,
   "uid": 67890,
-  "lastReadTime": 1700000000000
+  "last_read_time": 1700000000000
 }
 ```
 
-3. 以 `lastReadTime` 为基准，调用 `/core/channel/message/unread/get` 获取未读数；
+3. 以 `last_read_time` 为基准，调用 `/core/channel/message/unread/get` 获取未读数；
 4. 根据实际产品需求，拉取历史消息（可用 `/core/channel/message/list`）。
 
 ### 5.2 阅读新消息
@@ -223,17 +223,17 @@ LiteFlow 链配置（示意）：
 ```json
 {
   "cid": 12345,
-  "lastReadTime": 1700001000000
+  "last_read_time": 1700001000000
 }
 ```
 
-3. 服务端更新 `(uid, cid)` 的 `lastReadTime` 后，向该用户所有在线会话广播通知：
+3. 服务端更新 `(uid, cid)` 的 `last_read_time` 后，向该用户所有在线会话广播通知：
 
 ```json
 {
   "cid": 12345,
   "uid": 67890,
-  "lastReadTime": 1700001000000
+  "last_read_time": 1700001000000
 }
 ```
 
@@ -243,8 +243,8 @@ LiteFlow 链配置（示意）：
 
 ### 5.3 重新进入频道
 
-1. 客户端本地可以缓存 `lastReadTime`，也可以再次调用 `/read/state/get` 校验；
-2. 需要展示未读数时，以 `lastReadTime` 调用 `/unread/get`。
+1. 客户端本地可以缓存 `last_read_time`，也可以再次调用 `/read/state/get` 校验；
+2. 需要展示未读数时，以 `last_read_time` 调用 `/unread/get`。
 
 ---
 
@@ -252,7 +252,7 @@ LiteFlow 链配置（示意）：
 
 设计上刻意分离：
 
-- 读状态表：用于 **多端同步**，保证服务端能给出一个权威的 `lastReadTime`；
+- 读状态表：用于 **多端同步**，保证服务端能给出一个权威的 `last_read_time`；
 - 未读统计接口：保持 **简单**，只依赖调用时传入的时间戳。
 
 这带来的好处：

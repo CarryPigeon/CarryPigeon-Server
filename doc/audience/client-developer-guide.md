@@ -1,6 +1,6 @@
 # CarryPigeon 客户端 API 文档（TCP/Netty + HTTP）
 
-本文面向 CarryPigeon 客户端开发者，描述：
+本文面向 CarryPigeon 客户端/机器人端开发者，是对接协议与接口的主文档，描述：
 
 - TCP/Netty 连接、加密握手、帧格式
 - 业务 JSON 协议（`CPPacket` / `CPResponse`）
@@ -94,7 +94,7 @@
 字段说明：
 
 - `id`：任意长整型请求 id，用于日志追踪；
-- `session_id`：可选，当前连接 sessionId（可以先填 0，服务器会自己分配）；
+- `session_id`：可选，当前连接会话 id（可以先填 0，服务器会自己分配）；
 - `key`：对 `aes_key_base64` 进行 ECC 加密后的密文，再次 Base64 包装后的字符串。
 
 3) Server：解密并保存 AES 密钥
@@ -114,7 +114,7 @@
   "data": {
     "route": "handshake",
     "data": {
-      "sessionId": 123456789
+      "session_id": 123456789
     }
   }
 }
@@ -286,8 +286,7 @@
 
 这些通知仅携带 `route`，用于提示客户端刷新对应数据：
 
-- `/core/channel/list`：频道列表变化（创建/删除频道等链路可能触发）
-- `/core/channel/list`：频道列表变化（例如删除频道、频道资料更新等链路触发）
+- `/core/channel/list`：频道列表变化（创建/删除频道、频道资料更新等链路触发）
 - `/core/channel/member/list`：频道成员变化（踢人、设/撤管理员、审批通过等链路触发）  
   同时，对于部分链路还会附带结构化 `data`，详见 4.1.4。
 - `/core/channel/application/list`：频道申请列表变化（创建申请、处理申请触发）

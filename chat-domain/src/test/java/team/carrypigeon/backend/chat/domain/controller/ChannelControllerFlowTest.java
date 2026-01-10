@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.controller;
 
 import com.yomahub.liteflow.core.FlowExecutor;
 import com.yomahub.liteflow.flow.LiteflowResponse;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
@@ -39,7 +39,7 @@ import java.time.LocalDateTime;
  * - /core/channel/profile/get
  * - /core/channel/profile/update
  */
-@RunWith(SpringRunner.class)
+@ExtendWith(SpringExtension.class)
 @SpringBootTest(classes = ChatDomainTestConfig.class)
 public class ChannelControllerFlowTest {
 
@@ -58,7 +58,7 @@ public class ChannelControllerFlowTest {
     @Autowired
     private InMemoryDatabase inMemoryDatabase;
 
-    @After
+    @AfterEach
     public void clearDatabase() {
         inMemoryDatabase.clearAll();
     }
@@ -84,18 +84,18 @@ public class ChannelControllerFlowTest {
         context.setData("session", session);
 
         CPChannelCreateVO vo = new CPChannelCreateVO();
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/create", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         // 用户应当加入一个频道，且该频道 owner 为 uid
         CPChannelMember[] members = channelMemberDao.getAllMemberByUserId(uid);
-        Assert.assertEquals(1, members.length);
+        Assertions.assertEquals(1, members.length);
         long cid = members[0].getCid();
         CPChannel channel = channelDao.getById(cid);
-        Assert.assertNotNull(channel);
-        Assert.assertEquals(uid, channel.getOwner());
+        Assertions.assertNotNull(channel);
+        Assertions.assertEquals(uid, channel.getOwner());
     }
 
     @Test
@@ -139,13 +139,13 @@ public class ChannelControllerFlowTest {
         context.setData("session", session);
 
         CPChannelDeleteVO vo = new CPChannelDeleteVO(cid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/delete", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannel deleted = channelDao.getById(cid);
-        Assert.assertNull(deleted);
+        Assertions.assertNull(deleted);
     }
 
     @Test
@@ -189,10 +189,10 @@ public class ChannelControllerFlowTest {
         context.setData("session", session);
 
         CPChannelListVO vo = new CPChannelListVO();
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/list", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     @Test
@@ -216,10 +216,10 @@ public class ChannelControllerFlowTest {
         context.setData("session", session);
 
         CPChannelGetProfileVO vo = new CPChannelGetProfileVO(cid);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/profile/get", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
     }
 
     @Test
@@ -254,15 +254,15 @@ public class ChannelControllerFlowTest {
         context.setData("session", session);
 
         CPChannelUpdateProfileVO vo = new CPChannelUpdateProfileVO(cid, "newName", uid, "newBrief", 2L);
-        Assert.assertTrue(vo.insertData(context));
+        Assertions.assertTrue(vo.insertData(context));
 
         LiteflowResponse resp = flowExecutor.execute2Resp("/core/channel/profile/update", null, context);
-        Assert.assertTrue(resp.isSuccess());
+        Assertions.assertTrue(resp.isSuccess());
 
         CPChannel updated = channelDao.getById(cid);
-        Assert.assertNotNull(updated);
-        Assert.assertEquals("newName", updated.getName());
-        Assert.assertEquals("newBrief", updated.getBrief());
-        Assert.assertEquals(2L, updated.getAvatar());
+        Assertions.assertNotNull(updated);
+        Assertions.assertEquals("newName", updated.getName());
+        Assertions.assertEquals("newBrief", updated.getBrief());
+        Assertions.assertEquals(2L, updated.getAvatar());
     }
 }

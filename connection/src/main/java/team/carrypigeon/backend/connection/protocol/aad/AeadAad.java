@@ -49,9 +49,9 @@ public final class AeadAad {
      */
     public byte[] encode() {
         byte[] aad = new byte[LENGTH];
-        System.arraycopy(ByteUtil.intToBytes(packageId), 0, aad, OFFSET_PACKAGE_ID, 4);
-        System.arraycopy(ByteUtil.longToBytes(sessionId), 0, aad, OFFSET_SESSION_ID, 8);
-        System.arraycopy(ByteUtil.longToBytes(timestampMillis), 0, aad, OFFSET_TIMESTAMP, 8);
+        System.arraycopy(ByteUtil.intToBytes(packageId, ByteOrder.BIG_ENDIAN), 0, aad, OFFSET_PACKAGE_ID, 4);
+        System.arraycopy(ByteUtil.longToBytes(sessionId, ByteOrder.BIG_ENDIAN), 0, aad, OFFSET_SESSION_ID, 8);
+        System.arraycopy(ByteUtil.longToBytes(timestampMillis, ByteOrder.BIG_ENDIAN), 0, aad, OFFSET_TIMESTAMP, 8);
         return aad;
     }
 
@@ -67,7 +67,9 @@ public final class AeadAad {
         int pkgId = ByteUtil.bytesToInt(aad, OFFSET_PACKAGE_ID, ByteOrder.BIG_ENDIAN);
         long sessId = ByteUtil.bytesToLong(aad, OFFSET_SESSION_ID, ByteOrder.BIG_ENDIAN);
         long ts = ByteUtil.bytesToLong(aad, OFFSET_TIMESTAMP, ByteOrder.BIG_ENDIAN);
+        if (pkgId < 0 || sessId < 0 || ts < 0) {
+            throw new IllegalArgumentException("AAD contains negative fields");
+        }
         return new AeadAad(pkgId, sessId, ts);
     }
 }
-
