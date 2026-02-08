@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${checkstyle.suppressions.file}"/>
+    </module>
+
+    <module name="RegexpSinglelineJava">
+        <property name="format" value="System\.out\.print(ln)?\s*\("/>
+        <property name="message" value="Use logger instead of System.out."/>
+    </module>
+
+    <module name="RegexpSinglelineJava">
+        <property name="format" value="\bprintStackTrace\s*\("/>
+        <property name="message" value="Do not use printStackTrace; use logger with exception."/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- 文档级注释：public/protected 类型必须具备 JavaDoc -->
+        <module name="JavadocType">
+            <property name="scope" value="public"/>
+            <property name="excludeScope" value="package"/>
+            <property name="tokens" value="CLASS_DEF,INTERFACE_DEF,ENUM_DEF,ANNOTATION_DEF,RECORD_DEF"/>
+        </module>
+
+        <!-- 方法级注释：public/protected 方法必须具备 JavaDoc；override/属性访问器可省略 -->
+        <module name="JavadocMethod">
+            <property name="scope" value="public"/>
+            <property name="excludeScope" value="private"/>
+            <property name="tokens" value="METHOD_DEF,CTOR_DEF,COMPACT_CTOR_DEF"/>
+            <property name="allowMissingParamTags" value="true"/>
+            <property name="allowMissingReturnTag" value="true"/>
+            <property name="allowMissingThrowsTags" value="true"/>
+            <property name="allowMissingPropertyJavadoc" value="true"/>
+            <property name="allowMissingJavadocOverride" value="true"/>
+        </module>
+
+        <!-- 常量级注释：public 变量（含 public static final）必须具备 JavaDoc -->
+        <module name="JavadocVariable">
+            <property name="scope" value="public"/>
+            <property name="excludeScope" value="private"/>
+            <property name="tokens" value="VARIABLE_DEF"/>
+        </module>
+    </module>
+</module>

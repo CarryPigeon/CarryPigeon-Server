@@ -3,16 +3,13 @@ package team.carrypigeon.backend.chat.domain.cmp.checker.group;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 /**
  * 检查当前用户在频道内是否处于封禁状态。<br/>
@@ -31,11 +28,11 @@ public class CPChannelBanCheckerNode extends AbstractCheckerNode {
     private final ChannelBanDAO channelBanDAO;
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
+    protected void process(CPFlowContext context) throws Exception {
         boolean soft = isSoftMode();
 
-        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
-        Long uid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, Long.class);
+        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        Long uid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID);
         CPChannelBan ban = select(context,
                 buildSelectKey("channel_ban", java.util.Map.of("cid", cid, "uid", uid)),
                 () -> channelBanDAO.getByChannelIdAndUserId(uid, cid));
@@ -54,9 +51,7 @@ public class CPChannelBanCheckerNode extends AbstractCheckerNode {
                 return;
             }
             log.info("CPChannelBanChecker hard fail: user is banned, cid={}, uid={}, banId={}", cid, uid, ban.getId());
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("user is banned in this channel"));
-            throw new CPReturnException();
+            fail(CPProblem.of(403, "user_muted", "user is banned in this channel"));
         }
         // 封禁已过期，尝试删除旧记录
         boolean deleted = channelBanDAO.delete(ban);

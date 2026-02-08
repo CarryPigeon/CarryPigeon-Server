@@ -21,6 +21,9 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
 
     private final ChannelReadStateMapper channelReadStateMapper;
 
+    /**
+     * Create read-state DAO implementation.
+     */
     public ChannelReadStateDaoImpl(ChannelReadStateMapper channelReadStateMapper) {
         this.channelReadStateMapper = channelReadStateMapper;
     }

@@ -9,7 +9,6 @@ class IdUtilTests {
 
     @Test
     void generateId_shouldBePositiveAndChangeAcrossCalls() {
-        new IdUtil();
         long first = IdUtil.generateId();
         long second = IdUtil.generateId();
         assertTrue(first > 0);

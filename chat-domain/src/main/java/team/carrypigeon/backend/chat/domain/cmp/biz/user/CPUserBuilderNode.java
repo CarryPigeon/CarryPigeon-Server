@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
@@ -25,15 +24,15 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserBuilder")
 public class CPUserBuilderNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
-        String userInfoUserName = requireContext(context, CPNodeUserKeys.USER_INFO_USER_NAME, String.class);
-        String userInfoBrief = requireContext(context, CPNodeUserKeys.USER_INFO_BRIEF, String.class);
-        Long userInfoAvatar = requireContext(context, CPNodeUserKeys.USER_INFO_AVATAR, Long.class);
-        String userInfoEmail = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL, String.class);
-        Integer userInfoSex = requireContext(context, CPNodeUserKeys.USER_INFO_SEX, Integer.class);
-        Long userInfoBirthday = requireContext(context, CPNodeUserKeys.USER_INFO_BIRTHDAY, Long.class);
-        Long userInfoRegisterTime = requireContext(context, CPNodeUserKeys.USER_INFO_REGISTER_TIME, Long.class);
+    protected void process(CPFlowContext context) throws Exception {
+        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
+        String userInfoUserName = requireContext(context, CPNodeUserKeys.USER_INFO_USER_NAME);
+        String userInfoBrief = requireContext(context, CPNodeUserKeys.USER_INFO_BRIEF);
+        Long userInfoAvatar = requireContext(context, CPNodeUserKeys.USER_INFO_AVATAR);
+        String userInfoEmail = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL);
+        Integer userInfoSex = requireContext(context, CPNodeUserKeys.USER_INFO_SEX);
+        Long userInfoBirthday = requireContext(context, CPNodeUserKeys.USER_INFO_BIRTHDAY);
+        Long userInfoRegisterTime = requireContext(context, CPNodeUserKeys.USER_INFO_REGISTER_TIME);
         CPUser cpUser = new CPUser();
         cpUser.setId(userInfoId)
                 .setUsername(userInfoUserName)
@@ -41,8 +40,8 @@ public class CPUserBuilderNode extends CPNodeComponent {
                 .setAvatar(userInfoAvatar)
                 .setEmail(userInfoEmail)
                 .setSex(CPUserSexEnum.valueOf(userInfoSex))
-                .setBirthday(TimeUtil.MillisToLocalDateTime(userInfoBirthday))
-                .setRegisterTime(TimeUtil.MillisToLocalDateTime(userInfoRegisterTime));
-        context.setData(CPNodeUserKeys.USER_INFO, cpUser);
+                .setBirthday(TimeUtil.millisToLocalDateTime(userInfoBirthday))
+                .setRegisterTime(TimeUtil.millisToLocalDateTime(userInfoRegisterTime));
+        context.set(CPNodeUserKeys.USER_INFO, cpUser);
     }
 }

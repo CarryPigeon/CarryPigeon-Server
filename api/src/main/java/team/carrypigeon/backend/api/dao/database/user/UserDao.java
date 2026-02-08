@@ -3,26 +3,38 @@ package team.carrypigeon.backend.api.dao.database.user;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 
 /**
- * 用户的dao接口，用于与数据库进行交互
- * @author midreamsheep
- * */
+ * User DAO.
+ * <p>
+ * This interface is part of the stable API surface. Business logic and plugins should depend on this module, not the
+ * concrete database implementation.
+ */
 public interface UserDao {
 
     /**
-     * 通过id获取用户
-     * @param id 用户唯一id
-     * */
+     * Get a user by id.
+     *
+     * @param id user id
+     */
     CPUser getById(long id);
 
     /**
-     * 通过邮箱获取用户
-     * @param email 用户邮箱
-     * */
+     * Get a user by email.
+     *
+     * @param email user email
+     */
     CPUser getByEmail(String email);
 
     /**
-     * 更新用户数据（已存在则为更新，不存在则为插入）
-     * @param user 用户数据
-     * */
+     * Save user (insert or update).
+     *
+     * @param user user entity
+     */
     boolean save(CPUser user);
+
+    /**
+     * Batch load users by ids.
+     * <p>
+     * This method is used by HTTP APIs to avoid N+1 queries when rendering member/message lists.
+     */
+    java.util.List<CPUser> listByIds(java.util.Collection<Long> ids);
 }

@@ -27,13 +27,22 @@ SET FOREIGN_KEY_CHECKS = 0;
 
 CREATE TABLE IF NOT EXISTS `file_info` (
     `id` BIGINT NOT NULL COMMENT 'File id',
-    `sha256` CHAR(64) NOT NULL COMMENT 'SHA-256 hex string',
+    `share_key` VARCHAR(64) NOT NULL COMMENT 'Stable share key used by /api/files/download/{share_key}',
+    `owner_uid` BIGINT NOT NULL COMMENT 'Owner user id (uploader)',
+    `access_scope` VARCHAR(16) NOT NULL DEFAULT 'OWNER' COMMENT 'Access scope: OWNER|AUTH|CHANNEL|PUBLIC',
+    `scope_cid` BIGINT NOT NULL DEFAULT 0 COMMENT 'Scope channel id (required when access_scope=CHANNEL)',
+    `scope_mid` BIGINT NOT NULL DEFAULT 0 COMMENT 'Scope message id (reserved for P2+)',
+    `filename` VARCHAR(255) NULL COMMENT 'Original filename (optional)',
+    `sha256` CHAR(64) NULL COMMENT 'SHA-256 hex string (optional)',
     `size` BIGINT NOT NULL COMMENT 'File size (bytes)',
     `object_name` VARCHAR(255) NOT NULL COMMENT 'Object storage key',
     `content_type` VARCHAR(128) NULL COMMENT 'MIME type',
+    `uploaded` TINYINT NOT NULL DEFAULT 0 COMMENT '0 pending, 1 uploaded',
+    `uploaded_time` DATETIME NULL COMMENT 'Uploaded time (null if not uploaded)',
     `create_time` DATETIME NOT NULL COMMENT 'Create time',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_file_info_sha256` (`sha256`),
+    UNIQUE KEY `uk_file_info_share_key` (`share_key`),
+    KEY `idx_file_info_sha256` (`sha256`),
     KEY `idx_file_info_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -104,7 +113,9 @@ CREATE TABLE IF NOT EXISTS `channel_ban` (
     `cid` BIGINT NOT NULL COMMENT 'Channel id',
     `uid` BIGINT NOT NULL COMMENT 'Banned user id',
     `aid` BIGINT NOT NULL COMMENT 'Admin user id',
-    `duration` INT NOT NULL COMMENT 'Duration (seconds)',
+    `duration` INT NOT NULL COMMENT 'Duration (seconds, legacy)',
+    `until_time` BIGINT NOT NULL DEFAULT 0 COMMENT 'Mute until (epoch millis, 0 means not set)',
+    `reason` VARCHAR(255) NULL COMMENT 'Mute reason (optional)',
     `create_time` DATETIME NOT NULL COMMENT 'Create time',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_channel_ban_uid_cid` (`uid`, `cid`),
@@ -116,17 +127,20 @@ CREATE TABLE IF NOT EXISTS `message` (
     `uid` BIGINT NOT NULL COMMENT 'Sender user id',
     `cid` BIGINT NOT NULL COMMENT 'Channel id',
     `domain` VARCHAR(64) NOT NULL COMMENT 'Domain:SubDomain',
+    `domain_version` VARCHAR(16) NOT NULL DEFAULT '1.0.0' COMMENT 'Domain version (SemVer)',
+    `reply_to_mid` BIGINT NOT NULL DEFAULT 0 COMMENT 'Reply target message id (0 means not a reply)',
     `data` TEXT NOT NULL COMMENT 'JSON string payload',
     `send_time` DATETIME NOT NULL COMMENT 'Send time',
     PRIMARY KEY (`id`),
-    KEY `idx_message_cid_send_time` (`cid`, `send_time`),
-    KEY `idx_message_cid_uid_send_time` (`cid`, `uid`, `send_time`)
+    KEY `idx_message_cid_id` (`cid`, `id`),
+    KEY `idx_message_cid_send_time` (`cid`, `send_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `channel_read_state` (
     `id` BIGINT NOT NULL COMMENT 'Read state record id',
     `uid` BIGINT NOT NULL COMMENT 'User id',
     `cid` BIGINT NOT NULL COMMENT 'Channel id',
+    `last_read_mid` BIGINT NOT NULL DEFAULT 0 COMMENT 'Last read message id (0 means never)',
     `last_read_time` BIGINT NOT NULL DEFAULT 0 COMMENT 'Epoch millis (0 means never)',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_channel_read_state_uid_cid` (`uid`, `cid`),
@@ -134,4 +148,3 @@ CREATE TABLE IF NOT EXISTS `channel_read_state` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
-

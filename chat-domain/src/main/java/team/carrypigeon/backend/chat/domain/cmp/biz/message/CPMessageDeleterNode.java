@@ -4,11 +4,13 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
+import team.carrypigeon.backend.chat.domain.service.ws.ApiWsEventPublisher;
 
 /**
  * 删除消息的组件。<br/>
@@ -21,9 +23,10 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 public class CPMessageDeleterNode extends AbstractDeleteNode<CPMessage> {
 
     private final ChannelMessageDao channelMessageDao;
+    private final ApiWsEventPublisher wsEventPublisher;
 
     @Override
-    protected String getContextKey() {
+    protected CPKey<CPMessage> getContextKey() {
         return CPNodeMessageKeys.MESSAGE_INFO;
     }
 
@@ -43,17 +46,18 @@ public class CPMessageDeleterNode extends AbstractDeleteNode<CPMessage> {
     }
 
     @Override
-    protected void onFailure(CPMessage message, CPFlowContext context) throws CPReturnException {
+    protected void onFailure(CPMessage message, CPFlowContext context) {
         if (message != null) {
             log.error("CPMessageDeleter delete failed, mid={}, cid={}, uid={}",
                     message.getId(), message.getCid(), message.getUid());
         }
-        businessError(context, "delete message error");
+        fail(CPProblem.of(500, "internal_error", "delete message error"));
     }
 
     @Override
     protected void afterSuccess(CPMessage message, CPFlowContext context) {
         log.info("CPMessageDeleter success, mid={}, cid={}, uid={}",
                 message.getId(), message.getCid(), message.getUid());
+        wsEventPublisher.publishMessageDeleted(message.getCid(), message.getId());
     }
 }

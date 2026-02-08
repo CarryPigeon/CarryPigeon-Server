@@ -1,22 +1,25 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.read;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelReadStateKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
+import team.carrypigeon.backend.chat.domain.service.ws.ApiWsEventPublisher;
 
 /**
  * Upsert channel read state for current user in a channel.
  * <p>
  * Inputs:
- *  - SessionId:Long (current user id, written by UserLoginChecker)
+ *  - session_uid:Long (current user id, written by UserLoginChecker)
  *  - ChannelReadStateInfo_Cid:Long
+ *  - ChannelReadStateInfo_LastReadMid:Long (mid)
  *  - ChannelReadStateInfo_LastReadTime:Long (millis)
  * Output:
  *  - ChannelReadStateInfo:CPChannelReadState (updated entity)
@@ -27,17 +30,18 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 public class CPChannelReadStateUpdaterNode extends CPNodeComponent {
 
     private final ChannelReadStateDao channelReadStateDao;
+    private final ApiWsEventPublisher wsEventPublisher;
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long uid = context.getData(CPNodeCommonKeys.SESSION_ID);
-        Long cid = context.getData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_CID);
-        Long lastReadTimeMillis = context.getData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_LAST_READ_TIME);
-
-        if (uid == null || cid == null || lastReadTimeMillis == null || lastReadTimeMillis <= 0) {
-            log.error("CPChannelReadStateUpdater args error, uid={}, cid={}, lastReadTimeMillis={}",
-                    uid, cid, lastReadTimeMillis);
-            argsError(context);
+    protected void process(CPFlowContext context) throws Exception {
+        Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
+        Long cid = requireContext(context, CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_CID);
+        Long lastReadMid = requireContext(context, CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_LAST_READ_MID);
+        Long lastReadTimeMillis = requireContext(context, CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO_LAST_READ_TIME);
+        if (lastReadMid <= 0 || lastReadTimeMillis <= 0) {
+            log.error("CPChannelReadStateUpdater args error, uid={}, cid={}, lastReadMid={}, lastReadTimeMillis={}",
+                    uid, cid, lastReadMid, lastReadTimeMillis);
+            validationFailed();
             return;
         }
 
@@ -46,28 +50,39 @@ public class CPChannelReadStateUpdaterNode extends CPNodeComponent {
             state = new CPChannelReadState()
                     .setUid(uid)
                     .setCid(cid)
+                    .setLastReadMid(0L)
                     .setLastReadTime(0L);
         }
 
         // Only move forward the read position.
+        long oldMid = state.getLastReadMid();
         long oldTime = state.getLastReadTime();
+        long newMid = lastReadMid;
         long newTime = lastReadTimeMillis;
+
+        boolean moved = false;
+        if (newMid > oldMid) {
+            state.setLastReadMid(newMid);
+            moved = true;
+        }
         if (newTime > oldTime) {
             state.setLastReadTime(newTime);
-        } else {
-            log.debug("CPChannelReadStateUpdater ignored older read time, uid={}, cid={}, old={}, new={}",
-                    uid, cid, oldTime, newTime);
+            moved = true;
+        }
+        if (!moved) {
+            log.debug("CPChannelReadStateUpdater ignored non-forward read position, uid={}, cid={}, oldMid={}, newMid={}, oldTime={}, newTime={}",
+                    uid, cid, oldMid, newMid, oldTime, newTime);
         }
 
         boolean success = channelReadStateDao.save(state);
         if (!success) {
             log.error("CPChannelReadStateUpdater save failed, uid={}, cid={}", uid, cid);
-            businessError(context, "failed to save channel read state");
-            return;
+            fail(CPProblem.of(500, "internal_error", "failed to save channel read state"));
         }
 
-        context.setData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO, state);
-        log.debug("CPChannelReadStateUpdater success, uid={}, cid={}, lastReadTime={}",
-                uid, cid, state.getLastReadTime());
+        context.set(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO, state);
+        wsEventPublisher.publishReadStateUpdated(state);
+        log.debug("CPChannelReadStateUpdater success, uid={}, cid={}, lastReadMid={}, lastReadTime={}",
+                uid, cid, state.getLastReadMid(), state.getLastReadTime());
     }
 }

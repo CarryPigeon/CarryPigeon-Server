@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
@@ -25,31 +24,31 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPUserUpdater")
 public class CPUserUpdaterNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
-        String username = context.getData(CPNodeUserKeys.USER_INFO_USER_NAME);
+    protected void process(CPFlowContext context) throws Exception {
+        CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO);
+        String username = context.get(CPNodeUserKeys.USER_INFO_USER_NAME);
         if (username != null){
             user.setUsername(username);
         }
-        String brief = context.getData(CPNodeUserKeys.USER_INFO_BRIEF);
+        String brief = context.get(CPNodeUserKeys.USER_INFO_BRIEF);
         if (brief != null){
             user.setBrief(brief);
         }
-        Long avatar = context.getData(CPNodeUserKeys.USER_INFO_AVATAR);
+        Long avatar = context.get(CPNodeUserKeys.USER_INFO_AVATAR);
         if (avatar != null){
             user.setAvatar(avatar);
         }
-        String email = context.getData(CPNodeUserKeys.USER_INFO_EMAIL);
+        String email = context.get(CPNodeUserKeys.USER_INFO_EMAIL);
         if (email != null){
             user.setEmail(email);
         }
-        Integer sex = context.getData(CPNodeUserKeys.USER_INFO_SEX);
+        Integer sex = context.get(CPNodeUserKeys.USER_INFO_SEX);
         if (sex != null){
             user.setSex(CPUserSexEnum.valueOf(sex));
         }
-        Long birthday = context.getData(CPNodeUserKeys.USER_INFO_BIRTHDAY);
+        Long birthday = context.get(CPNodeUserKeys.USER_INFO_BIRTHDAY);
         if (birthday != null){
-            user.setBirthday(TimeUtil.MillisToLocalDateTime(birthday));
+            user.setBirthday(TimeUtil.millisToLocalDateTime(birthday));
         }
 
     }

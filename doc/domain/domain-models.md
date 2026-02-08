@@ -41,7 +41,7 @@
 用途：
 
 - 登录状态管理与多端登录控制；
-- 被 `/core/user/login/token`、`/core/user/login/token/logout` 等路由使用。
+- 被 `/api/users/me`、`/api/auth/revoke` 等路由使用。
 
 ---
 
@@ -171,7 +171,7 @@
 - 记录用户在每个频道的读状态，用于多端同步；
 - 与消息未读统计组合使用，参见：
   - `doc/features/feature-message-read-state.md`
-  - `doc/api/api-chat-message.md`
+  - `doc/api/11-HTTP端点清单.md`
 
 ---
 

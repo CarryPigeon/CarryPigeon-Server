@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- HTTP API: auth + users -->
+
+    <!-- ===== Auth ===== -->
+
+    <!-- POST /api/auth/email_codes -->
+    <chain name="api_auth_email_codes">
+        THEN(
+            ApiSendEmailCode,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- POST /api/auth/tokens -->
+    <chain name="api_auth_tokens">
+        THEN(
+            ApiCreateTokens,
+            ApiTokensResult
+        )
+    </chain>
+
+    <!-- POST /api/auth/refresh -->
+    <chain name="api_auth_refresh">
+        THEN(
+            ApiRefreshTokens,
+            ApiTokensResult
+        )
+    </chain>
+
+    <!-- POST /api/auth/revoke -->
+    <chain name="api_auth_revoke">
+        THEN(
+            ApiRevokeToken,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- ===== Users ===== -->
+
+    <!-- GET /api/users/me (auth required) -->
+    <chain name="api_users_me">
+        THEN(
+            ApiLoginGuard,
+            ApiUserMeResult
+        )
+    </chain>
+
+    <!-- PATCH /api/users/me (auth required) -->
+    <chain name="api_users_me_patch">
+        THEN(
+            ApiLoginGuard,
+            ApiUserMePatchBind,
+            CPUserSelector.bind("key","id"),
+            CPUserUpdater,
+            CPUserSaver,
+            CPUserAvatarFileScopeUpdater,
+            ApiUserMeResult
+        )
+    </chain>
+
+    <!-- GET /api/users/{uid} (auth required) -->
+    <chain name="api_users_get">
+        THEN(
+            ApiLoginGuard,
+            ApiUserGetBind,
+            CPUserSelector.bind("key","id"),
+            ApiUserGetResult
+        )
+    </chain>
+
+    <!-- GET /api/users?ids=... (auth required) -->
+    <chain name="api_users_batch">
+        THEN(
+            ApiLoginGuard,
+            ApiUsersBatchBind,
+            CPUserGroupSelector,
+            ApiUsersBatchResult
+        )
+    </chain>
+</flow>

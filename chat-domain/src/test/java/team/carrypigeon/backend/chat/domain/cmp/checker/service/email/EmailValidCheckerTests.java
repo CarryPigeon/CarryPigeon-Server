@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.service.email;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
-import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -17,10 +17,9 @@ class EmailValidCheckerTests {
         CPFlowContext context = new CPFlowContext();
         context.setData("Email", "bad");
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("email error", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("email_invalid", ex.getProblem().reason());
     }
 
     @Test
@@ -30,7 +29,7 @@ class EmailValidCheckerTests {
         context.setData("Email", "bad");
 
         node.process(null, context);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertFalse(result.state());
         assertEquals("email error", result.msg());
@@ -43,7 +42,7 @@ class EmailValidCheckerTests {
         context.setData("Email", "a@b.com");
 
         node.process(null, context);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
     }
@@ -64,4 +63,3 @@ class EmailValidCheckerTests {
         }
     }
 }
-

@@ -13,12 +13,20 @@ import team.carrypigeon.backend.dao.database.mapper.channel.member.ChannelMember
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link ChannelMemberDao} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * 写操作会全量失效成员相关缓存（allEntries=true），以避免组合 key 缓存不一致。
+ */
 @Slf4j
 @Service
 public class ChannelMemberDaoImpl implements ChannelMemberDao {
 
     private final ChannelMemberMapper channelMemberMapper;
 
+    /**
+     * 创建频道成员 DAO 实现（由 Spring 注入 {@link ChannelMemberMapper}）。
+     */
     public ChannelMemberDaoImpl(ChannelMemberMapper channelMemberMapper) {
         this.channelMemberMapper = channelMemberMapper;
     }

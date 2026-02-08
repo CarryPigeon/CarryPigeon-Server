@@ -27,22 +27,17 @@ public class CPMessageDeleteNotifyBuilderNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
-        if (message == null) {
-            log.error("CPMessageDeleteNotifyBuilder args error: MessageInfo is null");
-            argsError(context);
-            return;
-        }
+        CPMessage message = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO);
         long sendTimeMillis = message.getSendTime() != null
-                ? TimeUtil.LocalDateTimeToMillis(message.getSendTime())
-                : TimeUtil.getCurrentTime();
+                ? TimeUtil.localDateTimeToMillis(message.getSendTime())
+                : TimeUtil.currentTimeMillis();
         CPMessageNotificationData data = new CPMessageNotificationData()
                 .setType("delete")
                 .setSContent("message deleted")
                 .setCid(message.getCid())
                 .setUid(message.getUid())
                 .setSendTime(sendTimeMillis);
-        context.setData(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
+        context.set(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
         log.debug("CPMessageDeleteNotifyBuilder success, mid={}, cid={}, uid={}",
                 message.getId(), message.getCid(), message.getUid());
     }

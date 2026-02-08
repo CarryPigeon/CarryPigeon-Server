@@ -2,12 +2,10 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -24,10 +22,10 @@ class CPChannelMemberSelectorNodeTests {
         node.setMode("id");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, 1L);
 
         node.process(null, context);
-        assertSame(entity, context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO));
+        assertSame(entity, context.get(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO));
 
         node.process(null, context);
         verify(dao, times(1)).getById(1L);
@@ -43,11 +41,11 @@ class CPChannelMemberSelectorNodeTests {
         node.setMode("CidWithUid");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, 3L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, 3L);
 
         node.process(null, context);
-        assertSame(entity, context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO));
+        assertSame(entity, context.get(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO));
         verify(dao).getMember(2L, 3L);
     }
 
@@ -58,8 +56,9 @@ class CPChannelMemberSelectorNodeTests {
         node.setMode("unknown");
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        assertNotNull(context.getData(CPNodeCommonKeys.RESPONSE));
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -71,12 +70,11 @@ class CPChannelMemberSelectorNodeTests {
         node.setMode("id");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_ID, 1L);
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("channel member not found", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(403, ex.getProblem().status());
+        assertEquals("not_channel_member", ex.getProblem().reason());
     }
 
     private static final class TestableCPChannelMemberSelectorNode extends CPChannelMemberSelectorNode {
@@ -99,4 +97,3 @@ class CPChannelMemberSelectorNodeTests {
         }
     }
 }
-

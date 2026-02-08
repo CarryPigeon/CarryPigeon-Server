@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
@@ -26,24 +27,23 @@ public class CPChannelSelectorNode extends AbstractSelectorNode<CPChannel> {
     protected CPChannel doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode){
             case "id":
-                Long id = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
+                Long id = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
                 return select(context,
                         buildSelectKey("channel", "id", id),
                         () -> channelDao.getById(id));
             default:
-                argsError(context);
+                validationFailed();
                 return null;
         }
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPChannel> getResultKey() {
         return CPNodeChannelKeys.CHANNEL_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
-        // 通道不存在视为参数错误，保持与原实现一致
-        argsError(context);
+    protected void handleNotFound(String mode, CPFlowContext context) {
+        fail(CPProblem.of(404, "not_found", "channel not found"));
     }
 }

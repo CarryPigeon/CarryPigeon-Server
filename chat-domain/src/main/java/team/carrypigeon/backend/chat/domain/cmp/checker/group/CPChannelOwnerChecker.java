@@ -4,12 +4,9 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
 /**
@@ -31,18 +28,16 @@ public class CPChannelOwnerChecker extends AbstractCheckerNode {
         boolean soft = isSoftMode();
 
         // 必填参数：ChannelInfo, UserInfo_Id
-        CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO, CPChannel.class);
-        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+        CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
+        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         if (channelInfo.getOwner() != userInfoId) {
             if (soft) {
                 markSoftFail(context, "not owner");
                 log.info("CPChannelOwnerChecker soft fail: user not owner, uid={}, cid={}", userInfoId, channelInfo.getId());
                 return;
             }
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("you are not the owner of this channel"));
             log.info("CPChannelOwnerChecker hard fail: user not owner, uid={}, cid={}", userInfoId, channelInfo.getId());
-            throw new CPReturnException();
+            forbidden("not_channel_owner", "you are not the owner of this channel");
         }
         if (soft) {
             markSoftSuccess(context);

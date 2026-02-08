@@ -33,6 +33,9 @@ import java.time.Duration;
         matchIfMissing = true)
 public class StartupHealthCheckConfig {
 
+    /**
+     * 启动时自检 runner：在 Spring Boot 初始化完成后探测 MySQL 与 Redis 的可用性。
+     */
     @Bean
     public ApplicationRunner startupHealthChecker(DataSource dataSource,
                                                  StringRedisTemplate stringRedisTemplate) {
@@ -70,4 +73,3 @@ public class StartupHealthCheckConfig {
         }
     }
 }
-

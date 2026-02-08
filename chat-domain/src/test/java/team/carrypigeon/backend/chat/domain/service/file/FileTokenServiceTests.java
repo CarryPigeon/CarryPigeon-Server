@@ -78,9 +78,8 @@ class FileTokenServiceTests {
         cache.set("file:token:t2", "1:UPLOAD::not-number", 60);
         assertNull(service.consume("t2"));
 
-        long expiredMillis = TimeUtil.LocalDateTimeToMillis(LocalDateTime.now().minusSeconds(10));
+        long expiredMillis = TimeUtil.localDateTimeToMillis(LocalDateTime.now().minusSeconds(10));
         cache.set("file:token:t3", "1:DOWNLOAD:fid:" + expiredMillis, 60);
         assertNull(service.consume("t3"));
     }
 }
-

@@ -303,20 +303,19 @@ public class InMemoryDatabase {
         return messages.get(id);
     }
 
-    public CPMessage[] getMessagesBefore(long cid, LocalDateTime time, int count) {
+    public CPMessage[] getMessagesBeforeMid(long cid, long cursorMid, int count) {
+        long safeCursor = cursorMid <= 0 ? Long.MAX_VALUE : cursorMid;
         return messages.values().stream()
-                .filter(m -> m.getCid() == cid && m.getSendTime() != null && !m.getSendTime().isAfter(time))
-                .sorted(Comparator.comparing(CPMessage::getSendTime).reversed())
+                .filter(m -> m.getCid() == cid && m.getId() < safeCursor)
+                .sorted(Comparator.comparingLong(CPMessage::getId).reversed())
                 .limit(count)
                 .toArray(CPMessage[]::new);
     }
 
-    public int getMessagesAfterCount(long cid, long uid, LocalDateTime time) {
+    public int getMessagesAfterMidCount(long cid, long startMid) {
+        long safeStart = Math.max(0L, startMid);
         return (int) messages.values().stream()
-                .filter(m -> m.getCid() == cid
-                        && m.getUid() == uid
-                        && m.getSendTime() != null
-                        && m.getSendTime().isAfter(time))
+                .filter(m -> m.getCid() == cid && m.getId() > safeStart)
                 .count();
     }
 

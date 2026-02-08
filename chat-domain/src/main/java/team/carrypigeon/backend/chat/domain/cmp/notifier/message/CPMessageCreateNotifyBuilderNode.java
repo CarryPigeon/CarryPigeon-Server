@@ -32,16 +32,11 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
-        CPMessageData messageData = context.getData(CPNodeValueKeyExtraConstants.MESSAGE_DATA);
-        if (message == null || messageData == null) {
-            log.error("CPMessageCreateNotifyBuilder args error: message or messageData is null");
-            argsError(context);
-            return;
-        }
+        CPMessage message = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO);
+        CPMessageData messageData = requireContext(context, CPNodeValueKeyExtraConstants.MESSAGE_DATA);
         long sendTimeMillis = message.getSendTime() != null
-                ? TimeUtil.LocalDateTimeToMillis(message.getSendTime())
-                : TimeUtil.getCurrentTime();
+                ? TimeUtil.localDateTimeToMillis(message.getSendTime())
+                : TimeUtil.currentTimeMillis();
         CPMessageNotificationData data = new CPMessageNotificationData()
                 .setType("create")
                 .setSContent(messageData.getSContent())
@@ -49,7 +44,7 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
                 .setCid(message.getCid())
                 .setUid(message.getUid())
                 .setSendTime(sendTimeMillis);
-        context.setData(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
+        context.set(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
         log.debug("CPMessageCreateNotifyBuilder success, mid={}, cid={}, uid={}",
                 message.getId(), message.getCid(), message.getUid());
     }

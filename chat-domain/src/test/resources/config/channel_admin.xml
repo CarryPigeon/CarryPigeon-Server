@@ -2,7 +2,7 @@
     <!--创建管理员-->
     <chain name="/core/channel/admin/create">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),
@@ -25,7 +25,7 @@
     <!--删除管理员-->
     <chain name="/core/channel/admin/delete">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /**获取频道信息**/
         CPChannelSelector.bind("key","id"),

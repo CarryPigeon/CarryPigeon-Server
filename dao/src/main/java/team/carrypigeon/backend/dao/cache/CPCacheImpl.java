@@ -7,12 +7,20 @@ import team.carrypigeon.backend.api.dao.cache.CPCache;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * {@link CPCache} 的 Redis 实现（String → String）。
+ * <p>
+ * 基于 {@link StringRedisTemplate}，所有 TTL 单位均为秒。
+ */
 @Slf4j
 @Service
 public class CPCacheImpl implements CPCache {
 
     private final StringRedisTemplate stringRedisTemplate;
 
+    /**
+     * 创建缓存实现（由 Spring 注入 Redis 客户端）。
+     */
     public CPCacheImpl(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
     }
@@ -41,6 +49,28 @@ public class CPCacheImpl implements CPCache {
         String result = stringRedisTemplate.opsForValue().get(key);
         stringRedisTemplate.opsForValue().set(key, value, expireTime,TimeUnit.SECONDS);
         return result;
+    }
+
+    @Override
+    public boolean setIfAbsent(String key, String value, int expireTime) {
+        log.debug("CPCacheImpl#setIfAbsent - key={}, expireTime={}", key, expireTime);
+        Boolean success = stringRedisTemplate.opsForValue()
+                .setIfAbsent(key, value, Math.max(1, expireTime), TimeUnit.SECONDS);
+        return Boolean.TRUE.equals(success);
+    }
+
+    @Override
+    public long increment(String key, long delta, int expireTime) {
+        log.debug("CPCacheImpl#increment - key={}, delta={}, expireTime={}", key, delta, expireTime);
+        Long value = stringRedisTemplate.opsForValue().increment(key, delta);
+        if (value == null) {
+            return 0L;
+        }
+        Long ttl = stringRedisTemplate.getExpire(key, TimeUnit.SECONDS);
+        if (ttl == null || ttl < 0) {
+            stringRedisTemplate.expire(key, Math.max(1, expireTime), TimeUnit.SECONDS);
+        }
+        return value;
     }
 
     @Override

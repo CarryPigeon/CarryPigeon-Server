@@ -2,28 +2,28 @@ package team.carrypigeon.backend.chat.domain.cmp.basic;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeBindKeys;
 
 /**
- * 清理参数节点。<br/>
- * 需要清理的参数必须以 ; 隔开，例如：name1;name2<br/>
- * 注：清理参数只会删除原参数。<br/>
+ * 清理上下文参数节点（从 {@link CPFlowContext} 移除 key）。
+ * <p>
+ * bind 参数：
+ * <ul>
+ *     <li>{@code key}：要删除的 key 列表，使用 {@code ;} 分隔（例如 {@code "a;b;c"}）</li>
+ * </ul>
+ *
+ * <p>入参：无（仅依赖 bind 参数）。</p>
+ * <p>出参：无（副作用：从上下文移除指定 key）。</p>
  */
 @Slf4j
 @LiteflowComponent("CleanerArg")
 public class CleanerArgNode extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        String bindData = getBindData(CPNodeBindKeys.KEY, String.class);
-        if (bindData == null) {
-            log.error("CleanerArg args error: bind key '{}' is missing or null in node {}", CPNodeBindKeys.KEY, getNodeId());
-            argsError(context);
-            return;
-        }
+    protected void process(CPFlowContext context) throws Exception {
+        String bindData = requireBind(CPNodeBindKeys.KEY, String.class);
         String[] cleaners = bindData.split(";");
         for (String s : cleaners) {
             context.dataMap.remove(s);

@@ -39,6 +39,9 @@ public class UserPO {
     // 用户的注册时间
     private LocalDateTime registerTime;
 
+    /**
+     * 将当前 PO 转换为领域对象（BO）。
+     */
     public CPUser toBo() {
         return new CPUser()
                 .setId(id)
@@ -51,6 +54,9 @@ public class UserPO {
                 .setRegisterTime(registerTime);
     }
 
+    /**
+     * 从领域对象（BO）创建 PO。
+     */
     public static UserPO fromBo(CPUser user) {
         return new UserPO()
                 .setId(user.getId())

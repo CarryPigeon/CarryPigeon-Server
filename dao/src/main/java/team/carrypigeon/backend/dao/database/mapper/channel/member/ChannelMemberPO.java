@@ -11,6 +11,11 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuth
 
 import java.time.LocalDateTime;
 
+/**
+ * {@code channel_member} 表的持久化对象（PO）。
+ * <p>
+ * authority 字段为枚举值（见 {@link CPChannelMemberAuthorityEnum}）。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,7 +36,10 @@ public class ChannelMemberPO {
     // 加入时间
     private LocalDateTime joinTime;
 
-    public static ChannelMemberPO from(CPChannelMember member){
+    /**
+     * 从领域对象（BO）创建 PO。
+     */
+    public static ChannelMemberPO from(CPChannelMember member) {
         return new ChannelMemberPO()
                 .setId(member.getId())
                 .setUid(member.getUid())
@@ -40,7 +48,11 @@ public class ChannelMemberPO {
                 .setAuthority(member.getAuthority().getAuthority())
                 .setJoinTime(member.getJoinTime());
     }
-    public CPChannelMember toBo(){
+
+    /**
+     * 将当前 PO 转换为领域对象（BO）。
+     */
+    public CPChannelMember toBo() {
         return new CPChannelMember()
                 .setId(id)
                 .setUid(uid)

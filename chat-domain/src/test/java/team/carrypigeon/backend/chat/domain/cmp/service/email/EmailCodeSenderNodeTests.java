@@ -1,12 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.service.email;
 
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.api.service.email.CPEmailService;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 import java.lang.reflect.Field;
@@ -25,12 +23,11 @@ class EmailCodeSenderNodeTests {
         setField(node, "mailEnabled", false);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("email service disabled", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(500, ex.getProblem().status());
+        assertEquals("email_service_disabled", ex.getProblem().reason());
     }
 
     @Test
@@ -43,7 +40,7 @@ class EmailCodeSenderNodeTests {
         setField(node, "subject", "S");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
         node.process(null, context);
 
@@ -70,7 +67,7 @@ class EmailCodeSenderNodeTests {
         setField(node, "codeExpireSeconds", 0);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
         node.process(null, context);
 
@@ -89,16 +86,13 @@ class EmailCodeSenderNodeTests {
         doThrow(new RuntimeException("delete fail")).when(cache).delete(anyString());
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         verify(cache).set(eq("a@b.com:code"), anyString(), anyInt());
         verify(cache).delete(eq("a@b.com:code"));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(500, response.getCode());
-        assertEquals("send email error", response.getData().get("msg").asText());
+        assertEquals(500, ex.getProblem().status());
+        assertEquals("email_send_failed", ex.getProblem().reason());
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

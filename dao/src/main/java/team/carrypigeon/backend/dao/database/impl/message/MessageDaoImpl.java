@@ -10,16 +10,23 @@ import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
 import team.carrypigeon.backend.dao.database.mapper.message.MessageMapper;
 import team.carrypigeon.backend.dao.database.mapper.message.MessagePO;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link ChannelMessageDao} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * 注意：消息内容在表中以 JSON 字符串存储，{@link MessagePO} 会在 BO/PO 转换时负责序列化与反序列化。
+ */
 @Slf4j
 @Service
 public class MessageDaoImpl implements ChannelMessageDao {
 
     private final MessageMapper messageMapper;
 
+    /**
+     * 创建消息 DAO 实现（由 Spring 注入 {@link MessageMapper}）。
+     */
     public MessageDaoImpl(MessageMapper messageMapper) {
         this.messageMapper = messageMapper;
     }
@@ -38,31 +45,32 @@ public class MessageDaoImpl implements ChannelMessageDao {
     }
 
     @Override
-    public CPMessage[] getBefore(long cid, LocalDateTime time, int count) {
-        log.debug("MessageDaoImpl#getBefore - cid={}, time={}, count={}", cid, time, count);
+    public CPMessage[] listBefore(long cid, long cursorMid, int count) {
+        long safeCursor = cursorMid <= 0 ? Long.MAX_VALUE : cursorMid;
+        log.debug("MessageDaoImpl#listBefore - cid={}, cursorMid={}, count={}", cid, safeCursor, count);
         LambdaQueryWrapper<MessagePO> queryWrapper = new LambdaQueryWrapper<>();
-        // 查询指定频道在某个时间点之前的若干条消息，按时间倒序
+        // Snowflake message id is monotonic; use id cursor for stable pagination.
         queryWrapper.eq(MessagePO::getCid, cid)
-                .lt(MessagePO::getSendTime, time)
-                .orderByDesc(MessagePO::getSendTime)
+                .lt(MessagePO::getId, safeCursor)
+                .orderByDesc(MessagePO::getId)
                 .last("LIMIT " + count);
         List<MessagePO> records = messageMapper.selectList(queryWrapper);
         CPMessage[] result = records.stream()
                 .map(MessagePO::toBo)
                 .toArray(CPMessage[]::new);
-        log.debug("MessageDaoImpl#getBefore - resultCount={}, cid={}", result.length, cid);
+        log.debug("MessageDaoImpl#listBefore - resultCount={}, cid={}", result.length, cid);
         return result;
     }
 
     @Override
-    public int getAfterCount(long cid, long uid, LocalDateTime time) {
-        log.debug("MessageDaoImpl#getAfterCount - cid={}, uid={}, time={}", cid, uid, time);
+    public int countAfter(long cid, long startMid) {
+        long safeStart = Math.max(0L, startMid);
+        log.debug("MessageDaoImpl#countAfter - cid={}, startMid={}", cid, safeStart);
         LambdaQueryWrapper<MessagePO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(MessagePO::getCid, cid)
-                .eq(MessagePO::getUid, uid)
-                .gt(MessagePO::getSendTime, time);
+                .gt(MessagePO::getId, safeStart);
         int count = messageMapper.selectCount(queryWrapper).intValue();
-        log.debug("MessageDaoImpl#getAfterCount - resultCount={}, cid={}, uid={}", count, cid, uid);
+        log.debug("MessageDaoImpl#countAfter - resultCount={}, cid={}", count, cid);
         return count;
     }
 

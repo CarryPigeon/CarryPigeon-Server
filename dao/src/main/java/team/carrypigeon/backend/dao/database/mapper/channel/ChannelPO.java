@@ -10,6 +10,11 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 
 import java.time.LocalDateTime;
 
+/**
+ * {@code channel} 表的持久化对象（PO）。
+ * <p>
+ * 用于 BO（{@link CPChannel}）与数据库字段之间的转换。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -30,6 +35,9 @@ public class ChannelPO {
     // 通道创建时间
     private LocalDateTime createTime;
 
+    /**
+     * 将当前 PO 转换为领域对象（BO）。
+     */
     public CPChannel toBo() {
         return new CPChannel()
                 .setId(id)
@@ -40,6 +48,9 @@ public class ChannelPO {
                 .setCreateTime(createTime);
     }
 
+    /**
+     * 从领域对象（BO）创建 PO。
+     */
     public static ChannelPO fromBo(CPChannel cpChannel) {
         return new ChannelPO()
                 .setId(cpChannel.getId())
@@ -50,4 +61,3 @@ public class ChannelPO {
                 .setCreateTime(cpChannel.getCreateTime());
     }
 }
-

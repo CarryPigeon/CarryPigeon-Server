@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- HTTP API: messages + read state -->
+
+    <!-- ===== Messages ===== -->
+
+    <!-- GET /api/channels/{cid}/messages (auth required) -->
+    <chain name="api_messages_list">
+        THEN(
+            ApiLoginGuard,
+            ApiMessageListBind,
+            MemberGuard,
+            CPMessageLister,
+            ApiMessageListResult
+        )
+    </chain>
+
+    <!-- POST /api/channels/{cid}/messages (auth required) -->
+    <chain name="api_messages_create">
+        THEN(
+            ApiLoginGuard,
+            ApiMessageCreateBind,
+            MemberGuard,
+            CPChannelBanChecker,
+            CPChannelSelector.bind("key","id"),
+            ApiMessageIdempotencyCheck,
+            SWITCH(CheckerResultReader.bind("key","msg")).to(
+                THEN(
+                    DoNothing
+                ).id("hit"),
+                THEN(
+                    ApiMessageIdempotencyPendingFail
+                ).id("pending"),
+                THEN(
+                    ApiMessageConstraintsGuard,
+                    ApiMessageRateLimitGuard,
+                    CPMessageParse,
+                    CPMessageBuilder,
+                    CPMessageSaver,
+                    ApiMessageIdempotencySave
+                ).id("miss")
+            ),
+            ApiMessageCreateResult
+        )
+    </chain>
+
+    <!-- DELETE /api/messages/{mid} (auth required) -->
+    <chain name="api_messages_delete">
+        THEN(
+            ApiLoginGuard,
+            ApiMessageDeleteBind,
+            CPMessageSelector,
+            CPMessageDeletePermissionChecker,
+            CPMessageDeleter,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- ===== Read State ===== -->
+
+    <!-- PUT /api/channels/{cid}/read_state (auth required) -->
+    <chain name="api_read_state_update">
+        THEN(
+            ApiLoginGuard,
+            ApiReadStateUpdateBind,
+            ReadGuard,
+            CPChannelReadStateUpdater,
+            ApiReadStateUpdateResult
+        )
+    </chain>
+
+    <!-- GET /api/unreads (auth required) -->
+    <chain name="api_unreads_list">
+        THEN(
+            ApiLoginGuard,
+            CPChannelCollector,
+            ApiUnreadsResult
+        )
+    </chain>
+</flow>

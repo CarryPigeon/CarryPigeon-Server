@@ -5,15 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
+import team.carrypigeon.backend.chat.domain.service.ws.ApiWsEventPublisher;
 import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -29,17 +28,18 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelBanSaverNode extends CPNodeComponent {
 
     private final ChannelBanDAO channelBanDAO;
+    private final ApiWsEventPublisher wsEventPublisher;
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long cid = context.getData(CPNodeChannelKeys.CHANNEL_INFO_ID);
-        Long targetUid = context.getData(CPNodeChannelBanKeys.CHANNEL_BAN_TARGET_UID);
-        Integer duration = context.getData(CPNodeChannelBanKeys.CHANNEL_BAN_DURATION);
-        Long adminUid = context.getData(CPNodeUserKeys.USER_INFO_ID);
-        if (cid == null || targetUid == null || duration == null || adminUid == null) {
-            log.error("CPChannelBanSaver args error, cid={}, targetUid={}, duration={}, adminUid={}",
-                    cid, targetUid, duration, adminUid);
-            argsError(context);
+        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        Long targetUid = requireContext(context, CPNodeChannelBanKeys.CHANNEL_BAN_TARGET_UID);
+        Integer duration = context.get(CPNodeChannelBanKeys.CHANNEL_BAN_DURATION);
+        Long untilTime = context.get(CPNodeChannelBanKeys.CHANNEL_BAN_UNTIL_TIME);
+        String reason = context.get(CPNodeChannelBanKeys.CHANNEL_BAN_REASON);
+        Long adminUid = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
+        if ((untilTime == null || untilTime <= 0) && (duration == null || duration <= 0)) {
+            validationFailed();
             return;
         }
         CPChannelBan ban = select(context,
@@ -51,17 +51,25 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
                     .setCid(cid)
                     .setUid(targetUid);
         }
+        long nowMillis = TimeUtil.currentTimeMillis();
         ban.setAid(adminUid)
-                .setDuration(duration)
-                .setCreateTime(TimeUtil.getCurrentLocalTime());
+                .setReason(reason)
+                .setCreateTime(TimeUtil.currentLocalDateTime());
+        if (untilTime != null && untilTime > 0) {
+            long durationSec = Math.max(1L, (untilTime - nowMillis) / 1000L);
+            ban.setUntilTime(untilTime);
+            ban.setDuration(durationSec > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) durationSec);
+        } else if (duration != null && duration > 0) {
+            ban.setDuration(duration);
+            ban.setUntilTime(nowMillis + duration.longValue() * 1000L);
+        }
         if (!channelBanDAO.save(ban)) {
             log.error("CPChannelBanSaver save failed, cid={}, uid={}", cid, targetUid);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("error saving channel ban"));
-            throw new CPReturnException();
+            fail(CPProblem.of(500, "internal_error", "error saving channel ban"));
         }
-        context.setData(CPNodeChannelBanKeys.CHANNEL_BAN_INFO, ban);
-        log.info("CPChannelBanSaver success, banId={}, cid={}, uid={}, duration={}",
-                ban.getId(), ban.getCid(), ban.getUid(), ban.getDuration());
+        context.set(CPNodeChannelBanKeys.CHANNEL_BAN_INFO, ban);
+        wsEventPublisher.publishChannelChangedToChannelMembers(cid, "bans");
+        log.info("CPChannelBanSaver success, banId={}, cid={}, uid={}, untilTime={}, duration={}, reason={}",
+                ban.getId(), ban.getCid(), ban.getUid(), ban.getUntilTime(), ban.getDuration(), ban.getReason());
     }
 }

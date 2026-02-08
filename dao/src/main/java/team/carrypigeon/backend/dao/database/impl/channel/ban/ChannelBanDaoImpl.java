@@ -13,12 +13,20 @@ import team.carrypigeon.backend.dao.database.mapper.channel.ban.ChannelBanPO;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link ChannelBanDAO} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * duration 单位：秒（seconds）。
+ */
 @Slf4j
 @Service
 public class ChannelBanDaoImpl implements ChannelBanDAO {
 
     private final ChannelBanMapper channelBanMapper;
 
+    /**
+     * 创建频道禁言 DAO 实现（由 Spring 注入 {@link ChannelBanMapper}）。
+     */
     public ChannelBanDaoImpl(ChannelBanMapper channelBanMapper) {
         this.channelBanMapper = channelBanMapper;
     }

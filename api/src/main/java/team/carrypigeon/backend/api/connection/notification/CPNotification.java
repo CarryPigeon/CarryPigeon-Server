@@ -7,9 +7,23 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * 通知，用于服务端向客户端发送通知数据
- * @author midreamsheep
- * */
+ * 服务端推送通知体（作为 {@code CPResponse(id=-1, code=0)} 的 data）。
+ * <p>
+ * 推送协议外层统一是 {@code CPResponse}，其 {@code data} 字段为该对象：
+ * <pre>
+ * {
+ *   "id": -1,
+ *   "code": 0,
+ *   "data": { "route": "...", "data": { ... } }
+ * }
+ * </pre>
+ *
+ * <p>其中：
+ * <ul>
+ *     <li>{@link #route}：通知类型（例如 {@code "/core/message"}、{@code "handshake"}）。</li>
+ *     <li>{@link #data}：通知 payload（结构由 route 定义）。</li>
+ * </ul>
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

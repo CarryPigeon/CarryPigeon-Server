@@ -4,7 +4,8 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.message.ChannelMessageDao;
@@ -33,28 +34,27 @@ public class CPMessageSelectorNode extends AbstractSelectorNode<CPMessage> {
 
     @Override
     protected CPMessage doSelect(String mode, CPFlowContext context) throws Exception {
-        Long mid = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO_ID, Long.class);
+        Long mid = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO_ID);
         return select(context,
                 buildSelectKey("message", "id", mid),
                 () -> channelMessageDao.getById(mid));
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPMessage> getResultKey() {
         return CPNodeMessageKeys.MESSAGE_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
-        // 与原实现保持一致：message 不存在视为业务错误
+    protected void handleNotFound(String mode, CPFlowContext context) {
         log.debug("CPMessageSelector: message not found");
-        businessError(context, "message not found");
+        fail(CPProblem.of(404, "not_found", "message not found"));
     }
 
     @Override
     protected void afterSuccess(String mode, CPMessage entity, CPFlowContext context) {
         // 写入关联的频道 id，并打印日志
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, entity.getCid());
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, entity.getCid());
         log.debug("CPMessageSelector success, mid={}, cid={}, uid={}",
                 entity.getId(), entity.getCid(), entity.getUid());
     }

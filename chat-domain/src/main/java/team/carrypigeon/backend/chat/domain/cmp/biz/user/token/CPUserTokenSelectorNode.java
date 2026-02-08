@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
@@ -26,28 +27,28 @@ public class CPUserTokenSelectorNode extends AbstractSelectorNode<CPUserToken> {
         switch (mode){
             case "token":
                 String token =
-                        requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, String.class);
+                        requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN);
                 return select(context,
                         buildSelectKey("user_token", "token", token),
                         () -> userTokenDao.getByToken(token));
             case "id":
-                Long id = requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_ID, Long.class);
+                Long id = requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO_ID);
                 return select(context,
                         buildSelectKey("user_token", "id", id),
                         () -> userTokenDao.getById(id));
             default:
-                argsError(context);
+                validationFailed();
                 return null;
         }
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPUserToken> getResultKey() {
         return CPNodeUserTokenKeys.USER_TOKEN_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
-        businessError(context, "token does not exists");
+    protected void handleNotFound(String mode, CPFlowContext context) {
+        fail(CPProblem.of(404, "not_found", "token does not exists"));
     }
 }

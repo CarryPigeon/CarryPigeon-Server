@@ -26,7 +26,7 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long cid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID, Long.class);
+        Long cid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID);
         CPChannelMember[] allMember = select(context,
                 buildSelectKey("channel_member", "cid", cid),
                 () -> channelMemberDao.getAllMember(cid));
@@ -34,6 +34,6 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
         for (CPChannelMember member : allMember) {
             objects.add(member);
         }
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_LIST, objects);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_LIST, objects);
     }
 }

@@ -10,14 +10,29 @@ import team.carrypigeon.backend.api.dao.database.user.UserDao;
 import team.carrypigeon.backend.dao.database.mapper.user.UserMapper;
 import team.carrypigeon.backend.dao.database.mapper.user.UserPO;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link UserDao} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * 缓存策略：
+ * <ul>
+ *     <li>{@code userById}：按 id 缓存</li>
+ *     <li>{@code userByEmail}：按 email 缓存</li>
+ *     <li>写操作 {@link #save(CPUser)} 会清理相关缓存（allEntries=true）</li>
+ * </ul>
+ */
 @Slf4j
 @Service
 public class UserDaoImpl implements UserDao {
 
     private final UserMapper userMapper;
 
+    /**
+     * 创建用户 DAO 实现（由 Spring 注入 {@link UserMapper}）。
+     */
     public UserDaoImpl(UserMapper userMapper) {
         this.userMapper = userMapper;
     }
@@ -64,5 +79,17 @@ public class UserDaoImpl implements UserDao {
             log.warn("UserDaoImpl#save failed, uid={}", user.getId());
         }
         return success;
+    }
+
+    @Override
+    public List<CPUser> listByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        LambdaQueryWrapper<UserPO> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.in(UserPO::getId, ids);
+        return userMapper.selectList(queryWrapper).stream()
+                .map(UserPO::toBo)
+                .toList();
     }
 }

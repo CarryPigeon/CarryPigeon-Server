@@ -29,17 +29,12 @@ public class CPChannelReadStateNotifyBuilderNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPChannelReadState state = context.getData(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO);
-        if (state == null) {
-            log.error("CPChannelReadStateNotifyBuilder args error: ChannelReadStateInfo is null");
-            argsError(context);
-            return;
-        }
+        CPChannelReadState state = requireContext(context, CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO);
         CPChannelReadStateNotificationData data = new CPChannelReadStateNotificationData()
                 .setCid(state.getCid())
                 .setUid(state.getUid())
                 .setLastReadTime(state.getLastReadTime());
-        context.setData(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
+        context.set(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
         log.debug("CPChannelReadStateNotifyBuilder success, uid={}, cid={}, lastReadTime={}",
                 state.getUid(), state.getCid(), state.getLastReadTime());
     }

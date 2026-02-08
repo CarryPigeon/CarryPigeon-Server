@@ -5,6 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Getter
 @Slf4j
+/**
+ * 用户性别枚举（用于用户资料展示）。
+ */
 public enum CPUserSexEnum {
     UNKNOWN(0),
     MALE(1),
@@ -14,6 +17,13 @@ public enum CPUserSexEnum {
         this.value = value;
     }
 
+    /**
+     * 将数值转换为枚举。
+     *
+     * @param value 持久化/传输的枚举数值
+     * @return 对应的性别枚举
+     * @throws IllegalArgumentException 当 value 不合法时抛出
+     */
     public static CPUserSexEnum valueOf(int value) {
         return switch (value) {
             case 0 -> UNKNOWN;

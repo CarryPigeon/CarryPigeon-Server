@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import java.util.Map;
@@ -28,9 +27,9 @@ public class RenameArgNode extends CPNodeComponent {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
+    protected void process(CPFlowContext context) throws Exception {
         // 从节点 data 中读取重命名脚本：
-        // - 推荐形式：字符串 JSON，如 '{"SessionId":"UserInfo_Id"}'
+        // - 推荐形式：字符串 JSON，如 '{"session_uid":"UserInfo_Id"}'
         // - 兼容旧形式：Map<String,String>
         Object scriptObj = this.getCmpData(Object.class);
         Map<?, ?> mapping;
@@ -40,7 +39,7 @@ public class RenameArgNode extends CPNodeComponent {
             } catch (Exception e) {
                 log.error("RenameArg args error: invalid JSON script in node {}, script={}",
                         getNodeId(), scriptStr, e);
-                argsError(context);
+                validationFailed();
                 return;
             }
         } else if (scriptObj instanceof Map<?, ?> map) {
@@ -48,7 +47,7 @@ public class RenameArgNode extends CPNodeComponent {
         } else {
             log.error("RenameArg args error: data is neither JSON string nor Map in node {}, actual={}",
                     getNodeId(), scriptObj == null ? null : scriptObj.getClass().getName());
-            argsError(context);
+            validationFailed();
             return;
         }
 

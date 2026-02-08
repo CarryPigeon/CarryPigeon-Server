@@ -1,12 +1,10 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.service.email;
 
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowConnectionInfo;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 import java.util.HashMap;
@@ -21,12 +19,9 @@ class EmailRateLimitCheckerTests {
         EmailRateLimitChecker checker = new EmailRateLimitChecker(new InMemoryCPCache());
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("error args", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -38,15 +33,12 @@ class EmailRateLimitCheckerTests {
         cache.set("email_rate:ip_email:unknown:" + email, "5", 60);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, email);
         context.setConnectionInfo(new CPFlowConnectionInfo().setRemoteIp(null).setRemoteAddress("x"));
 
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("too many email requests", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(429, ex.getProblem().status());
+        assertEquals("rate_limited", ex.getProblem().reason());
     }
 
     @Test
@@ -59,15 +51,12 @@ class EmailRateLimitCheckerTests {
         cache.set("email_rate_day:ip_email:unknown:" + email, "30", 24 * 60 * 60);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, email);
         context.setConnectionInfo(new CPFlowConnectionInfo().setRemoteIp(null).setRemoteAddress("x"));
 
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("too many email requests", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(429, ex.getProblem().status());
+        assertEquals("rate_limited", ex.getProblem().reason());
     }
 
     @Test
@@ -79,7 +68,7 @@ class EmailRateLimitCheckerTests {
         cache.set("email_rate:ip_email:unknown:" + email, "oops", 60);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, email);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, email);
         context.setConnectionInfo(new CPFlowConnectionInfo().setRemoteIp(null).setRemoteAddress("x"));
 
         checker.process(null, context);
@@ -124,4 +113,3 @@ class EmailRateLimitCheckerTests {
         }
     }
 }
-

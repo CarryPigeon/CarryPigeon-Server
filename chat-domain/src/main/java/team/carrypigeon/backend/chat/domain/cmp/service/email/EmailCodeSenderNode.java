@@ -5,13 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.api.service.email.CPEmailService;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 import java.security.SecureRandom;
@@ -45,11 +43,10 @@ public class EmailCodeSenderNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL, String.class);
+        String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL);
 
         if (!mailEnabled) {
-            context.setData(CPNodeCommonKeys.RESPONSE, CPResponse.error("email service disabled"));
-            throw new CPReturnException();
+            fail(CPProblem.of(500, "email_service_disabled", "email service disabled"));
         }
 
         int expireSeconds = normalizeExpireSeconds(codeExpireSeconds);
@@ -67,8 +64,7 @@ public class EmailCodeSenderNode extends CPNodeComponent {
                 log.warn("failed to rollback email code cache, key={}", cacheKey, deleteEx);
             }
             log.error("failed to send email verification code, to={}", email, e);
-            context.setData(CPNodeCommonKeys.RESPONSE, CPResponse.serverError("send email error"));
-            throw new CPReturnException();
+            fail(CPProblem.of(500, "email_send_failed", "send email error"));
         }
     }
 

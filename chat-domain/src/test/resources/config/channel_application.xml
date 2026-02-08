@@ -20,7 +20,7 @@
     <chain name="/core/channel/application/process">
         RenameScriptAppProcessChannel ='{"ChannelApplicationInfo_Cid":"ChannelInfo_Id"}';
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /**获取申请信息**/
         CPChannelApplicationSelector.bind("key","id"),
@@ -61,7 +61,7 @@
     <!--获取申请列表-->
     <chain name="/core/channel/application/list">
         THEN(
-        /** 检查用户是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 检查用户是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /**判断是否为管理员**/
         CPChannelAdminChecker,

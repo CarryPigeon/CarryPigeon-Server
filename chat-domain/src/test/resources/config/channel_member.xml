@@ -2,12 +2,12 @@
 <flow>
     <!-- 获取单个群成员 -->
     <chain name="/core/channel/member/get">
-        RenameScriptGet1 = '{"SessionId":"ChannelMemberInfo_Uid"}';
+        RenameScriptGet1 = '{"session_uid":"ChannelMemberInfo_Uid"}';
         RenameScriptGet2 = '{"TargetMember_Uid":"ChannelMemberInfo_Uid"}';
         THEN(
         /** 判断是否登录 **/
         UserLoginChecker,
-        /** 使用当前 SessionId 校验是否为频道成员 **/
+        /** 使用当前 session_uid 校验是否为频道成员 **/
         RenameArg.data(RenameScriptGet1),
         /** 若不存在对应成员记录则视为“非频道成员” **/
         CPChannelMemberSelector.bind("key","CidWithUid"),
@@ -21,7 +21,7 @@
     <!-- 获取所有群成员 -->
     <chain name="/core/channel/member/list">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验 **/
         MemberGuard,
@@ -32,7 +32,7 @@
     <!-- 删除频道成员 -->
     <chain name="/core/channel/member/delete">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 获取频道信息 **/
         CPChannelSelector.bind("key","id"),

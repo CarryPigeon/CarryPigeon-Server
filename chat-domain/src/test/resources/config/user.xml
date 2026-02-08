@@ -29,7 +29,7 @@
     <!--修改用户信息-->
     <chain name="/core/user/profile/update">
         THEN(
-            /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+            /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
             UserLoginGuard,
             /**查询用户信息**/
             CPUserSelector.bind("key","id"),
@@ -46,7 +46,7 @@
     <!--修改用户邮箱-->
     <chain name="/core/user/profile/update/email">
         THEN(
-            /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+            /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
             UserLoginGuard,
             /**判断邮箱是否格式正确**/
             EmailValidChecker,

@@ -5,12 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 /**
  * 校验封禁目标是否合法的节点。<br/>
@@ -31,7 +28,7 @@ public class CPChannelBanTargetCheckerNode extends AbstractCheckerNode {
         boolean soft = isSoftMode();
 
         // 必填参数：ChannelMemberInfo
-        CPChannelMember target = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, CPChannelMember.class);
+        CPChannelMember target = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
         if (target.getAuthority() == CPChannelMemberAuthorityEnum.ADMIN) {
             if (soft) {
                 markSoftFail(context, "target is admin");
@@ -41,9 +38,7 @@ public class CPChannelBanTargetCheckerNode extends AbstractCheckerNode {
             }
             log.info("CPChannelBanTargetChecker hard fail: target is admin, uid={}, cid={}",
                     target.getUid(), target.getCid());
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("cannot ban channel admin"));
-            throw new CPReturnException();
+            forbidden("cannot_ban_admin", "cannot ban channel admin");
         }
         if (soft) {
             markSoftSuccess(context);

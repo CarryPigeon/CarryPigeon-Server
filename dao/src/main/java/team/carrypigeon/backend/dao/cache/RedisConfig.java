@@ -23,10 +23,16 @@ public class RedisConfig {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 创建 Redis 配置（由 Spring 注入 {@link ObjectMapper}）。
+     */
     public RedisConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 配置通用 {@link RedisTemplate}（key 为字符串，value 为 JSON）。
+     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();

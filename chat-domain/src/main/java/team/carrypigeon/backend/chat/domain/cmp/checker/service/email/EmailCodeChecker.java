@@ -4,15 +4,11 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
-import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 
 /**
  * 邮箱验证码校验节点。</br>
@@ -29,40 +25,28 @@ import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
 @LiteflowComponent("EmailCodeChecker")
 public class EmailCodeChecker extends AbstractCheckerNode {
 
-    private static final String BIND_TYPE_KEY = CPNodeBindKeys.TYPE;
-
     private final CPCache cache;
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        String type = getBindData(BIND_TYPE_KEY, String.class);
-        boolean soft = "soft".equalsIgnoreCase(type);
+        boolean soft = isSoftMode();
 
         // 读取参数
-        String email = context.getData(CPNodeValueKeyExtraConstants.EMAIL);
-        Integer code = context.getData(CPNodeValueKeyExtraConstants.EMAIL_CODE);
-        if (email == null || code == null) {
-            // 参数缺失，直接返回服务器错误
-            log.error("EmailCodeChecker param error: email or code is null");
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.serverError("email code param error"));
-            throw new CPReturnException();
-        }
+        String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL);
+        Integer code = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL_CODE);
+
         String serverCode = cache.getAndDelete(email + ":code");
         if (serverCode == null || !serverCode.equals(code.longValue() + "")) {
             if (soft) {
-                context.setData(CPNodeCommonKeys.CHECK_RESULT,
-                        new CheckResult(false, "email code error"));
+                markSoftFail(context, "email code error");
                 log.info("EmailCodeChecker soft fail: code error, email={}", email);
                 return;
             }
             log.info("EmailCodeChecker hard fail: code error, email={}", email);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("email code error"));
-            throw new CPReturnException();
+            fail(CPProblem.of(422, "email_code_invalid", "email code error"));
         }
         if (soft) {
-            context.setData(CPNodeCommonKeys.CHECK_RESULT, new CheckResult(true, null));
+            markSoftSuccess(context);
             log.debug("EmailCodeChecker soft success, email={}", email);
         }
         // 校验通过，这里无需额外处理

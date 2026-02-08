@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -24,21 +23,21 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPChannelBuilder")
 public class CPChannelBuilderNode extends CPNodeComponent {
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
+    protected void process(CPFlowContext context) throws Exception {
 
-        Long channelInfoId = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
-        String channelInfoName = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_NAME, String.class);
-        Long channelInfoOwner = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_OWNER, Long.class);
-        String channelInfoBrief = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_BRIEF, String.class);
-        Long channelInfoAvatar = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_AVATAR, Long.class);
-        Long channelInfoCreateTime = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_CREATE_TIME, Long.class);
+        Long channelInfoId = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        String channelInfoName = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_NAME);
+        Long channelInfoOwner = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_OWNER);
+        String channelInfoBrief = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_BRIEF);
+        Long channelInfoAvatar = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_AVATAR);
+        Long channelInfoCreateTime = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_CREATE_TIME);
         CPChannel cpChannel = new CPChannel();
         cpChannel.setId(channelInfoId)
                 .setName(channelInfoName)
                 .setOwner(channelInfoOwner)
                 .setBrief(channelInfoBrief)
                 .setAvatar(channelInfoAvatar)
-                .setCreateTime(TimeUtil.MillisToLocalDateTime(channelInfoCreateTime));
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO, cpChannel);
+                .setCreateTime(TimeUtil.millisToLocalDateTime(channelInfoCreateTime));
+        context.set(CPNodeChannelKeys.CHANNEL_INFO, cpChannel);
     }
 }

@@ -23,6 +23,11 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 // 启动日志打印
 @Slf4j
 public class ApplicationStarter {
+    /**
+     * Spring Boot 应用入口。
+     *
+     * @param args 启动参数
+     */
     public static void main(String[] args) {
         // 输出日志，通知项目启动
         log.info("Application is starting...");

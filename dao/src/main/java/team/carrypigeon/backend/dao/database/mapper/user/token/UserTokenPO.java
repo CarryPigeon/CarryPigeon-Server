@@ -10,6 +10,11 @@ import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 
 import java.time.LocalDateTime;
 
+/**
+ * {@code user_token} 表的持久化对象（PO）。
+ * <p>
+ * 用于 BO（{@link CPUserToken}）与数据库字段之间的转换。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -26,11 +31,17 @@ public class UserTokenPO {
     // 令牌到期时间
     private LocalDateTime expiredTime;
 
-    public CPUserToken toBo(){
-        return new CPUserToken(id,uid,token,expiredTime);
+    /**
+     * 将当前 PO 转换为领域对象（BO）。
+     */
+    public CPUserToken toBo() {
+        return new CPUserToken(id, uid, token, expiredTime);
     }
 
-    public static UserTokenPO from(CPUserToken cpUserToken){
+    /**
+     * 从领域对象（BO）创建 PO。
+     */
+    public static UserTokenPO from(CPUserToken cpUserToken) {
         return new UserTokenPO()
                 .setId(cpUserToken.getId())
                 .setUid(cpUserToken.getUid())

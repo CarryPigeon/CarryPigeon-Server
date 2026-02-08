@@ -33,10 +33,10 @@ public class FileTokenService {
      */
     public String createToken(long uid, String op, String fileId, long ttlSec) {
         String token = UUID.randomUUID().toString().replace("-", "");
-        LocalDateTime expireAt = TimeUtil.getCurrentLocalTime().plusSeconds(ttlSec);
+        LocalDateTime expireAt = TimeUtil.currentLocalDateTime().plusSeconds(ttlSec);
         FileToken fileToken = new FileToken(token, uid, op, fileId, expireAt);
         // encode as uid:op:fileId:expireAtMillis
-        long expireMillis = TimeUtil.LocalDateTimeToMillis(expireAt);
+        long expireMillis = TimeUtil.localDateTimeToMillis(expireAt);
         String encoded = uid + ":" + op + ":" + (fileId == null ? "" : fileId) + ":" + expireMillis;
         cpCache.set(buildCacheKey(token), encoded, (int) ttlSec);
         log.debug("create file token, token={}, uid={}, op={}, fileId={} ttlSec={}",
@@ -65,8 +65,8 @@ public class FileTokenService {
             String op = parts[1];
             String fileId = parts[2].isEmpty() ? null : parts[2];
             long expireMillis = Long.parseLong(parts[3]);
-            LocalDateTime expireAt = TimeUtil.MillisToLocalDateTime(expireMillis);
-            if (expireAt.isBefore(TimeUtil.getCurrentLocalTime())) {
+            LocalDateTime expireAt = TimeUtil.millisToLocalDateTime(expireMillis);
+            if (expireAt.isBefore(TimeUtil.currentLocalDateTime())) {
                 log.debug("file token expired by time, token={}", token);
                 return null;
             }

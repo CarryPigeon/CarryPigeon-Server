@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- HTTP API: public endpoints (no login required) -->
+
+    <!-- ===== Server & Catalog ===== -->
+
+    <!-- GET /api/server -->
+    <chain name="api_server">
+        THEN(
+            ApiServerInfoResult
+        )
+    </chain>
+
+    <!-- GET /api/plugins/catalog -->
+    <chain name="api_plugins_catalog">
+        THEN(
+            ApiPluginsCatalogResult
+        )
+    </chain>
+
+    <!-- GET /api/domains/catalog -->
+    <chain name="api_domains_catalog">
+        THEN(
+            ApiDomainsCatalogResult
+        )
+    </chain>
+
+    <!-- ===== Required Gate ===== -->
+
+    <!-- POST /api/gates/required/check -->
+    <chain name="api_required_gate_check">
+        THEN(
+            ApiRequiredGateCheck
+        )
+    </chain>
+</flow>

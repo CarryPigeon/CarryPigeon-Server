@@ -11,6 +11,11 @@ import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelAppli
 
 import java.time.LocalDateTime;
 
+/**
+ * {@code channel_application} 表的持久化对象（PO）。
+ * <p>
+ * state 字段为枚举值（见 {@link CPChannelApplicationStateEnum}）。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,6 +36,9 @@ public class ChannelApplicationPO {
     // 申请时间
     private LocalDateTime applyTime;
 
+    /**
+     * 将当前 PO 转换为领域对象（BO）。
+     */
     public CPChannelApplication toBo() {
         return new CPChannelApplication()
                 .setId(id)
@@ -40,6 +48,10 @@ public class ChannelApplicationPO {
                 .setMsg(msg)
                 .setApplyTime(applyTime);
     }
+
+    /**
+     * 从领域对象（BO）创建 PO。
+     */
     public static ChannelApplicationPO fromBo(CPChannelApplication cpChannelApplication) {
         return new ChannelApplicationPO()
                 .setId(cpChannelApplication.getId())

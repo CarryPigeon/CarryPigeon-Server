@@ -5,13 +5,11 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 /**
  * 用于更新频道成员信息的Node<br/>
@@ -29,20 +27,17 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPChannelMember channelMemberInfo =
-                requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, CPChannelMember.class);
-        String channelMemberInfoName = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_NAME);
+        CPChannelMember channelMemberInfo = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
+        String channelMemberInfoName = context.get(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_NAME);
         if (channelMemberInfoName != null){
             channelMemberInfo.setName(channelMemberInfoName);
         }
-        Integer channelMemberInfoAuthority = context.getData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_AUTHORITY);
+        Integer channelMemberInfoAuthority = context.get(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_AUTHORITY);
         if (channelMemberInfoAuthority != null){
             channelMemberInfo.setAuthority(CPChannelMemberAuthorityEnum.valueOf(channelMemberInfoAuthority));
         }
         if (!channelMemberDao.save(channelMemberInfo)){
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("update channel member error"));
-            throw new CPReturnException();
+            fail(CPProblem.of(500, "internal_error", "update channel member error"));
         }
     }
 }

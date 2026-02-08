@@ -14,8 +14,23 @@ import org.springframework.context.annotation.Configuration;
 import java.text.SimpleDateFormat;
 
 @Configuration
+/**
+ * Jackson 统一配置。
+ * <p>
+ * 该配置为全局提供 {@link ObjectMapper}，用于 TCP 协议（CPPacket/CPResponse/通知）与 Web API 的 JSON 读写。
+ * </p>
+ */
 public class JacksonConfiguration {
 
+    /**
+     * 提供项目统一的 {@link ObjectMapper}。
+     * <ul>
+     *     <li>对外 JSON 命名策略：{@code snake_case}</li>
+     *     <li>忽略未知字段：便于向前/向后兼容</li>
+     *     <li>日期时间：支持 {@code java.time}（{@link JavaTimeModule}）并使用统一格式</li>
+     *     <li>禁止将 {@code null} 写入属性：默认 fail-fast（{@link Nulls#FAIL}）</li>
+     * </ul>
+     */
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper mapper = new ObjectMapper();

@@ -2,11 +2,9 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -28,14 +26,14 @@ class CPUserTokenUpdaterNodeTests {
 
         long expiredMillis = 1700000000000L;
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO, token);
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "new");
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_EXPIRED_TIME, expiredMillis);
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO, token);
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "new");
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO_EXPIRED_TIME, expiredMillis);
 
         node.process(null, context);
 
         assertEquals("new", token.getToken());
-        assertEquals(TimeUtil.MillisToLocalDateTime(expiredMillis), token.getExpiredTime());
+        assertEquals(TimeUtil.millisToLocalDateTime(expiredMillis), token.getExpiredTime());
         verify(dao).save(token);
     }
 
@@ -47,14 +45,10 @@ class CPUserTokenUpdaterNodeTests {
         CPUserTokenUpdaterNode node = new CPUserTokenUpdaterNode(dao);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO, new CPUserToken().setId(1L));
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO, new CPUserToken().setId(1L));
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("update user token error", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(500, ex.getProblem().status());
+        assertEquals("internal_error", ex.getProblem().reason());
     }
 }
-

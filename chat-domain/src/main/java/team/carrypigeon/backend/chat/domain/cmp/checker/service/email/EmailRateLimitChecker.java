@@ -4,13 +4,11 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowConnectionInfo;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
@@ -46,7 +44,7 @@ public class EmailRateLimitChecker extends AbstractCheckerNode {
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         // 必填参数：邮箱
-        String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL, String.class);
+        String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL);
 
         // 从上下文中读取连接信息（由分发器在链路开始时写入）
         CPFlowConnectionInfo connectionInfo = context.getConnectionInfo();
@@ -64,9 +62,7 @@ public class EmailRateLimitChecker extends AbstractCheckerNode {
             log.info("EmailRateLimitChecker hard fail: short window rate limited, " +
                             "remoteIp={}, remoteAddress={}, email={}, count={}, windowSeconds={}",
                     remoteIp, remoteAddress, email, shortCount, SHORT_WINDOW_SECONDS);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("too many email requests"));
-            throw new CPReturnException();
+            fail(CPProblem.of(429, "rate_limited", "too many email requests"));
         }
 
         // 按天总次数限流
@@ -76,9 +72,7 @@ public class EmailRateLimitChecker extends AbstractCheckerNode {
             log.info("EmailRateLimitChecker hard fail: daily window rate limited, " +
                             "remoteIp={}, remoteAddress={}, email={}, count={}, windowSeconds={}",
                     remoteIp, remoteAddress, email, dailyCount, DAILY_WINDOW_SECONDS);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("too many email requests"));
-            throw new CPReturnException();
+            fail(CPProblem.of(429, "rate_limited", "too many email requests"));
         }
 
         log.debug("EmailRateLimitChecker pass: remoteIp={}, email={}, shortCount={}, dailyCount={}",

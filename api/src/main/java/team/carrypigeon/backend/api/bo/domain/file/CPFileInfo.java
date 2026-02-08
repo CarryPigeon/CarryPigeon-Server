@@ -23,6 +23,42 @@ public class CPFileInfo {
     private long id;
 
     /**
+     * Stable share key used by {@code GET /api/files/download/{share_key}}.
+     * <p>
+     * This is the primary identifier exposed to clients; it must be stable and unique.
+     */
+    private String shareKey;
+
+    /**
+     * Owner user id (uploader).
+     */
+    private long ownerUid;
+
+    /**
+     * Access scope for file download.
+     * <p>
+     * This controls who can download the file from {@code GET /api/files/download/{share_key}}.
+     */
+    private CPFileAccessScopeEnum accessScope;
+
+    /**
+     * Scope channel id (required when {@link #accessScope} is {@link CPFileAccessScopeEnum#CHANNEL}).
+     */
+    private long scopeCid;
+
+    /**
+     * Scope message id (reserved for P2+ "file bound to message" ACL).
+     * <p>
+     * When non-zero, it indicates the file is intended to be accessed through the referenced message.
+     */
+    private long scopeMid;
+
+    /**
+     * Original filename (optional).
+     */
+    private String filename;
+
+    /**
      * SHA-256 digest of file content, hex string.
      */
     private String sha256;
@@ -41,6 +77,18 @@ public class CPFileInfo {
      * Optional mime type when uploading.
      */
     private String contentType;
+
+    /**
+     * Whether the binary object has been uploaded to object storage.
+     * <p>
+     * Upload is a two-step flow: create metadata first, then upload bytes.
+     */
+    private boolean uploaded;
+
+    /**
+     * Uploaded time (null if not uploaded).
+     */
+    private LocalDateTime uploadedTime;
 
     /**
      * Created time of this record.

@@ -1,15 +1,15 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.group;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
-import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
 
 import java.time.LocalDateTime;
 
@@ -29,13 +29,13 @@ class CPChannelBanCheckerNodeTests {
         };
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
         when(dao.getByChannelIdAndUserId(2L, 1L)).thenReturn(null);
 
         checker.process(null, context);
 
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
     }
@@ -58,15 +58,13 @@ class CPChannelBanCheckerNodeTests {
                 .setCreateTime(LocalDateTime.now());
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
         when(dao.getByChannelIdAndUserId(2L, 1L)).thenReturn(ban);
 
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("user is banned in this channel", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(403, ex.getProblem().status());
+        assertEquals("user_muted", ex.getProblem().reason());
     }
 
     @Test
@@ -87,17 +85,17 @@ class CPChannelBanCheckerNodeTests {
                 .setCreateTime(LocalDateTime.now());
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
         when(dao.getByChannelIdAndUserId(2L, 1L)).thenReturn(ban);
 
         checker.process(null, context);
 
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertFalse(result.state());
         assertEquals("banned", result.msg());
-        assertNull(context.getData(CPNodeCommonKeys.RESPONSE));
+        assertNull(context.get(CPFlowKeys.RESPONSE));
     }
 
     @Test
@@ -118,14 +116,14 @@ class CPChannelBanCheckerNodeTests {
                 .setCreateTime(LocalDateTime.now().minusSeconds(10));
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
         when(dao.getByChannelIdAndUserId(2L, 1L)).thenReturn(ban);
         when(dao.delete(ban)).thenReturn(true);
 
         checker.process(null, context);
         verify(dao, times(1)).delete(ban);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
     }
@@ -148,14 +146,14 @@ class CPChannelBanCheckerNodeTests {
                 .setCreateTime(LocalDateTime.now().minusSeconds(10));
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, 1L);
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, 2L);
         when(dao.getByChannelIdAndUserId(2L, 1L)).thenReturn(ban);
         when(dao.delete(ban)).thenReturn(false);
 
         checker.process(null, context);
         verify(dao, times(1)).delete(ban);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
     }

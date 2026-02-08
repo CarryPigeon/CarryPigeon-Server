@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- HTTP API: files -->
+
+    <!-- POST /api/files/uploads (auth required) -->
+    <chain name="api_files_uploads_create">
+        THEN(
+            ApiLoginGuard,
+            ApiFileUploadApplyBind,
+            CPFileInfoSaver,
+            CPFileTokenCreator.bind("key","UPLOAD"),
+            ApiFileUploadApplyResult
+        )
+    </chain>
+</flow>

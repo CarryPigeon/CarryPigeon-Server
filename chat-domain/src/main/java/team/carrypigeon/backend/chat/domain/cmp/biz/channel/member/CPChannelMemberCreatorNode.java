@@ -23,8 +23,8 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPChannelMemberCreatorNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO, CPChannel.class);
-        Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+        CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
+        Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         CPChannelMember channelMemberInfo = new CPChannelMember();
         channelMemberInfo
                 .setId(IdUtil.generateId())
@@ -32,7 +32,7 @@ public class CPChannelMemberCreatorNode extends CPNodeComponent {
                 .setUid(userId)
                 .setName("")
                 .setAuthority(CPChannelMemberAuthorityEnum.MEMBER)
-                .setJoinTime(TimeUtil.getCurrentLocalTime());
-        context.setData(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, channelMemberInfo);
+                .setJoinTime(TimeUtil.currentLocalDateTime());
+        context.set(CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, channelMemberInfo);
     }
 }

@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<suppressions>
+    <!-- 不对测试代码做强制注释要求（测试更关注行为表达）。 -->
+    <suppress checks="JavadocType|JavadocMethod|JavadocVariable" files="[/\\\\]src[/\\\\]test[/\\\\]java[/\\\\]"/>
+</suppressions>

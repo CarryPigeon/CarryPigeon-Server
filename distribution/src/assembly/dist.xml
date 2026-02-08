@@ -16,15 +16,11 @@
                 <include>CarryPigeon:common</include>
                 <include>CarryPigeon:dao</include>
                 <include>CarryPigeon:chat-domain</include>
-                <include>CarryPigeon:connection</include>
                 <include>CarryPigeon:external-service</include>
             </includes>
             <binaries>
                 <outputDirectory>module</outputDirectory>
                 <unpack>false</unpack>
-                <includes>
-                    <include>*.jar</include>
-                </includes>
             </binaries>
         </moduleSet>
     </moduleSets>
@@ -60,7 +56,6 @@
             <includes>
                 <include>application.yaml</include>
                 <include>log4j2_config.xml</include>
-                <include>mybatis-config.xml</include>
             </includes>
         </fileSet>
         <fileSet>

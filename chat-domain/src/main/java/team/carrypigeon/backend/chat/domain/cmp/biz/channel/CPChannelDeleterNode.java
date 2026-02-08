@@ -4,12 +4,14 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractDeleteNode;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
+import team.carrypigeon.backend.chat.domain.service.ws.ApiWsEventPublisher;
 
 /**
  * 用于删除通道的Node<br/>
@@ -23,9 +25,10 @@ public class CPChannelDeleterNode extends AbstractDeleteNode<CPChannel> {
 
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
+    private final ApiWsEventPublisher wsEventPublisher;
 
     @Override
-    protected String getContextKey() {
+    protected CPKey<CPChannel> getContextKey() {
         return CPNodeChannelKeys.CHANNEL_INFO;
     }
 
@@ -46,11 +49,13 @@ public class CPChannelDeleterNode extends AbstractDeleteNode<CPChannel> {
     }
 
     @Override
-    protected void afterSuccess(CPChannel entity, CPFlowContext context) throws CPReturnException {
+    protected void afterSuccess(CPChannel entity, CPFlowContext context) {
+        // Notify all members to refresh channel list before deleting member records.
+        wsEventPublisher.publishChannelsChangedToChannelMembers(entity.getId());
         // 频道删除成功后，清理所有成员记录
         for (CPChannelMember channelMember : channelMemberDao.getAllMember(entity.getId())) {
             if (!channelMemberDao.delete(channelMember)) {
-                businessError(context, "error deleting channel member");
+                fail(CPProblem.of(500, "internal_error", "error deleting channel member"));
             }
         }
     }

@@ -32,10 +32,6 @@
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>connection</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
             <artifactId>dao</artifactId>
         </dependency>
         <dependency>

@@ -30,12 +30,12 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         // 获取用户信息
-        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+        Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         // 获取Set<Long>
-        Set<Long> uids = context.getData(CPNodeNotifierKeys.NOTIFIER_UIDS);
+        Set<Long> uids = context.get(CPNodeNotifierKeys.NOTIFIER_UIDS);
         if (uids == null){
             uids = new HashSet<>();
-            context.setData(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
+            context.set(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
         }
         // 获取用户id
         CPChannelMember[] allMemberByUserId = select(context,

@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.cmp.notifier.channel;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
@@ -32,8 +31,8 @@ public class CPChannelCollectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long uid = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+    protected void process(CPFlowContext context) throws Exception {
+        Long uid = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         CPChannelMember[] members = select(context,
                 buildSelectKey("channel_member", "uid", uid),
                 () -> channelMemberDao.getAllMemberByUserId(uid));
@@ -51,7 +50,7 @@ public class CPChannelCollectorNode extends CPNodeComponent {
             }
         }
         cpChannels.addAll(Arrays.asList(allFixed));
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_LIST,cpChannels);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_LIST,cpChannels);
         log.debug("CPChannelCollector success, uid={},size={}", uid,cpChannels.size());
     }
 }

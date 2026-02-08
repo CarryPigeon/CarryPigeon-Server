@@ -4,7 +4,8 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
@@ -31,8 +32,8 @@ public class CPChannelBanSelectorNode extends AbstractSelectorNode<CPChannelBan>
 
     @Override
     protected CPChannelBan doSelect(String mode, CPFlowContext context) throws Exception {
-        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
-        Long targetUid = requireContext(context, CPNodeChannelBanKeys.CHANNEL_BAN_TARGET_UID, Long.class);
+        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        Long targetUid = requireContext(context, CPNodeChannelBanKeys.CHANNEL_BAN_TARGET_UID);
         CPChannelBan ban = select(context,
                 buildSelectKey("channel_ban", java.util.Map.of("cid", cid, "uid", targetUid)),
                 () -> channelBanDAO.getByChannelIdAndUserId(targetUid, cid));
@@ -43,14 +44,14 @@ public class CPChannelBanSelectorNode extends AbstractSelectorNode<CPChannelBan>
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPChannelBan> getResultKey() {
         return CPNodeChannelBanKeys.CHANNEL_BAN_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) {
         log.info("CPChannelBanSelector: ban not found or expired");
-        businessError(context, "this user is not banned");
+        fail(CPProblem.of(404, "not_found", "this user is not banned"));
     }
 
     @Override

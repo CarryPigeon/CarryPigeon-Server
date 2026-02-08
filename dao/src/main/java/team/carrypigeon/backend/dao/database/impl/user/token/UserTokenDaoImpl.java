@@ -13,12 +13,20 @@ import team.carrypigeon.backend.dao.database.mapper.user.token.UserTokenPO;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link UserTokenDao} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * 安全约束：token 属于敏感信息，日志中只允许输出长度或脱敏摘要。
+ */
 @Slf4j
 @Service
 public class UserTokenDaoImpl implements UserTokenDao {
 
     private final UserTokenMapper userTokenMapper;
 
+    /**
+     * 创建用户 token DAO 实现（由 Spring 注入 {@link UserTokenMapper}）。
+     */
     public UserTokenDaoImpl(UserTokenMapper userTokenMapper) {
         this.userTokenMapper = userTokenMapper;
     }

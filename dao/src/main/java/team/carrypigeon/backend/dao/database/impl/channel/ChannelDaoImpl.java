@@ -13,12 +13,20 @@ import team.carrypigeon.backend.dao.database.mapper.channel.ChannelPO;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link ChannelDao} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * {@link #getAllFixed()}：查询 owner=-1 的“固定频道”（由业务约定定义）。
+ */
 @Slf4j
 @Service
 public class ChannelDaoImpl implements ChannelDao {
 
     private final ChannelMapper channelMapper;
 
+    /**
+     * 创建 Channel DAO 实现（由 Spring 注入 {@link ChannelMapper}）。
+     */
     public ChannelDaoImpl(ChannelMapper channelMapper) {
         this.channelMapper = channelMapper;
     }

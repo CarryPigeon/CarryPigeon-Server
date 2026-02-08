@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
@@ -11,9 +12,9 @@ import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 用于获取用户所有通道的Node<br/>
@@ -23,7 +24,7 @@ import java.util.List;
  * */
 @AllArgsConstructor
 @LiteflowComponent("CPChannelGroupSelector")
-public class CPChannelGroupSelectorNode extends AbstractSelectorNode<java.util.List<CPChannel>> {
+public class CPChannelGroupSelectorNode extends AbstractSelectorNode<Set> {
 
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
@@ -35,15 +36,15 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<java.util.L
     }
 
     @Override
-    protected List<CPChannel> doSelect(String mode, CPFlowContext context) throws Exception {
-        Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+    protected Set doSelect(String mode, CPFlowContext context) throws Exception {
+        Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         CPChannel[] allFixedChannel = select(context,
                 buildSelectKey("channel", "fixed", "all"),
                 channelDao::getAllFixed);
         CPChannelMember[] allUserChannel = select(context,
                 buildSelectKey("channel_member", "uid", userId),
                 () -> channelMemberDao.getAllMemberByUserId(userId));
-        List<CPChannel> result = new ArrayList<>(allFixedChannel.length + allUserChannel.length);
+        Set<CPChannel> result = new HashSet<>(allFixedChannel.length + allUserChannel.length);
         Collections.addAll(result, allFixedChannel);
         for (CPChannelMember channelMember : allUserChannel) {
             long cid = channelMember.getCid();
@@ -58,7 +59,7 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<java.util.L
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<Set> getResultKey() {
         return CPNodeChannelKeys.CHANNEL_INFO_LIST;
     }
 

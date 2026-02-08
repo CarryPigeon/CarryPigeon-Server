@@ -159,7 +159,7 @@ liteflow:
 - `channel_application.xml`：频道申请；
 - `channel_ban.xml`：禁言；
 - `channel_admin.xml`：管理员相关；
-- `channel_message.xml`：消息发送、删除、列表、未读数、读状态更新/查询；
+- `api_messages.xml`：消息发送、删除、列表、未读数、读状态更新/查询；
 - `file.xml`：文件上传/下载链路。
 
 说明：

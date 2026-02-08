@@ -65,6 +65,7 @@ public class MessagePO {
     private Long uid;
     private Long cid;
     private String domain;
+    private String domainVersion;
     private String data;
     private LocalDateTime sendTime;
 
@@ -97,11 +98,12 @@ public class MessageDaoImpl implements ChannelMessageDao {
     }
 
     @Override
-    public CPMessage[] getBefore(long cid, LocalDateTime time, int count) {
+    public CPMessage[] listBefore(long cid, long cursorMid, int count) {
+        long cursor = cursorMid <= 0 ? Long.MAX_VALUE : cursorMid;
         LambdaQueryWrapper<MessagePO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(MessagePO::getCid, cid)
-                .lt(MessagePO::getSendTime, time)
-                .orderByDesc(MessagePO::getSendTime)
+                .lt(MessagePO::getId, cursor)
+                .orderByDesc(MessagePO::getId)
                 .last("LIMIT " + count);
         ...
     }
@@ -282,4 +284,3 @@ public class DistChannelReadStateDaoImpl implements ChannelReadStateDao { ... }
   - 侵入性插件可实现新的 DAO 模块，并通过 Spring 装配接管数据访问。
 
 通过遵守以上约定，可以在保持系统稳定性的同时，对 DAO 层进行持续优化与演进。 
-

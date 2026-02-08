@@ -2,15 +2,11 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.ban;
 
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelBanKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
-import team.carrypigeon.backend.chat.domain.controller.netty.channel.ban.list.CPChannelListBanResultItem;
-import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,12 +22,9 @@ class CPChannelBanListerNodeTests {
         CPChannelBanListerNode node = new CPChannelBanListerNode(dao);
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("error args", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -53,21 +46,17 @@ class CPChannelBanListerNodeTests {
         when(dao.delete(expired2)).thenReturn(false);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
+        context.set(CPNodeChannelKeys.CHANNEL_INFO_ID, cid);
 
         node.process(null, context);
 
         @SuppressWarnings("unchecked")
-        List<CPChannelListBanResultItem> items = (List<CPChannelListBanResultItem>) context.getData(CPNodeChannelBanKeys.CHANNEL_BAN_ITEMS);
+        List<CPChannelBan> items = (List<CPChannelBan>) context.get(CPNodeChannelBanKeys.CHANNEL_BAN_ITEMS);
         assertNotNull(items);
         assertEquals(1, items.size());
-        assertEquals(2L, items.get(0).getUid());
-        assertEquals(3L, items.get(0).getAid());
-        assertEquals(60, items.get(0).getDuration());
-        assertEquals(TimeUtil.LocalDateTimeToMillis(now), items.get(0).getBanTime());
+        assertSame(valid, items.get(0));
 
         verify(dao).delete(expired1);
         verify(dao).delete(expired2);
     }
 }
-

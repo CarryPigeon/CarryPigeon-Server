@@ -26,6 +26,9 @@ public class CPPluginManager {
     private final List<CPPlugin> plugins;
     private final ServerInfoConfig serverInfoConfig;
 
+    /**
+     * 创建插件管理器（由 Spring 注入）。
+     */
     public CPPluginManager(List<CPPlugin> plugins, ServerInfoConfig serverInfoConfig) {
         // avoid NPE if there is no plugin at all
         this.plugins = plugins == null ? Collections.emptyList() : plugins;

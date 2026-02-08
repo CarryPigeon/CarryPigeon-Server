@@ -331,10 +331,10 @@ class DaoImplTests {
                 new MessagePO().setId(1L).setUid(2L).setCid(3L).setData("{\"k\":\"v\"}"),
                 new MessagePO().setId(2L).setUid(2L).setCid(3L).setData("{\"k\":\"v2\"}")
         ));
-        assertEquals(2, dao.getBefore(1L, LocalDateTime.now(), 10).length);
+        assertEquals(2, dao.listBefore(1L, Long.MAX_VALUE, 10).length);
 
         when(mapper.selectCount(any())).thenReturn(5L);
-        assertEquals(5, dao.getAfterCount(1L, 2L, LocalDateTime.now()));
+        assertEquals(5, dao.countAfter(1L, 2L));
 
         assertFalse(dao.save(null));
         CPMessage msg = new CPMessage().setId(1L).setCid(2L).setUid(3L);
@@ -369,11 +369,19 @@ class DaoImplTests {
         when(mapper.selectOne(any())).thenReturn(null);
         assertNull(dao.getBySha256AndSize("sha", 1L));
 
+        when(mapper.selectOne(any())).thenReturn(new FileInfoPO()
+                .setId(4L)
+                .setShareKey("shr_4")
+                .setSize(1L));
+        assertNotNull(dao.getByShareKey("shr_4"));
+        when(mapper.selectOne(any())).thenReturn(null);
+        assertNull(dao.getByShareKey("shr_4"));
+
         assertFalse(dao.save(null));
         CPFileInfo info = new CPFileInfo().setId(1L).setSha256("sha").setSize(1L);
-        when(mapper.insert(any(FileInfoPO.class))).thenReturn(1);
+        when(mapper.insertOrUpdate(any(FileInfoPO.class))).thenReturn(true);
         assertTrue(dao.save(info));
-        when(mapper.insert(any(FileInfoPO.class))).thenReturn(0);
+        when(mapper.insertOrUpdate(any(FileInfoPO.class))).thenReturn(false);
         assertFalse(dao.save(info));
     }
 }

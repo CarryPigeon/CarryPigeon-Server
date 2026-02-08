@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.user;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
@@ -26,28 +27,28 @@ public class CPUserSelectorNode extends AbstractSelectorNode<CPUser> {
     protected CPUser doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode) {
             case "id":
-                Long id = requireContext(context, CPNodeUserKeys.USER_INFO_ID, Long.class);
+                Long id = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
                 return select(context,
                         buildSelectKey("user", "id", id),
                         () -> userDao.getById(id));
             case "email":
-                String email = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL, String.class);
+                String email = requireContext(context, CPNodeUserKeys.USER_INFO_EMAIL);
                 return select(context,
                         buildSelectKey("user", "email", email),
                         () -> userDao.getByEmail(email));
             default:
-                argsError(context);
+                validationFailed();
                 return null;
         }
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPUser> getResultKey() {
         return CPNodeUserKeys.USER_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
-        businessError(context, "user not found");
+    protected void handleNotFound(String mode, CPFlowContext context) {
+        fail(CPProblem.of(404, "not_found", "user not found"));
     }
 }

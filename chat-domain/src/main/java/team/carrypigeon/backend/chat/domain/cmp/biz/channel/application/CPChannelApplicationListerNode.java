@@ -28,8 +28,8 @@ public class CPChannelApplicationListerNode extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        Long channelId = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
-        PageInfo pageInfo = requireContext(context, CPNodeValueKeyExtraConstants.PAGE_INFO, PageInfo.class);
+        Long channelId = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        PageInfo pageInfo = requireContext(context, CPNodeValueKeyExtraConstants.PAGE_INFO);
         int page = pageInfo.page();
         int pageSize = pageInfo.pageSize();
         CPChannelApplication[] applications = select(context,
@@ -39,6 +39,6 @@ public class CPChannelApplicationListerNode extends CPNodeComponent {
         for (CPChannelApplication application : applications) {
             objects.add(application);
         }
-        context.setData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_LIST, objects);
+        context.set(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_LIST, objects);
     }
 }

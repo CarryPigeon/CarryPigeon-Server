@@ -24,6 +24,9 @@ public class EmailServiceImpl implements CPEmailService {
     @Value("${spring.mail.enable:false}")
     private boolean isEnable;
 
+    /**
+     * 创建邮件服务实现（由 Spring 注入 {@link JavaMailSender}）。
+     */
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
     }

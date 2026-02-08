@@ -3,12 +3,11 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
-import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
 
 /**
  * 选择通道申请Node<br/>
@@ -28,24 +27,24 @@ public class CPChannelApplicationSelectorNode extends AbstractSelectorNode<CPCha
         switch (mode) {
             case "id":
                 Long applicationId =
-                        requireContext(context, CPNodeValueKeyExtraConstants.CHANNEL_APPLICATION_INFO_ID, Long.class);
+                        requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_ID);
                 return select(context,
                         buildSelectKey("channel_application", "id", applicationId),
                         () -> channelApplicationDao.getById(applicationId));
             default:
-                argsError(context);
+                validationFailed();
                 return null;
         }
     }
 
     @Override
-    protected String getResultKey() {
+    protected CPKey<CPChannelApplication> getResultKey() {
         return CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO;
     }
 
     @Override
-    protected void handleNotFound(String mode, CPFlowContext context) throws CPReturnException {
+    protected void handleNotFound(String mode, CPFlowContext context) {
         // 与原实现保持一致：视为参数错误
-        argsError(context);
+        validationFailed();
     }
 }

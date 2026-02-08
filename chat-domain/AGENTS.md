@@ -106,11 +106,11 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 
 ```xml
     <!--更新频道数据-->
-    <chain name="/core/channel/profile/update">
-        THEN(
-        RenameScript = {"SessionId":"UserInfo_Id"},
-        /**判断用户是否登录**/
-        UserLoginChecker,
+	    <chain name="/core/channel/profile/update">
+	        THEN(
+	        RenameScript = {"session_uid":"UserInfo_Id"},
+	        /**判断用户是否登录**/
+	        UserLoginChecker,
         /**重命名参数**/
         RenameArg.data(RenameScript),
         /**获取频道信息**/
@@ -137,7 +137,7 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 
 ### 3.0 组件定义规范
 
-一个组件应该集成项目中的`[CPNodeComponent.java](../api/src/main/java/team/carrypigeon/backend/api/chat/domain/controller/CPNodeComponent.java)
+一个组件应该继承项目中的 `[CPNodeComponent.java](../api/src/main/java/team/carrypigeon/backend/api/chat/domain/node/CPNodeComponent.java)`。
 
 `CPNodeComponent`继承自`NodeComponent`，其定义了组件的必要属性与方法
 
@@ -148,10 +148,16 @@ public class CPUserEmailLoginResult implements CPControllerResult {
 4. 组件输出参数，即出参(name:type)形式,其在组件调用完后存在于上下文中
 
 组件的参数校验：
-组件的参数校验应该在组件的`process`方法中进行，应该在组件刚开始执行时就进行入参的存在性校验，如果某一个参数不存在则调用`argsError()`方法并返回
+组件的参数校验应该在组件的 `process` 方法中进行，应该在组件刚开始执行时就进行入参的存在性校验：
+- 优先使用 `requireContext(context, key, type)` / `requireBind(key, type)` 读取必填参数；
+- 或在校验失败时调用 `validationFailed()` 抛出 `CPProblemException`（状态码 422）。
 
 组件的中断：
-某一个组件调用时如果发生了异常，则在context中加入相关的错误的response，然后抛出`CPReturnException`
+某一个组件调用时如果发生了异常，统一通过抛出 `CPProblemException` 中断链路：
+- 参数错误：`validationFailed()` / `validationFailed(message)`
+- 资源不存在：`notFound(message)`
+- 权限不足：`forbidden(reason, message)`
+- 其他业务错误：`fail(CPProblem.of(status, reason, message))`
 ### 3.1 基本组件
 
 基本组件用于提供上下文中的基础性功能，例如对上下文中的参数进行删除与重命名操作，使得同一数据能够在不同的组件间使用

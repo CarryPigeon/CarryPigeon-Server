@@ -7,21 +7,39 @@ import lombok.experimental.Accessors;
 
 import java.time.LocalDateTime;
 
+/**
+ * 频道（Channel）领域对象。
+ * <p>
+ * 该对象描述频道的基础资料（名称/简介/头像/创建时间等），不包含成员关系与权限信息。
+ * </p>
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
 public class CPChannel {
-    // 通道id
+    /**
+     * 频道 ID。
+     */
     private long id;
-    //  通道名
+    /**
+     * 频道名称。
+     */
     private String name;
-    // 通道所有者
+    /**
+     * 频道所有者用户 ID。
+     */
     private long owner;
-    // 通道简介
+    /**
+     * 频道简介（可为空）。
+     */
     private String brief;
-    // 通道头像资源id
+    /**
+     * 频道头像资源 ID（如 fileId / resourceId）。
+     */
     private long avatar;
-    // 通道创建时间
+    /**
+     * 频道创建时间。
+     */
     private LocalDateTime createTime;
 }

@@ -3,7 +3,7 @@
     <!-- 创建频道封禁 -->
     <chain name="/core/channel/ban/create">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id，供管理员校验使用 **/
         UserLoginGuard,
         /** 查询频道信息 **/
         CPChannelSelector.bind("key","id"),
@@ -25,7 +25,7 @@
     <!-- 删除频道封禁 -->
     <chain name="/core/channel/ban/delete">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id，供管理员校验使用 **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id，供管理员校验使用 **/
         UserLoginGuard,
         /** 查询频道信息 **/
         CPChannelSelector.bind("key","id"),
@@ -45,7 +45,7 @@
     <!-- 获取频道封禁列表 -->
     <chain name="/core/channel/ban/list">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验 **/
         MemberGuard,

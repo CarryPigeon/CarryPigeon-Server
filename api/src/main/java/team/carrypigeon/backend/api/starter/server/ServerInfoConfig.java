@@ -15,6 +15,14 @@ import org.springframework.context.annotation.Configuration;
 public class ServerInfoConfig {
 
     /**
+     * Stable server id, mapped from {@code cp.server.server_id}.
+     * <p>
+     * This value must remain stable across restarts, and is used by clients as the isolation key.
+     */
+    @JsonProperty("server_id")
+    private String serverId;
+
+    /**
      * Server display name, mapped from {@code cp.server.server_name}.
      */
     @JsonProperty("server_name")

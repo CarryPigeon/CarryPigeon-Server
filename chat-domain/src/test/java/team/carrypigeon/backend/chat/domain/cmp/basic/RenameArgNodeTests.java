@@ -1,10 +1,8 @@
 package team.carrypigeon.backend.chat.domain.cmp.basic;
 
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -33,11 +31,9 @@ class RenameArgNodeTests {
         TestableRenameArgNode node = new TestableRenameArgNode("not-json");
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("error args", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -45,8 +41,9 @@ class RenameArgNodeTests {
         TestableRenameArgNode node = new TestableRenameArgNode(123);
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        assertNotNull(context.getData(CPNodeCommonKeys.RESPONSE));
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test

@@ -80,21 +80,16 @@ public class CPChannelReadState {
 
 ## 3. 对外接口设计
 
-读状态涉及 3 条主要路由（均为 Netty 路由）：
+读状态/未读涉及 2 条主要 HTTP 路由：
 
-1. `/core/channel/message/unread/get`  
-   - 基于 **客户端提供的时间戳** 计算未读数；
-   - 不直接依赖读状态表。
-2. `/core/channel/message/read/state/update`  
-   - 更新服务端存储的 `(uid, cid)` 读状态；
-   - 成功后广播给该用户所有在线会话。
-3. `/core/channel/message/read/state/get`  
-   - 查询服务端存储的 `(uid, cid)` 读状态；
-   - 新设备上线时，可以用它获取“起点”。
+1. `/api/channels/{cid}/read_state`  
+   - 更新服务端存储的 `(uid, cid)` 读状态。
+2. `/api/unreads`  
+   - 拉取未读概览，用于客户端刷新未读展示。
 
-具体请求/响应结构见：`doc/api/api-chat-message.md`。
+具体请求/响应结构见：`doc/api/11-HTTP端点清单.md`。
 
-### 3.1 获取未读消息数量 `/core/channel/message/unread/get`
+### 3.1 获取未读消息数量 `/api/unreads`
 
 语义：
 
@@ -110,7 +105,7 @@ public class CPChannelReadState {
 
 - 前端手动维护一个“认为自己读到的时间”，以此为基准获取未读数。
 
-### 3.2 更新读状态 `/core/channel/message/read/state/update`
+### 3.2 更新读状态 `/api/channels/{cid}/read_state`
 
 语义：
 
@@ -122,7 +117,7 @@ public class CPChannelReadState {
 - 需要登录，且必须是频道成员；
 - 若客户端上报的时间 `t_new <= t_old`，则忽略此次更新。
 
-### 3.3 查询读状态 `/core/channel/message/read/state/get`
+### 3.3 拉取未读概览 `/api/unreads`
 
 语义：
 
@@ -138,20 +133,20 @@ public class CPChannelReadState {
 
 ## 4. 服务端内部链路设计（LiteFlow）
 
-### 4.1 更新读状态链 `/core/channel/message/read/state/update`
+### 4.1 更新读状态链 `/api/channels/{cid}/read_state`
 
 LiteFlow 链配置（示意）：
 
 ```xml
-<chain name="/core/channel/message/read/state/update">
+<chain name="api_read_state_update">
     THEN(
     UserLoginChecker,
-    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:session_uid;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     CPChannelMemberSelector.bind("key","CidWithUid"),
     CPChannelReadStateUpserter,
     CPUserSelfCollector,
     CPChannelReadStateNotifyBuilder,
-    CPNotifier.bind("route","/core/channel/message/read/state")
+    ApiReadStateUpdateResult
     )
 </chain>
 ```
@@ -159,29 +154,29 @@ LiteFlow 链配置（示意）：
 关键节点说明：
 
 - `UserLoginChecker`
-  - 校验登录态，写入 `SessionId`；
+  - 校验登录态，写入 `session_uid`；
 - `RenameArg`
-  - 将 `SessionId` 和 `ChannelReadStateInfo_Cid` 映射为成员选择所需的参数；
+  - 将 `session_uid` 和 `ChannelReadStateInfo_Cid` 映射为成员选择所需的参数；
 - `CPChannelMemberSelector`
   - 校验用户确实是该频道成员；
 - `CPChannelReadStateUpserter`
   - 根据 `(uid, cid)` 读写读状态表，保证 `lastReadTime` 单调递增；
 - `CPUserSelfCollector`
-  - 基于 `SessionId` 收集当前用户 uid，写入 `Notifier_Uids`；
+  - 基于 `session_uid` 收集当前用户 uid，写入 `Notifier_Uids`；
 - `CPChannelReadStateNotifyBuilder`
   - 从 `ChannelReadStateInfo` 构建 `CPChannelReadStateNotificationData`，写入 `Notifier_Data`；
 - `CPNotifier`
   - 调用 `CPNotificationService` 向该用户所有在线 `CPSession` 推送通知。
 
-### 4.2 查询读状态链 `/core/channel/message/read/state/get`
+### 4.2 未读概览链 `/api/unreads`
 
 LiteFlow 链配置（示意）：
 
 ```xml
-<chain name="/core/channel/message/read/state/get">
+<chain name="api_unreads_list">
     THEN(
     UserLoginChecker,
-    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:SessionId;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
+    RenameArg.data("RenameScript","ChannelMemberInfo_Uid:session_uid;ChannelMemberInfo_Cid:ChannelReadStateInfo_Cid"),
     CPChannelMemberSelector.bind("key","CidWithUid"),
     CPChannelReadStateSelector
     )
@@ -190,7 +185,7 @@ LiteFlow 链配置（示意）：
 
 `CPChannelReadStateSelector` 行为：
 
-- 输入：`SessionId`, `ChannelReadStateInfo_Cid`
+- 输入：`session_uid`, `ChannelReadStateInfo_Cid`
 - 查询：`ChannelReadStateDao.getByUidAndCid(uid, cid)`
 - 若不存在记录：创建 `lastReadTime = 0` 的临时对象返回；
 - 输出：`ChannelReadStateInfo`，供 Result 组装响应。
@@ -202,7 +197,7 @@ LiteFlow 链配置（示意）：
 ### 5.1 新设备首次进入频道
 
 1. 建立连接，完成鉴权；
-2. 调用 `/core/channel/message/read/state/get`，得到：
+2. 调用 `/api/unreads`，得到：
 
 ```json
 {
@@ -212,13 +207,13 @@ LiteFlow 链配置（示意）：
 }
 ```
 
-3. 以 `last_read_time` 为基准，调用 `/core/channel/message/unread/get` 获取未读数；
-4. 根据实际产品需求，拉取历史消息（可用 `/core/channel/message/list`）。
+3. 以 `last_read_time` 为基准，调用 `/api/unreads` 获取未读数；
+4. 根据实际产品需求，拉取历史消息（可用 `/api/channels/{cid}/messages`）。
 
 ### 5.2 阅读新消息
 
 1. 用户在当前设备上阅读了一部分消息，前端本地更新“最后阅读时间”；
-2. 以最新阅读时间调用 `/core/channel/message/read/state/update`：
+2. 以最新阅读时间调用 `/api/channels/{cid}/read_state`：
 
 ```json
 {
@@ -243,8 +238,8 @@ LiteFlow 链配置（示意）：
 
 ### 5.3 重新进入频道
 
-1. 客户端本地可以缓存 `last_read_time`，也可以再次调用 `/read/state/get` 校验；
-2. 需要展示未读数时，以 `last_read_time` 调用 `/unread/get`。
+1. 客户端本地可以缓存 `last_read_time`，也可以再次调用 `/api/unreads` 校验；
+2. 需要展示未读数时，以 `last_read_time` 调用 `/api/unreads`。
 
 ---
 

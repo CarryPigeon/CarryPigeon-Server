@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 
+/**
+ * MinIO 文件对象存储服务。
+ * <p>
+ * 负责对象的上传、下载、元信息查询与删除；不负责权限控制与业务 token 校验（由上层 Controller/Service 处理）。
+ * </p>
+ */
 @Slf4j
 @Service
 public class FileService {
@@ -22,6 +28,9 @@ public class FileService {
     @Value("${minio.bucketName}")
     private String bucketName;
 
+    /**
+     * 创建文件服务（由 Spring 注入 {@link MinioClient}）。
+     */
     public FileService(MinioClient minioClient) {
         this.minioClient = minioClient;
     }

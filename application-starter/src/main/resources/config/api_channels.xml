@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flow>
+    <!-- HTTP API: channels + moderation -->
+
+    <!-- ===== Channels ===== -->
+
+    <!-- GET /api/channels (auth required) -->
+    <chain name="api_channels_list">
+        THEN(
+            ApiLoginGuard,
+            CPChannelCollector,
+            ApiChannelListResult
+        )
+    </chain>
+
+    <!-- POST /api/channels (auth required) -->
+    <chain name="api_channels_create">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelCreateBind,
+            CPChannelBuilder,
+            CPChannelSaver,
+            CPChannelMemberCreator,
+            CPChannelMemberAuthoritySetter.bind("key","admin"),
+            CPChannelMemberSaver,
+            ApiChannelResult
+        )
+    </chain>
+
+    <!-- GET /api/channels/{cid} (auth required) -->
+    <chain name="api_channels_get">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelIdBind,
+            MemberGuard,
+            CPChannelSelector.bind("key","id"),
+            ApiChannelResult
+        )
+    </chain>
+
+    <!-- PATCH /api/channels/{cid} (auth required) -->
+    <chain name="api_channels_patch">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelPatchBind,
+            MemberGuard,
+            CPChannelSelector.bind("key","id"),
+            ApiChannelAdminOrOwnerGuard,
+            CPChannelUpdater,
+            CPChannelSaver,
+            ApiChannelResult
+        )
+    </chain>
+
+    <!-- DELETE /api/channels/{cid} (auth required) -->
+    <chain name="api_channels_delete">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelIdBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelOwnerChecker,
+            CPChannelDeleter,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- ===== Members ===== -->
+
+    <!-- GET /api/channels/{cid}/members (auth required) -->
+    <chain name="api_channel_members_list">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelMembersListBind,
+            MemberGuard,
+            CPChannelSelector.bind("key","id"),
+            CPChannelMemberLister,
+            ApiChannelMembersResult
+        )
+    </chain>
+
+    <!-- DELETE /api/channels/{cid}/members/{uid} (auth required) -->
+    <chain name="api_channel_members_kick">
+        RenameScriptKick = '{"TargetMember_Uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        THEN(
+            ApiLoginGuard,
+            ApiChannelMemberTargetBind,
+            MemberGuard,
+            CPChannelSelector.bind("key","id"),
+            ApiChannelAdminOrOwnerGuard,
+            RenameArg.data(RenameScriptKick),
+            CPChannelMemberSelector.bind("key","CidWithUid"),
+            CPChannelMemberDeleter,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- PUT /api/channels/{cid}/admins/{uid} (auth required) -->
+    <chain name="api_channel_admins_put">
+        RenameScriptAdmin = '{"TargetMember_Uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        THEN(
+            ApiLoginGuard,
+            ApiChannelMemberTargetBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelOwnerChecker,
+            RenameArg.data(RenameScriptAdmin),
+            CPChannelMemberSelector.bind("key","CidWithUid"),
+            CPChannelMemberAuthoritySetter.bind("key","admin"),
+            CPChannelMemberSaver,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- DELETE /api/channels/{cid}/admins/{uid} (auth required) -->
+    <chain name="api_channel_admins_delete">
+        RenameScriptAdmin = '{"TargetMember_Uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        THEN(
+            ApiLoginGuard,
+            ApiChannelMemberTargetBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelOwnerChecker,
+            RenameArg.data(RenameScriptAdmin),
+            CPChannelMemberSelector.bind("key","CidWithUid"),
+            CPChannelMemberAuthoritySetter.bind("key","member"),
+            CPChannelMemberSaver,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- ===== Applications ===== -->
+
+    <!-- POST /api/channels/{cid}/applications (auth required) -->
+    <chain name="api_channel_applications_create">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelApplicationCreateBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelApplicationCreator,
+            CPChannelApplicationSavor,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- GET /api/channels/{cid}/applications (auth required) -->
+    <chain name="api_channel_applications_list">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelApplicationsListBind,
+            CPChannelAdminChecker,
+            CPChannelApplicationLister,
+            ApiChannelApplicationsResult
+        )
+    </chain>
+
+    <!-- POST /api/channels/{cid}/applications/{application_id}/decisions (auth required) -->
+    <chain name="api_channel_application_decision">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelApplicationDecisionBind,
+            CPChannelAdminChecker,
+            CPChannelApplicationSelector.bind("key","id"),
+            ApiChannelApplicationCidMatchGuard,
+            ChannelApplicationStateSetterSwitcher,
+            SWITCH(CheckerResultReader.bind("key","msg")).to(
+                THEN(
+                    CPChannelApplicationApproved,
+                    CPChannelMemberSaver
+                ).id("approved"),
+                THEN(
+                    DoNothing
+                ).id("rejected")
+            ),
+            CPChannelApplicationSavor,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- ===== Bans ===== -->
+
+    <!-- PUT /api/channels/{cid}/bans/{uid} (auth required) -->
+    <chain name="api_channel_bans_put">
+        RenameScriptBanTarget = '{"TargetMember_Uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        THEN(
+            ApiLoginGuard,
+            ApiChannelBanUpsertBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelAdminChecker,
+            RenameArg.data(RenameScriptBanTarget),
+            CPChannelMemberSelector.bind("key","CidWithUid"),
+            CPChannelBanTargetChecker,
+            CPChannelBanSaver,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- DELETE /api/channels/{cid}/bans/{uid} (auth required) -->
+    <chain name="api_channel_bans_delete">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelBanDeleteBind,
+            CPChannelSelector.bind("key","id"),
+            CPChannelAdminChecker,
+            CPChannelBanSelector,
+            CPChannelBanDeleter,
+            ApiNoContentResult
+        )
+    </chain>
+
+    <!-- GET /api/channels/{cid}/bans (auth required) -->
+    <chain name="api_channel_bans_list">
+        THEN(
+            ApiLoginGuard,
+            ApiChannelBanListBind,
+            CPChannelAdminChecker,
+            CPChannelBanLister,
+            ApiChannelBansResult
+        )
+    </chain>
+</flow>

@@ -10,8 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 自动扫描自定义注解{@link CPMessageDomain}并根据值注入map中
- * */
+ * 自动扫描 {@link CPMessageDomain} 标注的消息类型，并注册到 domain → 解析器映射。
+ */
 @Slf4j
 @Component
 public class CPMessageDataPostProcessor implements BeanPostProcessor {
@@ -27,6 +27,9 @@ public class CPMessageDataPostProcessor implements BeanPostProcessor {
         return bean;
     }
 
+    /**
+     * 提供消息 domain 到解析器（{@link CPMessageData}）的映射。
+     */
     @Bean
     public Map<String, CPMessageData> getMessageDataTypeMaps() {
         return messageDataTypeMaps;

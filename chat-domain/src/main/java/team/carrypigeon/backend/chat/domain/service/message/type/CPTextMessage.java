@@ -30,9 +30,18 @@ public class CPTextMessage implements CPMessageData {
      */
     private JsonNode data;
 
+    /**
+     * 默认构造（用于反序列化/框架创建）。
+     */
     public CPTextMessage() {
     }
 
+    /**
+     * 构造一个文本消息。
+     *
+     * @param sContent 短摘要
+     * @param data     原始 JSON 数据
+     */
     public CPTextMessage(String sContent, JsonNode data) {
         this.sContent = sContent;
         this.data = data;

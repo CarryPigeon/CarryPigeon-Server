@@ -29,11 +29,11 @@ public class CPChannelAdminCollector extends CPNodeComponent {
 
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPChannel channel = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO, CPChannel.class);
-        Set<Long> uids = context.getData(CPNodeNotifierKeys.NOTIFIER_UIDS);
+        CPChannel channel = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
+        Set<Long> uids = context.get(CPNodeNotifierKeys.NOTIFIER_UIDS);
         if (uids == null){
             uids = new HashSet<>();
-            context.setData(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
+            context.set(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
         }
         long cid = channel.getId();
         CPChannelMember[] allMember = select(context,

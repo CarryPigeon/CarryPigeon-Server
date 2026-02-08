@@ -21,7 +21,9 @@ import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
 import team.carrypigeon.backend.chat.domain.support.InMemoryDatabase;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -53,6 +55,17 @@ public class InMemoryDaoConfig {
         public boolean save(CPUser user) {
             db.saveUser(user);
             return true;
+        }
+
+        @Override
+        public List<CPUser> listByIds(Collection<Long> ids) {
+            if (ids == null || ids.isEmpty()) {
+                return List.of();
+            }
+            return ids.stream()
+                    .map(db::getUserById)
+                    .filter(u -> u != null)
+                    .toList();
         }
     }
 
@@ -241,13 +254,13 @@ public class InMemoryDaoConfig {
         }
 
         @Override
-        public CPMessage[] getBefore(long cid, LocalDateTime time, int count) {
-            return db.getMessagesBefore(cid, time, count);
+        public CPMessage[] listBefore(long cid, long cursorMid, int count) {
+            return db.getMessagesBeforeMid(cid, cursorMid, count);
         }
 
         @Override
-        public int getAfterCount(long cid, long uid, LocalDateTime time) {
-            return db.getMessagesAfterCount(cid, uid, time);
+        public int countAfter(long cid, long startMid) {
+            return db.getMessagesAfterMidCount(cid, startMid);
         }
 
         @Override

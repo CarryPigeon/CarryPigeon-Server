@@ -3,9 +3,12 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel.application;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
+import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSaveNode;
 import team.carrypigeon.backend.api.dao.database.channel.application.ChannelApplicationDAO;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKeys;
+import team.carrypigeon.backend.chat.domain.service.ws.ApiWsEventPublisher;
 
 /**
  * 频道申请保存Node<br/>
@@ -19,9 +22,10 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKe
 public class CPChannelApplicationSavorNode extends AbstractSaveNode<CPChannelApplication> {
 
     private final ChannelApplicationDAO channelApplicationDAO;
+    private final ApiWsEventPublisher wsEventPublisher;
 
     @Override
-    protected String getContextKey() {
+    protected CPKey<CPChannelApplication> getContextKey() {
         return CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO;
     }
 
@@ -38,5 +42,13 @@ public class CPChannelApplicationSavorNode extends AbstractSaveNode<CPChannelApp
     @Override
     protected String getErrorMessage() {
         return "save channel application error";
+    }
+
+    @Override
+    protected void afterSuccess(CPChannelApplication entity, CPFlowContext context) {
+        if (entity == null) {
+            return;
+        }
+        wsEventPublisher.publishChannelChangedToChannelMembers(entity.getCid(), "applications");
     }
 }

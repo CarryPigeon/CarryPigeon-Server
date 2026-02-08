@@ -2,11 +2,9 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,10 +22,10 @@ class CPUserTokenSelectorNodeTests {
         node.setMode("token");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "t");
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "t");
 
         node.process(null, context);
-        assertSame(entity, context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO));
+        assertSame(entity, context.get(CPNodeUserTokenKeys.USER_TOKEN_INFO));
 
         node.process(null, context);
         verify(dao, times(1)).getByToken("t");
@@ -43,10 +41,10 @@ class CPUserTokenSelectorNodeTests {
         node.setMode("id");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_ID, 2L);
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO_ID, 2L);
 
         node.process(null, context);
-        assertSame(entity, context.getData(CPNodeUserTokenKeys.USER_TOKEN_INFO));
+        assertSame(entity, context.get(CPNodeUserTokenKeys.USER_TOKEN_INFO));
         verify(dao).getById(2L);
     }
 
@@ -58,8 +56,9 @@ class CPUserTokenSelectorNodeTests {
         node.setMode("unknown");
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        assertNotNull(context.getData(CPNodeCommonKeys.RESPONSE));
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -71,12 +70,11 @@ class CPUserTokenSelectorNodeTests {
         node.setMode("token");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "t");
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO_TOKEN, "t");
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("token does not exists", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(404, ex.getProblem().status());
+        assertEquals("not_found", ex.getProblem().reason());
     }
 
     private static final class TestableCPUserTokenSelectorNode extends CPUserTokenSelectorNode {
@@ -99,4 +97,3 @@ class CPUserTokenSelectorNodeTests {
         }
     }
 }
-

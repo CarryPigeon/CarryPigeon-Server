@@ -1,18 +1,17 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
@@ -35,27 +34,20 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPMessage message = context.getData(CPNodeMessageKeys.MESSAGE_INFO);
-        Long operatorUid = context.getData(CPNodeCommonKeys.SESSION_ID);
-        if (message == null || operatorUid == null) {
-            log.error("CPMessageDeletePermissionChecker args error: message or operatorUid is null");
-            argsError(context);
-            return;
-        }
+    protected void process(CPFlowContext context) throws Exception {
+        CPMessage message = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO);
+        Long operatorUid = requireContext(context, CPFlowKeys.SESSION_UID);
         LocalDateTime sendTime = message.getSendTime();
         if (sendTime == null) {
             log.error("CPMessageDeletePermissionChecker error: message sendTime is null, mid={}", message.getId());
-            argsError(context);
+            validationFailed();
             return;
         }
-        LocalDateTime now = TimeUtil.getCurrentLocalTime();
+        LocalDateTime now = TimeUtil.currentLocalDateTime();
         if (now.isAfter(sendTime.plusSeconds(DELETE_WINDOW_SECONDS))) {
             log.info("CPMessageDeletePermissionChecker fail: delete timeout, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("message delete timeout"));
-            throw new CPReturnException();
+            fail(CPProblem.of(409, "conflict", "message delete timeout"));
         }
         // 发送者本人可以删除
         if (operatorUid.equals(message.getUid())) {
@@ -71,9 +63,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
         if (member == null || member.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             log.info("CPMessageDeletePermissionChecker fail: no permission, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("no permission to delete message"));
-            throw new CPReturnException();
+            fail(CPProblem.of(403, "forbidden", "no permission to delete message"));
         }
         log.debug("CPMessageDeletePermissionChecker success: admin delete, mid={}, operatorUid={}",
                 message.getId(), operatorUid);

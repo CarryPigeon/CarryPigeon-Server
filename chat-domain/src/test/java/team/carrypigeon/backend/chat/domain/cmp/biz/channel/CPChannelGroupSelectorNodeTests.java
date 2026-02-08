@@ -3,16 +3,15 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.channel;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.channel.ChannelDao;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
-import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -41,17 +40,17 @@ class CPChannelGroupSelectorNodeTests {
         CPChannelGroupSelectorNode node = new CPChannelGroupSelectorNode(channelDao, memberDao);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserKeys.USER_INFO_ID, uid);
+        context.set(CPNodeUserKeys.USER_INFO_ID, uid);
 
         node.process(null, context);
 
         @SuppressWarnings("unchecked")
-        List<CPChannel> channels = (List<CPChannel>) context.getData(CPNodeChannelKeys.CHANNEL_INFO_LIST);
+        Set<CPChannel> channels = (Set<CPChannel>) context.get(CPNodeChannelKeys.CHANNEL_INFO_LIST);
         assertNotNull(channels);
-        assertEquals(3, channels.size());
-        assertEquals(1L, channels.get(0).getId());
-        assertEquals(10L, channels.get(1).getId());
-        assertEquals(10L, channels.get(2).getId());
+        assertEquals(2, channels.size());
+        Set<Long> ids = channels.stream().map(CPChannel::getId).collect(Collectors.toSet());
+        assertTrue(ids.contains(1L));
+        assertTrue(ids.contains(10L));
 
         verify(channelDao, times(1)).getAllFixed();
         verify(memberDao, times(1)).getAllMemberByUserId(uid);
@@ -66,11 +65,8 @@ class CPChannelGroupSelectorNodeTests {
         CPChannelGroupSelectorNode node = new CPChannelGroupSelectorNode(channelDao, memberDao);
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("error args", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 }

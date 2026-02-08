@@ -14,12 +14,20 @@ import team.carrypigeon.backend.dao.database.mapper.channel.application.ChannelA
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * {@link ChannelApplicationDAO} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * <p>
+ * 分页查询 {@link #getByCid(long, int, int)} 使用 MyBatis-Plus {@link Page}。
+ */
 @Slf4j
 @Service
 public class ChannelApplicationDaoImpl implements ChannelApplicationDAO {
 
     private final ChannelApplicationMapper channelApplicationMapper;
 
+    /**
+     * 创建频道申请 DAO 实现（由 Spring 注入 {@link ChannelApplicationMapper}）。
+     */
     public ChannelApplicationDaoImpl(ChannelApplicationMapper channelApplicationMapper) {
         this.channelApplicationMapper = channelApplicationMapper;
     }

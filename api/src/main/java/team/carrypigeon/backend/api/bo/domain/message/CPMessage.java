@@ -24,6 +24,14 @@ public class CPMessage {
     private long cid;
     // 消息域，格式为 Domain:SubDomain
     private String domain;
+    // 消息域版本（SemVer 字符串，例如 1.0.0）
+    private String domainVersion;
+    /**
+     * Reply target message id (mid), 0 means not a reply.
+     * <p>
+     * JSON protocol uses {@code reply_to_mid} as a snowflake string.
+     */
+    private long replyToMid;
     // 消息数据
     private JsonNode data;
     // 发送时间

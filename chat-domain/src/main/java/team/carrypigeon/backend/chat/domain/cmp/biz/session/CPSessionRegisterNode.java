@@ -13,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterServi
 /**
  * 用于注册会话<br/>
  * 入参：UserInfo:{@link CPUser}<br/>
- * 出参：SessionId:Long<br/>
+ * 出参：session_uid:Long<br/>
  * @author midreamsheep
  * */
 @AllArgsConstructor
@@ -23,7 +23,7 @@ public class CPSessionRegisterNode extends CPNodeComponent {
     private final CPSessionCenterService cpSessionCenterService;
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
+        CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO);
         // 注册会话
         cpSessionCenterService.addSession(user.getId(), session);
         // 将用户id注册进会话上下文

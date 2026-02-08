@@ -27,6 +27,9 @@ public class CPNotificationService implements CPNotificationSender {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 创建通知服务（由 Spring 注入会话中心与 {@link ObjectMapper}）。
+     */
     public CPNotificationService(CPSessionCenterService cpSessionCenterService, ObjectMapper objectMapper) {
         this.cpSessionCenterService = cpSessionCenterService;
         this.objectMapper = objectMapper;
@@ -46,10 +49,7 @@ public class CPNotificationService implements CPNotificationSender {
                 continue;
             }
             for (CPSession session : sessions) {
-                CPResponse cpResponse = new CPResponse();
-                cpResponse.setId(-1)
-                        .setCode(0)
-                        .setData(objectMapper.valueToTree( notification));
+                CPResponse cpResponse = CPResponse.notification(objectMapper.valueToTree(notification));
                 try {
                     session.write(objectMapper.writeValueAsString(cpResponse));
                 } catch (JsonProcessingException e) {

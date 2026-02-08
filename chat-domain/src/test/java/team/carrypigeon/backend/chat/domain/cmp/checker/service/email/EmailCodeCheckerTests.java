@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.service.email;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
-import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,12 +21,9 @@ class EmailCodeCheckerTests {
         TestableEmailCodeChecker checker = new TestableEmailCodeChecker(new InMemoryCPCache(), null);
 
         CPFlowContext context = new CPFlowContext();
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(500, response.getCode());
-        assertEquals("email code param error", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("validation_failed", ex.getProblem().reason());
     }
 
     @Test
@@ -36,14 +33,12 @@ class EmailCodeCheckerTests {
         TestableEmailCodeChecker checker = new TestableEmailCodeChecker(cache, null);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, 456);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL_CODE, 456);
 
-        assertThrows(CPReturnException.class, () -> checker.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals(100, response.getCode());
-        assertEquals("email code error", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
+        assertEquals(422, ex.getProblem().status());
+        assertEquals("email_code_invalid", ex.getProblem().reason());
     }
 
     @Test
@@ -53,11 +48,11 @@ class EmailCodeCheckerTests {
         TestableEmailCodeChecker checker = new TestableEmailCodeChecker(cache, "soft");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, 456);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL_CODE, 456);
 
         checker.process(null, context);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertFalse(result.state());
         assertEquals("email code error", result.msg());
@@ -70,11 +65,11 @@ class EmailCodeCheckerTests {
         TestableEmailCodeChecker checker = new TestableEmailCodeChecker(cache, "soft");
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL_CODE, 123);
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL_CODE, 123);
 
         checker.process(null, context);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
         assertNull(result.msg());
@@ -133,4 +128,3 @@ class EmailCodeCheckerTests {
         }
     }
 }
-

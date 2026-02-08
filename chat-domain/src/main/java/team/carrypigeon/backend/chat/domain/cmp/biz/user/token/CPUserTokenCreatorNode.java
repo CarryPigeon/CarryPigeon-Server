@@ -2,15 +2,12 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.user.token;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 import team.carrypigeon.backend.common.id.IdUtil;
@@ -24,26 +21,24 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * */
 @AllArgsConstructor
 @LiteflowComponent("CPUserTokenCreator")
-    public class CPUserTokenCreatorNode extends CPNodeComponent {
+public class CPUserTokenCreatorNode extends CPNodeComponent {
 
     private final UserTokenDao userTokenDao;
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
+    protected void process(CPFlowContext context) throws Exception {
         // 查询数据
-        CPUser userInfo = requireContext(context, CPNodeUserKeys.USER_INFO, CPUser.class);
+        CPUser userInfo = requireContext(context, CPNodeUserKeys.USER_INFO);
         // 创建token
         CPUserToken cpUserToken = new CPUserToken();
         cpUserToken
                 .setId(IdUtil.generateId())
                 .setUid(userInfo.getId())
                 .setToken(IdUtil.generateToken())
-                .setExpiredTime(TimeUtil.getCurrentLocalTime().plusDays(30));
+                .setExpiredTime(TimeUtil.currentLocalDateTime().plusDays(30));
         if (!userTokenDao.save(cpUserToken)){
-            context.setData(CPNodeCommonKeys.RESPONSE,
-                    CPResponse.error("save user token error"));
-            throw new CPReturnException();
+            fail(CPProblem.of(500, "internal_error", "save user token error"));
         }
-        context.setData(CPNodeUserTokenKeys.USER_TOKEN_INFO, cpUserToken);
+        context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO, cpUserToken);
     }
 }

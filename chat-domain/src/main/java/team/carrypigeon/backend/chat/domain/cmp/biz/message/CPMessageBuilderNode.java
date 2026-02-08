@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.cmp.biz.message;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -30,19 +29,26 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 public class CPMessageBuilderNode extends CPNodeComponent {
 
     @Override
-    public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPMessageData messageData =
-                requireContext(context, CPNodeValueKeyExtraConstants.MESSAGE_DATA, CPMessageData.class);
-        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID, Long.class);
-        Long uid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID, Long.class);
+    protected void process(CPFlowContext context) throws Exception {
+        CPMessageData messageData = requireContext(context, CPNodeValueKeyExtraConstants.MESSAGE_DATA);
+        Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
+        Long uid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_UID);
+        String domainVersion = context.get(CPNodeMessageKeys.MESSAGE_INFO_DOMAIN_VERSION);
+        if (domainVersion == null || domainVersion.isBlank()) {
+            domainVersion = "1.0.0";
+        }
+        Long replyToMid = context.get(CPNodeMessageKeys.MESSAGE_INFO_REPLY_TO_MID);
+        long safeReplyToMid = replyToMid == null ? 0L : Math.max(0L, replyToMid);
         CPMessage message = new CPMessage()
                 .setId(IdUtil.generateId())
                 .setCid(cid)
                 .setUid(uid)
                 .setDomain(messageData.getDomain())
+                .setDomainVersion(domainVersion)
+                .setReplyToMid(safeReplyToMid)
                 .setData(messageData.getData())
-                .setSendTime(TimeUtil.getCurrentLocalTime());
-        context.setData(CPNodeMessageKeys.MESSAGE_INFO, message);
+                .setSendTime(TimeUtil.currentLocalDateTime());
+        context.set(CPNodeMessageKeys.MESSAGE_INFO, message);
         log.info("CPMessageBuilder success, mid={}, cid={}, uid={}, domain={}",
                 message.getId(), message.getCid(), message.getUid(), message.getDomain());
     }

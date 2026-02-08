@@ -3,7 +3,7 @@
     <!-- 发送频道消息 -->
     <chain name="/core/channel/message/create">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验 **/
         MemberGuard,
@@ -51,7 +51,7 @@
     <!-- 拉取频道消息列表 -->
     <chain name="/core/channel/message/list">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验 **/
         MemberGuard,
@@ -62,13 +62,13 @@
 
     <!-- 获取单条频道消息 -->
     <chain name="/core/channel/message/get">
-        RenameScript = '{"SessionId":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        RenameScript = '{"session_uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
         THEN(
         /** 判断用户是否登录 **/
         UserLoginChecker,
         /** 查询消息信息 **/
         CPMessageSelector,
-        /** 将 SessionId、频道 id 映射为成员选择所需的参数，用于校验是否在频道中 **/
+        /** 将 session_uid、频道 id 映射为成员选择所需的参数，用于校验是否在频道中 **/
         RenameArg.data(RenameScript),
         /** 校验用户是否在频道中 **/
         CPChannelMemberSelector.bind("key","CidWithUid")
@@ -78,7 +78,7 @@
     <!-- 获取未读消息数量 -->
     <chain name="/core/channel/message/unread/get">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验 **/
         MemberGuard,
@@ -90,7 +90,7 @@
     <!-- 更新频道消息已读状态 -->
     <chain name="/core/channel/message/read/state/update">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验（基于读状态 cid） **/
         ReadGuard,
@@ -108,7 +108,7 @@
     <!-- 获取频道消息已读状态 -->
     <chain name="/core/channel/message/read/state/get">
         THEN(
-        /** 判断是否登录并将 SessionId 映射为 UserInfo_Id **/
+        /** 判断是否登录并将 session_uid 映射为 UserInfo_Id **/
         UserLoginGuard,
         /** 参数重命名 + 成员存在校验（基于读状态 cid） **/
         ReadGuard,

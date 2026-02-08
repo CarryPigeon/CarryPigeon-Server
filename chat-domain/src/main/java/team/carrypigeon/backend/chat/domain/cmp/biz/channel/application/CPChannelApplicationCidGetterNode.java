@@ -17,8 +17,7 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKe
 public class CPChannelApplicationCidGetterNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        CPChannelApplication channelApplicationInfo =
-                requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO, CPChannelApplication.class);
-        context.setData(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_CID, channelApplicationInfo.getCid());
+        CPChannelApplication channelApplicationInfo = requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
+        context.set(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_CID, channelApplicationInfo.getCid());
     }
 }

@@ -30,15 +30,15 @@ class CPUserRelatedCollectorNodeTests {
         CPUserRelatedCollectorNode node = new CPUserRelatedCollectorNode(dao);
 
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeUserKeys.USER_INFO_ID, uid);
+        context.set(CPNodeUserKeys.USER_INFO_ID, uid);
         Set<Long> pre = new HashSet<>();
         pre.add(0L);
-        context.setData(CPNodeNotifierKeys.NOTIFIER_UIDS, pre);
+        context.set(CPNodeNotifierKeys.NOTIFIER_UIDS, pre);
 
         node.process(null, context);
 
         @SuppressWarnings("unchecked")
-        Set<Long> result = (Set<Long>) context.getData(CPNodeNotifierKeys.NOTIFIER_UIDS);
+        Set<Long> result = (Set<Long>) context.get(CPNodeNotifierKeys.NOTIFIER_UIDS);
         assertSame(pre, result);
         assertTrue(result.contains(0L));
         assertTrue(result.contains(1L));
@@ -48,4 +48,3 @@ class CPUserRelatedCollectorNodeTests {
         verify(dao, times(1)).getAllMember(10L);
     }
 }
-

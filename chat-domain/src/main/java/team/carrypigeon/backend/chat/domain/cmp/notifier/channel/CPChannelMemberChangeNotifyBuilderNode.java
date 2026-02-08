@@ -7,9 +7,9 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.node.CPNodeBindKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.connection.notification.CPChannelMemberNotificationData;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeBindKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeNotifierKeys;
 
@@ -37,16 +37,15 @@ public class CPChannelMemberChangeNotifyBuilderNode extends CPNodeComponent {
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         // 变更类型由 bind("key", ...) 指定
-        String type = requireBind(context, CPNodeBindKeys.KEY, String.class);
-        CPChannelMember member =
-                requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO, CPChannelMember.class);
+        String type = requireBind(CPNodeBindKeys.KEY, String.class);
+        CPChannelMember member = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
 
         CPChannelMemberNotificationData data = new CPChannelMemberNotificationData()
                 .setType(type)
                 .setCid(member.getCid())
                 .setUid(member.getUid());
 
-        context.setData(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
+        context.set(CPNodeNotifierKeys.NOTIFIER_DATA, objectMapper.valueToTree(data));
         log.debug("CPChannelMemberChangeNotifyBuilder built notify data, type={}, cid={}, uid={}",
                 type, member.getCid(), member.getUid());
     }

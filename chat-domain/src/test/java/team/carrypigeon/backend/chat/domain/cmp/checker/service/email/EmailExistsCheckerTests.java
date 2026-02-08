@@ -1,14 +1,14 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.service.email;
 
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
-import team.carrypigeon.backend.api.chat.domain.controller.CPReturnException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.api.connection.protocol.CPResponse;
 import team.carrypigeon.backend.api.dao.database.user.UserDao;
-import team.carrypigeon.backend.chat.domain.attribute.CPNodeCommonKeys;
 import team.carrypigeon.backend.chat.domain.cmp.basic.CPNodeValueKeyExtraConstants;
-import team.carrypigeon.backend.chat.domain.cmp.info.CheckResult;
+import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -22,12 +22,11 @@ class EmailExistsCheckerTests {
 
         TestableEmailExistsChecker node = new TestableEmailExistsChecker(userDao, null);
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
-        assertThrows(CPReturnException.class, () -> node.process(null, context));
-        CPResponse response = context.getData(CPNodeCommonKeys.RESPONSE);
-        assertNotNull(response);
-        assertEquals("email exists", response.getData().get("msg").asText());
+        CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
+        assertEquals(409, ex.getProblem().status());
+        assertEquals("email_exists", ex.getProblem().reason());
     }
 
     @Test
@@ -37,10 +36,10 @@ class EmailExistsCheckerTests {
 
         TestableEmailExistsChecker node = new TestableEmailExistsChecker(userDao, "soft");
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
         node.process(null, context);
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertFalse(result.state());
         assertEquals("email exists", result.msg());
@@ -53,13 +52,13 @@ class EmailExistsCheckerTests {
 
         TestableEmailExistsChecker node = new TestableEmailExistsChecker(userDao, "soft");
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
         node.process(null, context);
         node.process(null, context);
 
         verify(userDao, times(2)).getByEmail("a@b.com");
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertTrue(result.state());
     }
@@ -71,13 +70,13 @@ class EmailExistsCheckerTests {
 
         TestableEmailExistsChecker node = new TestableEmailExistsChecker(userDao, "soft");
         CPFlowContext context = new CPFlowContext();
-        context.setData(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
+        context.set(CPNodeValueKeyExtraConstants.EMAIL, "a@b.com");
 
         node.process(null, context);
         node.process(null, context);
 
         verify(userDao, times(1)).getByEmail("a@b.com");
-        CheckResult result = context.getData(CPNodeCommonKeys.CHECK_RESULT);
+        CheckResult result = context.get(CPFlowKeys.CHECK_RESULT);
         assertNotNull(result);
         assertFalse(result.state());
     }

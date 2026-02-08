@@ -1,6 +1,10 @@
 ﻿spring:
   application:
     name: CarryPigeonBackend
+  jackson:
+    # API 协议要求 snake_case（例如 server_id、access_token、refresh_token）。
+    # 统一开启后，Spring Web /api 下的请求解析与响应序列化都会使用 snake_case。
+    property-naming-strategy: SNAKE_CASE
   mail:
     host: smtp.gmail.com
     port: 587
@@ -19,26 +23,51 @@ logging:
 
 cp:
   server:
+    # server_id: stable UUID string for this server (used by clients for isolation)
+    server_id: 550e8400-e29b-41d4-a716-446655440000
     # server_name: logical display name of this backend server
     server_name: CarryPigeonBackend
     # avatar: image id or key used by frontend to display server avatar
-    avatar: default-server-avatar
+    avatar: api/files/download/server_avatar
     # brief: short introduction or description of this server
     brief: CarryPigeon chat backend server
     # time: created time of this server in milliseconds since epoch
     time: 1733616000000
 
-# TODO 閰嶇疆杩佺Щ
+  api:
+    required_plugins: []
+    message_rate_limit:
+      enabled: true
+      core_text:
+        window_seconds: 10
+        max_requests: 20
+      plugin:
+        window_seconds: 10
+        max_requests: 10
+    plugin_package_scan:
+      enabled: true
+      dir: plugins/packages
+      latest_only: true
+      refresh_interval_seconds: 30
+      download_base_path: api/plugins/download
+      contract_base_path: api/contracts
+      trust:
+        enabled: false
+        allowed_plugin_ids: []
+        blocked_plugin_ids: []
+        allowed_zip_sha256: []
+        require_ed25519_signature: false
+        ed25519_public_keys: []
+
+  auth:
+    access_token_ttl_seconds: 1800
+    refresh_token_ttl_days: 30
+
 minio:
   endpoint: http://localhost:9005
   bucketName: carrygieon
   accessKey: minioadmin
   secretKey: minioadmin
-
-connection:
-  port: 7609
-  ecc-private-key: MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgU75tMS9EejjHU2YU1RFqktAFPlGsLqXgJ0lGMwuWgSugCgYIKoZIzj0DAQehRANCAAQZeLMnhTR2Ry4mbzOYsmRJ2mj1cJU/O3lLnzvQCd1aKDHIr0YdUQ+P1KiLORPPPD5XlbvAcry2tQUXLaIYBw0i
-  ecc-public-key: MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEGXizJ4U0dkcuJm8zmLJkSdpo9XCVPzt5S5870AndWigxyK9GHVEPj9SoizkTzzw+V5W7wHK8trUFFy2iGAcNIg==
 
 liteflow:
   rule-source: config/*.xml

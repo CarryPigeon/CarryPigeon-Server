@@ -36,7 +36,7 @@
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>connection</artifactId>
+            <artifactId>chat-domain</artifactId>
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>

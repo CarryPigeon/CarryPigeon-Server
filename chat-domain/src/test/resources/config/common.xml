@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <flow>
-    <!-- 公共子链：SessionId -> UserInfo_Id + 登录校验 -->
+    <!-- 公共子链：session_uid -> UserInfo_Id + 登录校验 -->
     <chain name="UserLoginGuard">
-        RenameScript = '{"SessionId":"UserInfo_Id"}';
+        RenameScript = '{"session_uid":"UserInfo_Id"}';
         THEN(
         /** 判断用户是否登录 **/
         UserLoginChecker,
-        /** 将 SessionId 映射为 UserInfo_Id，供后续节点使用 **/
+        /** 将 session_uid 映射为 UserInfo_Id，供后续节点使用 **/
         RenameArg.data(RenameScript)
         )
     </chain>
 
     <!-- 公共子链：通过 ChannelInfo_Id 校验频道成员（仅参数重命名 + 成员存在校验） -->
     <chain name="MemberGuard">
-        RenameScript = '{"SessionId":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
+        RenameScript = '{"session_uid":"ChannelMemberInfo_Uid","ChannelInfo_Id":"ChannelMemberInfo_Cid"}';
         THEN(
-        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        /** 将 session_uid、频道 id 映射为成员选择所需的参数 **/
         RenameArg.data(RenameScript),
         /** 校验用户是否在频道中（不存在记录时视为非频道成员） **/
         CPChannelMemberSelector.bind("key","CidWithUid")
@@ -24,9 +24,9 @@
 
     <!-- 公共子链：通过 ChannelReadStateInfo_Cid 校验频道成员（仅参数重命名 + 成员存在校验） -->
     <chain name="ReadGuard">
-        RenameScript = '{"SessionId":"ChannelMemberInfo_Uid","ChannelReadStateInfo_Cid":"ChannelMemberInfo_Cid"}';
+        RenameScript = '{"session_uid":"ChannelMemberInfo_Uid","ChannelReadStateInfo_Cid":"ChannelMemberInfo_Cid"}';
         THEN(
-        /** 将 SessionId、频道 id 映射为成员选择所需的参数 **/
+        /** 将 session_uid、频道 id 映射为成员选择所需的参数 **/
         RenameArg.data(RenameScript),
         /** 校验用户是否在频道中（不存在记录时视为非频道成员） **/
         CPChannelMemberSelector.bind("key","CidWithUid")

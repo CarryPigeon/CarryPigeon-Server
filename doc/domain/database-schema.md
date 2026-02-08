@@ -118,7 +118,9 @@
 - `cid BIGINT NOT NULL` — 频道 id；
 - `uid BIGINT NOT NULL` — 被禁言用户 id；
 - `aid BIGINT NOT NULL` — 管理员 id；
-- `duration INT NOT NULL` — 禁言时长（秒）；
+- `duration INT NOT NULL` — 禁言时长（秒，legacy，逐步迁移到 until_time）；
+- `until_time BIGINT NOT NULL DEFAULT 0` — 禁言截止时间（毫秒时间戳；0 表示未设置）；
+- `reason VARCHAR` — 禁言原因（可为空）；
 - `create_time DATETIME NOT NULL` — 创建时间。
 
 索引建议：
@@ -141,13 +143,14 @@
 - `uid BIGINT NOT NULL` — 发送者用户 id；
 - `cid BIGINT NOT NULL` — 频道 id；
 - `domain VARCHAR NOT NULL` — 消息域（`Domain:SubDomain`）；
+- `domain_version VARCHAR NOT NULL DEFAULT '1.0.0'` — domain 版本（SemVer 字符串）；
 - `data TEXT` — 消息内容 JSON；
 - `send_time DATETIME NOT NULL` — 发送时间。
 
 索引建议：
 
-- `INDEX (cid, send_time)`：支持按时间分页拉取频道消息；
-- `INDEX (cid, uid, send_time)`：支持按用户统计某时间点之后的消息数量（未读统计时使用）。
+- `INDEX (cid, id)`：支持按 message id（Snowflake）分页拉取频道消息；
+- `INDEX (cid, send_time)`：可选，支持按时间排序/范围查询。
 
 ### 3.2 读状态表 `channel_read_state`
 
@@ -159,6 +162,7 @@
 - `id BIGINT PRIMARY KEY` — 记录 id；
 - `uid BIGINT NOT NULL` — 用户 id；
 - `cid BIGINT NOT NULL` — 频道 id；
+- `last_read_mid BIGINT NOT NULL DEFAULT 0` — 最新已读消息 id（0 表示从未读）；
 - `last_read_time BIGINT NOT NULL DEFAULT 0` — 最新已读时间（毫秒，0 表示从未读）。
 
 索引建议：
@@ -178,15 +182,24 @@
 主要字段：
 
 - `id BIGINT PRIMARY KEY` — 文件记录 id；
-- `sha256 VARCHAR NOT NULL` — 文件内容 SHA-256 哈希；
+- `share_key VARCHAR NOT NULL` — 对外稳定下载标识（`/api/files/download/{share_key}`）；
+- `owner_uid BIGINT NOT NULL` — 文件所有者（上传者）；
+- `access_scope VARCHAR NOT NULL DEFAULT 'OWNER'` — 下载权限范围（`OWNER|AUTH|CHANNEL|PUBLIC`）；
+- `scope_cid BIGINT NOT NULL DEFAULT 0` — 当 `access_scope=CHANNEL` 时的频道 id；
+- `scope_mid BIGINT NOT NULL DEFAULT 0` — 预留：当文件绑定到具体消息时的消息 id；
+- `filename VARCHAR` — 原始文件名（可为空）；
+- `sha256 VARCHAR` — 文件内容 SHA-256 哈希（可为空；为空时表示客户端未提供摘要）；
 - `size BIGINT NOT NULL` — 文件大小（字节）；
 - `object_name VARCHAR NOT NULL` — 对象存储的 key；
 - `content_type VARCHAR` — MIME 类型；
+- `uploaded TINYINT NOT NULL DEFAULT 0` — 是否已完成上传（0 pending / 1 uploaded）；
+- `uploaded_time DATETIME` — 上传完成时间（未上传则为 null）；
 - `create_time DATETIME NOT NULL` — 记录创建时间。
 
 索引建议：
 
-- `UNIQUE (sha256)`：根据内容哈希防止重复上传；
+- `UNIQUE (share_key)`：下载入口用；
+- `INDEX (sha256)`：可用于相同内容检测/去重策略（非强制唯一）；
 - `INDEX (create_time)`：按时间清理或统计。
 
 ---
@@ -202,4 +215,3 @@
   - 在 `api` 中定义 BO；
   - 在 `dao` 中定义对应 PO 与 Mapper；
   - 在本文件中更新表结构说明。 
-

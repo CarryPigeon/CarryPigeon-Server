@@ -95,19 +95,20 @@ WHERE `id` BETWEEN 710000000000000001 AND 710000000000000010;
 
 -- ----------------------------
 -- 2) file_info（头像/频道头像/示例文件）
--- object_name 约定为 fileId 字符串（与 MinioController 一致）
+-- object_name 约定为 file_{fileId}（与 HTTP Files 模块一致）
 -- ----------------------------
-INSERT INTO `file_info` (`id`, `sha256`, `size`, `object_name`, `content_type`, `create_time`) VALUES
-    (@fid_base + 1, REPEAT('1', 64), 12543, CONCAT(@fid_base + 1), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 2, REPEAT('2', 64), 16420, CONCAT(@fid_base + 2), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 3, REPEAT('3', 64), 13210, CONCAT(@fid_base + 3), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 4, REPEAT('4', 64), 14210, CONCAT(@fid_base + 4), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 5, REPEAT('5', 64), 15310, CONCAT(@fid_base + 5), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 6, REPEAT('6', 64), 10420, CONCAT(@fid_base + 6), 'image/png', DATE_SUB(@seed_now, INTERVAL 180 DAY)),
-    (@fid_base + 7, REPEAT('7', 64), 17420, CONCAT(@fid_base + 7), 'image/png', DATE_SUB(@seed_now, INTERVAL 90 DAY)),
-    (@fid_base + 8, REPEAT('8', 64), 18420, CONCAT(@fid_base + 8), 'image/png', DATE_SUB(@seed_now, INTERVAL 60 DAY)),
-    (@fid_base + 9, REPEAT('9', 64), 524288, CONCAT(@fid_base + 9), 'application/pdf', DATE_SUB(@seed_now, INTERVAL 30 DAY)),
-    (@fid_base + 10, REPEAT('a', 64), 4194304, CONCAT(@fid_base + 10), 'image/jpeg', DATE_SUB(@seed_now, INTERVAL 10 DAY));
+INSERT INTO `file_info`
+(`id`, `share_key`, `owner_uid`, `access_scope`, `scope_cid`, `scope_mid`, `filename`, `sha256`, `size`, `object_name`, `content_type`, `uploaded`, `uploaded_time`, `create_time`) VALUES
+    (@fid_base + 1,  CONCAT('shr_', @fid_base + 1),  @uid_admin,  'AUTH', 0, 0, 'avatar_admin.png', REPEAT('1', 64), 12543,  CONCAT('file_', @fid_base + 1),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 2,  CONCAT('shr_', @fid_base + 2),  @uid_alice,  'AUTH', 0, 0, 'avatar_alice.png', REPEAT('2', 64), 16420,  CONCAT('file_', @fid_base + 2),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 3,  CONCAT('shr_', @fid_base + 3),  @uid_bob,    'AUTH', 0, 0, 'avatar_bob.png',   REPEAT('3', 64), 13210,  CONCAT('file_', @fid_base + 3),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 4,  CONCAT('shr_', @fid_base + 4),  @uid_chen,   'AUTH', 0, 0, 'avatar_chen.png',  REPEAT('4', 64), 14210,  CONCAT('file_', @fid_base + 4),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 5,  CONCAT('shr_', @fid_base + 5),  @uid_eve,    'AUTH', 0, 0, 'avatar_eve.png',   REPEAT('5', 64), 15310,  CONCAT('file_', @fid_base + 5),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 6,  CONCAT('shr_', @fid_base + 6),  @uid_admin,  'AUTH', 0, 0, 'channel_dev.png',  REPEAT('6', 64), 10420,  CONCAT('file_', @fid_base + 6),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 180 DAY), DATE_SUB(@seed_now, INTERVAL 180 DAY)),
+    (@fid_base + 7,  CONCAT('shr_', @fid_base + 7),  @uid_admin,  'OWNER', 0, 0, 'misc_01.png',      REPEAT('7', 64), 17420,  CONCAT('file_', @fid_base + 7),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 90 DAY),  DATE_SUB(@seed_now, INTERVAL 90 DAY)),
+    (@fid_base + 8,  CONCAT('shr_', @fid_base + 8),  @uid_admin,  'OWNER', 0, 0, 'misc_02.png',      REPEAT('8', 64), 18420,  CONCAT('file_', @fid_base + 8),  'image/png', 1, DATE_SUB(@seed_now, INTERVAL 60 DAY),  DATE_SUB(@seed_now, INTERVAL 60 DAY)),
+    (@fid_base + 9,  CONCAT('shr_', @fid_base + 9),  @uid_admin,  'OWNER', 0, 0, 'misc_doc.pdf',     REPEAT('9', 64), 524288, CONCAT('file_', @fid_base + 9),  'application/pdf', 1, DATE_SUB(@seed_now, INTERVAL 30 DAY),  DATE_SUB(@seed_now, INTERVAL 30 DAY)),
+    (@fid_base + 10, CONCAT('shr_', @fid_base + 10), @uid_admin,  'OWNER', 0, 0, 'misc_big.jpg',     REPEAT('a', 64), 4194304, CONCAT('file_', @fid_base + 10), 'image/jpeg', 1, DATE_SUB(@seed_now, INTERVAL 10 DAY),  DATE_SUB(@seed_now, INTERVAL 10 DAY));
 
 -- ----------------------------
 -- 3) user（8 个典型用户：管理员/频道主/普通成员/被禁言/新用户/游客/机器人）

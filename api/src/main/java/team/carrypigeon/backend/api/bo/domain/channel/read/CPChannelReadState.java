@@ -25,6 +25,8 @@ public class CPChannelReadState {
     private long uid;
     /** Channel id */
     private long cid;
+    /** Latest read message id in the channel (0 means never read) */
+    private long lastReadMid;
     /** Latest read time in the channel (epoch millis, 0 means never read) */
     private long lastReadTime;
 }

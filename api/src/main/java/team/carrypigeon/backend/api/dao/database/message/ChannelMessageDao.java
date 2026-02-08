@@ -2,42 +2,54 @@ package team.carrypigeon.backend.api.dao.database.message;
 
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 
-import java.time.LocalDateTime;
-
 /**
- * 消息dao接口
- * @author midreamsheep
- * */
+ * Channel message DAO.
+ * <p>
+ * This DAO intentionally uses {@code mid} (message id, snowflake long) as the stable cursor for pagination and unread
+ * counting. Avoid using {@code send_time} as the cursor to prevent boundary bugs when multiple messages share the same
+ * timestamp.
+ */
 public interface ChannelMessageDao {
     /**
-     * 通过id获取消息
-     * @param id 消息id
-     * */
+     * Get a message by id.
+     *
+     * @param id message id
+     */
     CPMessage getById(long id);
     /**
-     * 获取指定通道指定时间之前的count条**有效**消息 <br/>
-     * 若总消息数量不足count则返回所有有效消息
-     * @param cid 通道id
-     * @param time 时间
-     * @param count 获取数量，数量范围为[1,100]
-     * */
-    CPMessage[] getBefore(long cid, LocalDateTime time, int count);
-    /**
-     * 获取指定通道指定时间之后条**有效**消息的数量 <br/>
-     * @param cid 通道id
-     * @param time 时间
-     * */
-    int getAfterCount(long cid,long uid, LocalDateTime time);
+     * List messages in a channel before a cursor message id (exclusive), ordered by id desc.
+     * <p>
+     * Cursor semantics:
+     * <ul>
+     *   <li>cursorMid &lt;= 0: treated as {@link Long#MAX_VALUE} (first page)</li>
+     *   <li>otherwise: list messages with {@code id &lt; cursorMid}</li>
+     * </ul>
+     *
+     * @param cid       channel id
+     * @param cursorMid cursor message id (exclusive)
+     * @param count     max items, suggested range [1, 100]
+     */
+    CPMessage[] listBefore(long cid, long cursorMid, int count);
 
     /**
-     * 保存消息（已存在则为更新，不存在则为插入）
-     * @param message 消息
-     * */
+     * Count messages after a start message id (exclusive), in the given channel.
+     *
+     * @param cid      channel id
+     * @param startMid last read message id (exclusive)
+     */
+    int countAfter(long cid, long startMid);
+
+    /**
+     * Save a message (insert or update).
+     *
+     * @param message message
+     */
     boolean save(CPMessage message);
 
     /**
-     * 删除消息
-     * @param message 消息
-     * */
+     * Delete a message.
+     *
+     * @param message message
+     */
     boolean delete(CPMessage message);
 }
