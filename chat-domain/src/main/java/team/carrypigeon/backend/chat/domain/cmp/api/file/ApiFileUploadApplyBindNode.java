@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.domain.file.CPFileAccessScopeEnum;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -17,19 +18,15 @@ import team.carrypigeon.backend.common.id.IdUtil;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * Bind {@code POST /api/files/uploads} into file context keys.
+ * 文件上传申请绑定节点。
  * <p>
- * Output:
- * <ul>
- *   <li>{@link CPNodeFileKeys#FILE_INFO}</li>
- *   <li>{@link CPNodeFileKeys#FILE_INFO_ID} (for token creation)</li>
- * </ul>
+ * 解析 `POST /api/files/uploads` 请求，校验参数后构建 `CPFileInfo` 并写入上下文。
  */
 @Slf4j
 @AllArgsConstructor
@@ -40,34 +37,37 @@ public class ApiFileUploadApplyBindNode extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 解析并绑定文件上传申请。
+     */
     @Override
     protected void process(CPFlowContext context) {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof FileUploadApplyRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         if (req.filename() == null || req.filename().isBlank()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "filename", "reason", "invalid", "message", "filename is required")
                     ))));
         }
         if (containsUnsafeChars(req.filename())) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "filename", "reason", "invalid", "message", "filename contains invalid chars")
                     ))));
         }
         long size = req.sizeBytes() == null ? 0L : req.sizeBytes();
         if (size <= 0) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "size_bytes", "reason", "invalid", "message", "size_bytes must be > 0")
                     ))));
         }
         if (req.mimeType() != null && !req.mimeType().isBlank() && !isValidMimeType(req.mimeType())) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "mime_type", "reason", "invalid", "message", "invalid mime_type")
                     ))));
@@ -78,7 +78,7 @@ public class ApiFileUploadApplyBindNode extends CPNodeComponent {
         if (scope == CPFileAccessScopeEnum.CHANNEL) {
             scopeCid = parseId(req.scopeCid(), "scope_cid");
             if (channelMemberDao.getMember(uid, scopeCid) == null) {
-                throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+                throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
             }
         }
 
@@ -118,21 +118,30 @@ public class ApiFileUploadApplyBindNode extends CPNodeComponent {
         log.debug("ApiFileUploadApplyBind success, fileId={}, shareKey={}, uid={}", info.getId(), info.getShareKey(), uid);
     }
 
+    /**
+     * 生成文件分享键。
+     */
     private String generateShareKey() {
         return "shr_" + UUID.randomUUID().toString().replace("-", "");
     }
 
+    /**
+     * 解析字符串 ID。
+     */
     private long parseId(String str, String field) {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", field, "reason", "invalid", "message", "invalid " + field)
                     ))));
         }
     }
 
+    /**
+     * 校验 MIME 类型格式是否合法。
+     */
     private boolean isValidMimeType(String mimeType) {
         String trimmed = mimeType.trim();
         if (trimmed.length() > 127) {
@@ -141,6 +150,9 @@ public class ApiFileUploadApplyBindNode extends CPNodeComponent {
         return MIME_PATTERN.matcher(trimmed).matches();
     }
 
+    /**
+     * 检测文件名是否包含 CR/LF 注入字符。
+     */
     private boolean containsUnsafeChars(String filename) {
         return filename.indexOf('\r') >= 0 || filename.indexOf('\n') >= 0;
     }

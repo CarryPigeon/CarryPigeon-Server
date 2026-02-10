@@ -21,6 +21,9 @@ public final class CPNodeChannelReadStateKeys {
     /** {@code Long}: 最后已读时间（毫秒时间戳）。 */
     public static final CPKey<Long> CHANNEL_READ_STATE_INFO_LAST_READ_TIME = CPKey.of("ChannelReadStateInfo_LastReadTime", Long.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeChannelReadStateKeys() {
     }
 }

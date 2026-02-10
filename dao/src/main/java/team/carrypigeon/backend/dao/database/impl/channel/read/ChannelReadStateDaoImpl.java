@@ -13,7 +13,9 @@ import team.carrypigeon.backend.dao.database.mapper.channel.read.ChannelReadStat
 import java.util.Optional;
 
 /**
- * Database implementation of {@link ChannelReadStateDao}.
+ * {@link ChannelReadStateDao} 的数据库实现。
+ * <p>
+ * 基于 MyBatis-Plus 完成读写，并通过 Spring Cache 缓存常见查询。
  */
 @Slf4j
 @Service
@@ -22,12 +24,18 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
     private final ChannelReadStateMapper channelReadStateMapper;
 
     /**
-     * Create read-state DAO implementation.
+     * 构造函数注入 Mapper。
      */
     public ChannelReadStateDaoImpl(ChannelReadStateMapper channelReadStateMapper) {
         this.channelReadStateMapper = channelReadStateMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 已读状态记录 ID
+     * @return 匹配的已读状态；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelReadStateById", key = "#id", unless = "#result == null")
     public CPChannelReadState getById(long id) {
@@ -41,6 +49,13 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
         return result;
     }
 
+    /**
+     * 按用户与频道联合查询数据。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 匹配的已读状态；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelReadStateByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelReadState getByUidAndCid(long uid, long cid) {
@@ -57,6 +72,12 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
         return result;
     }
 
+    /**
+     * 保存频道已读状态。
+     *
+     * @param state 待保存的已读状态实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelReadStateById", "channelReadStateByUidCid"}, allEntries = true)
     public boolean save(CPChannelReadState state) {
@@ -75,6 +96,12 @@ public class ChannelReadStateDaoImpl implements ChannelReadStateDao {
         return success;
     }
 
+    /**
+     * 删除频道已读状态。
+     *
+     * @param state 待删除的已读状态实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelReadStateById", "channelReadStateByUidCid"}, allEntries = true)
     public boolean delete(CPChannelReadState state) {

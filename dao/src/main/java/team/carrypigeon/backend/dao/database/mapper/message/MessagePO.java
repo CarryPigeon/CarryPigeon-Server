@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.dao.database.mapper.message;
 
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,39 +15,65 @@ import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import java.time.LocalDateTime;
 
 /**
- * 数据库中消息的映射类
- * */
+ * `message` 表持久化对象。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
 @TableName("message")
 public class MessagePO {
-    // 消息id
+
+    /**
+     * 消息 ID。
+     */
     @TableId
     private Long id;
-    // 用户id
+
+    /**
+     * 发送者用户 ID。
+     */
     private Long uid;
-    // 通道id
+
+    /**
+     * 频道 ID。
+     */
     private Long cid;
-    // 消息域，格式为 Domain:SubDomain
+
+    /**
+     * 消息领域。
+     */
     private String domain;
-    // 消息域版本
+
+    /**
+     * 消息领域版本。
+     */
     private String domainVersion;
-    // 回复目标消息 id（mid），0 表示非回复
+
+    /**
+     * 回复目标消息 ID。
+     */
     @TableField("reply_to_mid")
     private Long replyToMid;
-    // 消息数据
+
+    /**
+     * 序列化后的消息数据。
+     */
     private String data;
-    // 发送时间
+
+    /**
+     * 发送时间。
+     */
     private LocalDateTime sendTime;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    @SneakyThrows
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 消息领域对象。
      */
+    @SneakyThrows
     public CPMessage toBo() {
         return new CPMessage()
                 .setId(id)
@@ -60,10 +86,13 @@ public class MessagePO {
                 .setSendTime(sendTime);
     }
 
-    @SneakyThrows
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param message 消息领域对象。
+     * @return 消息持久化对象。
      */
+    @SneakyThrows
     public static MessagePO fromBo(CPMessage message) {
         return new MessagePO()
                 .setId(message.getId())

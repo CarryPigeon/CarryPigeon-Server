@@ -10,6 +10,9 @@ public final class CPChatDomainAttributes {
     /** {@code Long}: 当前连接绑定的登录用户 id。 */
     public static final String CHAT_DOMAIN_USER_ID = "ChatDomainUserId";
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPChatDomainAttributes() {
     }
 }

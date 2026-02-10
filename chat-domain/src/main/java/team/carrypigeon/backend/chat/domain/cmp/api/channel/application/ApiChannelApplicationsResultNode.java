@@ -15,12 +15,17 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Result mapper for {@code GET /api/channels/{cid}/applications}.
+ * 入群申请列表结果节点。
+ * <p>
+ * 将申请记录集合映射为 API 响应列表。
  */
 @Slf4j
 @LiteflowComponent("ApiChannelApplicationsResult")
 public class ApiChannelApplicationsResultNode extends AbstractResultNode<ApiChannelApplicationsResultNode.ApplicationsResponse> {
 
+    /**
+     * 构建申请列表响应。
+     */
     @Override
     protected ApplicationsResponse build(CPFlowContext context) {
         @SuppressWarnings("unchecked")
@@ -44,6 +49,9 @@ public class ApiChannelApplicationsResultNode extends AbstractResultNode<ApiChan
         return resp;
     }
 
+    /**
+     * 将申请状态枚举映射为对外状态字符串。
+     */
     private String statusOf(CPChannelApplicationStateEnum state) {
         if (state == null) {
             return "pending";
@@ -55,10 +63,15 @@ public class ApiChannelApplicationsResultNode extends AbstractResultNode<ApiChan
         };
     }
 
+    /**
+     * 申请列表响应体。
+     */
     public record ApplicationsResponse(List<ApplicationItem> items) {
     }
 
+    /**
+     * 单个申请响应项。
+     */
     public record ApplicationItem(String applicationId, String cid, String uid, String reason, long applyTime, String status) {
     }
 }
-

@@ -72,13 +72,9 @@ class ApiPluginPackageScannerTests {
     @Test
     void scanOnce_trustSignatureRequired_shouldRejectInvalidAndAcceptValid() throws Exception {
         Path dir = Files.createTempDirectory("cp-plugins-sig");
-
-        // Generate Ed25519 key
         KeyPairGenerator g = KeyPairGenerator.getInstance("Ed25519");
         KeyPair kp = g.generateKeyPair();
         String pubKeyB64 = Base64.getEncoder().encodeToString(kp.getPublic().getEncoded());
-
-        // 1) unsigned plugin -> rejected
         writeZip(dir.resolve("unsigned.zip"), """
                 {
                   "plugin_id": "u",
@@ -90,8 +86,6 @@ class ApiPluginPackageScannerTests {
                   "contracts": []
                 }
                 """);
-
-        // 2) signed plugin -> accepted
         Path signedZip = dir.resolve("signed.zip");
         String manifestNoSig = """
                 {
@@ -138,6 +132,13 @@ class ApiPluginPackageScannerTests {
         assertEquals("s", index.snapshot().pluginsView().getFirst().getPluginId());
     }
 
+    /**
+     * 测试辅助方法。
+     *
+     * @param zipPath 测试输入参数
+     * @param manifestJson 测试输入参数
+     * @throws Exception 执行过程中抛出的异常
+     */
     private void writeZip(Path zipPath, String manifestJson) throws Exception {
         Files.deleteIfExists(zipPath);
         try (var out = Files.newOutputStream(zipPath);
@@ -150,6 +151,13 @@ class ApiPluginPackageScannerTests {
         }
     }
 
+    /**
+     * 测试辅助方法。
+     *
+     * @param manifestJson 测试输入参数
+     * @return 测试辅助方法返回结果
+     * @throws Exception 执行过程中抛出的异常
+     */
     private byte[] canonicalManifestBytesForSignature(String manifestJson) throws Exception {
         JsonNode n = objectMapper.readTree(manifestJson);
         assertNotNull(n);
@@ -161,6 +169,14 @@ class ApiPluginPackageScannerTests {
                 .writeValueAsBytes(copy);
     }
 
+    /**
+     * 测试辅助方法。
+     *
+     * @param manifestWithoutSignature 测试输入参数
+     * @param signatureBase64 测试输入参数
+     * @return 测试辅助方法返回结果
+     * @throws Exception 执行过程中抛出的异常
+     */
     private String insertSignature(String manifestWithoutSignature, String signatureBase64) throws Exception {
         JsonNode n = objectMapper.readTree(manifestWithoutSignature);
         assertNotNull(n);

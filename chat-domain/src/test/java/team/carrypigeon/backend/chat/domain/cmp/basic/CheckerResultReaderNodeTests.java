@@ -18,7 +18,7 @@ class CheckerResultReaderNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.run(context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -54,20 +54,39 @@ class CheckerResultReaderNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.run(context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     private static final class TestableCheckerResultReaderNode extends CheckerResultReaderNode {
         private final String mode;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param mode 测试节点模式标识
+         */
         private TestableCheckerResultReaderNode(String mode) {
             this.mode = mode;
         }
 
+        /**
+         * 执行测试辅助逻辑。
+         *
+         * @param context 测试上下文对象
+         * @return 测试辅助方法返回结果
+         * @throws Exception 执行过程中抛出的异常
+         */
         private String run(CPFlowContext context) throws Exception {
             return super.process(context);
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 参数键名
+         * @param clazz 参数目标类型
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("key".equals(key) && clazz == String.class) {

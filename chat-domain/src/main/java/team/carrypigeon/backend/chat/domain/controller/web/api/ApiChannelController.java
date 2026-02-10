@@ -14,10 +14,9 @@ import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ChannelPatchR
 import team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowRunner;
 
 /**
- * Channel resources under {@code /api/channels}.
+ * 频道基础 API 控制器。
  * <p>
- * All endpoints require {@code Authorization: Bearer <access_token>}.
- * Business logic is implemented in LiteFlow chains (see {@code application-starter/src/main/resources/config/api.xml}).
+ * 提供频道创建、查询、更新、删除等核心路由。
  */
 @RestController
 public class ApiChannelController {
@@ -29,16 +28,24 @@ public class ApiChannelController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 创建频道控制器。
+     *
+     * @param flowRunner API 链路执行器
+     */
     public ApiChannelController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * Create a channel.
+     * 创建频道。
      * <p>
      * Route: {@code POST /api/channels}
-     * <p>
      * Chain: {@code api_channels_create}
+     *
+     * @param body 频道创建请求体
+     * @param request HTTP 请求对象（用于获取鉴权用户）
+     * @return HTTP 201 响应，响应体为标准协议对象
      */
     @PostMapping("/api/channels")
     public ResponseEntity<Object> create(@Valid @RequestBody ChannelCreateRequest body, HttpServletRequest request) {
@@ -50,11 +57,14 @@ public class ApiChannelController {
     }
 
     /**
-     * Get channel profile.
+     * 获取频道资料。
      * <p>
      * Route: {@code GET /api/channels/{cid}}
-     * <p>
      * Chain: {@code api_channels_get}
+     *
+     * @param cid 频道 ID（字符串形式）
+     * @param request HTTP 请求对象（用于获取鉴权用户）
+     * @return 标准协议响应对象
      */
     @GetMapping("/api/channels/{cid}")
     public Object get(@PathVariable("cid") String cid, HttpServletRequest request) {
@@ -66,11 +76,15 @@ public class ApiChannelController {
     }
 
     /**
-     * Update channel profile.
+     * 更新频道资料。
      * <p>
      * Route: {@code PATCH /api/channels/{cid}}
-     * <p>
      * Chain: {@code api_channels_patch}
+     *
+     * @param cid 频道 ID（字符串形式）
+     * @param body 频道更新请求体
+     * @param request HTTP 请求对象（用于获取鉴权用户）
+     * @return 标准协议响应对象
      */
     @PatchMapping("/api/channels/{cid}")
     public Object patch(@PathVariable("cid") String cid,
@@ -84,11 +98,14 @@ public class ApiChannelController {
     }
 
     /**
-     * Delete a channel.
+     * 删除频道。
      * <p>
      * Route: {@code DELETE /api/channels/{cid}}
-     * <p>
      * Chain: {@code api_channels_delete}
+     *
+     * @param cid 频道 ID（字符串形式）
+     * @param request HTTP 请求对象（用于获取鉴权用户）
+     * @return 空内容响应（HTTP 204）
      */
     @DeleteMapping("/api/channels/{cid}")
     public ResponseEntity<Void> delete(@PathVariable("cid") String cid, HttpServletRequest request) {
@@ -99,4 +116,3 @@ public class ApiChannelController {
         return ResponseEntity.noContent().build();
     }
 }
-

@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.cmp.biz.channel.member;
 
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
+
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
@@ -22,22 +24,27 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
  * */
 @LiteflowComponent("CPChannelMemberAuthoritySetter")
 public class CPChannelMemberAuthoritySetterNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（用于识别操作者）
+     * @param context LiteFlow 上下文，读取成员实体并更新权限值
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelMember channelMember = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
         CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
         String authority = requireBind(CPNodeBindKeys.KEY, String.class);
         Long sessionUid = requireContext(context, CPFlowKeys.SESSION_UID);
-
-        // Only channel owner can change member authority (chain should also guard, but node keeps the invariant).
         if (channelInfo.getOwner() != sessionUid) {
-            forbidden("not_channel_owner", "you are not the owner of this channel");
+            forbidden(CPProblemReason.NOT_CHANNEL_OWNER, "you are not the owner of this channel");
         }
 
         switch (authority) {
             case "member" -> {
                 if (channelMember.getUid() == channelInfo.getOwner()) {
-                    forbidden("cannot_change_owner_authority", "cannot change owner authority");
+                    forbidden(CPProblemReason.CANNOT_CHANGE_OWNER_AUTHORITY, "cannot change owner authority");
                 }
                 channelMember.setAuthority(CPChannelMemberAuthorityEnum.MEMBER);
             }

@@ -11,11 +11,9 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 
 /**
- * Issues and verifies long-lived refresh tokens.
+ * Refresh Token 服务。
  * <p>
- * Refresh token is persisted in database ({@link CPUserToken}) so that it can be revoked server-side.
- * Token format: {@code rtk_<opaque_random>}.
- * Expiration is tracked by {@link CPUserToken#getExpiredTime()}.
+ * 提供刷新令牌签发、查询、过期判断与吊销能力。
  */
 @Service
 @RequiredArgsConstructor
@@ -26,6 +24,13 @@ public class RefreshTokenService {
 
     private final UserTokenDao userTokenDao;
 
+    /**
+     * 签发刷新令牌并持久化。
+     *
+     * @param uid 用户 ID。
+     * @param ttlDays 令牌有效期（天）。
+     * @return 持久化后的刷新令牌实体。
+     */
     public CPUserToken issue(long uid, int ttlDays) {
         CPUserToken token = new CPUserToken()
                 .setId(IdUtil.generateId())
@@ -36,6 +41,12 @@ public class RefreshTokenService {
         return token;
     }
 
+    /**
+     * 按令牌字符串查询刷新令牌记录。
+     *
+     * @param refreshToken 刷新令牌字符串。
+     * @return 刷新令牌记录；不存在时返回 {@code null}。
+     */
     public CPUserToken getByToken(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             return null;
@@ -43,10 +54,21 @@ public class RefreshTokenService {
         return userTokenDao.getByToken(refreshToken);
     }
 
+    /**
+     * 判断刷新令牌是否过期。
+     *
+     * @param token 刷新令牌实体。
+     * @return 已过期返回 {@code true}，否则返回 {@code false}。
+     */
     public boolean isExpired(CPUserToken token) {
         return token == null || token.getExpiredTime() == null || LocalDateTime.now().isAfter(token.getExpiredTime());
     }
 
+    /**
+     * 吊销刷新令牌。
+     *
+     * @param token 待吊销的刷新令牌实体。
+     */
     public void revoke(CPUserToken token) {
         if (token == null) {
             return;
@@ -54,6 +76,12 @@ public class RefreshTokenService {
         userTokenDao.delete(token);
     }
 
+    /**
+     * 生成随机令牌片段。
+     *
+     * @param bytes 随机字节长度。
+     * @return Base64Url 编码后的随机串。
+     */
     private String randomToken(int bytes) {
         byte[] b = new byte[bytes];
         SECURE_RANDOM.nextBytes(b);

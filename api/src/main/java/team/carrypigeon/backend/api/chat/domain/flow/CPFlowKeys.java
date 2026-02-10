@@ -26,9 +26,6 @@ package team.carrypigeon.backend.api.chat.domain.flow;
  * @see CPFlowContext
  */
 public final class CPFlowKeys {
-
-    // ==================== 请求/响应 ====================
-
     /**
      * 请求 DTO 对象。
      * <p>
@@ -48,9 +45,6 @@ public final class CPFlowKeys {
      * 类型：取决于具体接口的 Response DTO
      */
     public static final CPKey<Object> RESPONSE = CPKey.of("response", Object.class);
-
-    // ==================== 认证信息 ====================
-
     /**
      * 已认证用户 ID。
      * <p>
@@ -70,9 +64,6 @@ public final class CPFlowKeys {
      * 类型：{@code Long}
      */
     public static final CPKey<Long> SESSION_UID = CPKey.of("session_uid", Long.class);
-
-    // ==================== 校验结果 ====================
-
     /**
      * 软校验结果。
      * <p>
@@ -85,7 +76,9 @@ public final class CPFlowKeys {
      */
     public static final CPKey<CheckResult> CHECK_RESULT = CPKey.of("check_result", CheckResult.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPFlowKeys() {
-        // 禁止实例化
     }
 }

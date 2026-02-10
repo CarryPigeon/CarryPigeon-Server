@@ -11,9 +11,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import java.time.LocalDateTime;
 
 /**
- * {@code channel_ban} 表的持久化对象（PO）。
- * <p>
- * duration 单位：秒（seconds）。
+ * `channel_ban` 表持久化对象。
  */
 @Data
 @NoArgsConstructor
@@ -21,26 +19,52 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("channel_ban")
 public class ChannelBanPO {
-    // 禁言记录id
+
+    /**
+     * 禁言记录 ID。
+     */
     @TableId
     private Long id;
-    // 通道id
+
+    /**
+     * 频道 ID。
+     */
     private Long cid;
-    // 用户id
+
+    /**
+     * 被禁言用户 ID。
+     */
     private Long uid;
-    // 禁言的管理员id
+
+    /**
+     * 操作者用户 ID。
+     */
     private Long aid;
-    // 禁言时长，单位为秒
+
+    /**
+     * 禁言时长（秒）。
+     */
     private int duration;
-    // 禁言截止时间（毫秒时间戳）
+
+    /**
+     * 禁言截止时间（毫秒时间戳）。
+     */
     private Long untilTime;
-    // 禁言原因（可为空）
+
+    /**
+     * 禁言原因。
+     */
     private String reason;
-    // 创建时间
+
+    /**
+     * 创建时间。
+     */
     private LocalDateTime createTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 频道禁言领域对象。
      */
     public CPChannelBan toBo() {
         return new CPChannelBan()
@@ -55,7 +79,10 @@ public class ChannelBanPO {
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param channelBan 频道禁言领域对象。
+     * @return 频道禁言持久化对象。
      */
     public static ChannelBanPO fromBo(CPChannelBan channelBan) {
         return new ChannelBanPO()

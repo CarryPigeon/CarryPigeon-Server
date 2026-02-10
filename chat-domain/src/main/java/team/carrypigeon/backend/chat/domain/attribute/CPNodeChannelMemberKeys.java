@@ -30,6 +30,9 @@ public final class CPNodeChannelMemberKeys {
     /** {@code List<CPChannelMember>}: 成员列表。 */
     public static final CPKey<Set> CHANNEL_MEMBER_INFO_LIST = CPKey.of("members", Set.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeChannelMemberKeys() {
     }
 }

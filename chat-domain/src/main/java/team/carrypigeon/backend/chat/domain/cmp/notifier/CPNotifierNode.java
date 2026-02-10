@@ -36,6 +36,13 @@ public class CPNotifierNode extends CPNodeComponent {
 
     private final CPNotificationSender notificationSender;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，包含通知路由、接收人集合与通知负载
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         String route = requireBind(CPNodeBindKeys.ROUTE, String.class);

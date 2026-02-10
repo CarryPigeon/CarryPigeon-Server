@@ -2,7 +2,11 @@ package team.carrypigeon.backend.chat.domain.controller.web.api;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.chat.domain.controller.web.api.auth.ApiAuth;
@@ -11,7 +15,9 @@ import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ChannelMember
 import team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowRunner;
 
 /**
- * Channel membership and admin management endpoints.
+ * 频道成员 API 控制器。
+ * <p>
+ * 提供成员列表查询、移除成员与管理员授予/撤销路由。
  */
 @RestController
 public class ApiChannelMemberController {
@@ -23,12 +29,21 @@ public class ApiChannelMemberController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 构造频道成员控制器。
+     *
+     * @param flowRunner API 责任链执行器。
+     */
     public ApiChannelMemberController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * Route: {@code GET /api/channels/{cid}/members}
+     * 查询频道成员列表。
+     *
+     * @param cid 频道 ID。
+     * @param request HTTP 请求对象。
+     * @return 标准成员列表响应。
      */
     @GetMapping("/api/channels/{cid}/members")
     public Object list(@PathVariable("cid") String cid, HttpServletRequest request) {
@@ -40,7 +55,12 @@ public class ApiChannelMemberController {
     }
 
     /**
-     * Route: {@code DELETE /api/channels/{cid}/members/{uid}}
+     * 移除频道成员。
+     *
+     * @param cid 频道 ID。
+     * @param uid 目标用户 ID。
+     * @param request HTTP 请求对象。
+     * @return HTTP 204 无内容响应。
      */
     @DeleteMapping("/api/channels/{cid}/members/{uid}")
     public ResponseEntity<Void> kick(@PathVariable("cid") String cid,
@@ -54,7 +74,12 @@ public class ApiChannelMemberController {
     }
 
     /**
-     * Route: {@code PUT /api/channels/{cid}/admins/{uid}}
+     * 授予频道管理员权限。
+     *
+     * @param cid 频道 ID。
+     * @param uid 目标用户 ID。
+     * @param request HTTP 请求对象。
+     * @return HTTP 204 无内容响应。
      */
     @PutMapping("/api/channels/{cid}/admins/{uid}")
     public ResponseEntity<Void> adminPut(@PathVariable("cid") String cid,
@@ -68,7 +93,12 @@ public class ApiChannelMemberController {
     }
 
     /**
-     * Route: {@code DELETE /api/channels/{cid}/admins/{uid}}
+     * 撤销频道管理员权限。
+     *
+     * @param cid 频道 ID。
+     * @param uid 目标用户 ID。
+     * @param request HTTP 请求对象。
+     * @return HTTP 204 无内容响应。
      */
     @DeleteMapping("/api/channels/{cid}/admins/{uid}")
     public ResponseEntity<Void> adminDelete(@PathVariable("cid") String cid,
@@ -81,4 +111,3 @@ public class ApiChannelMemberController {
         return ResponseEntity.noContent().build();
     }
 }
-

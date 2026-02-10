@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeApiKeys;
@@ -16,20 +17,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 消息创建请求绑定节点（HTTP：{@code POST /api/channels/{cid}/messages}）。
- *
- * <p>职责：将 HTTP DTO {@link MessageCreateRequest} 解析/校验后写入 LiteFlow 上下文，
- * 以便后续节点（权限校验、限流、schema 校验、落库、结果映射）复用统一的 key。
- *
- * <p>输入：{@link CPFlowKeys#REQUEST} = {@link MessageCreateRequest}
- *
- * <p>输出（写入上下文）：
- * <ul>
- *   <li>{@link CPNodeChannelKeys#CHANNEL_INFO_ID}: channel id</li>
- *   <li>{@link CPNodeMessageKeys#MESSAGE_INFO_DOMAIN}: message domain</li>
- *   <li>{@link CPNodeMessageKeys#MESSAGE_INFO_DOMAIN_VERSION}: message domain version</li>
- *   <li>{@link CPNodeMessageKeys#MESSAGE_INFO_DATA}: message payload (JsonNode)</li>
- * </ul>
+ * 消息创建请求绑定节点。
+ * <p>
+ * 解析发消息接口请求并写入消息创建所需上下文字段。
  */
 @Slf4j
 @LiteflowComponent("ApiMessageCreateBind")
@@ -51,17 +41,17 @@ public class ApiMessageCreateBindNode extends CPNodeComponent {
     protected void process(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof MessageCreateRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         long cid = parseId(req.cid(), "cid");
         if (req.domain() == null || req.domain().isBlank()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "domain", "reason", "invalid", "message", "domain is required")
                     ))));
         }
         if (req.data() == null) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "data", "reason", "invalid", "message", "data is required")
                     ))));
@@ -90,7 +80,7 @@ public class ApiMessageCreateBindNode extends CPNodeComponent {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", field, "reason", "invalid", "message", "invalid id")
                     ))));
@@ -110,7 +100,7 @@ public class ApiMessageCreateBindNode extends CPNodeComponent {
         }
         long v = parseId(str, field);
         if (v < 0) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", field, "reason", "invalid", "message", "invalid id")
                     ))));

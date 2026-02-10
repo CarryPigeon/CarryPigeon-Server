@@ -23,7 +23,7 @@ class EmailCodeCheckerTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -38,7 +38,7 @@ class EmailCodeCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("email_code_invalid", ex.getProblem().reason());
+        assertEquals("email_code_invalid", ex.getProblem().reason().code());
     }
 
     @Test
@@ -78,11 +78,24 @@ class EmailCodeCheckerTests {
     private static final class TestableEmailCodeChecker extends EmailCodeChecker {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param cache 测试输入参数
+         * @param type 测试输入参数
+         */
         private TestableEmailCodeChecker(CPCache cache, String type) {
             super(cache);
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {
@@ -95,21 +108,48 @@ class EmailCodeCheckerTests {
     private static final class InMemoryCPCache implements CPCache {
         private final Map<String, String> data = new HashMap<>();
 
+        /**
+         * 写入测试数据。
+         *
+         * @param key 测试输入参数
+         * @param value 测试输入参数
+         * @param expireTime 测试输入参数
+         */
         @Override
         public void set(String key, String value, int expireTime) {
             data.put(key, value);
         }
 
+        /**
+         * 返回测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String get(String key) {
             return data.get(key);
         }
 
+        /**
+         * 读取并删除测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String getAndDelete(String key) {
             return data.remove(key);
         }
 
+        /**
+         * 读取旧值并写入新值。
+         *
+         * @param key 测试输入参数
+         * @param value 测试输入参数
+         * @param expireTime 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String getAndSet(String key, String value, int expireTime) {
             String old = data.get(key);
@@ -117,11 +157,23 @@ class EmailCodeCheckerTests {
             return old;
         }
 
+        /**
+         * 判断测试数据是否存在。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public boolean exists(String key) {
             return data.containsKey(key);
         }
 
+        /**
+         * 删除测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public boolean delete(String key) {
             return data.remove(key) != null;

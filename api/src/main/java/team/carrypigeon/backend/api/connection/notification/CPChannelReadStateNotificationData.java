@@ -6,9 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * Notification payload for channel message read state updates.
+ * 频道已读状态变更通知数据。
  * <p>
- * Pushed to all active sessions of a user when the read state is updated.
+ * 用于同一用户多终端同步已读进度。
  */
 @Data
 @AllArgsConstructor
@@ -16,13 +16,18 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class CPChannelReadStateNotificationData {
 
-    /** Channel id */
+    /**
+     * 频道 ID。
+     */
     private long cid;
 
-    /** User id */
+    /**
+     * 用户 ID。
+     */
     private long uid;
 
-    /** Latest read time (epoch millis) */
+    /**
+     * 最近一次已读时间（毫秒时间戳）。
+     */
     private long lastReadTime;
 }
-

@@ -20,7 +20,7 @@ class UserLoginCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(new TestSession(), context));
         assertEquals(401, ex.getProblem().status());
-        assertEquals("unauthorized", ex.getProblem().reason());
+        assertEquals("unauthorized", ex.getProblem().reason().code());
     }
 
     @Test
@@ -53,10 +53,22 @@ class UserLoginCheckerNodeTests {
     private static final class TestableUserLoginCheckerNode extends UserLoginCheckerNode {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param type 测试输入参数
+         */
         private TestableUserLoginCheckerNode(String type) {
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

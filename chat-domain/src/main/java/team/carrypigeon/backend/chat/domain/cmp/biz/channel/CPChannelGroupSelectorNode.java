@@ -29,12 +29,25 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<Set> {
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 读取当前节点的执行模式。
+     *
+     * @param context LiteFlow 上下文（此节点固定返回 all 模式）
+     * @return 固定模式字符串 { all}
+     */
     @Override
     protected String readMode(CPFlowContext context) {
-        // 不依赖 bind，固定为 all
         return "all";
     }
 
+    /**
+     * 按模式执行数据查询。
+     *
+     * @param mode 查询模式（当前仅支持 { all}）
+     * @param context LiteFlow 上下文（此节点固定返回 all 模式）
+     * @return 当前用户可见的频道集合（固定频道+已加入频道）
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected Set doSelect(String mode, CPFlowContext context) throws Exception {
         Long userId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
@@ -58,13 +71,23 @@ public class CPChannelGroupSelectorNode extends AbstractSelectorNode<Set> {
         return result;
     }
 
+    /**
+     * 返回查询结果写入的上下文键。
+     *
+     * @return 频道列表写入键 { CHANNEL_INFO_LIST}
+     */
     @Override
     protected CPKey<Set> getResultKey() {
         return CPNodeChannelKeys.CHANNEL_INFO_LIST;
     }
 
+    /**
+     * 处理未找到资源时的分支行为。
+     *
+     * @param mode 查询模式（当前仅支持 { all}）
+     * @param context LiteFlow 上下文（此节点固定返回 all 模式）
+     */
     @Override
     protected void handleNotFound(String mode, CPFlowContext context) {
-        // 理论上不会为 null，保持空实现即可
     }
 }

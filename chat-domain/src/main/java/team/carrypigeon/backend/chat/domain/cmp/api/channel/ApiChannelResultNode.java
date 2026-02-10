@@ -4,16 +4,16 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
-import team.carrypigeon.backend.api.dao.database.file.FileInfoDao;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
+import team.carrypigeon.backend.api.dao.database.file.FileInfoDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
 /**
- * Result mapper for channel endpoints that return a single channel.
+ * 单频道结果节点。
  * <p>
- * Input: {@link CPNodeChannelKeys#CHANNEL_INFO}
+ * 将上下文中的频道实体映射为标准 API 响应，并生成头像下载路径。
  */
 @Slf4j
 @AllArgsConstructor
@@ -22,6 +22,9 @@ public class ApiChannelResultNode extends AbstractResultNode<ApiChannelResultNod
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 构建单频道响应。
+     */
     @Override
     protected ChannelResponse build(CPFlowContext context) {
         CPChannel channel = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
@@ -38,6 +41,9 @@ public class ApiChannelResultNode extends AbstractResultNode<ApiChannelResultNod
         return resp;
     }
 
+    /**
+     * 根据头像文件 ID 生成下载路径。
+     */
     private String avatarPath(long avatarId) {
         if (avatarId <= 0) {
             return "";
@@ -49,6 +55,9 @@ public class ApiChannelResultNode extends AbstractResultNode<ApiChannelResultNod
         return "api/files/download/" + info.getShareKey();
     }
 
+    /**
+     * 单频道响应体。
+     */
     public record ChannelResponse(String cid, String name, String brief, String avatar, String ownerUid, long createTime) {
     }
 }

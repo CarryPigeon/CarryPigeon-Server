@@ -35,6 +35,13 @@ public class CPNotificationService implements CPNotificationSender {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 向目标用户集合发送通知消息。
+     *
+     * @param uids 目标用户 ID 集合
+     * @param notification 待发送的通知体
+     * @return {@code true} 表示通知分发流程执行完成（单用户失败仅记录日志）
+     */
     @Override
     public boolean sendNotification(Collection<Long> uids, CPNotification notification) {
         if (uids == null || uids.isEmpty()) {

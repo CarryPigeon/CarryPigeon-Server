@@ -38,7 +38,7 @@ class CPChannelBanTargetCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("cannot_ban_admin", ex.getProblem().reason());
+        assertEquals("cannot_ban_admin", ex.getProblem().reason().code());
     }
 
     @Test
@@ -59,10 +59,22 @@ class CPChannelBanTargetCheckerNodeTests {
     private static final class TestableCPChannelBanTargetCheckerNode extends CPChannelBanTargetCheckerNode {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param type 测试输入参数
+         */
         private TestableCPChannelBanTargetCheckerNode(String type) {
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

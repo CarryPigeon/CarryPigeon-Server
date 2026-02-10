@@ -20,7 +20,7 @@ class CPChannelApplicationStateSetterSwitcherNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -31,7 +31,7 @@ class CPChannelApplicationStateSetterSwitcherNodeTests {
         context.set(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_STATE, 3);
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -42,7 +42,7 @@ class CPChannelApplicationStateSetterSwitcherNodeTests {
         context.set(CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_STATE, 0);
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test

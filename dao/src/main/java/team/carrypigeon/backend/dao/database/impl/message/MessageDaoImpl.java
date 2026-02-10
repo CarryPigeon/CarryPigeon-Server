@@ -31,6 +31,12 @@ public class MessageDaoImpl implements ChannelMessageDao {
         this.messageMapper = messageMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 消息 ID
+     * @return 匹配的消息对象；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "messageById", key = "#id", unless = "#result == null")
     public CPMessage getById(long id) {
@@ -44,12 +50,19 @@ public class MessageDaoImpl implements ChannelMessageDao {
         return result;
     }
 
+    /**
+     * 按游标向前分页查询消息。
+     *
+     * @param cid 频道 ID
+     * @param cursorMid 游标消息 ID（不含该条）
+     * @param count 最大返回条数
+     * @return 按消息 ID 倒序排列的消息数组
+     */
     @Override
     public CPMessage[] listBefore(long cid, long cursorMid, int count) {
         long safeCursor = cursorMid <= 0 ? Long.MAX_VALUE : cursorMid;
         log.debug("MessageDaoImpl#listBefore - cid={}, cursorMid={}, count={}", cid, safeCursor, count);
         LambdaQueryWrapper<MessagePO> queryWrapper = new LambdaQueryWrapper<>();
-        // Snowflake message id is monotonic; use id cursor for stable pagination.
         queryWrapper.eq(MessagePO::getCid, cid)
                 .lt(MessagePO::getId, safeCursor)
                 .orderByDesc(MessagePO::getId)
@@ -62,6 +75,13 @@ public class MessageDaoImpl implements ChannelMessageDao {
         return result;
     }
 
+    /**
+     * 统计游标之后的消息数量。
+     *
+     * @param cid 频道 ID
+     * @param startMid 起始消息 ID（不含该条）
+     * @return 游标之后的消息总数
+     */
     @Override
     public int countAfter(long cid, long startMid) {
         long safeStart = Math.max(0L, startMid);
@@ -74,6 +94,12 @@ public class MessageDaoImpl implements ChannelMessageDao {
         return count;
     }
 
+    /**
+     * 保存消息数据。
+     *
+     * @param message 待保存的消息实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = "messageById", key = "#message.id")
     public boolean save(CPMessage message) {
@@ -90,6 +116,12 @@ public class MessageDaoImpl implements ChannelMessageDao {
         return success;
     }
 
+    /**
+     * 删除消息数据。
+     *
+     * @param message 待删除的消息实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = "messageById", key = "#message.id")
     public boolean delete(CPMessage message) {

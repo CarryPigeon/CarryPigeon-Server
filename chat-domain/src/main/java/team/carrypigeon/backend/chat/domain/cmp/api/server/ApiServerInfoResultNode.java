@@ -3,22 +3,22 @@ package team.carrypigeon.backend.chat.domain.cmp.api.server;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
 import team.carrypigeon.backend.api.starter.server.ServerInfoConfig;
 import team.carrypigeon.backend.chat.domain.controller.web.api.config.CpApiProperties;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ServerInfoRequest;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
-import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 
 import java.util.List;
 
 /**
- * Server discovery response for {@code GET /api/server}.
+ * 服务端发现信息结果节点。
  * <p>
- * Input: {@link ApiFlowKeys#REQUEST} = {@link ServerInfoRequest} (used to build {@code ws_url})
- * Output: {@link ApiFlowKeys#RESPONSE} = {@link ServerInfoResponse}
+ * 生成 `GET /api/server` 响应，包括 server 基础信息、WS 地址、能力与时间戳。
  */
 @Slf4j
 @LiteflowComponent("ApiServerInfoResult")
@@ -28,11 +28,14 @@ public class ApiServerInfoResultNode extends AbstractResultNode<ApiServerInfoRes
     private final ServerInfoConfig serverInfoConfig;
     private final CpApiProperties properties;
 
+    /**
+     * 构建服务发现响应。
+     */
     @Override
     protected ServerInfoResponse build(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof ServerInfoRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         String wsUrl = buildWsUrl(req);
         ServerInfoResponse response = new ServerInfoResponse(
@@ -51,6 +54,9 @@ public class ApiServerInfoResultNode extends AbstractResultNode<ApiServerInfoRes
         return response;
     }
 
+    /**
+     * 根据请求协议/主机/端口构造 WS URL。
+     */
     private String buildWsUrl(ServerInfoRequest req) {
         String scheme = req.scheme() == null ? "http" : req.scheme();
         String host = req.host();
@@ -64,6 +70,9 @@ public class ApiServerInfoResultNode extends AbstractResultNode<ApiServerInfoRes
         return wsScheme + "://" + host + ":" + port + "/api/ws";
     }
 
+    /**
+     * 服务发现响应体。
+     */
     public record ServerInfoResponse(
             String serverId,
             String name,
@@ -78,6 +87,9 @@ public class ApiServerInfoResultNode extends AbstractResultNode<ApiServerInfoRes
     ) {
     }
 
+    /**
+     * 服务能力标记。
+     */
     public record Capabilities(boolean messageDomains, boolean pluginCatalog, boolean eventResume) {
     }
 }

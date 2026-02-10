@@ -2,7 +2,6 @@ package team.carrypigeon.backend.api.chat.domain.message;
 
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.api.chat.domain.controller.CPController;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -10,13 +9,20 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * 用于标记处理器的注解，标记的处理器必须实现{@link CPController}接口
- * value：处理器处理的路径
- * */
+ * 消息领域处理器标注。
+ * <p>
+ * 通过 `value` 声明该处理器支持的消息领域，并自动注册为 Spring 组件。
+ */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Component
 public @interface CPMessageDomain {
+
+    /**
+     * 消息领域标识。
+     *
+     * @return 消息领域标识字符串。
+     */
     @AliasFor(annotation = Component.class)
     String value();
 }

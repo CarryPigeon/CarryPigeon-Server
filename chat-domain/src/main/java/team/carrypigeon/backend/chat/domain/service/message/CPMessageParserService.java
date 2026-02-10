@@ -8,25 +8,31 @@ import team.carrypigeon.backend.api.chat.domain.message.CPMessageData;
 import java.util.Map;
 
 /**
- * 消息解析服务：根据消息域（domain）将 JSON data 解析为具体的 {@link CPMessageData}。
+ * 消息解析服务。
+ * <p>
+ * 根据消息领域选择对应解析器，将 JSON 载荷转换为 `CPMessageData`。
  */
 @Slf4j
 @Service
 public class CPMessageParserService {
+
     private final Map<String, CPMessageData> messageDataMap;
 
     /**
-     * 创建消息解析服务（由 Spring 注入所有已注册的 {@link CPMessageData}）。
+     * 构造消息解析服务。
+     *
+     * @param messageDataMap 按领域名注册的消息解析器映射。
      */
     public CPMessageParserService(Map<String, CPMessageData> messageDataMap) {
         this.messageDataMap = messageDataMap;
     }
 
     /**
-     * 解析消息数据
-     * @param domain 消息域
-     * @param data 消息数据
-     * @return 解析后的消息数据，null则为解析失败或不支持的类型
+     * 解析指定领域消息。
+     *
+     * @param domain 消息领域。
+     * @param data 消息 JSON 载荷。
+     * @return 解析后的消息对象；领域不支持或解析失败时返回 {@code null}。
      */
     public CPMessageData parse(String domain, JsonNode data) {
         if (!messageDataMap.containsKey(domain)) {
@@ -37,6 +43,12 @@ public class CPMessageParserService {
         return parser.parse(data);
     }
 
+    /**
+     * 判断是否支持指定领域。
+     *
+     * @param domain 消息领域标识。
+     * @return 支持返回 {@code true}，否则返回 {@code false}。
+     */
     public boolean supports(String domain) {
         return domain != null && messageDataMap.containsKey(domain);
     }

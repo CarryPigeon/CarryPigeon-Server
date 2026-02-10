@@ -24,6 +24,13 @@ public class CPChannelMemberListerNode extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取频道信息并加载成员列表
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         Long cid = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO_CID);

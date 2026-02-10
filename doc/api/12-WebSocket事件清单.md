@@ -8,6 +8,41 @@
 - URL：`wss://{host}/api/ws`
 - 连接成功后必须先发 `auth`（见 `10-HTTP+WebSocket协议.md`）。
 
+<!-- AUTO-GENERATED:WS_PROTOCOL:BEGIN -->
+## 1.1 自动生成 WS 协议总表（代码权威）
+
+> 本节由 `scripts/generate_protocol_artifacts.py` 从 WS 处理代码自动生成。
+> 变更命令/事件后请重新生成产物，不要手改下表。
+
+### 命令（客户端 -> 服务端）
+- `auth`
+- `ping`
+- `reauth`
+- `subscribe`
+
+### 命令响应类型（服务端 -> 客户端）
+- 成功：`<command>.ok`
+- 失败：`<command>.err`
+
+### 错误 reason（来自处理器）
+- `api_version_unsupported`
+- `unauthorized`
+- `validation_failed`
+
+### 事件类型（event.data.event_type）
+- `channel.changed`
+- `channels.changed`
+- `message.created`
+- `message.deleted`
+- `read_state.updated`
+
+### 静态消息 type（代码字面量）
+- `event`
+- `pong`
+- `resume.failed`
+
+<!-- AUTO-GENERATED:WS_PROTOCOL:END -->
+
 ## 2. 事件 envelope（服务端 -> 客户端）
 
 服务端推送事件统一格式：

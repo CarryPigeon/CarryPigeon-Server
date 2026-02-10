@@ -6,15 +6,17 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
 
 /**
- * Result node for token endpoints.
+ * 令牌结果节点。
  * <p>
- * Input: {@link ApiAuthFlowKeys#TOKEN_RESPONSE} = {@link ApiTokenResponse}
- * Output: {@code CPFlowKeys.RESPONSE} = {@link ApiTokenResponse}
+ * 从上下文读取 {@link ApiAuthFlowKeys#TOKEN_RESPONSE} 并作为 API 响应输出。
  */
 @Slf4j
 @LiteflowComponent("ApiTokensResult")
 public class ApiTokensResultNode extends AbstractResultNode<ApiTokenResponse> {
 
+    /**
+     * 构建令牌响应。
+     */
     @Override
     protected ApiTokenResponse build(CPFlowContext context) {
         ApiTokenResponse response = requireContext(context, ApiAuthFlowKeys.TOKEN_RESPONSE);
@@ -22,4 +24,3 @@ public class ApiTokensResultNode extends AbstractResultNode<ApiTokenResponse> {
         return response;
     }
 }
-

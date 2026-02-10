@@ -12,6 +12,9 @@ import java.time.ZoneId;
  * </p>
  */
 public class TimeUtil {
+    /**
+     * 工具类不允许实例化。
+     */
     private TimeUtil() {
     }
 

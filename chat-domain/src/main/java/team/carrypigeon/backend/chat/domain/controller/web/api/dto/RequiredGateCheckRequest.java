@@ -4,7 +4,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Required gate check body for {@code POST /api/gates/required/check}.
+ * Required Gate 预检查请求体。
+ *
+ * @param client 客户端信息。
  */
 public record RequiredGateCheckRequest(@NotNull @Valid ClientInfo client) {
 }

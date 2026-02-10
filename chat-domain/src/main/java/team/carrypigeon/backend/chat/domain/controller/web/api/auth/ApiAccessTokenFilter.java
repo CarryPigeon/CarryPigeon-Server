@@ -16,16 +16,9 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * HTTP authentication filter for `/api/**`.
+ * API Access Token 认证过滤器。
  * <p>
- * Behavior:
- * <ul>
- *   <li>For protected endpoints, requires {@code Authorization: Bearer <access_token>}.</li>
- *   <li>Verifies access token via {@link AccessTokenService}.</li>
- *   <li>On success, stores {@code uid} into request attribute {@link ApiAuth#REQ_ATTR_UID}.</li>
- *   <li>On failure, returns {@code 401} with a unified {@link ApiErrorResponse} body.</li>
- * </ul>
- * Public endpoint allowlist is maintained in {@link #shouldNotFilter(HttpServletRequest)}.
+ * 负责从 `Authorization` 头提取 Bearer Token，校验通过后写入请求用户上下文。
  */
 @Component
 public class ApiAccessTokenFilter extends OncePerRequestFilter {
@@ -33,11 +26,23 @@ public class ApiAccessTokenFilter extends OncePerRequestFilter {
     private final AccessTokenService accessTokenService;
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造认证过滤器。
+     *
+     * @param accessTokenService Access Token 服务。
+     * @param objectMapper JSON 序列化组件。
+     */
     public ApiAccessTokenFilter(AccessTokenService accessTokenService, ObjectMapper objectMapper) {
         this.accessTokenService = accessTokenService;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 判断当前请求是否跳过鉴权过滤。
+     *
+     * @param request HTTP 请求对象。
+     * @return 需要跳过过滤返回 {@code true}，否则返回 {@code false}。
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -47,7 +52,6 @@ public class ApiAccessTokenFilter extends OncePerRequestFilter {
         if (!path.startsWith("/api")) {
             return true;
         }
-        // Public endpoints:
         return path.equals("/api/server")
                 || path.equals("/api/gates/required/check")
                 || path.equals("/api/plugins/catalog")
@@ -59,9 +63,19 @@ public class ApiAccessTokenFilter extends OncePerRequestFilter {
                 || path.startsWith("/api/files/download/");
     }
 
+    /**
+     * 执行 Access Token 鉴权。
+     *
+     * @param request HTTP 请求对象。
+     * @param response HTTP 响应对象。
+     * @param filterChain 过滤器链。
+     * @throws ServletException Servlet 过滤异常。
+     * @throws IOException IO 异常。
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
         String token = extractBearer(auth);
         Long uid = accessTokenService.verify(token);
@@ -73,6 +87,12 @@ public class ApiAccessTokenFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * 从 Authorization 请求头提取 Bearer Token。
+     *
+     * @param auth Authorization 请求头值。
+     * @return Bearer Token；格式不合法时返回 {@code null}。
+     */
     private String extractBearer(String auth) {
         if (auth == null) {
             return null;
@@ -84,6 +104,13 @@ public class ApiAccessTokenFilter extends OncePerRequestFilter {
         return auth.substring(prefix.length()).trim();
     }
 
+    /**
+     * 输出 401 未授权响应。
+     *
+     * @param request HTTP 请求对象。
+     * @param response HTTP 响应对象。
+     * @throws IOException 当响应输出失败时抛出。
+     */
     private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String requestId = (String) request.getAttribute("cp_request_id");
         if (requestId == null || requestId.isBlank()) {

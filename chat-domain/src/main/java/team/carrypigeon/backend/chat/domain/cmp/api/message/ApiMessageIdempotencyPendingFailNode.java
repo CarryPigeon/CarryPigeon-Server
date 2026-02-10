@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.cmp.api.message;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 
@@ -11,9 +12,11 @@ import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 @LiteflowComponent("ApiMessageIdempotencyPendingFail")
 public class ApiMessageIdempotencyPendingFailNode extends CPNodeComponent {
 
+    /**
+     * 直接返回幂等处理中错误。
+     */
     @Override
     protected void process(CPFlowContext context) {
-        fail(CPProblem.of(409, "idempotency_processing", "request with same idempotency key is processing"));
+        fail(CPProblem.of(CPProblemReason.IDEMPOTENCY_PROCESSING, "request with same idempotency key is processing"));
     }
 }
-

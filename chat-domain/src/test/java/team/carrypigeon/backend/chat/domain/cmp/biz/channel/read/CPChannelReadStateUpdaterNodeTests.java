@@ -29,7 +29,7 @@ class CPChannelReadStateUpdaterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -99,6 +99,6 @@ class CPChannelReadStateUpdaterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(500, ex.getProblem().status());
-        assertEquals("internal_error", ex.getProblem().reason());
+        assertEquals("internal_error", ex.getProblem().reason().code());
     }
 }

@@ -8,6 +8,9 @@ package team.carrypigeon.backend.api.bo.connection;
  */
 public final class CPConnectionAttributes {
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPConnectionAttributes() {
     }
 

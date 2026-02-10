@@ -4,22 +4,21 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
 import team.carrypigeon.backend.chat.domain.controller.web.api.config.CpApiProperties;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.RequiredGateCheckRequest;
-import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Required gate check for onboarding.
+ * Required Gate 检查节点。
  * <p>
- * Route: {@code POST /api/gates/required/check} (public)
+ * 路由：`POST /api/gates/required/check`（公开接口）。
  * <p>
- * Input: {@link ApiFlowKeys#REQUEST} = {@link RequiredGateCheckRequest}
- * Output: {@link ApiFlowKeys#RESPONSE} = {@link MissingPluginsResponse}
+ * 根据客户端已安装插件列表，计算系统要求但客户端缺失的插件集合。
  */
 @Slf4j
 @LiteflowComponent("ApiRequiredGateCheck")
@@ -28,6 +27,9 @@ public class ApiRequiredGateCheckNode extends AbstractResultNode<ApiRequiredGate
 
     private final CpApiProperties properties;
 
+    /**
+     * 生成缺失插件响应。
+     */
     @Override
     protected MissingPluginsResponse build(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
@@ -46,6 +48,9 @@ public class ApiRequiredGateCheckNode extends AbstractResultNode<ApiRequiredGate
         return response;
     }
 
+    /**
+     * 缺失插件响应体。
+     */
     public record MissingPluginsResponse(List<String> missingPlugins) {
     }
 }

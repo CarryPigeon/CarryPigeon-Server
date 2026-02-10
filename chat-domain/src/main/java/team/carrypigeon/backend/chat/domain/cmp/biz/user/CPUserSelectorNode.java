@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractSelectorNode;
@@ -23,6 +24,14 @@ public class CPUserSelectorNode extends AbstractSelectorNode<CPUser> {
 
     private final UserDao userDao;
 
+    /**
+     * 按模式执行数据查询。
+     *
+     * @param mode 查询模式（支持 { id} 与 { email}）
+     * @param context LiteFlow 上下文，读取用户查询条件
+     * @return 命中的用户实体；未命中时返回 { null}
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected CPUser doSelect(String mode, CPFlowContext context) throws Exception {
         switch (mode) {
@@ -42,13 +51,24 @@ public class CPUserSelectorNode extends AbstractSelectorNode<CPUser> {
         }
     }
 
+    /**
+     * 返回查询结果写入的上下文键。
+     *
+     * @return 用户实体写入键 { USER_INFO}
+     */
     @Override
     protected CPKey<CPUser> getResultKey() {
         return CPNodeUserKeys.USER_INFO;
     }
 
+    /**
+     * 处理未找到资源时的分支行为。
+     *
+     * @param mode 查询模式（支持 { id} 与 { email}）
+     * @param context LiteFlow 上下文
+     */
     @Override
     protected void handleNotFound(String mode, CPFlowContext context) {
-        fail(CPProblem.of(404, "not_found", "user not found"));
+        fail(CPProblem.of(CPProblemReason.NOT_FOUND, "user not found"));
     }
 }

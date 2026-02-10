@@ -4,9 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * Request body for {@code POST /api/auth/email_codes}.
- * <p>
- * JSON field: {@code email}.
+ * 邮箱验证码发送请求体。
+ *
+ * @param email 邮箱地址。
  */
 public record SendEmailCodeRequest(@NotBlank @Email String email) {
 }

@@ -33,7 +33,7 @@ class RenameArgNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -43,7 +43,7 @@ class RenameArgNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -69,10 +69,21 @@ class RenameArgNodeTests {
     private static final class TestableRenameArgNode extends RenameArgNode {
         private final Object cmpData;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param cmpData 组件配置数据
+         */
         private TestableRenameArgNode(Object cmpData) {
             this.cmpData = cmpData;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param clazz 参数目标类型
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getCmpData(Class<T> clazz) {
             @SuppressWarnings("unchecked")

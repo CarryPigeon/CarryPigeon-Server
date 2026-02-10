@@ -30,6 +30,13 @@ public class CPMessageCreateNotifyBuilderNode extends CPNodeComponent {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取消息创建数据并构建通知 payload
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPMessage message = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO);

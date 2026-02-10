@@ -23,7 +23,7 @@ class CPChannelOwnerCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("not_channel_owner", ex.getProblem().reason());
+        assertEquals("not_channel_owner", ex.getProblem().reason().code());
     }
 
     @Test
@@ -56,10 +56,22 @@ class CPChannelOwnerCheckerTests {
     private static final class TestableCPChannelOwnerChecker extends CPChannelOwnerChecker {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param type 测试输入参数
+         */
         private TestableCPChannelOwnerChecker(String type) {
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

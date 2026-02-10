@@ -15,6 +15,13 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKe
  * */
 @LiteflowComponent("CPChannelApplicationCidGetter")
 public class CPChannelApplicationCidGetterNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取申请实体并提取频道 ID
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelApplication channelApplicationInfo = requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);

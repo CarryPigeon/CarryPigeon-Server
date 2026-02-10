@@ -30,6 +30,12 @@ public class FileInfoDaoImpl implements FileInfoDao {
         this.fileInfoMapper = fileInfoMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 文件记录 ID
+     * @return 匹配的文件信息；不存在时返回 {@code null}
+     */
     @Override
     public CPFileInfo getById(long id) {
         log.debug("FileInfoDaoImpl#getById - id={}", id);
@@ -42,6 +48,12 @@ public class FileInfoDaoImpl implements FileInfoDao {
         return result;
     }
 
+    /**
+     * 按分享键查询文件。
+     *
+     * @param shareKey 文件分享码
+     * @return 匹配的文件信息；不存在时返回 {@code null}
+     */
     @Override
     public CPFileInfo getByShareKey(String shareKey) {
         if (shareKey == null || shareKey.isBlank()) {
@@ -59,6 +71,13 @@ public class FileInfoDaoImpl implements FileInfoDao {
         return result;
     }
 
+    /**
+     * 按文件摘要与大小查询文件。
+     *
+     * @param sha256 文件 SHA-256 摘要
+     * @param size 文件大小（字节）
+     * @return 匹配的文件信息；不存在时返回 {@code null}
+     */
     @Override
     public CPFileInfo getBySha256AndSize(String sha256, long size) {
         log.debug("FileInfoDaoImpl#getBySha256AndSize - sha256={}, size={}", sha256, size);
@@ -74,6 +93,12 @@ public class FileInfoDaoImpl implements FileInfoDao {
         return result;
     }
 
+    /**
+     * 保存文件元数据。
+     *
+     * @param fileInfo 待保存的文件实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     public boolean save(CPFileInfo fileInfo) {
         if (fileInfo == null) {
@@ -89,6 +114,12 @@ public class FileInfoDaoImpl implements FileInfoDao {
         return success;
     }
 
+    /**
+     * 按主键列表批量查询数据。
+     *
+     * @param ids 文件 ID 集合
+     * @return 命中的文件信息列表；当入参为空时返回空列表
+     */
     @Override
     public List<CPFileInfo> listByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {

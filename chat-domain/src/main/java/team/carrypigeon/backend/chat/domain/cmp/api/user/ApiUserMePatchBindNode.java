@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -17,14 +18,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bind {@code PATCH /api/users/me} request body into {@link CPNodeUserKeys}.
+ * 当前用户资料更新绑定节点。
  * <p>
- * Output keys:
- * <ul>
- *   <li>{@link CPNodeUserKeys#USER_INFO_ID}</li>
- *   <li>{@link CPNodeUserKeys#USER_INFO_USER_NAME} (optional)</li>
- *   <li>{@link CPNodeUserKeys#USER_INFO_AVATAR} (optional)</li>
- * </ul>
+ * 解析 `PATCH /api/users/me` 请求并写入可更新字段。
  */
 @Slf4j
 @AllArgsConstructor
@@ -33,12 +29,15 @@ public class ApiUserMePatchBindNode extends CPNodeComponent {
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 解析并绑定当前用户资料更新参数。
+     */
     @Override
     protected void process(CPFlowContext context) {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof UserMePatchRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
 
         boolean hasAny = false;
@@ -63,7 +62,7 @@ public class ApiUserMePatchBindNode extends CPNodeComponent {
                     throw fieldValidationFailed("avatar");
                 }
                 if (info.getOwnerUid() != uid) {
-                    throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+                    throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
                 }
                 context.set(CPNodeUserKeys.USER_INFO_AVATAR, info.getId());
             }
@@ -71,14 +70,17 @@ public class ApiUserMePatchBindNode extends CPNodeComponent {
         }
 
         if (!hasAny) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
 
         log.debug("ApiUserMePatchBind success, uid={}", uid);
     }
 
+    /**
+     * 生成字段校验失败异常。
+     */
     private CPProblemException fieldValidationFailed(String field) {
-        return new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+        return new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                 Map.of("field_errors", List.of(
                         Map.of("field", field, "reason", "invalid", "message", "invalid " + field)
                 ))));

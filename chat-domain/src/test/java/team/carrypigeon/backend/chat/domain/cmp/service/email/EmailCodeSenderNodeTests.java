@@ -27,7 +27,7 @@ class EmailCodeSenderNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(500, ex.getProblem().status());
-        assertEquals("email_service_disabled", ex.getProblem().reason());
+        assertEquals("email_service_disabled", ex.getProblem().reason().code());
     }
 
     @Test
@@ -92,9 +92,17 @@ class EmailCodeSenderNodeTests {
         verify(cache).set(eq("a@b.com:code"), anyString(), anyInt());
         verify(cache).delete(eq("a@b.com:code"));
         assertEquals(500, ex.getProblem().status());
-        assertEquals("email_send_failed", ex.getProblem().reason());
+        assertEquals("email_send_failed", ex.getProblem().reason().code());
     }
 
+    /**
+     * 测试辅助方法。
+     *
+     * @param target 测试输入参数
+     * @param fieldName 测试输入参数
+     * @param value 测试输入参数
+     * @throws Exception 执行过程中抛出的异常
+     */
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field f = target.getClass().getDeclaredField(fieldName);
         f.setAccessible(true);

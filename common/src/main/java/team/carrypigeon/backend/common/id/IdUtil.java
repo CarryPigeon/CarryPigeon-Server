@@ -9,6 +9,9 @@ import cn.hutool.core.codec.Base64;
  * </p>
  */
 public class IdUtil {
+    /**
+     * 工具类不允许实例化。
+     */
     private IdUtil() {
     }
 

@@ -17,6 +17,12 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserTokenKeys;
 @AllArgsConstructor
 @LiteflowComponent("CPUserTokenUidGetter")
 public class CPUserTokenUidGetterNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取令牌并回写其所属用户 ID
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPUserToken userToken = requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO);

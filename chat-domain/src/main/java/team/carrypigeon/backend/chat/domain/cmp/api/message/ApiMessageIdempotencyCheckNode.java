@@ -96,7 +96,6 @@ public class ApiMessageIdempotencyCheckNode extends CPNodeComponent {
             return;
         }
         if (existing.getCid() != cid || existing.getUid() != uid) {
-            // Defensive: key collisions should not leak cross-user/channel messages.
             cache.delete(cacheKey);
             boolean marked = ApiMessageIdempotencySaveNode.tryMarkPending(cache, uid, cid, key);
             context.set(CPFlowKeys.CHECK_RESULT, new CheckResult(true, marked ? "miss" : "pending"));

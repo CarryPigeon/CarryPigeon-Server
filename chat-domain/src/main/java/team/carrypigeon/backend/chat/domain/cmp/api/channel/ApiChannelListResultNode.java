@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.cmp.api.channel;
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
+import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
 import team.carrypigeon.backend.api.dao.database.file.FileInfoDao;
@@ -18,13 +18,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Result mapper for {@code GET /api/channels}.
+ * 频道列表结果节点。
  * <p>
- * Input (from {@code CPChannelCollector}):
- * {@link CPNodeChannelKeys#CHANNEL_INFO_LIST} = {@code Set<CPChannel>}
- * <p>
- * Output:
- * {@link ApiFlowKeys#RESPONSE} = {@link ChannelsResponse}
+ * 将上下文中的频道集合转换为 API 响应结构，并补充头像下载路径。
  */
 @Slf4j
 @AllArgsConstructor
@@ -33,6 +29,9 @@ public class ApiChannelListResultNode extends AbstractResultNode<ApiChannelListR
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 构建频道列表响应。
+     */
     @Override
     protected ChannelsResponse build(CPFlowContext context) {
         @SuppressWarnings("unchecked")
@@ -63,6 +62,9 @@ public class ApiChannelListResultNode extends AbstractResultNode<ApiChannelListR
         return response;
     }
 
+    /**
+     * 根据头像 ID 生成下载路径。
+     */
     private String avatarPath(long avatarId, Map<Long, String> avatarShareKeys) {
         if (avatarId <= 0) {
             return "";
@@ -74,9 +76,15 @@ public class ApiChannelListResultNode extends AbstractResultNode<ApiChannelListR
         return "api/files/download/" + shareKey;
     }
 
+    /**
+     * 频道列表响应体。
+     */
     public record ChannelsResponse(List<ChannelItem> channels) {
     }
 
+    /**
+     * 单频道列表项。
+     */
     public record ChannelItem(String cid, String name, String brief, String avatar, String ownerUid) {
     }
 }

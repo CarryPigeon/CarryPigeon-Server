@@ -41,8 +41,6 @@ public class ApiMessagePreviewService {
         if ("Core:Text".equals(domain)) {
             return coreTextPreview(data);
         }
-
-        // For non-core domains, do not expose payload fields. Use a stable marker for degrade display.
         return "[" + domain + "]";
     }
 

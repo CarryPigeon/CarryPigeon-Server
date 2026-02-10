@@ -29,6 +29,12 @@ public class CPChannelReadStateSelectorNode extends CPNodeComponent {
 
     private final ChannelReadStateDao channelReadStateDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取用户与频道并查询已读状态
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);

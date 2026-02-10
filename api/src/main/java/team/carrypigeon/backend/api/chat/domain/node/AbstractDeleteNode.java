@@ -3,6 +3,7 @@ package team.carrypigeon.backend.api.chat.domain.node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 
@@ -62,24 +63,23 @@ public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractDeleteNode.class);
 
+    /**
+     * 执行删除节点主流程：读取目标、调用删除并处理结果。
+     *
+     * @param context 链路上下文
+     * @throws Exception 删除过程中的异常
+     */
     @Override
     protected final void process(CPFlowContext context) throws Exception {
-        // 1. 从上下文读取实体
         CPKey<T> key = getContextKey();
         T entity = requireContext(context, key);
         log.debug("[{}] 开始删除实体: key={}", getNodeId(), key.name());
-
-        // 2. 执行删除
         boolean success = doDelete(entity);
-
-        // 3. 处理结果
         if (!success) {
             log.error("[{}] 删除失败: key={}", getNodeId(), key.name());
             onFailure(entity, context);
             return;
         }
-
-        // 4. 删除成功
         log.info("[{}] 删除成功: key={}", getNodeId(), key.name());
         afterSuccess(entity, context);
     }
@@ -133,7 +133,6 @@ public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
      * @throws Exception 处理过程中的异常
      */
     protected void afterSuccess(T entity, CPFlowContext context) throws Exception {
-        // 默认空实现
     }
 
     /**
@@ -146,6 +145,6 @@ public abstract class AbstractDeleteNode<T> extends CPNodeComponent {
      * @throws Exception 处理过程中的异常
      */
     protected void onFailure(T entity, CPFlowContext context) throws Exception {
-        fail(CPProblem.of(500, "internal_error", getErrorMessage()));
+        fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, getErrorMessage()));
     }
 }

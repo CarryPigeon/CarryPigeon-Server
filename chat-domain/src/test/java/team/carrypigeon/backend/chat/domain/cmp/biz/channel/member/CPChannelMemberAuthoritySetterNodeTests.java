@@ -20,7 +20,7 @@ class CPChannelMemberAuthoritySetterNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -47,7 +47,7 @@ class CPChannelMemberAuthoritySetterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("not_channel_owner", ex.getProblem().reason());
+        assertEquals("not_channel_owner", ex.getProblem().reason().code());
     }
 
     @Test
@@ -74,16 +74,28 @@ class CPChannelMemberAuthoritySetterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     private static final class TestableNode extends CPChannelMemberAuthoritySetterNode {
         private final String mode;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param mode 测试输入参数
+         */
         private TestableNode(String mode) {
             this.mode = mode;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("key".equals(key) && clazz == String.class) {

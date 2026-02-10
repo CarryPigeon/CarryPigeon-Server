@@ -37,6 +37,12 @@ public class UserDaoImpl implements UserDao {
         this.userMapper = userMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 用户 ID
+     * @return 匹配的用户对象；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "userById", key = "#id", unless = "#result == null")
     public CPUser getById(long id) {
@@ -50,6 +56,12 @@ public class UserDaoImpl implements UserDao {
         return result;
     }
 
+    /**
+     * 按邮箱查询用户。
+     *
+     * @param email 用户邮箱地址
+     * @return 匹配的用户对象；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "userByEmail", key = "#email", unless = "#result == null")
     public CPUser getByEmail(String email) {
@@ -65,6 +77,12 @@ public class UserDaoImpl implements UserDao {
         return result;
     }
 
+    /**
+     * 保存用户数据。
+     *
+     * @param user 待保存的用户实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"userById", "userByEmail"}, allEntries = true)
     public boolean save(CPUser user) {
@@ -81,6 +99,12 @@ public class UserDaoImpl implements UserDao {
         return success;
     }
 
+    /**
+     * 按主键列表批量查询数据。
+     *
+     * @param ids 用户 ID 集合
+     * @return 命中的用户列表；当入参为空时返回空列表
+     */
     @Override
     public List<CPUser> listByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) {

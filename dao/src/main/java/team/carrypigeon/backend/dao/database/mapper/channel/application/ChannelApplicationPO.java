@@ -12,9 +12,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelAppli
 import java.time.LocalDateTime;
 
 /**
- * {@code channel_application} 表的持久化对象（PO）。
- * <p>
- * state 字段为枚举值（见 {@link CPChannelApplicationStateEnum}）。
+ * `channel_application` 表持久化对象。
  */
 @Data
 @NoArgsConstructor
@@ -22,22 +20,42 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("channel_application")
 public class ChannelApplicationPO {
-    // 申请表id
+
+    /**
+     * 申请记录 ID。
+     */
     @TableId
     private Long id;
-    // 申请人id
+
+    /**
+     * 申请人用户 ID。
+     */
     private Long uid;
-    // 申请通道id
+
+    /**
+     * 频道 ID。
+     */
     private Long cid;
-    // 申请状态，0为待处理，1为通过，2为拒绝
+
+    /**
+     * 申请状态值。
+     */
     private int state;
-    // 申请信息留言
+
+    /**
+     * 申请留言。
+     */
     private String msg;
-    // 申请时间
+
+    /**
+     * 申请时间。
+     */
     private LocalDateTime applyTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 频道申请领域对象。
      */
     public CPChannelApplication toBo() {
         return new CPChannelApplication()
@@ -50,7 +68,10 @@ public class ChannelApplicationPO {
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param cpChannelApplication 频道申请领域对象。
+     * @return 频道申请持久化对象。
      */
     public static ChannelApplicationPO fromBo(CPChannelApplication cpChannelApplication) {
         return new ChannelApplicationPO()

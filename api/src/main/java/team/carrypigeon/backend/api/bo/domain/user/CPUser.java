@@ -8,27 +8,53 @@ import lombok.experimental.Accessors;
 import java.time.LocalDateTime;
 
 /**
- * CarryPigeon用户实体类，主要在chat-domain模块中作为用户信息
- * */
+ * 用户领域对象。
+ * <p>
+ * 承载用户资料基础信息，不包含会话态与权限态。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
 public class CPUser {
-    // 用户唯一id
+
+    /**
+     * 用户 ID。
+     */
     private long id;
-    // 用户名
+
+    /**
+     * 用户名。
+     */
     private String username;
-    // 头像id
+
+    /**
+     * 头像资源 ID。
+     */
     private long avatar;
-    // 用户邮箱
+
+    /**
+     * 邮箱地址。
+     */
     private String email;
-    // 用户的性别，0为未知，1为男性，2为女性
+
+    /**
+     * 性别。
+     */
     private CPUserSexEnum sex;
-    // 用户简介
+
+    /**
+     * 个人简介。
+     */
     private String brief;
-    // 用户的生日
+
+    /**
+     * 出生时间。
+     */
     private LocalDateTime birthday;
-    // 用户的注册时间
+
+    /**
+     * 注册时间。
+     */
     private LocalDateTime registerTime;
 }

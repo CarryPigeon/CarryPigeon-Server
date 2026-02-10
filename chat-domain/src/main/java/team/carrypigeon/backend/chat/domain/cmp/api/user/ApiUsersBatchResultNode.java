@@ -16,9 +16,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Batch user profiles response for {@code GET /api/users?ids=...}.
+ * 用户批量查询结果节点。
  * <p>
- * Input: {@link CPNodeUserKeys#USER_INFO_LIST} from {@code CPUserGroupSelector}
+ * 将批量命中的用户实体集合映射为 API 返回列表。
  */
 @Slf4j
 @AllArgsConstructor
@@ -27,6 +27,9 @@ public class ApiUsersBatchResultNode extends AbstractResultNode<ApiUsersBatchRes
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 构建用户批量查询响应。
+     */
     @Override
     protected UsersBatchResponse build(CPFlowContext context) {
         @SuppressWarnings("unchecked")
@@ -51,6 +54,9 @@ public class ApiUsersBatchResultNode extends AbstractResultNode<ApiUsersBatchRes
         return resp;
     }
 
+    /**
+     * 根据头像文件 ID 生成下载路径。
+     */
     private String avatarPath(long avatarId, Map<Long, String> avatarShareKeys) {
         if (avatarId <= 0) {
             return "";
@@ -62,9 +68,15 @@ public class ApiUsersBatchResultNode extends AbstractResultNode<ApiUsersBatchRes
         return "api/files/download/" + shareKey;
     }
 
+    /**
+     * 批量用户响应体。
+     */
     public record UsersBatchResponse(List<UserItem> items) {
     }
 
+    /**
+     * 单个用户响应项。
+     */
     public record UserItem(String uid, String nickname, String avatar) {
     }
 }

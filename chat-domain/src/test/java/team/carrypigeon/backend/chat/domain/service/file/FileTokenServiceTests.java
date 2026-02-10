@@ -15,31 +15,70 @@ class FileTokenServiceTests {
     private static class InMemoryCache implements CPCache {
         private final Map<String, String> map = new ConcurrentHashMap<>();
 
+        /**
+         * 写入测试数据。
+         *
+         * @param key 测试输入参数
+         * @param value 测试输入参数
+         * @param expireTime 测试输入参数
+         */
         @Override
         public void set(String key, String value, int expireTime) {
             map.put(key, value);
         }
 
+        /**
+         * 返回测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String get(String key) {
             return map.get(key);
         }
 
+        /**
+         * 读取并删除测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String getAndDelete(String key) {
             return map.remove(key);
         }
 
+        /**
+         * 读取旧值并写入新值。
+         *
+         * @param key 测试输入参数
+         * @param value 测试输入参数
+         * @param expireTime 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public String getAndSet(String key, String value, int expireTime) {
             return map.put(key, value);
         }
 
+        /**
+         * 判断测试数据是否存在。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public boolean exists(String key) {
             return map.containsKey(key);
         }
 
+        /**
+         * 删除测试数据。
+         *
+         * @param key 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public boolean delete(String key) {
             return map.remove(key) != null;

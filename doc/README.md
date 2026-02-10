@@ -14,6 +14,7 @@
 ## 2. 目录分工（标准）
 
 - `doc/api/*`：对外协议规范（HTTP `/api` + WebSocket `/api/ws`）
+- `doc/generated/*`：由代码自动生成的协议产物（端点/链路/WS 事件）
 - `doc/audience/*`：按角色组织的阅读入口与落地建议
 - `doc/modules/*`：模块职责与代码结构
 - `doc/features/*`：关键业务特性设计说明
@@ -31,4 +32,5 @@
 
 - 一次性扫描报告、阶段性验收表、草案计划不作为长期规范文档保留
 - 规范类文档优先“短而准”，避免在多处重复同一接口字段
-- 新增接口时必须同时更新 `doc/api/11-HTTP端点清单.md` 与对应角色入口文档
+- 新增接口后运行 `python3 scripts/generate_protocol_artifacts.py` 自动同步端点清单与生成产物
+- 提交前运行 `bash scripts/check_code_as_doc.sh` 做“代码即文档”契约校验

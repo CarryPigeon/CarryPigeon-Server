@@ -31,6 +31,12 @@ public class CPUserGroupSelectorNode extends CPNodeComponent {
 
     private final UserDao userDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取用户 ID 并加载所属频道集合
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         @SuppressWarnings("unchecked")

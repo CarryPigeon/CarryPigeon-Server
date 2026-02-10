@@ -6,12 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * Channel read state for a user.
+ * 用户在频道内的已读状态。
  * <p>
- * Used to persist the latest read message position of a user in a channel,
- * so that multiple clients of the same user can synchronize read/unread state.
- * <p>
- * The position is represented only by a timestamp in milliseconds.
+ * 该对象用于持久化“某用户在某频道读到了哪里”，以支持同一账号多端间未读数与已读进度同步。
  */
 @Data
 @NoArgsConstructor
@@ -19,14 +16,14 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class CPChannelReadState {
 
-    /** Primary id */
+    /** 主键 ID。 */
     private long id;
-    /** User id */
+    /** 用户 ID。 */
     private long uid;
-    /** Channel id */
+    /** 频道 ID。 */
     private long cid;
-    /** Latest read message id in the channel (0 means never read) */
+    /** 最近一次已读消息 ID（0 表示从未读过）。 */
     private long lastReadMid;
-    /** Latest read time in the channel (epoch millis, 0 means never read) */
+    /** 最近一次已读时间（毫秒时间戳，0 表示从未读过）。 */
     private long lastReadTime;
 }

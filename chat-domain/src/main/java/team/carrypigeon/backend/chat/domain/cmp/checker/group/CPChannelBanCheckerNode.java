@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
@@ -27,6 +28,12 @@ public class CPChannelBanCheckerNode extends AbstractCheckerNode {
 
     private final ChannelBanDAO channelBanDAO;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param context LiteFlow 上下文，读取用户与频道信息并校验封禁状态
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         boolean soft = isSoftMode();
@@ -37,7 +44,6 @@ public class CPChannelBanCheckerNode extends AbstractCheckerNode {
                 buildSelectKey("channel_ban", java.util.Map.of("cid", cid, "uid", uid)),
                 () -> channelBanDAO.getByChannelIdAndUserId(uid, cid));
         if (ban == null) {
-            // 用户未被封禁，直接通过
             if (soft) {
                 markSoftSuccess(context);
             }
@@ -51,9 +57,8 @@ public class CPChannelBanCheckerNode extends AbstractCheckerNode {
                 return;
             }
             log.info("CPChannelBanChecker hard fail: user is banned, cid={}, uid={}, banId={}", cid, uid, ban.getId());
-            fail(CPProblem.of(403, "user_muted", "user is banned in this channel"));
+            fail(CPProblem.of(CPProblemReason.USER_MUTED, "user is banned in this channel"));
         }
-        // 封禁已过期，尝试删除旧记录
         boolean deleted = channelBanDAO.delete(ban);
         if (deleted) {
             log.debug("CPChannelBanChecker: deleted expired ban, cid={}, uid={}, banId={}", cid, uid, ban.getId());

@@ -28,6 +28,9 @@ public final class ApiWsSessionAttributes {
      */
     public static final String SUB_CIDS = "cp_ws_sub_cids";
 
+    /**
+     * 工具类不允许实例化。
+     */
     private ApiWsSessionAttributes() {
     }
 }

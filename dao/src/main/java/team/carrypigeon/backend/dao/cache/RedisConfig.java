@@ -7,7 +7,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SetOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -15,7 +21,7 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import java.time.Duration;
 
 /**
- * Redis配置类
+ * Redis 配置。
  */
 @Configuration
 @EnableCaching
@@ -24,20 +30,23 @@ public class RedisConfig {
     private final ObjectMapper objectMapper;
 
     /**
-     * 创建 Redis 配置（由 Spring 注入 {@link ObjectMapper}）。
+     * 构造 Redis 配置。
+     *
+     * @param objectMapper Jackson 对象映射器。
      */
     public RedisConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
     /**
-     * 配置通用 {@link RedisTemplate}（key 为字符串，value 为 JSON）。
+     * 配置通用 `RedisTemplate`。
+     *
+     * @param factory Redis 连接工厂。
+     * @return 通用 RedisTemplate。
      */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-
-        // 设置连接工厂
         redisTemplate.setConnectionFactory(factory);
 
         RedisSerializer<String> keySerializer = RedisSerializer.string();
@@ -54,7 +63,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置StringRedisTemplate（专用字符串操作）
+     * 配置字符串模板。
+     *
+     * @param factory Redis 连接工厂。
+     * @return StringRedisTemplate。
      */
     @Bean
     public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory factory) {
@@ -64,7 +76,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置HashOperations
+     * 配置 Hash 操作接口。
+     *
+     * @param redisTemplate RedisTemplate。
+     * @return HashOperations。
      */
     @Bean
     public HashOperations<String, String, Object> hashOperations(RedisTemplate<String, Object> redisTemplate) {
@@ -72,7 +87,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置ValueOperations
+     * 配置 Value 操作接口。
+     *
+     * @param stringRedisTemplate StringRedisTemplate。
+     * @return ValueOperations。
      */
     @Bean
     public ValueOperations<String, String> valueOperations(StringRedisTemplate stringRedisTemplate) {
@@ -80,7 +98,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置ListOperations
+     * 配置 List 操作接口。
+     *
+     * @param redisTemplate RedisTemplate。
+     * @return ListOperations。
      */
     @Bean
     public ListOperations<String, Object> listOperations(RedisTemplate<String, Object> redisTemplate) {
@@ -88,7 +109,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置SetOperations
+     * 配置 Set 操作接口。
+     *
+     * @param redisTemplate RedisTemplate。
+     * @return SetOperations。
      */
     @Bean
     public SetOperations<String, Object> setOperations(RedisTemplate<String, Object> redisTemplate) {
@@ -96,7 +120,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置ZSetOperations
+     * 配置 ZSet 操作接口。
+     *
+     * @param redisTemplate RedisTemplate。
+     * @return ZSetOperations。
      */
     @Bean
     public ZSetOperations<String, Object> zSetOperations(RedisTemplate<String, Object> redisTemplate) {
@@ -104,7 +131,10 @@ public class RedisConfig {
     }
 
     /**
-     * 配置缓存管理器
+     * 配置缓存管理器。
+     *
+     * @param factory Redis 连接工厂。
+     * @return Redis 缓存管理器。
      */
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
@@ -113,10 +143,10 @@ public class RedisConfig {
                 .defaultTyping(true)
                 .build();
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofHours(1))  // 设置缓存有效期
+                .entryTtl(Duration.ofHours(1))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(valueSerializer))
-                .disableCachingNullValues();  // 不缓存空值
+                .disableCachingNullValues();
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)

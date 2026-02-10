@@ -1,26 +1,23 @@
 package team.carrypigeon.backend.chat.domain.controller.web.api.config;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * HTTP API（/api）相关配置项。
+ * API 模块配置属性。
  * <p>
- * 配置来源：Spring Boot 配置文件（例如 `application-starter/src/main/resources/application.yaml`）中 `cp.*` 前缀。<br/>
- * 本类只承担“配置绑定”职责，不包含业务逻辑。
- * <p>
- * 常用映射示例：
- * <ul>
- *   <li>{@code cp.api.required_plugins} -> {@link Api#requiredPlugins}</li>
- *   <li>{@code cp.auth.access_token_ttl_seconds} -> {@link Auth#accessTokenTtlSeconds}</li>
- *   <li>{@code cp.auth.refresh_token_ttl_days} -> {@link Auth#refreshTokenTtlDays}</li>
- * </ul>
+ * 对应 `cp.api.*` 配置项，涵盖认证、WS、限流、目录等参数。
  */
 @Data
+@Validated
 @Configuration
 @ConfigurationProperties(prefix = "cp")
 public class CpApiProperties {
@@ -28,10 +25,12 @@ public class CpApiProperties {
     /**
      * /api 相关配置。
      */
+    @Valid
     private Api api = new Api();
     /**
      * 认证相关配置。
      */
+    @Valid
     private Auth auth = new Auth();
 
     @Data
@@ -45,26 +44,31 @@ public class CpApiProperties {
          * <p>
          * 主要用于：{@code GET /api/plugins/catalog}
          */
+        @Valid
         private PluginCatalog pluginCatalog = new PluginCatalog();
         /**
          * Domain 目录配置。
          * <p>
          * 主要用于：{@code GET /api/domains/catalog}
          */
+        @Valid
         private DomainCatalog domainCatalog = new DomainCatalog();
         /**
          * 发送消息频率限制配置。
          * <p>
          * 主要用于：{@code POST /api/channels/{cid}/messages}
          */
+        @Valid
         private MessageRateLimit messageRateLimit = new MessageRateLimit();
         /**
          * 插件包扫描配置（本地文件系统）。
          */
+        @Valid
         private PluginPackageScan pluginPackageScan = new PluginPackageScan();
         /**
          * WebSocket（/api/ws）配置：事件存储、resume 回放等。
          */
+        @Valid
         private Ws ws = new Ws();
     }
 
@@ -73,10 +77,12 @@ public class CpApiProperties {
         /**
          * access_token TTL（秒）。
          */
+        @Min(1)
         private int accessTokenTtlSeconds = 1800;
         /**
          * refresh_token TTL（天）。
          */
+        @Min(1)
         private int refreshTokenTtlDays = 30;
     }
 
@@ -229,10 +235,12 @@ public class CpApiProperties {
         /**
          * 事件存储窗口配置（capacity + ttl）。
          */
+        @Valid
         private EventStore eventStore = new EventStore();
         /**
          * 单次 resume 最大回放事件数（防止一次补发过大）。
          */
+        @Min(1)
         private int resumeMaxEvents = 2000;
     }
 
@@ -241,10 +249,12 @@ public class CpApiProperties {
         /**
          * 事件存储容量上限（条数）。
          */
+        @Min(1)
         private int capacity = 2000;
         /**
          * 事件存储 TTL（秒）。
          */
+        @Min(1)
         private int ttlSeconds = 600;
     }
 
@@ -259,6 +269,7 @@ public class CpApiProperties {
          * <p>
          * 相对路径将以当前工作目录解析。
          */
+        @NotBlank
         private String dir = "plugins/packages";
         /**
          * 是否仅返回每个 plugin_id 的最新版本。
@@ -267,10 +278,12 @@ public class CpApiProperties {
         /**
          * 插件包下载端点 base path（相对路径，不含 host），例如：`api/plugins/download`。
          */
+        @NotBlank
         private String downloadBasePath = "api/plugins/download";
         /**
          * 合约下载端点 base path（相对路径，不含 host），例如：`api/contracts`。
          */
+        @NotBlank
         private String contractBasePath = "api/contracts";
 
         /**
@@ -278,11 +291,13 @@ public class CpApiProperties {
          * <p>
          * 设为 0：关闭定时刷新（仍会在启动时扫描一次）。
          */
+        @Min(0)
         private int refreshIntervalSeconds = 30;
 
         /**
          * 插件包信任策略（白名单/签名校验）。
          */
+        @Valid
         private PluginTrust trust = new PluginTrust();
     }
 
@@ -343,11 +358,13 @@ public class CpApiProperties {
         /**
          * {@code Core:Text} 的限流窗口（维度：uid+cid）。
          */
+        @Valid
         private RateLimitWindow coreText = new RateLimitWindow();
 
         /**
          * 非 {@code Core:*} domain 的限流窗口（维度：uid+cid+domain）。
          */
+        @Valid
         private RateLimitWindow plugin = new RateLimitWindow(10, 10);
     }
 
@@ -356,15 +373,25 @@ public class CpApiProperties {
         /**
          * 固定窗口大小（秒）。
          */
+        @Min(1)
         private int windowSeconds = 10;
         /**
          * 窗口内最大请求数。
          */
+        @Min(1)
         private int maxRequests = 20;
-
+        /**
+         * 使用默认参数创建限流窗口。
+         */
         public RateLimitWindow() {
         }
 
+        /**
+         * 使用指定参数创建限流窗口。
+         *
+         *  windowSeconds 固定窗口大小（秒）。
+         *  maxRequests 窗口内最大请求数。
+         */
         public RateLimitWindow(int windowSeconds, int maxRequests) {
             this.windowSeconds = windowSeconds;
             this.maxRequests = maxRequests;

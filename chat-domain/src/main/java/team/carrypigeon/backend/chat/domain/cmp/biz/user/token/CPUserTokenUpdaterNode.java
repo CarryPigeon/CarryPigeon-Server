@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
@@ -25,6 +26,12 @@ public class CPUserTokenUpdaterNode extends CPNodeComponent {
 
     private final UserTokenDao userTokenDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取刷新令牌并同步新的用户令牌状态
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPUserToken userToken = requireContext(context, CPNodeUserTokenKeys.USER_TOKEN_INFO);
@@ -37,7 +44,7 @@ public class CPUserTokenUpdaterNode extends CPNodeComponent {
             userToken.setExpiredTime(TimeUtil.millisToLocalDateTime(expiredTime));
         }
         if (!userTokenDao.save(userToken)){
-            fail(CPProblem.of(500, "internal_error", "update user token error"));
+            fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "update user token error"));
         }
 
     }

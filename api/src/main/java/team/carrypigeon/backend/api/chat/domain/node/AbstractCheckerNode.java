@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.api.chat.domain.node;
 
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
@@ -40,7 +42,7 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
  *                 markSoftFail(context, "user_muted");
  *                 return;
  *             }
- *             forbidden("user_muted", "you are muted in this channel");
+ *             forbidden(CPProblemReason.USER_MUTED, "you are muted in this channel");
  *         }
  *
  *         if (soft) {

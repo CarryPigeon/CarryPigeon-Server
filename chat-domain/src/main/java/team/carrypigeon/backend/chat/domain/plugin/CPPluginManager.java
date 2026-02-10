@@ -11,13 +11,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Central manager for all backend plugins.
- *
- * This manager collects all {@link CPPlugin} beans from the Spring context
- * and calls their {@link CPPlugin#init()} method during application startup.
- *
- * Plugin implementations should live in separate JARs under package
- * {@code team.carrypigeon.backend.plugin.*} and be annotated as Spring beans.
+ * 插件管理器。
+ * <p>
+ * 负责收集、初始化并暴露系统已加载插件集合。
  */
 @Slf4j
 @Component
@@ -27,16 +23,18 @@ public class CPPluginManager {
     private final ServerInfoConfig serverInfoConfig;
 
     /**
-     * 创建插件管理器（由 Spring 注入）。
+     * 构造插件管理器。
+     *
+     * @param plugins Spring 扫描到的插件集合。
+     * @param serverInfoConfig 服务端基础信息配置。
      */
     public CPPluginManager(List<CPPlugin> plugins, ServerInfoConfig serverInfoConfig) {
-        // avoid NPE if there is no plugin at all
         this.plugins = plugins == null ? Collections.emptyList() : plugins;
         this.serverInfoConfig = serverInfoConfig;
     }
 
     /**
-     * Initialize all discovered plugins once Spring context is ready.
+     * 在容器启动完成后初始化全部插件。
      */
     @PostConstruct
     public void initPlugins() {

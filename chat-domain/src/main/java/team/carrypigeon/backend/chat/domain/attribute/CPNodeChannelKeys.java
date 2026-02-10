@@ -27,6 +27,9 @@ public final class CPNodeChannelKeys {
     /** {@code Set<CPChannel>}: 频道列表。 */
     public static final CPKey<Set> CHANNEL_INFO_LIST = CPKey.of("channels", Set.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeChannelKeys() {
     }
 }

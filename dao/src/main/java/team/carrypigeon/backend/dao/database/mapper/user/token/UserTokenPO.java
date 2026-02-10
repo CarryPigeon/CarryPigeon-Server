@@ -11,9 +11,7 @@ import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import java.time.LocalDateTime;
 
 /**
- * {@code user_token} 表的持久化对象（PO）。
- * <p>
- * 用于 BO（{@link CPUserToken}）与数据库字段之间的转换。
+ * `user_token` 表持久化对象。
  */
 @Data
 @NoArgsConstructor
@@ -21,25 +19,42 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("user_token")
 public class UserTokenPO {
-    // 令牌id
+
+    /**
+     * 令牌记录 ID。
+     */
     @TableId
     private Long id;
-    // 用户id
+
+    /**
+     * 用户 ID。
+     */
     private Long uid;
-    // 令牌
+
+    /**
+     * 刷新令牌字符串。
+     */
     private String token;
-    // 令牌到期时间
+
+    /**
+     * 到期时间。
+     */
     private LocalDateTime expiredTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 用户令牌领域对象。
      */
     public CPUserToken toBo() {
         return new CPUserToken(id, uid, token, expiredTime);
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param cpUserToken 用户令牌领域对象。
+     * @return 用户令牌持久化对象。
      */
     public static UserTokenPO from(CPUserToken cpUserToken) {
         return new UserTokenPO()

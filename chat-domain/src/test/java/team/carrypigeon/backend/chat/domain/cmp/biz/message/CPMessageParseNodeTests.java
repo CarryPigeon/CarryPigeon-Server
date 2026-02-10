@@ -32,7 +32,7 @@ class CPMessageParseNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -49,7 +49,7 @@ class CPMessageParseNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("schema_invalid", ex.getProblem().reason());
+        assertEquals("schema_invalid", ex.getProblem().reason().code());
     }
 
     @Test
@@ -108,6 +108,13 @@ class CPMessageParseNodeTests {
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

@@ -31,6 +31,12 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         this.channelMemberMapper = channelMemberMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 成员记录 ID
+     * @return 匹配的成员记录；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelMemberById", key = "#id", unless = "#result == null")
     public CPChannelMember getById(long id) {
@@ -44,6 +50,12 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         return result;
     }
 
+    /**
+     * 查询频道全部成员。
+     *
+     * @param cid 频道 ID
+     * @return 该频道下的成员列表
+     */
     @Override
     @Cacheable(cacheNames = "channelMembersByCid", key = "#cid")
     public CPChannelMember[] getAllMember(long cid) {
@@ -58,6 +70,13 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         return result;
     }
 
+    /**
+     * 查询频道指定成员。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 匹配的成员记录；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelMemberByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelMember getMember(long uid, long cid) {
@@ -73,6 +92,12 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         return result;
     }
 
+    /**
+     * 查询用户加入的全部频道成员记录。
+     *
+     * @param uid 用户 ID
+     * @return 用户所在频道的成员记录数组
+     */
     @Override
     @Cacheable(cacheNames = "channelMembersByUid", key = "#uid")
     public CPChannelMember[] getAllMemberByUserId(long uid) {
@@ -87,6 +112,12 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         return result;
     }
 
+    /**
+     * 保存频道成员记录。
+     *
+     * @param channelMember 待保存的成员实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelMemberById", "channelMembersByCid", "channelMemberByUidCid", "channelMembersByUid"}, allEntries = true)
     public boolean save(CPChannelMember channelMember) {
@@ -103,6 +134,12 @@ public class ChannelMemberDaoImpl implements ChannelMemberDao {
         return success;
     }
 
+    /**
+     * 删除频道成员记录。
+     *
+     * @param cpChannelMember 待删除的成员实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelMemberById", "channelMembersByCid", "channelMemberByUidCid", "channelMembersByUid"}, allEntries = true)
     public boolean delete(CPChannelMember cpChannelMember) {

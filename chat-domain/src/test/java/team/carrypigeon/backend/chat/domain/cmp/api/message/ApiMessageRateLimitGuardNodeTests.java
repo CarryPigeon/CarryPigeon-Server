@@ -47,10 +47,9 @@ class ApiMessageRateLimitGuardNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(429, ex.getProblem().status());
-        assertEquals("rate_limited", ex.getProblem().reason());
+        assertEquals("rate_limited", ex.getProblem().reason().code());
         assertNotNull(ex.getProblem().details());
         assertTrue(ex.getProblem().details() instanceof Map);
-        //noinspection unchecked
         Map<String, Object> details = (Map<String, Object>) ex.getProblem().details();
         assertTrue(details.containsKey("retry_after_ms"));
         Object v = details.get("retry_after_ms");
@@ -76,7 +75,7 @@ class ApiMessageRateLimitGuardNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(429, ex.getProblem().status());
-        assertEquals("rate_limited", ex.getProblem().reason());
+        assertEquals("rate_limited", ex.getProblem().reason().code());
     }
 }
 

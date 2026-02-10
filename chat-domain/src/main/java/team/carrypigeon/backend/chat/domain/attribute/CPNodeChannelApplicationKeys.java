@@ -28,6 +28,9 @@ public final class CPNodeChannelApplicationKeys {
     /** {@code List<CPChannelApplication>}: 申请列表。 */
     public static final CPKey<Set> CHANNEL_APPLICATION_INFO_LIST = CPKey.of("applications", Set.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeChannelApplicationKeys() {
     }
 }

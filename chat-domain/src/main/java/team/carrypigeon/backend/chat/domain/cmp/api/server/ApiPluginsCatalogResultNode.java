@@ -11,13 +11,9 @@ import team.carrypigeon.backend.chat.domain.service.catalog.ApiPluginCatalogInde
 import java.util.List;
 
 /**
- * Plugin catalog response for {@code GET /api/plugins/catalog}.
+ * 插件目录结果节点。
  * <p>
- * Current P0 behavior:
- * <ul>
- *   <li>Return {@code required_plugins} from configuration.</li>
- *   <li>Return empty {@code plugins[]} placeholder (catalog integration can be added later).</li>
- * </ul>
+ * 生成 `GET /api/plugins/catalog` 响应，包含必需插件与当前目录视图。
  */
 @Slf4j
 @LiteflowComponent("ApiPluginsCatalogResult")
@@ -27,6 +23,9 @@ public class ApiPluginsCatalogResultNode extends AbstractResultNode<ApiPluginsCa
     private final CpApiProperties properties;
     private final ApiPluginCatalogIndex catalogIndex;
 
+    /**
+     * 构建插件目录响应。
+     */
     @Override
     protected PluginsCatalogResponse build(CPFlowContext context) {
         List<CpApiProperties.PluginItem> plugins = catalogIndex.snapshot().pluginsView();
@@ -36,6 +35,9 @@ public class ApiPluginsCatalogResultNode extends AbstractResultNode<ApiPluginsCa
         return response;
     }
 
+    /**
+     * 插件目录响应体。
+     */
     public record PluginsCatalogResponse(List<String> requiredPlugins, List<CpApiProperties.PluginItem> plugins) {
     }
 }

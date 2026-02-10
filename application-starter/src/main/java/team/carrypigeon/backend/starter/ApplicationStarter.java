@@ -8,19 +8,15 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * 服务端启动main函数，整个服务端的启动入口，不应该包含任何与业务逻辑相关的代码
- * @author midreamsheep
- * */
-// 声明springboot应用
+ * Spring Boot 启动入口。
+ * <p>
+ * 该类只负责启动容器与基础框架能力开关，不承载业务逻辑。
+ * 阅读项目时可从此处作为入口，然后进入 `chat-domain` 的 Controller 与 Flow 链路。
+ */
 @SpringBootApplication
-// 允许定时任务
 @EnableScheduling
-// 启用声明式事务管理
 @EnableTransactionManagement
-// 扫描team.carrypigeon.backend包下的所有类文件
-// 插件相关包命名规范为team.carrypigeon.backend.plugin.{{PluginName}}
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
-// 启动日志打印
 @Slf4j
 public class ApplicationStarter {
     /**
@@ -29,9 +25,7 @@ public class ApplicationStarter {
      * @param args 启动参数
      */
     public static void main(String[] args) {
-        // 输出日志，通知项目启动
         log.info("Application is starting...");
-        // 启动容器注入服务并获取对应上下文
         new SpringApplication(ApplicationStarter.class).run(args);
         log.info("Application is running ...");
     }

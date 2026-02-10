@@ -26,11 +26,14 @@ public class RenameArgNode extends CPNodeComponent {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param context LiteFlow 上下文，依据重命名映射迁移字段值
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
-        // 从节点 data 中读取重命名脚本：
-        // - 推荐形式：字符串 JSON，如 '{"session_uid":"UserInfo_Id"}'
-        // - 兼容旧形式：Map<String,String>
         Object scriptObj = this.getCmpData(Object.class);
         Map<?, ?> mapping;
         if (scriptObj instanceof String scriptStr) {

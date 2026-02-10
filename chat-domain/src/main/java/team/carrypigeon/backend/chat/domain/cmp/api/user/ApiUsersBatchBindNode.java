@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -17,10 +18,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Bind {@code GET /api/users?ids=...} into context keys.
+ * 用户批量查询绑定节点。
  * <p>
- * Input: {@link CPFlowKeys#REQUEST} = {@link UsersBatchRequest}
- * Output: {@link CPNodeUserKeys#USER_INFO_ID_LIST}
+ * 解析 `GET /api/users?ids=...` 请求参数并写入批量查询上下文。
  */
 @Slf4j
 @LiteflowComponent("ApiUsersBatchBind")
@@ -28,11 +28,14 @@ public class ApiUsersBatchBindNode extends CPNodeComponent {
 
     private static final int MAX_IDS = 200;
 
+    /**
+     * 解析并绑定批量用户查询参数。
+     */
     @Override
     protected void process(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof UsersBatchRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         List<String> raw = req.ids();
         if (raw == null || raw.isEmpty()) {
@@ -40,7 +43,7 @@ public class ApiUsersBatchBindNode extends CPNodeComponent {
             return;
         }
         if (raw.size() > MAX_IDS) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "ids", "reason", "too_many", "message", "too many ids")
                     ))));
@@ -57,15 +60,17 @@ public class ApiUsersBatchBindNode extends CPNodeComponent {
         log.debug("ApiUsersBatchBind success, size={}", ids.size());
     }
 
+    /**
+     * 解析字符串形式的用户 ID。
+     */
     private long parseId(String str) {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "ids", "reason", "invalid", "message", "invalid id")
                     ))));
         }
     }
 }
-

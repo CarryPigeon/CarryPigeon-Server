@@ -31,6 +31,14 @@ public class ApiWsPayloadMapper {
     private final FileInfoDao fileInfoDao;
     private final ApiMessagePreviewService previewService;
 
+    /**
+     * 构造 WS 负载映射器。
+     *
+     * @param objectMapper JSON 映射器
+     * @param userDao 用户数据访问
+     * @param fileInfoDao 文件数据访问
+     * @param previewService 消息预览服务
+     */
     public ApiWsPayloadMapper(ObjectMapper objectMapper, UserDao userDao, FileInfoDao fileInfoDao, ApiMessagePreviewService previewService) {
         this.objectMapper = objectMapper;
         this.userDao = userDao;
@@ -40,6 +48,14 @@ public class ApiWsPayloadMapper {
 
     /**
      * 构造 {@code message.created} 的 payload。
+     * <p>
+     * 结构：
+     * <pre>{@code
+     * {
+     *   "cid": "<snowflake_string>",
+     *   "message": { ... }
+     * }
+     * }</pre>
      */
     public ObjectNode messageCreatedPayload(CPMessage message) {
         ObjectNode payload = objectMapper.createObjectNode();
@@ -50,6 +66,8 @@ public class ApiWsPayloadMapper {
 
     /**
      * 构造 {@code message.deleted} 的 payload。
+     * <p>
+     * 结构：{@code {"cid":"...","mid":"...","delete_time":<epoch_millis>}}
      */
     public ObjectNode messageDeletedPayload(long cid, long mid, long deleteTimeMillis) {
         ObjectNode payload = objectMapper.createObjectNode();
@@ -61,6 +79,8 @@ public class ApiWsPayloadMapper {
 
     /**
      * 构造 {@code read_state.updated} 的 payload。
+     * <p>
+     * 结构：{@code {"cid":"...","uid":"...","last_read_mid":"...","last_read_time":...}}
      */
     public ObjectNode readStateUpdatedPayload(CPChannelReadState state) {
         ObjectNode payload = objectMapper.createObjectNode();
@@ -73,6 +93,8 @@ public class ApiWsPayloadMapper {
 
     /**
      * 构造 {@code channels.changed} 的 payload（提示刷新）。
+     * <p>
+     * 固定结构：{@code {"hint":"refresh"}}
      */
     public ObjectNode channelsChangedPayload() {
         ObjectNode payload = objectMapper.createObjectNode();
@@ -82,6 +104,8 @@ public class ApiWsPayloadMapper {
 
     /**
      * 构造 {@code channel.changed} 的 payload（提示刷新）。
+     * <p>
+     * 固定结构：{@code {"cid":"...","scope":"...","hint":"refresh"}}
      */
     public ObjectNode channelChangedPayload(long cid, String scope) {
         ObjectNode payload = objectMapper.createObjectNode();
@@ -93,6 +117,14 @@ public class ApiWsPayloadMapper {
 
     /**
      * 将消息对象映射为 WS message item（用于 message.created）。
+     * <p>
+     * 关键约束：
+     * <ul>
+     *   <li>所有 ID 字段统一转为十进制字符串</li>
+     *   <li>domain_version 为空时默认 {@code 1.0.0}</li>
+     *   <li>reply_to_mid 仅在 >0 时输出</li>
+     *   <li>preview 统一由 {@link ApiMessagePreviewService} 生成</li>
+     * </ul>
      */
     private ObjectNode messageItem(CPMessage m) {
         ObjectNode msg = objectMapper.createObjectNode();
@@ -142,6 +174,4 @@ public class ApiWsPayloadMapper {
         }
         return "api/files/download/" + info.getShareKey();
     }
-
-    // preview generation moved to ApiMessagePreviewService
 }

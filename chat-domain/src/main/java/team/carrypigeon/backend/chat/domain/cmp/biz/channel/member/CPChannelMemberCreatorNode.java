@@ -21,6 +21,13 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * */
 @LiteflowComponent("CPChannelMemberCreator")
 public class CPChannelMemberCreatorNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（用于获取创建者 UID）
+     * @param context LiteFlow 上下文，读取频道信息并创建成员实体
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);

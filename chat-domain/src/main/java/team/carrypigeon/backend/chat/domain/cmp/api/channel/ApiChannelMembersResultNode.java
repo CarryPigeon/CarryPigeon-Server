@@ -16,14 +16,18 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelMemberKeys;
 import team.carrypigeon.backend.common.time.TimeUtil;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Result mapper for {@code GET /api/channels/{cid}/members}.
+ * 频道成员列表结果节点。
  * <p>
- * Expected chain:
- * {@code ApiLoginGuard -> ApiChannelMembersListBind -> MemberGuard -> CPChannelSelector -> CPChannelMemberLister -> ApiChannelMembersResult}
+ * 汇总成员关系、用户资料与头像信息，输出成员列表响应体。
  */
 @Slf4j
 @AllArgsConstructor
@@ -33,6 +37,9 @@ public class ApiChannelMembersResultNode extends AbstractResultNode<ApiChannelMe
     private final UserDao userDao;
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 构建频道成员列表响应。
+     */
     @Override
     protected MembersResponse build(CPFlowContext context) {
         CPChannel channel = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
@@ -79,6 +86,9 @@ public class ApiChannelMembersResultNode extends AbstractResultNode<ApiChannelMe
         return resp;
     }
 
+    /**
+     * 计算成员角色（owner/admin/member）。
+     */
     private String roleOf(CPChannel channel, CPChannelMember member) {
         if (member.getUid() == channel.getOwner()) {
             return "owner";
@@ -89,6 +99,9 @@ public class ApiChannelMembersResultNode extends AbstractResultNode<ApiChannelMe
         return "member";
     }
 
+    /**
+     * 根据头像文件 ID 生成下载路径。
+     */
     private String avatarPath(long avatarId, Map<Long, String> avatarShareKeys) {
         if (avatarId <= 0) {
             return "";
@@ -100,9 +113,15 @@ public class ApiChannelMembersResultNode extends AbstractResultNode<ApiChannelMe
         return "api/files/download/" + shareKey;
     }
 
+    /**
+     * 成员列表响应体。
+     */
     public record MembersResponse(List<MemberItem> items) {
     }
 
+    /**
+     * 单个成员响应项。
+     */
     public record MemberItem(String uid, String role, String nickname, String avatar, long joinTime) {
     }
 }

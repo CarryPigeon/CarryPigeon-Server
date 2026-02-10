@@ -1,29 +1,28 @@
 package team.carrypigeon.backend.api.plugin;
 
 /**
- * Core plugin interface for CarryPigeon backend.
- *
- * Implementations of this interface should be provided by plugin JARs
- * under package {@code team.carrypigeon.backend.plugin.*}.
- *
- * All plugin beans will be discovered by Spring (via component scanning)
- * and then managed by the core plugin manager in chat-domain.
+ * 后端插件统一接口。
+ * <p>
+ * 外部插件通过实现该接口接入系统，并由 `chat-domain` 中的插件管理器统一加载与初始化。
  */
 public interface CPPlugin {
 
     /**
-     * Human readable name of this plugin.
+     * 获取插件名称。
+     *
+     * @return 人类可读插件名
      */
     String getName();
 
     /**
-     * Version of the plugin, e.g. "1.0.0".
+     * 获取插件版本。
+     *
+     * @return 语义化版本字符串
      */
     String getVersion();
 
     /**
-     * Called once on application startup after the Spring context is ready.
-     * Use this to perform plugin initialization (e.g. register handlers).
+     * 应用启动后执行插件初始化。
      */
     void init();
 }

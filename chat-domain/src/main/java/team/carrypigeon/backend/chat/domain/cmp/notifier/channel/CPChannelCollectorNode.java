@@ -30,6 +30,12 @@ public class CPChannelCollectorNode extends CPNodeComponent {
     private final ChannelDao channelDao;
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param context LiteFlow 上下文，读取频道信息并收集关联用户 ID
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         Long uid = requireContext(context, CPNodeUserKeys.USER_INFO_ID);

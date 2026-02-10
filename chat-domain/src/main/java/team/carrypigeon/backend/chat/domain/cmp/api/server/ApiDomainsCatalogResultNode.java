@@ -11,9 +11,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Domain catalog response for {@code GET /api/domains/catalog}.
+ * 消息域能力目录结果节点。
  * <p>
- * Current P0 behavior: exposes built-in {@code Core:Text} domain as a baseline.
+ * 生成 `GET /api/domains/catalog` 的标准响应，返回各消息域版本与约束信息。
  */
 @Slf4j
 @LiteflowComponent("ApiDomainsCatalogResult")
@@ -21,10 +21,16 @@ public class ApiDomainsCatalogResultNode extends AbstractResultNode<ApiDomainsCa
 
     private final ApiPluginCatalogIndex catalogIndex;
 
+    /**
+     * 构造函数注入目录索引服务。
+     */
     public ApiDomainsCatalogResultNode(ApiPluginCatalogIndex catalogIndex) {
         this.catalogIndex = catalogIndex;
     }
 
+    /**
+     * 构建域目录响应。
+     */
     @Override
     protected DomainsCatalogResponse build(CPFlowContext context) {
         DomainCatalogItem coreText = coreText();
@@ -40,6 +46,9 @@ public class ApiDomainsCatalogResultNode extends AbstractResultNode<ApiDomainsCa
         return response;
     }
 
+    /**
+     * 生成内置 Core:Text 域定义。
+     */
     private DomainCatalogItem coreText() {
         return new DomainCatalogItem(
                 "Core:Text",
@@ -51,6 +60,9 @@ public class ApiDomainsCatalogResultNode extends AbstractResultNode<ApiDomainsCa
         );
     }
 
+    /**
+     * 将扫描得到的域项映射为 API 响应项。
+     */
     private DomainCatalogItem mapScanned(ApiPluginCatalogIndex.DomainItem item) {
         Map<String, Object> constraints = Map.of(
                 "max_payload_bytes", item.constraints() == null ? null : item.constraints().maxPayloadBytes(),
@@ -90,9 +102,15 @@ public class ApiDomainsCatalogResultNode extends AbstractResultNode<ApiDomainsCa
         return new DomainCatalogItem(item.domain(), item.supportedVersions(), item.recommendedVersion(), constraints, providers, contract);
     }
 
+    /**
+     * 域目录响应体。
+     */
     public record DomainsCatalogResponse(List<DomainCatalogItem> items) {
     }
 
+    /**
+     * 单个域目录项。
+     */
     public record DomainCatalogItem(
             String domain,
             List<String> supportedVersions,

@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
 
@@ -23,11 +24,16 @@ public class EmailValidChecker extends AbstractCheckerNode {
 
     private static final String EMAIL_VALID_CHECKER_PARAM = "Email";
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取邮箱并执行格式校验
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         boolean soft = isSoftMode();
-
-        // 读取邮箱参数（必填）
         String email = requireContext(context, EMAIL_VALID_CHECKER_PARAM, String.class);
         if (!email.matches("^[a-zA-Z0-9_+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+$")) {
             if (soft) {
@@ -36,7 +42,7 @@ public class EmailValidChecker extends AbstractCheckerNode {
                 return;
             }
             log.info("EmailValidChecker hard fail: invalid email format, email={}", email);
-            fail(CPProblem.of(422, "email_invalid", "email error"));
+            fail(CPProblem.of(CPProblemReason.EMAIL_INVALID, "email error"));
         }
         if (soft) {
             markSoftSuccess(context);

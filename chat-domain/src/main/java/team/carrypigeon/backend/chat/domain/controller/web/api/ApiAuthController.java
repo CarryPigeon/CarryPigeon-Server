@@ -11,14 +11,9 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowRunner;
 
 /**
- * Authentication endpoints under {@code /api/auth}.
+ * 认证相关 API 控制器。
  * <p>
- * All endpoints in this controller are public (no {@code Authorization} header required) because they are used for
- * onboarding/login flows. The implementation is delegated to LiteFlow chains (see
- * {@code application-starter/src/main/resources/config/api.xml}).
- * <p>
- * Required gate behavior:
- * {@code POST /api/auth/tokens} must perform required gate checks (P0) and reject login if required plugins are missing.
+ * 提供邮箱验证码、令牌签发/刷新/吊销、required gate 检查等路由。
  */
 @RestController
 public class ApiAuthController {
@@ -31,16 +26,23 @@ public class ApiAuthController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 创建认证控制器。
+     *
+     * @param flowRunner API 链路执行器
+     */
     public ApiAuthController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * Required gate check (public).
+     * 执行 required gate 预检查。
      * <p>
      * Route: {@code POST /api/gates/required/check}
-     * <p>
      * Chain: {@code api_required_gate_check}
+     *
+     * @param request required gate 检查请求体
+     * @return 标准响应对象（包含 required gate 检查结果）
      */
     @PostMapping("/api/gates/required/check")
     public Object requiredGateCheck(@Valid @RequestBody RequiredGateCheckRequest request) {
@@ -51,11 +53,13 @@ public class ApiAuthController {
     }
 
     /**
-     * Send email login code (public).
+     * 发送邮箱验证码。
      * <p>
      * Route: {@code POST /api/auth/email_codes}
-     * <p>
      * Chain: {@code api_auth_email_codes}
+     *
+     * @param request 邮箱验证码发送请求体
+     * @return 空内容响应（HTTP 204）
      */
     @PostMapping("/api/auth/email_codes")
     public ResponseEntity<Void> emailCodes(@Valid @RequestBody SendEmailCodeRequest request) {
@@ -66,11 +70,13 @@ public class ApiAuthController {
     }
 
     /**
-     * Exchange email+code for tokens (public).
+     * 使用邮箱验证码换取访问令牌与刷新令牌。
      * <p>
      * Route: {@code POST /api/auth/tokens}
-     * <p>
      * Chain: {@code api_auth_tokens}
+     *
+     * @param request 令牌签发请求体
+     * @return 标准响应对象（包含 access_token 与 refresh_token）
      */
     @PostMapping("/api/auth/tokens")
     public Object tokens(@Valid @RequestBody TokenRequest request) {
@@ -81,11 +87,13 @@ public class ApiAuthController {
     }
 
     /**
-     * Refresh tokens (public).
+     * 刷新访问令牌与刷新令牌。
      * <p>
      * Route: {@code POST /api/auth/refresh}
-     * <p>
      * Chain: {@code api_auth_refresh}
+     *
+     * @param request 令牌刷新请求体
+     * @return 标准响应对象（包含新的 access_token 与 refresh_token）
      */
     @PostMapping("/api/auth/refresh")
     public Object refresh(@Valid @RequestBody RefreshRequest request) {
@@ -96,11 +104,13 @@ public class ApiAuthController {
     }
 
     /**
-     * Revoke refresh token (public).
+     * 吊销刷新令牌。
      * <p>
      * Route: {@code POST /api/auth/revoke}
-     * <p>
      * Chain: {@code api_auth_revoke}
+     *
+     * @param request 令牌吊销请求体
+     * @return 空内容响应（HTTP 204）
      */
     @PostMapping("/api/auth/revoke")
     public ResponseEntity<Void> revoke(@Valid @RequestBody RevokeRequest request) {

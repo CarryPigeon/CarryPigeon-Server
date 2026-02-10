@@ -11,13 +11,28 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+/**
+ * 启动健康检查配置测试。
+ */
 class StartupHealthCheckConfigTests {
 
+    /**
+     * 验证 MySQL 与 Redis 正常时检查通过。
+     *
+     * @throws Exception 测试执行异常。
+     */
     @Test
     void startupHealthChecker_mysqlAndRedisOk_shouldPass() throws Exception {
         DataSource dataSource = mock(DataSource.class);
@@ -43,6 +58,11 @@ class StartupHealthCheckConfigTests {
         verify(ps, times(1)).close();
     }
 
+    /**
+     * 验证 MySQL 不可用时启动检查抛错。
+     *
+     * @throws Exception 测试执行异常。
+     */
     @Test
     void startupHealthChecker_mysqlFail_shouldThrowIllegalStateException() throws Exception {
         DataSource dataSource = mock(DataSource.class);
@@ -57,6 +77,11 @@ class StartupHealthCheckConfigTests {
         verify(redisTemplate, never()).opsForValue();
     }
 
+    /**
+     * 验证 Redis 不可用时启动检查抛错。
+     *
+     * @throws Exception 测试执行异常。
+     */
     @Test
     void startupHealthChecker_redisFail_shouldThrowIllegalStateException() throws Exception {
         DataSource dataSource = mock(DataSource.class);
@@ -77,4 +102,3 @@ class StartupHealthCheckConfigTests {
         assertThrows(IllegalStateException.class, () -> runner.run(mock(ApplicationArguments.class)));
     }
 }
-

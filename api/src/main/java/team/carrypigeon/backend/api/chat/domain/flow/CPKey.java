@@ -3,17 +3,17 @@ package team.carrypigeon.backend.api.chat.domain.flow;
 import java.util.Objects;
 
 /**
- * 强类型上下文 Key。
- * <p>
- * LiteFlow {@link CPFlowContext} 本质仍是 {@code Map<String, Object>}，
- * 该 Key 用于把“名称 + 类型”绑定在一起，提升可读性并减少类型误用。
+ * 强类型上下文键。
  *
- * @param name Key 名称（必须与链路约定一致）
- * @param type 值类型（运行时校验使用）
- * @param <T>  值类型
+ * @param name 键名。
+ * @param type 值类型。
+ * @param <T> 值类型参数。
  */
 public record CPKey<T>(String name, Class<T> type) {
 
+    /**
+     * 校验键名与类型合法性。
+     */
     public CPKey {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(type, "type");
@@ -22,8 +22,15 @@ public record CPKey<T>(String name, Class<T> type) {
         }
     }
 
+    /**
+     * 创建强类型上下文键。
+     *
+     * @param name 键名。
+     * @param type 值类型。
+     * @param <T> 值类型参数。
+     * @return 强类型上下文键。
+     */
     public static <T> CPKey<T> of(String name, Class<T> type) {
         return new CPKey<>(name, type);
     }
 }
-

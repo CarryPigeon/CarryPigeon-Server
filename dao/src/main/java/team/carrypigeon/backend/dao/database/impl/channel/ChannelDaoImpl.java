@@ -31,6 +31,12 @@ public class ChannelDaoImpl implements ChannelDao {
         this.channelMapper = channelMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 频道 ID
+     * @return 匹配的频道对象；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelById", key = "#id", unless = "#result == null")
     public CPChannel getById(long id) {
@@ -44,6 +50,11 @@ public class ChannelDaoImpl implements ChannelDao {
         return result;
     }
 
+    /**
+     * 查询全部固定频道（owner=-1）。
+     *
+     * @return 固定频道数组，按数据库返回顺序组织
+     */
     @Override
     @Cacheable(cacheNames = "channelFixed", key = "'all'")
     public CPChannel[] getAllFixed() {
@@ -58,6 +69,12 @@ public class ChannelDaoImpl implements ChannelDao {
         return result;
     }
 
+    /**
+     * 保存频道数据。
+     *
+     * @param channel 待保存的频道实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean save(CPChannel channel) {
@@ -74,6 +91,12 @@ public class ChannelDaoImpl implements ChannelDao {
         return success;
     }
 
+    /**
+     * 删除频道数据。
+     *
+     * @param cpChannel 待删除的频道实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelById", "channelFixed"}, allEntries = true)
     public boolean delete(CPChannel cpChannel) {

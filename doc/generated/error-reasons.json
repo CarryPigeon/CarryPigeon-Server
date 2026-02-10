@@ -1,0 +1,158 @@
+{
+  "count": 28,
+  "items": [
+    {
+      "code": "unauthorized",
+      "enum": "UNAUTHORIZED",
+      "status": 401
+    },
+    {
+      "code": "token_expired",
+      "enum": "TOKEN_EXPIRED",
+      "status": 401
+    },
+    {
+      "code": "api_version_unsupported",
+      "enum": "API_VERSION_UNSUPPORTED",
+      "status": 406
+    },
+    {
+      "code": "forbidden",
+      "enum": "FORBIDDEN",
+      "status": 403
+    },
+    {
+      "code": "not_channel_member",
+      "enum": "NOT_CHANNEL_MEMBER",
+      "status": 403
+    },
+    {
+      "code": "not_channel_admin",
+      "enum": "NOT_CHANNEL_ADMIN",
+      "status": 403
+    },
+    {
+      "code": "not_channel_owner",
+      "enum": "NOT_CHANNEL_OWNER",
+      "status": 403
+    },
+    {
+      "code": "user_muted",
+      "enum": "USER_MUTED",
+      "status": 403
+    },
+    {
+      "code": "cannot_ban_admin",
+      "enum": "CANNOT_BAN_ADMIN",
+      "status": 403
+    },
+    {
+      "code": "cannot_change_owner_authority",
+      "enum": "CANNOT_CHANGE_OWNER_AUTHORITY",
+      "status": 403
+    },
+    {
+      "code": "not_found",
+      "enum": "NOT_FOUND",
+      "status": 404
+    },
+    {
+      "code": "conflict",
+      "enum": "CONFLICT",
+      "status": 409
+    },
+    {
+      "code": "already_in_channel",
+      "enum": "ALREADY_IN_CHANNEL",
+      "status": 409
+    },
+    {
+      "code": "application_already_processed",
+      "enum": "APPLICATION_ALREADY_PROCESSED",
+      "status": 409
+    },
+    {
+      "code": "idempotency_processing",
+      "enum": "IDEMPOTENCY_PROCESSING",
+      "status": 409
+    },
+    {
+      "code": "required_plugin_missing",
+      "enum": "REQUIRED_PLUGIN_MISSING",
+      "status": 412
+    },
+    {
+      "code": "validation_failed",
+      "enum": "VALIDATION_FAILED",
+      "status": 422
+    },
+    {
+      "code": "schema_invalid",
+      "enum": "SCHEMA_INVALID",
+      "status": 422
+    },
+    {
+      "code": "cursor_invalid",
+      "enum": "CURSOR_INVALID",
+      "status": 422
+    },
+    {
+      "code": "event_too_old",
+      "enum": "EVENT_TOO_OLD",
+      "status": 422
+    },
+    {
+      "code": "channel_fixed",
+      "enum": "CHANNEL_FIXED",
+      "status": 422
+    },
+    {
+      "code": "email_invalid",
+      "enum": "EMAIL_INVALID",
+      "status": 422
+    },
+    {
+      "code": "email_code_invalid",
+      "enum": "EMAIL_CODE_INVALID",
+      "status": 422
+    },
+    {
+      "code": "rate_limited",
+      "enum": "RATE_LIMITED",
+      "status": 429
+    },
+    {
+      "code": "internal_error",
+      "enum": "INTERNAL_ERROR",
+      "status": 500
+    },
+    {
+      "code": "email_service_disabled",
+      "enum": "EMAIL_SERVICE_DISABLED",
+      "status": 500
+    },
+    {
+      "code": "email_send_failed",
+      "enum": "EMAIL_SEND_FAILED",
+      "status": 500
+    },
+    {
+      "code": "email_exists",
+      "enum": "EMAIL_EXISTS",
+      "status": 409
+    }
+  ],
+  "kind": "error_reasons",
+  "source": "api CPProblemReason enum",
+  "status_distribution": {
+    "401": 2,
+    "403": 7,
+    "404": 1,
+    "406": 1,
+    "409": 5,
+    "412": 1,
+    "422": 7,
+    "429": 1,
+    "500": 3
+  }
+}

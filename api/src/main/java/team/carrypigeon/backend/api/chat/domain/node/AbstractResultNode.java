@@ -49,12 +49,15 @@ public abstract class AbstractResultNode<T> extends CPNodeComponent {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractResultNode.class);
 
+    /**
+     * 执行结果节点主流程：组装协议响应并写入上下文。
+     *
+     * @param context 链路上下文
+     * @throws Exception 组装过程中的异常
+     */
     @Override
     protected final void process(CPFlowContext context) throws Exception {
-        // 1. 构建响应 DTO
         T response = build(context);
-
-        // 2. 写入上下文
         if (response != null) {
             context.set(CPFlowKeys.RESPONSE, response);
             log.debug("[{}] 响应构建完成: type={}", getNodeId(), response.getClass().getSimpleName());

@@ -6,6 +6,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -25,6 +26,13 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取成员实体并执行更新
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelMember channelMemberInfo = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
@@ -37,7 +45,7 @@ public class CPChannelMemberUpdaterNode extends CPNodeComponent {
             channelMemberInfo.setAuthority(CPChannelMemberAuthorityEnum.valueOf(channelMemberInfoAuthority));
         }
         if (!channelMemberDao.save(channelMemberInfo)){
-            fail(CPProblem.of(500, "internal_error", "update channel member error"));
+            fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "update channel member error"));
         }
     }
 }

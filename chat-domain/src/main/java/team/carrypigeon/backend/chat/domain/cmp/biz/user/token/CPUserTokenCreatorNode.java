@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import team.carrypigeon.backend.api.bo.domain.user.CPUser;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.user.token.UserTokenDao;
@@ -25,11 +26,15 @@ public class CPUserTokenCreatorNode extends CPNodeComponent {
 
     private final UserTokenDao userTokenDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取用户信息并创建新的访问令牌
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
-        // 查询数据
         CPUser userInfo = requireContext(context, CPNodeUserKeys.USER_INFO);
-        // 创建token
         CPUserToken cpUserToken = new CPUserToken();
         cpUserToken
                 .setId(IdUtil.generateId())
@@ -37,7 +42,7 @@ public class CPUserTokenCreatorNode extends CPNodeComponent {
                 .setToken(IdUtil.generateToken())
                 .setExpiredTime(TimeUtil.currentLocalDateTime().plusDays(30));
         if (!userTokenDao.save(cpUserToken)){
-            fail(CPProblem.of(500, "internal_error", "save user token error"));
+            fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "save user token error"));
         }
         context.set(CPNodeUserTokenKeys.USER_TOKEN_INFO, cpUserToken);
     }

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.ban.CPChannelBan;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.ban.ChannelBanDAO;
@@ -30,6 +31,13 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
     private final ChannelBanDAO channelBanDAO;
     private final ApiWsEventPublisher wsEventPublisher;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取封禁实体并执行保存
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);
@@ -65,7 +73,7 @@ public class CPChannelBanSaverNode extends CPNodeComponent {
         }
         if (!channelBanDAO.save(ban)) {
             log.error("CPChannelBanSaver save failed, cid={}, uid={}", cid, targetUid);
-            fail(CPProblem.of(500, "internal_error", "error saving channel ban"));
+            fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "error saving channel ban"));
         }
         context.set(CPNodeChannelBanKeys.CHANNEL_BAN_INFO, ban);
         wsEventPublisher.publishChannelChangedToChannelMembers(cid, "bans");

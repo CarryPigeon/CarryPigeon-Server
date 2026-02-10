@@ -37,7 +37,7 @@ class CPChannelMemberDeleterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("forbidden", ex.getProblem().reason());
+        assertEquals("forbidden", ex.getProblem().reason().code());
         verify(dao, never()).delete(any());
     }
 
@@ -59,7 +59,7 @@ class CPChannelMemberDeleterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(500, ex.getProblem().status());
-        assertEquals("internal_error", ex.getProblem().reason());
+        assertEquals("internal_error", ex.getProblem().reason().code());
         verify(dao).delete(member);
     }
 

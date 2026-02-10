@@ -70,14 +70,34 @@ public class ApiPluginCatalogIndex {
             this.contractFiles = contractFiles == null ? Map.of() : contractFiles;
         }
 
+        /**
+         * 创建空快照对象。
+         *
+         * @return 不包含任何插件与领域数据的空快照
+         */
         public static Snapshot empty() {
             return new Snapshot(List.of(), List.of(), Map.of(), Map.of());
         }
 
+        /**
+         * 查询插件包索引文件。
+         *
+         * @param pluginId 插件标识
+         * @param version 插件版本号
+         * @return 对应插件版本的包文件信息；不存在时返回 { null}
+         */
         public PluginPackageFile pluginFile(String pluginId, String version) {
             return pluginFiles.get(new PluginVersionKey(pluginId, version));
         }
 
+        /**
+         * 查询领域契约索引文件。
+         *
+         * @param pluginId 插件标识
+         * @param domain 领域标识
+         * @param domainVersion 领域版本号
+         * @return 对应领域契约文件；不存在时返回 { null}
+         */
         public ContractFile contractFile(String pluginId, String domain, String domainVersion) {
             return contractFiles.get(new ContractKey(pluginId, domain, domainVersion));
         }

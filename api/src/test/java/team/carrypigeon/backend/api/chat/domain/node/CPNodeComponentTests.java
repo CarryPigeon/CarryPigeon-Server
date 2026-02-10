@@ -34,8 +34,6 @@ class CPNodeComponentTests {
     @Test
     void buildSelectKey_map_shouldSortKeysAlphabetically() {
         TestableNode node = new TestableNode();
-
-        // 字段应按字母序排列
         assertEquals("member-cid_uid:cid=1;uid=2",
                 node.callBuildSelectKey("member", Map.of("uid", 2, "cid", 1)));
         assertEquals("t-a_b_c:a=1;b=2;c=3",
@@ -55,14 +53,10 @@ class CPNodeComponentTests {
         TestableNode node = new TestableNode();
         CPFlowContext context = new CPFlowContext();
         AtomicInteger callCount = new AtomicInteger();
-
-        // 第一次调用
         String v1 = node.callSelect(context, "key1", () -> {
             callCount.incrementAndGet();
             return "value";
         });
-
-        // 第二次调用（应该命中缓存）
         String v2 = node.callSelect(context, "key1", () -> {
             callCount.incrementAndGet();
             return "different";
@@ -78,8 +72,6 @@ class CPNodeComponentTests {
         TestableNode node = new TestableNode();
         CPFlowContext context = new CPFlowContext();
         AtomicInteger callCount = new AtomicInteger();
-
-        // null 结果不应缓存
         Object n1 = node.callSelect(context, "nullKey", () -> {
             callCount.incrementAndGet();
             return null;
@@ -114,7 +106,7 @@ class CPNodeComponentTests {
                 () -> node.callRequireContext(context, "missing", String.class));
 
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -135,7 +127,7 @@ class CPNodeComponentTests {
                 () -> node.callFail(404, "not_found", "resource not found"));
 
         assertEquals(404, ex.getProblem().status());
-        assertEquals("not_found", ex.getProblem().reason());
+        assertEquals("not_found", ex.getProblem().reason().code());
         assertEquals("resource not found", ex.getProblem().message());
     }
 
@@ -147,7 +139,7 @@ class CPNodeComponentTests {
                 node::callValidationFailed);
 
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -158,7 +150,7 @@ class CPNodeComponentTests {
                 () -> node.callNotFound("user not found"));
 
         assertEquals(404, ex.getProblem().status());
-        assertEquals("not_found", ex.getProblem().reason());
+        assertEquals("not_found", ex.getProblem().reason().code());
     }
 
     @Test
@@ -169,7 +161,7 @@ class CPNodeComponentTests {
                 () -> node.callForbidden("not_channel_member", "you are not a member"));
 
         assertEquals(403, ex.getProblem().status());
-        assertEquals("not_channel_member", ex.getProblem().reason());
+        assertEquals("not_channel_member", ex.getProblem().reason().code());
     }
 
     /**
@@ -177,16 +169,33 @@ class CPNodeComponentTests {
      */
     private static final class TestableNode extends CPNodeComponent {
 
+        /**
+         * 测试桩：仅用于覆盖父类抽象方法，不参与本用例逻辑。
+         *
+         * @param context 测试上下文（当前实现不使用）
+         */
         @Override
         protected void process(CPFlowContext context) {
             throw new UnsupportedOperationException("测试类不实现 process");
         }
 
+        /**
+         * 测试桩：仅用于覆盖父类抽象方法，不参与本用例逻辑。
+         *
+         * @return 固定节点标识 { TestableNode}
+         */
         @Override
         public String getNodeId() {
             return "TestableNode";
         }
 
+        /**
+         * 测试桩：仅用于覆盖父类抽象方法，不参与本用例逻辑。
+         *
+         * @param key bind 参数键名
+         * @param clazz bind 参数目标类型
+         * @return 当前测试实现固定返回 { null}
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             return null; // 测试用，不实现 bind 功能
@@ -225,7 +234,7 @@ class CPNodeComponentTests {
         }
 
         void callForbidden(String reason, String message) {
-            forbidden(reason, message);
+            forbidden(team.carrypigeon.backend.api.chat.domain.error.CPProblemReason.fromCode(reason), message);
         }
     }
 }

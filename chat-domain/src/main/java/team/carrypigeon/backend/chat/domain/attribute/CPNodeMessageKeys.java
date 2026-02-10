@@ -38,6 +38,9 @@ public final class CPNodeMessageKeys {
     /** {@code Long}: 未读数量。 */
     public static final CPKey<Long> MESSAGE_UNREAD_COUNT = CPKey.of("MessageUnread_Count", Long.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeMessageKeys() {
     }
 }

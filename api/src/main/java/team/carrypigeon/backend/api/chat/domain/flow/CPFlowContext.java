@@ -59,14 +59,25 @@ public class CPFlowContext extends DefaultContext {
      * 例如：{@code user-id:id=123}, {@code channel_member-cid_uid:cid=1;uid=2}
      */
     private final Map<String, Object> selectCache = new ConcurrentHashMap<>();
-
-    // ==================== 强类型 Key 访问 ====================
-
+    /**
+     * 使用强类型 key 写入上下文。
+     *
+     * @param key   上下文 key
+     * @param value 待写入值
+     * @param <T>   值类型
+     */
     public <T> void set(CPKey<T> key, T value) {
         Objects.requireNonNull(key, "key");
         setData(key.name(), value);
     }
 
+    /**
+     * 使用强类型 key 读取上下文。
+     *
+     * @param key 上下文 key
+     * @param <T> 值类型
+     * @return 上下文值，不存在时返回 null
+     */
     @SuppressWarnings("unchecked")
     public <T> T get(CPKey<T> key) {
         Objects.requireNonNull(key, "key");
@@ -82,11 +93,21 @@ public class CPFlowContext extends DefaultContext {
         return (T) raw;
     }
 
+    /**
+     * 按强类型 key 删除上下文值。
+     *
+     * @param key 上下文 key
+     */
     public void remove(CPKey<?> key) {
         Objects.requireNonNull(key, "key");
         dataMap.remove(key.name());
     }
 
+    /**
+     * 按原始字符串 key 删除上下文值。
+     *
+     * @param key 字符串 key
+     */
     public void remove(String key) {
         if (key == null || key.isBlank()) {
             return;

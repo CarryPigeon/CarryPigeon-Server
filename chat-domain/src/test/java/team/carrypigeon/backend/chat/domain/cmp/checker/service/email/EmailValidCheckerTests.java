@@ -19,7 +19,7 @@ class EmailValidCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("email_invalid", ex.getProblem().reason());
+        assertEquals("email_invalid", ex.getProblem().reason().code());
     }
 
     @Test
@@ -50,10 +50,22 @@ class EmailValidCheckerTests {
     private static final class TestableEmailValidChecker extends EmailValidChecker {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param type 测试输入参数
+         */
         private TestableEmailValidChecker(String type) {
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

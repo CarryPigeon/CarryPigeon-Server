@@ -5,13 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Error response wrapper for HTTP `/api` endpoints.
+ * API 错误响应包装体。
  * <p>
- * Contract: controller/advice always returns {@code {"error": {...}}} on failure.
+ * 保证所有失败响应统一为 `{"error": {...}}` 结构。
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApiErrorResponse {
+
+    /**
+     * 错误主体。
+     */
     private ApiErrorBody error;
 }

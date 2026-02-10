@@ -11,9 +11,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.CPChannel;
 import java.time.LocalDateTime;
 
 /**
- * {@code channel} 表的持久化对象（PO）。
- * <p>
- * 用于 BO（{@link CPChannel}）与数据库字段之间的转换。
+ * `channel` 表持久化对象。
  */
 @Data
 @NoArgsConstructor
@@ -21,22 +19,42 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("channel")
 public class ChannelPO {
-    // 通道id
+
+    /**
+     * 频道 ID。
+     */
     @TableId
     private Long id;
-    //  通道名
+
+    /**
+     * 频道名称。
+     */
     private String name;
-    // 通道所有者
+
+    /**
+     * 频道所有者用户 ID。
+     */
     private Long owner;
-    // 通道简介
+
+    /**
+     * 频道简介。
+     */
     private String brief;
-    // 通道头像资源id
+
+    /**
+     * 频道头像资源 ID。
+     */
     private Long avatar;
-    // 通道创建时间
+
+    /**
+     * 创建时间。
+     */
     private LocalDateTime createTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 频道领域对象。
      */
     public CPChannel toBo() {
         return new CPChannel()
@@ -49,7 +67,10 @@ public class ChannelPO {
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param cpChannel 频道领域对象。
+     * @return 频道持久化对象。
      */
     public static ChannelPO fromBo(CPChannel cpChannel) {
         return new ChannelPO()

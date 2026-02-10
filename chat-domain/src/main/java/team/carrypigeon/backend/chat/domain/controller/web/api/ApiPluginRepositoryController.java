@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.chat.domain.service.catalog.ApiPluginCatalogIndex;
 
 import java.io.InputStream;
@@ -19,34 +20,42 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Public endpoints for plugin package repository (download + domain contract schema).
+ * 插件仓库 API 控制器。
  * <p>
- * These endpoints are used by clients during required gate onboarding.
+ * 提供插件包下载与 domain 合约查询路由。
  */
 @RestController
 public class ApiPluginRepositoryController {
 
     private final ApiPluginCatalogIndex catalogIndex;
 
+    /**
+     * 构造插件仓库控制器。
+     *
+     * @param catalogIndex 插件目录索引服务。
+     */
     public ApiPluginRepositoryController(ApiPluginCatalogIndex catalogIndex) {
         this.catalogIndex = catalogIndex;
     }
 
     /**
-     * Download a plugin package zip.
-     * <p>
-     * Route: {@code GET /api/plugins/download/{plugin_id}/{version}}
+     * 下载指定插件版本的压缩包。
+     *
+     * @param pluginId 插件 ID。
+     * @param version 插件版本。
+     * @return 插件包下载响应。
+     * @throws Exception 当读取插件包文件失败时抛出。
      */
     @GetMapping("/api/plugins/download/{plugin_id}/{version}")
     public ResponseEntity<InputStreamResource> download(@PathVariable("plugin_id") String pluginId,
                                                         @PathVariable("version") String version) throws Exception {
         ApiPluginCatalogIndex.PluginPackageFile f = catalogIndex.snapshot().pluginFile(pluginId, version);
         if (f == null || f.path() == null) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "plugin not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "plugin not found"));
         }
         Path path = f.path();
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "plugin not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "plugin not found"));
         }
         InputStream in = Files.newInputStream(path);
         InputStreamResource resource = new InputStreamResource(in);
@@ -62,9 +71,12 @@ public class ApiPluginRepositoryController {
     }
 
     /**
-     * Get JSON schema for a domain contract.
-     * <p>
-     * Route: {@code GET /api/contracts/{plugin_id}/{domain}/{domain_version}}
+     * 查询插件提供的 domain 合约 Schema。
+     *
+     * @param pluginId 插件 ID。
+     * @param domain domain 名称。
+     * @param domainVersion domain 版本。
+     * @return JSON Schema 内容。
      */
     @GetMapping("/api/contracts/{plugin_id}/{domain}/{domain_version}")
     public JsonNode contract(@PathVariable("plugin_id") String pluginId,
@@ -72,9 +84,8 @@ public class ApiPluginRepositoryController {
                              @PathVariable("domain_version") String domainVersion) {
         ApiPluginCatalogIndex.ContractFile f = catalogIndex.snapshot().contractFile(pluginId, domain, domainVersion);
         if (f == null || f.schema() == null) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "contract not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "contract not found"));
         }
-        // Schema is public and small; return directly.
         return f.schema();
     }
 }

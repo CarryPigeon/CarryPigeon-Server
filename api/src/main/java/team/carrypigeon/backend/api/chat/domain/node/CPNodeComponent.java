@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
@@ -78,7 +79,6 @@ public abstract class CPNodeComponent extends NodeComponent {
      * @throws Exception 处理过程中的异常
      */
     protected void process(CPFlowContext context) throws Exception {
-        // 默认空实现：允许子类仅实现 {@link #process(CPSession, CPFlowContext)}
     }
 
     /**
@@ -94,9 +94,6 @@ public abstract class CPNodeComponent extends NodeComponent {
     public void process(CPSession session, CPFlowContext context) throws Exception {
         process(context);
     }
-
-    // ==================== 上下文操作 ====================
-
     /**
      * 从上下文读取必填数据（强类型 Key）。
      *
@@ -108,22 +105,22 @@ public abstract class CPNodeComponent extends NodeComponent {
      */
     protected <T> T requireContext(CPFlowContext context, CPKey<T> key) {
         if (context == null) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "context is null"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context is null"));
         }
         if (key == null) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "key is null"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "key is null"));
         }
         T value;
         try {
             value = context.get(key);
         } catch (IllegalStateException ex) {
             log.error("[{}] 上下文参数类型不匹配: key={}", getNodeId(), key.name(), ex);
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "context type mismatch: " + key.name()));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context type mismatch: " + key.name()));
         }
         if (value == null) {
             log.error("[{}] 必填上下文参数缺失: key={}, type={}",
                     getNodeId(), key.name(), key.type().getSimpleName());
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "missing required parameter: " + key.name()));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "missing required parameter: " + key.name()));
         }
         return value;
     }
@@ -151,17 +148,16 @@ public abstract class CPNodeComponent extends NodeComponent {
             log.error("[{}] 必填上下文参数缺失: key={}, type={}",
                     getNodeId(), key, type != null ? type.getSimpleName() : "null");
             throw new CPProblemException(
-                    CPProblem.of(422, "validation_failed", "missing required parameter: " + key)
+                    CPProblem.of(CPProblemReason.VALIDATION_FAILED, "missing required parameter: " + key)
             );
         }
         if (type != null && !type.isInstance(raw)) {
             log.error("[{}] 上下文参数类型不匹配: key={}, expected={}, actual={}",
                     getNodeId(), key, type.getSimpleName(), raw.getClass().getSimpleName());
             throw new CPProblemException(
-                    CPProblem.of(500, "internal_error", "context type mismatch: " + key)
+                    CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context type mismatch: " + key)
             );
         }
-        //noinspection unchecked
         return type != null ? type.cast(raw) : (T) raw;
     }
 
@@ -196,12 +192,9 @@ public abstract class CPNodeComponent extends NodeComponent {
             return context.get(key);
         } catch (IllegalStateException ex) {
             log.error("[{}] 上下文参数类型不匹配: key={}", getNodeId(), key.name(), ex);
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "context type mismatch: " + key.name()));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context type mismatch: " + key.name()));
         }
     }
-
-    // ==================== Bind 参数操作 ====================
-
     /**
      * 从 LiteFlow bind 参数读取必填配置。
      * <p>
@@ -224,7 +217,7 @@ public abstract class CPNodeComponent extends NodeComponent {
             log.error("[{}] 必填 bind 参数缺失: key={}, type={}",
                     getNodeId(), key, type != null ? type.getSimpleName() : "null");
             throw new CPProblemException(
-                    CPProblem.of(500, "internal_error", "missing bind parameter: " + key)
+                    CPProblem.of(CPProblemReason.INTERNAL_ERROR, "missing bind parameter: " + key)
             );
         }
         return value;
@@ -243,9 +236,6 @@ public abstract class CPNodeComponent extends NodeComponent {
         T value = getBindData(key, type);
         return value != null ? value : defaultValue;
     }
-
-    // ==================== 错误处理 ====================
-
     /**
      * 抛出标准化业务错误。
      * <p>
@@ -254,7 +244,7 @@ public abstract class CPNodeComponent extends NodeComponent {
      * <h3>使用示例</h3>
      * <pre>{@code
      * if (user == null) {
-     *     fail(CPProblem.of(404, "not_found", "user not found"));
+     *     fail(CPProblem.of(CPProblemReason.NOT_FOUND, "user not found"));
      * }
      * }</pre>
      *
@@ -263,7 +253,7 @@ public abstract class CPNodeComponent extends NodeComponent {
      */
     protected void fail(CPProblem problem) {
         CPProblem safe = problem != null ? problem
-                : CPProblem.of(500, "internal_error", "internal error");
+                : CPProblem.of(CPProblemReason.INTERNAL_ERROR, "internal error");
         log.debug("[{}] 业务失败: status={}, reason={}, message={}",
                 getNodeId(), safe.status(), safe.reason(), safe.message());
         throw new CPProblemException(safe);
@@ -272,12 +262,12 @@ public abstract class CPNodeComponent extends NodeComponent {
     /**
      * 参数校验失败的快捷方法。
      * <p>
-     * 等同于 {@code fail(CPProblem.of(422, "validation_failed", "validation failed"))}
+     * 等同于 {@code fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"))}
      *
      * @throws CPProblemException 总是抛出
      */
     protected void validationFailed() {
-        fail(CPProblem.of(422, "validation_failed", "validation failed"));
+        fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
     }
 
     /**
@@ -287,7 +277,7 @@ public abstract class CPNodeComponent extends NodeComponent {
      * @throws CPProblemException 总是抛出
      */
     protected void validationFailed(String message) {
-        fail(CPProblem.of(422, "validation_failed", message));
+        fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, message));
     }
 
     /**
@@ -297,7 +287,7 @@ public abstract class CPNodeComponent extends NodeComponent {
      * @throws CPProblemException 总是抛出
      */
     protected void notFound(String message) {
-        fail(CPProblem.of(404, "not_found", message));
+        fail(CPProblem.of(CPProblemReason.NOT_FOUND, message));
     }
 
     /**
@@ -307,12 +297,9 @@ public abstract class CPNodeComponent extends NodeComponent {
      * @param message 错误描述
      * @throws CPProblemException 总是抛出
      */
-    protected void forbidden(String reason, String message) {
-        fail(CPProblem.of(403, reason, message));
+    protected void forbidden(CPProblemReason reason, String message) {
+        fail(CPProblem.of(reason, message));
     }
-
-    // ==================== 查询缓存 ====================
-
     /**
      * 执行带缓存的查询。
      * <p>

@@ -25,6 +25,13 @@ import java.util.Set;
 @LiteflowComponent("CPChannelMemberCollector")
 public class CPChannelMemberCollectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取频道成员并合并到通知接收集合
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);

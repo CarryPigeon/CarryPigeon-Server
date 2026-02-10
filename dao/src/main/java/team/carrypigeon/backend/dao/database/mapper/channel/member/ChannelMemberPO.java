@@ -12,9 +12,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuth
 import java.time.LocalDateTime;
 
 /**
- * {@code channel_member} 表的持久化对象（PO）。
- * <p>
- * authority 字段为枚举值（见 {@link CPChannelMemberAuthorityEnum}）。
+ * `channel_member` 表持久化对象。
  */
 @Data
 @NoArgsConstructor
@@ -22,22 +20,43 @@ import java.time.LocalDateTime;
 @Accessors(chain = true)
 @TableName("channel_member")
 public class ChannelMemberPO {
-    // 成员表id
+
+    /**
+     * 关系记录 ID。
+     */
     @TableId
     private Long id;
-    // 用户id
+
+    /**
+     * 用户 ID。
+     */
     private Long uid;
-    // 通道id
+
+    /**
+     * 频道 ID。
+     */
     private Long cid;
-    // 群昵称
+
+    /**
+     * 群昵称。
+     */
     private String name;
-    // 权限，0为普通成员，1为管理员
+
+    /**
+     * 权限值。
+     */
     private int authority;
-    // 加入时间
+
+    /**
+     * 加入时间。
+     */
     private LocalDateTime joinTime;
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param member 频道成员领域对象。
+     * @return 频道成员持久化对象。
      */
     public static ChannelMemberPO from(CPChannelMember member) {
         return new ChannelMemberPO()
@@ -50,7 +69,9 @@ public class ChannelMemberPO {
     }
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 频道成员领域对象。
      */
     public CPChannelMember toBo() {
         return new CPChannelMember()

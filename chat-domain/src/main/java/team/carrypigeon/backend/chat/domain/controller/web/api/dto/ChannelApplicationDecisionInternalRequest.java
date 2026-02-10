@@ -1,8 +1,13 @@
 package team.carrypigeon.backend.chat.domain.controller.web.api.dto;
 
 /**
- * Internal request object used by LiteFlow for {@code POST /api/channels/{cid}/applications/{application_id}/decisions}.
+ * 入群申请审批内部请求。
+ *
+ * @param cid 频道 ID。
+ * @param applicationId 申请 ID。
+ * @param body 审批请求体。
  */
-public record ChannelApplicationDecisionInternalRequest(String cid, String applicationId, ChannelApplicationDecisionRequest body) {
+public record ChannelApplicationDecisionInternalRequest(String cid,
+                                                        String applicationId,
+                                                        ChannelApplicationDecisionRequest body) {
 }
-

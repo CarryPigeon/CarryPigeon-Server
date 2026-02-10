@@ -6,8 +6,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * General server information that is configured via application.yaml.
- * All fields here are mapped from the {@code cp.server.*} configuration.
+ * 服务端基础信息配置。
+ * <p>
+ * 从 `cp.server.*` 配置前缀映射，用于 API Server 信息输出与客户端展示。
  */
 @Data
 @Configuration
@@ -15,34 +16,31 @@ import org.springframework.context.annotation.Configuration;
 public class ServerInfoConfig {
 
     /**
-     * Stable server id, mapped from {@code cp.server.server_id}.
-     * <p>
-     * This value must remain stable across restarts, and is used by clients as the isolation key.
+     * 服务端稳定标识（`cp.server.server_id`）。
      */
     @JsonProperty("server_id")
     private String serverId;
 
     /**
-     * Server display name, mapped from {@code cp.server.server_name}.
+     * 服务端展示名称（`cp.server.server_name`）。
      */
     @JsonProperty("server_name")
     private String serverName;
 
     /**
-     * Avatar image id or key, mapped from {@code cp.server.avatar}.
+     * 服务端头像标识（`cp.server.avatar`）。
      */
     @JsonProperty("avatar")
     private String avatar;
 
     /**
-     * Short introduction of this server, mapped from {@code cp.server.brief}.
+     * 服务端简介（`cp.server.brief`）。
      */
     @JsonProperty("brief")
     private String brief;
 
     /**
-     * Created time of this server in milliseconds since epoch,
-     * mapped from {@code cp.server.time}.
+     * 服务端创建时间（毫秒时间戳，`cp.server.time`）。
      */
     @JsonProperty("time")
     private Long time;

@@ -7,6 +7,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
@@ -45,6 +46,12 @@ public class CPMessageParseNode extends CPNodeComponent {
     private final CPMessageParserService cpMessageParserService;
     private final ApiDomainContractService domainContractService;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取消息领域并完成结构化解析
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         String type = getBindData(BIND_TYPE_KEY, String.class);
@@ -67,13 +74,12 @@ public class CPMessageParseNode extends CPNodeComponent {
                     return;
                 }
                 log.warn("CPMessageParse hard fail: schema invalid, domain={}", domain);
-                throw new CPProblemException(CPProblem.of(422, "schema_invalid", "schema invalid",
+                throw new CPProblemException(CPProblem.of(CPProblemReason.SCHEMA_INVALID, "schema invalid",
                         Map.of("field_errors", List.of(
                                 Map.of("field", "data", "reason", "invalid", "message", "schema invalid")
                         ))));
             }
         } else if (domainContractService.supports(domain, domainVersion)) {
-            // Plugin domain: validate with JSON schema then wrap raw data
             try {
                 domainContractService.validateOrThrow(domain, domainVersion, data);
             } catch (CPProblemException e) {
@@ -92,7 +98,7 @@ public class CPMessageParseNode extends CPNodeComponent {
                 return;
             }
             log.warn("CPMessageParse hard fail: unsupported domain, domain={}, version={}", domain, domainVersion);
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "domain", "reason", "unsupported", "message", "unsupported message domain")
                     ))));

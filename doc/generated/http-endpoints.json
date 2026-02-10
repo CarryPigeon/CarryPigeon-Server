@@ -1,0 +1,340 @@
+{
+  "count": 37,
+  "items": [
+    {
+      "auth": "public",
+      "chain": "api_auth_email_codes",
+      "controller": "ApiAuthController",
+      "handler": "emailCodes",
+      "method": "POST",
+      "path": "/api/auth/email_codes",
+      "request_body_type": "SendEmailCodeRequest"
+    },
+    {
+      "auth": "public",
+      "chain": "api_auth_refresh",
+      "controller": "ApiAuthController",
+      "handler": "refresh",
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "request_body_type": "RefreshRequest"
+    },
+    {
+      "auth": "public",
+      "chain": "api_auth_revoke",
+      "controller": "ApiAuthController",
+      "handler": "revoke",
+      "method": "POST",
+      "path": "/api/auth/revoke",
+      "request_body_type": "RevokeRequest"
+    },
+    {
+      "auth": "public",
+      "chain": "api_auth_tokens",
+      "controller": "ApiAuthController",
+      "handler": "tokens",
+      "method": "POST",
+      "path": "/api/auth/tokens",
+      "request_body_type": "TokenRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channels_list",
+      "controller": "ApiChannelMessageController",
+      "handler": "channels",
+      "method": "GET",
+      "path": "/api/channels",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channels_create",
+      "controller": "ApiChannelController",
+      "handler": "create",
+      "method": "POST",
+      "path": "/api/channels",
+      "request_body_type": "ChannelCreateRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channels_delete",
+      "controller": "ApiChannelController",
+      "handler": "delete",
+      "method": "DELETE",
+      "path": "/api/channels/{cid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channels_get",
+      "controller": "ApiChannelController",
+      "handler": "get",
+      "method": "GET",
+      "path": "/api/channels/{cid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channels_patch",
+      "controller": "ApiChannelController",
+      "handler": "patch",
+      "method": "PATCH",
+      "path": "/api/channels/{cid}",
+      "request_body_type": "ChannelPatchRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_admins_delete",
+      "controller": "ApiChannelMemberController",
+      "handler": "adminDelete",
+      "method": "DELETE",
+      "path": "/api/channels/{cid}/admins/{uid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_admins_put",
+      "controller": "ApiChannelMemberController",
+      "handler": "adminPut",
+      "method": "PUT",
+      "path": "/api/channels/{cid}/admins/{uid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_applications_list",
+      "controller": "ApiChannelModerationController",
+      "handler": "listApplications",
+      "method": "GET",
+      "path": "/api/channels/{cid}/applications",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_applications_create",
+      "controller": "ApiChannelModerationController",
+      "handler": "createApplication",
+      "method": "POST",
+      "path": "/api/channels/{cid}/applications",
+      "request_body_type": "ChannelApplicationCreateRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_application_decision",
+      "controller": "ApiChannelModerationController",
+      "handler": "decide",
+      "method": "POST",
+      "path": "/api/channels/{cid}/applications/{application_id}/decisions",
+      "request_body_type": "ChannelApplicationDecisionRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_bans_list",
+      "controller": "ApiChannelModerationController",
+      "handler": "bans",
+      "method": "GET",
+      "path": "/api/channels/{cid}/bans",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_bans_delete",
+      "controller": "ApiChannelModerationController",
+      "handler": "banDelete",
+      "method": "DELETE",
+      "path": "/api/channels/{cid}/bans/{uid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_bans_put",
+      "controller": "ApiChannelModerationController",
+      "handler": "banPut",
+      "method": "PUT",
+      "path": "/api/channels/{cid}/bans/{uid}",
+      "request_body_type": "ChannelBanUpsertRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_members_list",
+      "controller": "ApiChannelMemberController",
+      "handler": "list",
+      "method": "GET",
+      "path": "/api/channels/{cid}/members",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_channel_members_kick",
+      "controller": "ApiChannelMemberController",
+      "handler": "kick",
+      "method": "DELETE",
+      "path": "/api/channels/{cid}/members/{uid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_messages_list",
+      "controller": "ApiChannelMessageController",
+      "handler": "messages",
+      "method": "GET",
+      "path": "/api/channels/{cid}/messages",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_messages_create",
+      "controller": "ApiChannelMessageController",
+      "handler": "create",
+      "method": "POST",
+      "path": "/api/channels/{cid}/messages",
+      "request_body_type": "CreateMessageBody"
+    },
+    {
+      "auth": "required",
+      "chain": "api_read_state_update",
+      "controller": "ApiChannelMessageController",
+      "handler": "updateReadState",
+      "method": "PUT",
+      "path": "/api/channels/{cid}/read_state",
+      "request_body_type": "ReadStateBody"
+    },
+    {
+      "auth": "public",
+      "chain": null,
+      "controller": "ApiPluginRepositoryController",
+      "handler": "contract",
+      "method": "GET",
+      "path": "/api/contracts/{plugin_id}/{domain}/{domain_version}",
+      "request_body_type": null
+    },
+    {
+      "auth": "public",
+      "chain": "api_domains_catalog",
+      "controller": "ApiServerController",
+      "handler": "domainsCatalog",
+      "method": "GET",
+      "path": "/api/domains/catalog",
+      "request_body_type": null
+    },
+    {
+      "auth": "public",
+      "chain": null,
+      "controller": "ApiFileController",
+      "handler": "download",
+      "method": "GET",
+      "path": "/api/files/download/{share_key}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": null,
+      "controller": "ApiFileController",
+      "handler": "upload",
+      "method": "PUT",
+      "path": "/api/files/upload/{file_id}",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_files_uploads_create",
+      "controller": "ApiFileController",
+      "handler": "applyUpload",
+      "method": "POST",
+      "path": "/api/files/uploads",
+      "request_body_type": "FileUploadApplyRequest"
+    },
+    {
+      "auth": "public",
+      "chain": "api_required_gate_check",
+      "controller": "ApiAuthController",
+      "handler": "requiredGateCheck",
+      "method": "POST",
+      "path": "/api/gates/required/check",
+      "request_body_type": "RequiredGateCheckRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_messages_delete",
+      "controller": "ApiChannelMessageController",
+      "handler": "delete",
+      "method": "DELETE",
+      "path": "/api/messages/{mid}",
+      "request_body_type": null
+    },
+    {
+      "auth": "public",
+      "chain": "api_plugins_catalog",
+      "controller": "ApiServerController",
+      "handler": "pluginsCatalog",
+      "method": "GET",
+      "path": "/api/plugins/catalog",
+      "request_body_type": null
+    },
+    {
+      "auth": "public",
+      "chain": null,
+      "controller": "ApiPluginRepositoryController",
+      "handler": "download",
+      "method": "GET",
+      "path": "/api/plugins/download/{plugin_id}/{version}",
+      "request_body_type": null
+    },
+    {
+      "auth": "public",
+      "chain": "api_server",
+      "controller": "ApiServerController",
+      "handler": "server",
+      "method": "GET",
+      "path": "/api/server",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_unreads_list",
+      "controller": "ApiChannelMessageController",
+      "handler": "unreads",
+      "method": "GET",
+      "path": "/api/unreads",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_users_batch",
+      "controller": "ApiUserController",
+      "handler": "batch",
+      "method": "GET",
+      "path": "/api/users",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_users_me",
+      "controller": "ApiUserController",
+      "handler": "me",
+      "method": "GET",
+      "path": "/api/users/me",
+      "request_body_type": null
+    },
+    {
+      "auth": "required",
+      "chain": "api_users_me_patch",
+      "controller": "ApiUserController",
+      "handler": "patchMe",
+      "method": "PATCH",
+      "path": "/api/users/me",
+      "request_body_type": "UserMePatchRequest"
+    },
+    {
+      "auth": "required",
+      "chain": "api_users_get",
+      "controller": "ApiUserController",
+      "handler": "get",
+      "method": "GET",
+      "path": "/api/users/{uid}",
+      "request_body_type": null
+    }
+  ],
+  "kind": "http_endpoints",
+  "source": "chat-domain/controller + ApiFlowRunner chain calls"
+}

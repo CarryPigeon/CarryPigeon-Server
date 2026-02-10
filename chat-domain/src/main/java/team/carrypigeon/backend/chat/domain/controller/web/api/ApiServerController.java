@@ -4,16 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ServerInfoRequest;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ServerInfoRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowRunner;
 
 /**
- * Public `/api` endpoints that do not require authentication.
+ * 服务发现 API 控制器。
  * <p>
- * This controller is intentionally thin:
- * it only builds a {@link CPFlowContext}, writes {@link ApiFlowKeys#REQUEST} when the chain needs input,
- * and executes LiteFlow chains defined in {@code application-starter/src/main/resources/config/api.xml}.
+ * 提供服务信息、插件目录与消息域目录查询路由。
  */
 @RestController
 public class ApiServerController {
@@ -24,16 +22,20 @@ public class ApiServerController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 构造服务发现控制器。
+     *
+     * @param flowRunner API 责任链执行器。
+     */
     public ApiServerController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * Get basic server metadata and discovery URLs (including {@code ws_url}).
-     * <p>
-     * Route: {@code GET /api/server} (public)
-     * <p>
-     * Chain: {@code api_server}
+     * 查询基础服务信息与发现入口。
+     *
+     * @param request HTTP 请求对象。
+     * @return 标准服务信息响应。
      */
     @GetMapping("/api/server")
     public Object server(HttpServletRequest request) {
@@ -44,11 +46,9 @@ public class ApiServerController {
     }
 
     /**
-     * Get server-side plugin catalog.
-     * <p>
-     * Route: {@code GET /api/plugins/catalog} (public)
-     * <p>
-     * Chain: {@code api_plugins_catalog}
+     * 查询插件目录。
+     *
+     * @return 标准插件目录响应。
      */
     @GetMapping("/api/plugins/catalog")
     public Object pluginsCatalog() {
@@ -58,11 +58,9 @@ public class ApiServerController {
     }
 
     /**
-     * Get server-supported message domain catalog.
-     * <p>
-     * Route: {@code GET /api/domains/catalog} (public)
-     * <p>
-     * Chain: {@code api_domains_catalog}
+     * 查询消息域目录。
+     *
+     * @return 标准消息域目录响应。
      */
     @GetMapping("/api/domains/catalog")
     public Object domainsCatalog() {

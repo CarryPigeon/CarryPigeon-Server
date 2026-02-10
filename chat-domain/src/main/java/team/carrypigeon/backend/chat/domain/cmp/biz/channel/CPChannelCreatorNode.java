@@ -18,6 +18,12 @@ import team.carrypigeon.backend.common.time.TimeUtil;
  * */
 @LiteflowComponent("CPChannelCreator")
 public class CPChannelCreatorNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，基于当前用户创建默认频道实体
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO);

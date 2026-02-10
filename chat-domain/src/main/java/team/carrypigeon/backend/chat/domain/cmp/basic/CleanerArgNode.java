@@ -21,6 +21,12 @@ import team.carrypigeon.backend.api.chat.domain.node.CPNodeBindKeys;
 @LiteflowComponent("CleanerArg")
 public class CleanerArgNode extends CPNodeComponent {
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param context LiteFlow 上下文，按 bind 指定键删除数据
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         String bindData = requireBind(CPNodeBindKeys.KEY, String.class);

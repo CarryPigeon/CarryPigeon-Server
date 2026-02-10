@@ -15,14 +15,9 @@ import java.sql.PreparedStatement;
 import java.time.Duration;
 
 /**
- * 应用启动时的基础依赖自检。
- *
- * - 在 Spring Boot 完成上下文初始化后，主动探测 MySQL 与 Redis 是否可用；
- * - 任一关键依赖不可用时，抛出异常终止启动（进程以非 0 状态退出）。
- *
- * 开关：
- *   cp.startup.health-check.enabled=true|false
- * 默认开启，如需在开发或特殊环境关闭自检，可在配置中显式设为 false。
+ * 应用启动依赖健康检查配置。
+ * <p>
+ * 容器启动后主动探测 MySQL 与 Redis，可用性不足时立即中止启动。
  */
 @Slf4j
 @Configuration
@@ -34,12 +29,21 @@ import java.time.Duration;
 public class StartupHealthCheckConfig {
 
     /**
-     * 启动时自检 runner：在 Spring Boot 初始化完成后探测 MySQL 与 Redis 的可用性。
+     * 创建启动健康检查 Runner。
+     *
+     * @param dataSource 数据源。
+     * @param stringRedisTemplate Redis 模板。
+     * @return 启动健康检查 Runner。
      */
     @Bean
     public ApplicationRunner startupHealthChecker(DataSource dataSource,
-                                                 StringRedisTemplate stringRedisTemplate) {
+                                                  StringRedisTemplate stringRedisTemplate) {
         return new ApplicationRunner() {
+            /**
+             * 执行启动健康检查。
+             *
+             * @param args 启动参数。
+             */
             @Override
             public void run(ApplicationArguments args) {
                 checkMySql(dataSource);
@@ -49,6 +53,11 @@ public class StartupHealthCheckConfig {
         };
     }
 
+    /**
+     * 检查 MySQL 可用性。
+     *
+     * @param dataSource 数据源。
+     */
     private void checkMySql(DataSource dataSource) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT 1")) {
@@ -60,6 +69,11 @@ public class StartupHealthCheckConfig {
         }
     }
 
+    /**
+     * 检查 Redis 可用性。
+     *
+     * @param stringRedisTemplate Redis 模板。
+     */
     private void checkRedis(StringRedisTemplate stringRedisTemplate) {
         String key = "cp:startup:health-check";
         try {

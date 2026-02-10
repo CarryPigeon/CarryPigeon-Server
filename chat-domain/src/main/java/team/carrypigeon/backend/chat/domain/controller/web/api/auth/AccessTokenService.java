@@ -8,13 +8,9 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
- * Issues and verifies short-lived access tokens for HTTP APIs.
+ * Access Token 服务。
  * <p>
- * Token format: {@code atk_<opaque_random>} (URL-safe Base64 without padding).
- * Storage: {@link CPCache} (typically Redis) with TTL.
- * <p>
- * This is intentionally stateless on the server-side (opaque token lookup).
- * If you need JWT-style self-contained tokens, implement a separate strategy.
+ * 提供访问令牌签发、校验、解析与撤销能力。
  */
 @Service
 @RequiredArgsConstructor
@@ -25,20 +21,37 @@ public class AccessTokenService {
 
     private final CPCache cache;
 
+    /**
+     * 签发访问令牌并写入缓存。
+     *
+     * @param uid 用户 ID。
+     * @param ttlSeconds 令牌有效期（秒）。
+     * @return 新签发的访问令牌。
+     */
     public String issue(long uid, int ttlSeconds) {
         String token = "atk_" + randomToken(32);
         long expiresAt = System.currentTimeMillis() + Math.max(1, ttlSeconds) * 1000L;
-        // Value format (v2): "<uid>|<expiresAtMillis>".
-        // Backward compatible with v1: "<uid>" only.
         cache.set(key(token), uid + "|" + expiresAt, ttlSeconds);
         return token;
     }
 
+    /**
+     * 校验访问令牌并返回用户 ID。
+     *
+     * @param token 访问令牌。
+     * @return 用户 ID；校验失败时返回 {@code null}。
+     */
     public Long verify(String token) {
         TokenInfo info = verifyInfo(token);
         return info == null ? null : info.uid();
     }
 
+    /**
+     * 校验访问令牌并返回完整令牌信息。
+     *
+     * @param token 访问令牌。
+     * @return 令牌信息；校验失败时返回 {@code null}。
+     */
     public TokenInfo verifyInfo(String token) {
         if (token == null || token.isBlank()) {
             return null;
@@ -47,7 +60,6 @@ public class AccessTokenService {
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        // v2: "<uid>|<expiresAtMillis>"
         int sep = raw.indexOf('|');
         if (sep > 0) {
             String uidStr = raw.substring(0, sep);
@@ -60,7 +72,6 @@ public class AccessTokenService {
                 return null;
             }
         }
-        // v1: "<uid>"
         try {
             long uid = Long.parseLong(raw);
             return new TokenInfo(uid, 0L);
@@ -69,6 +80,11 @@ public class AccessTokenService {
         }
     }
 
+    /**
+     * 撤销访问令牌。
+     *
+     * @param token 访问令牌。
+     */
     public void revoke(String token) {
         if (token == null || token.isBlank()) {
             return;
@@ -76,16 +92,34 @@ public class AccessTokenService {
         cache.delete(key(token));
     }
 
+    /**
+     * 生成令牌缓存键。
+     *
+     * @param token 访问令牌。
+     * @return 缓存键。
+     */
     private String key(String token) {
         return "cp:api:access:" + token;
     }
 
+    /**
+     * 生成随机令牌片段。
+     *
+     * @param bytes 随机字节长度。
+     * @return Base64Url 编码后的随机串。
+     */
     private String randomToken(int bytes) {
         byte[] b = new byte[bytes];
         SECURE_RANDOM.nextBytes(b);
         return BASE64_URL.encodeToString(b);
     }
 
+    /**
+     * 访问令牌解析结果。
+     *
+     * @param uid 令牌绑定用户 ID。
+     * @param expiresAt 过期时间戳（毫秒）。
+     */
     public record TokenInfo(long uid, long expiresAt) {
     }
 }

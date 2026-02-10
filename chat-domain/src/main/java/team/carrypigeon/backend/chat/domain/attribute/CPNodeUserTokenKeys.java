@@ -19,6 +19,9 @@ public final class CPNodeUserTokenKeys {
     /** {@code Long}: 过期时间（毫秒时间戳）。 */
     public static final CPKey<Long> USER_TOKEN_INFO_EXPIRED_TIME = CPKey.of("UserTokenInfo_ExpiredTime", Long.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeUserTokenKeys() {
     }
 }

@@ -16,6 +16,9 @@ public final class CPNodeNotifierKeys {
     /** {@code JsonNode}: 通知 payload（由 route 定义其结构）。 */
     public static final CPKey<JsonNode> NOTIFIER_DATA = CPKey.of("Notifier_Data", JsonNode.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeNotifierKeys() {
     }
 }

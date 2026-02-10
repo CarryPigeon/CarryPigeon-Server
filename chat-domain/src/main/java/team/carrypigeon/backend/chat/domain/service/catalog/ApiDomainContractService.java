@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 
 import java.util.List;
@@ -33,6 +34,11 @@ public class ApiDomainContractService {
     private final ApiPluginCatalogIndex catalogIndex;
     private final SimpleJsonSchemaValidator validator = new SimpleJsonSchemaValidator();
 
+    /**
+     * 构造 Domain 契约服务。
+     *
+     * @param catalogIndex 插件目录索引
+     */
     public ApiDomainContractService(ApiPluginCatalogIndex catalogIndex) {
         this.catalogIndex = catalogIndex;
     }
@@ -77,14 +83,14 @@ public class ApiDomainContractService {
     public void validateOrThrow(String domain, String domainVersion, JsonNode payload) {
         ApiPluginCatalogIndex.ContractFile schemaFile = resolveContractFile(domain, domainVersion);
         if (schemaFile == null || schemaFile.schema() == null) {
-            throw new CPProblemException(CPProblem.of(422, "schema_invalid", "schema invalid",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.SCHEMA_INVALID, "schema invalid",
                     Map.of("field_errors", List.of(
                             Map.of("field", "domain_version", "reason", "unsupported", "message", "unsupported domain_version")
                     ))));
         }
         List<String> errors = validator.validate(schemaFile.schema(), payload);
         if (!errors.isEmpty()) {
-            throw new CPProblemException(CPProblem.of(422, "schema_invalid", "schema invalid",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.SCHEMA_INVALID, "schema invalid",
                     Map.of("field_errors", List.of(
                             Map.of("field", "data", "reason", "invalid", "message", "schema invalid")
                     ))));

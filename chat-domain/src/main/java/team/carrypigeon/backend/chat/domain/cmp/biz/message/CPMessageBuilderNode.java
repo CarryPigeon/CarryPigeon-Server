@@ -28,6 +28,12 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 @LiteflowComponent("CPMessageBuilder")
 public class CPMessageBuilderNode extends CPNodeComponent {
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取用户输入并构建消息实体
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPMessageData messageData = requireContext(context, CPNodeValueKeyExtraConstants.MESSAGE_DATA);

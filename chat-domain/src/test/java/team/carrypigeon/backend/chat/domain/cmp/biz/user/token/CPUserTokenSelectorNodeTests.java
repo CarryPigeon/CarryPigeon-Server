@@ -58,7 +58,7 @@ class CPUserTokenSelectorNodeTests {
         CPFlowContext context = new CPFlowContext();
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -74,20 +74,37 @@ class CPUserTokenSelectorNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(404, ex.getProblem().status());
-        assertEquals("not_found", ex.getProblem().reason());
+        assertEquals("not_found", ex.getProblem().reason().code());
     }
 
     private static final class TestableCPUserTokenSelectorNode extends CPUserTokenSelectorNode {
         private String mode;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param userTokenDao 测试输入参数
+         */
         private TestableCPUserTokenSelectorNode(UserTokenDao userTokenDao) {
             super(userTokenDao);
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param mode 测试输入参数
+         */
         private void setMode(String mode) {
             this.mode = mode;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("key".equals(key) && clazz == String.class) {

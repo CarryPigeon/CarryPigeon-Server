@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.chat.domain.controller.web.api.error.ApiErrorBody;
 import team.carrypigeon.backend.chat.domain.controller.web.api.error.ApiErrorResponse;
 
@@ -18,9 +19,9 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Enforces API version negotiation via {@code Accept: application/vnd.carrypigeon+json; version=1}.
+ * HTTP `/api` 版本协商过滤器。
  * <p>
- * See {@code doc/api/10-HTTP+WebSocket协议.md}.
+ * 负责解析 `Accept` 头中的版本参数，并对不支持版本返回标准错误响应。
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Component
@@ -31,23 +32,43 @@ public class ApiVersionFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 构造版本过滤器。
+     *
+     * @param objectMapper JSON 序列化组件。
+     */
     public ApiVersionFilter(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 判断当前请求是否跳过版本过滤。
+     *
+     * @param request HTTP 请求对象。
+     * @return 需要跳过过滤返回 {@code true}，否则返回 {@code false}。
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
         if (path == null || !path.startsWith("/api")) {
             return true;
         }
-        // WS version is checked in WS auth message (api_version).
         return path.startsWith("/api/ws");
     }
 
+    /**
+     * 执行版本协商并在响应阶段回写标准媒体类型。
+     *
+     * @param request HTTP 请求对象。
+     * @param response HTTP 响应对象。
+     * @param filterChain 过滤器链。
+     * @throws ServletException Servlet 过滤异常。
+     * @throws IOException IO 异常。
+     */
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
         String accept = request.getHeader(HttpHeaders.ACCEPT);
         if (accept != null && accept.contains(MEDIA)) {
             String version = parseVersion(accept);
@@ -57,15 +78,19 @@ public class ApiVersionFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
-        // Recommend response content type for JSON responses.
         if (!response.isCommitted() && response.getContentType() != null
                 && response.getContentType().startsWith(MediaType.APPLICATION_JSON_VALUE)) {
             response.setHeader(HttpHeaders.CONTENT_TYPE, MEDIA + "; version=" + EXPECTED_VERSION);
         }
     }
 
+    /**
+     * 从 Accept 头中解析版本号。
+     *
+     * @param accept Accept 请求头值。
+     * @return 解析出的版本号；不存在时返回 {@code null}。
+     */
     private String parseVersion(String accept) {
-        // naive but robust enough: find "version=" after the media type occurrence
         int mediaPos = accept.indexOf(MEDIA);
         if (mediaPos < 0) {
             return null;
@@ -87,16 +112,23 @@ public class ApiVersionFilter extends OncePerRequestFilter {
         return v.isEmpty() ? null : v;
     }
 
+    /**
+     * 输出不支持版本错误。
+     *
+     * @param request HTTP 请求对象。
+     * @param response HTTP 响应对象。
+     * @throws IOException 当响应输出失败时抛出。
+     */
     private void writeUnsupported(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String requestId = (String) request.getAttribute("cp_request_id");
         if (requestId == null || requestId.isBlank()) {
             requestId = "req_" + UUID.randomUUID();
             request.setAttribute("cp_request_id", requestId);
         }
-        response.setStatus(406);
+        CPProblemReason reason = CPProblemReason.API_VERSION_UNSUPPORTED;
+        response.setStatus(reason.status());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ApiErrorBody body = new ApiErrorBody(406, "api_version_unsupported", "api version unsupported", requestId, null);
+        ApiErrorBody body = new ApiErrorBody(reason.status(), reason.code(), "api version unsupported", requestId, null);
         objectMapper.writeValue(response.getOutputStream(), new ApiErrorResponse(body));
     }
 }
-

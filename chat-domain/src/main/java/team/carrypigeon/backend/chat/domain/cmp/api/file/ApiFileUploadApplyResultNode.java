@@ -11,7 +11,9 @@ import team.carrypigeon.backend.common.time.TimeUtil;
 import java.util.Map;
 
 /**
- * Result mapper for {@code POST /api/files/uploads}.
+ * 文件上传申请结果节点。
+ * <p>
+ * 将上下文中的上传凭据与文件标识组装为 API 返回结构。
  */
 @Slf4j
 @LiteflowComponent("ApiFileUploadApplyResult")
@@ -19,6 +21,9 @@ public class ApiFileUploadApplyResultNode extends AbstractResultNode<ApiFileUplo
 
     private static final long DEFAULT_TTL_SEC = 300L;
 
+    /**
+     * 构建文件上传申请响应。
+     */
     @Override
     protected FileUploadApplyResponse build(CPFlowContext context) {
         CPFileInfo info = requireContext(context, CPNodeFileKeys.FILE_INFO);
@@ -39,10 +44,15 @@ public class ApiFileUploadApplyResultNode extends AbstractResultNode<ApiFileUplo
         return resp;
     }
 
+    /**
+     * 上传申请响应体。
+     */
     public record FileUploadApplyResponse(String fileId, String shareKey, UploadInfo upload) {
     }
 
+    /**
+     * 上传凭据描述。
+     */
     public record UploadInfo(String method, String url, Map<String, String> headers, long expiresAt) {
     }
 }
-

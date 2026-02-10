@@ -49,6 +49,6 @@ class CPUserTokenUpdaterNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(500, ex.getProblem().status());
-        assertEquals("internal_error", ex.getProblem().reason());
+        assertEquals("internal_error", ex.getProblem().reason().code());
     }
 }

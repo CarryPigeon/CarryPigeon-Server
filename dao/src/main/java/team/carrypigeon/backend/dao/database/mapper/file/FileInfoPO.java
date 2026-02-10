@@ -12,7 +12,9 @@ import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import java.time.LocalDateTime;
 
 /**
- * Persistence object for file metadata.
+ * `file_info` 表持久化对象。
+ * <p>
+ * 负责数据库字段与领域对象 {@link CPFileInfo} 之间的转换。
  */
 @Data
 @NoArgsConstructor
@@ -21,40 +23,53 @@ import java.time.LocalDateTime;
 @TableName("file_info")
 public class FileInfoPO {
 
+    /** 主键 ID。 */
     @TableId
     private Long id;
 
+    /** 对外共享键。 */
     private String shareKey;
 
+    /** 上传者用户 ID。 */
     private Long ownerUid;
 
     /**
-     * Access scope in DB (uppercase string).
+     * 访问范围（数据库中存储为大写字符串）。
      */
     private String accessScope;
 
+    /** 访问范围绑定频道 ID。 */
     private Long scopeCid;
 
+    /** 访问范围绑定消息 ID。 */
     private Long scopeMid;
 
+    /** 原始文件名。 */
     private String filename;
 
+    /** SHA-256 摘要。 */
     private String sha256;
 
+    /** 文件大小（字节）。 */
     private Long size;
 
+    /** 对象存储对象名。 */
     private String objectName;
 
+    /** MIME 类型。 */
     private String contentType;
 
+    /** 是否已完成上传。 */
     private Boolean uploaded;
 
+    /** 上传完成时间。 */
     private LocalDateTime uploadedTime;
 
+    /** 记录创建时间。 */
     private LocalDateTime createTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将当前 PO 转换为领域对象。
      */
     public CPFileInfo toBo() {
         return new CPFileInfo()
@@ -75,7 +90,7 @@ public class FileInfoPO {
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从领域对象构造 PO。
      */
     public static FileInfoPO fromBo(CPFileInfo info) {
         return new FileInfoPO()

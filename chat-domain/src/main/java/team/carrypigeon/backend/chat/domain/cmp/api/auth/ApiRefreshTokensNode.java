@@ -4,29 +4,25 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.user.token.CPUserToken;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.chat.domain.controller.web.api.auth.AccessTokenService;
 import team.carrypigeon.backend.chat.domain.controller.web.api.auth.RefreshTokenService;
 import team.carrypigeon.backend.chat.domain.controller.web.api.config.CpApiProperties;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.RefreshRequest;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
-import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 
 /**
- * Refresh tokens using a refresh token.
+ * 刷新令牌节点。
  * <p>
- * Route: {@code POST /api/auth/refresh} (public)
+ * 路由：`POST /api/auth/refresh`（公开接口）。
  * <p>
- * Input: {@link ApiFlowKeys#REQUEST} = {@link RefreshRequest}
- * Output: {@link ApiAuthFlowKeys#TOKEN_RESPONSE} = {@link ApiTokenResponse}
- * <p>
- * Rotation strategy:
- * <ul>
- *   <li>Refresh token is single-use: on refresh, old token is revoked and a new token is issued.</li>
- *   <li>If token is expired, it is deleted and request fails.</li>
- * </ul>
+ * 刷新策略：
+ * - refresh token 单次使用，刷新时会吊销旧 token；
+ * - 过期 token 会被清理并返回 `token_expired`。
  */
 @Slf4j
 @LiteflowComponent("ApiRefreshTokens")
@@ -37,19 +33,24 @@ public class ApiRefreshTokensNode extends CPNodeComponent {
     private final AccessTokenService accessTokenService;
     private final RefreshTokenService refreshTokenService;
 
+    /**
+     * 执行 refresh token 换发流程。
+     *
+     * @param context LiteFlow 上下文，需包含 {@link CPFlowKeys#REQUEST}
+     */
     @Override
     protected void process(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof RefreshRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         CPUserToken old = refreshTokenService.getByToken(req.refreshToken());
         if (old == null) {
-            throw new CPProblemException(CPProblem.of(401, "unauthorized", "invalid refresh token"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.UNAUTHORIZED, "invalid refresh token"));
         }
         if (refreshTokenService.isExpired(old)) {
             refreshTokenService.revoke(old);
-            throw new CPProblemException(CPProblem.of(401, "token_expired", "refresh token expired"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.TOKEN_EXPIRED, "refresh token expired"));
         }
 
         refreshTokenService.revoke(old);

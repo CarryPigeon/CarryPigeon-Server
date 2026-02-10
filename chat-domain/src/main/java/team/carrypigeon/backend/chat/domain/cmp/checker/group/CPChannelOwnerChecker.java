@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.cmp.checker.group;
 
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
+
 import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
@@ -23,11 +25,16 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 @LiteflowComponent("CPChannelOwnerChecker")
 public class CPChannelOwnerChecker extends AbstractCheckerNode {
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前请求会话（用于获取调用方 UID）
+     * @param context LiteFlow 上下文，读取频道信息并校验拥有者权限
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         boolean soft = isSoftMode();
-
-        // 必填参数：ChannelInfo, UserInfo_Id
         CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);
         Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
         if (channelInfo.getOwner() != userInfoId) {
@@ -37,7 +44,7 @@ public class CPChannelOwnerChecker extends AbstractCheckerNode {
                 return;
             }
             log.info("CPChannelOwnerChecker hard fail: user not owner, uid={}, cid={}", userInfoId, channelInfo.getId());
-            forbidden("not_channel_owner", "you are not the owner of this channel");
+            forbidden(CPProblemReason.NOT_CHANNEL_OWNER, "you are not the owner of this channel");
         }
         if (soft) {
             markSoftSuccess(context);

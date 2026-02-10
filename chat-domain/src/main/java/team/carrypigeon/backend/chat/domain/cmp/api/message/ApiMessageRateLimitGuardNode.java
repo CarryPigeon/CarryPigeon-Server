@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -85,7 +86,7 @@ public class ApiMessageRateLimitGuardNode extends CPNodeComponent {
             long retryAfterMs = Math.max(1L, bucketEndSeconds * 1000L - nowMillis);
             log.warn("消息创建限流：触发：uid={}, cid={}, domain={}, count={}, limit={}, windowSeconds={}, retryAfterMs={}",
                     uid, cid, domain, count, window.getMaxRequests(), windowSeconds, retryAfterMs);
-            fail(CPProblem.of(429, "rate_limited", "too many requests", Map.of("retry_after_ms", retryAfterMs)));
+            fail(CPProblem.of(CPProblemReason.RATE_LIMITED, "too many requests", Map.of("retry_after_ms", retryAfterMs)));
         }
     }
 

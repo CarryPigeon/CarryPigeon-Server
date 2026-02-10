@@ -10,6 +10,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.starter.server.ServerInfoConfig;
 import team.carrypigeon.backend.chat.domain.controller.web.api.auth.AccessTokenService;
 import team.carrypigeon.backend.chat.domain.controller.web.api.config.CpApiProperties;
@@ -24,10 +25,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * API WebSocket 协议处理器（/api/ws）。
+ * `/api/ws` WebSocket 协议处理器。
  * <p>
- * 协议约定见：{@code doc/api/12-WebSocket事件清单.md}。<br/>
- * 本实现采用“消息级鉴权”：连接建立后客户端必须先发送 {@code auth} 才会进入已登录态。
+ * 该类实现消息级状态机，负责 `ping`、`auth`、`reauth`、`subscribe` 指令分发，
+ * 并在鉴权成功后与会话注册表、事件存储、事件发布器协作完成在线推送与断线回放。
  */
 @Slf4j
 @Component
@@ -41,13 +42,24 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     private final ApiWsEventStore eventStore;
     private final ApiWsEventPublisher eventPublisher;
 
+    /**
+     * 构造 WebSocket 协议处理器。
+     *
+     * @param objectMapper JSON 序列化与反序列化组件。
+     * @param properties API 配置，用于读取回放阈值等参数。
+     * @param accessTokenService Access Token 校验服务。
+     * @param serverInfoConfig 当前服务节点信息。
+     * @param sessionRegistry WebSocket 会话注册表。
+     * @param eventStore WebSocket 事件存储，用于断线回放。
+     * @param eventPublisher 事件封包发布器。
+     */
     public ApiWebSocketHandler(ObjectMapper objectMapper,
-                              CpApiProperties properties,
-                              AccessTokenService accessTokenService,
-                              ServerInfoConfig serverInfoConfig,
-                              ApiWsSessionRegistry sessionRegistry,
-                              ApiWsEventStore eventStore,
-                              ApiWsEventPublisher eventPublisher) {
+                               CpApiProperties properties,
+                               AccessTokenService accessTokenService,
+                               ServerInfoConfig serverInfoConfig,
+                               ApiWsSessionRegistry sessionRegistry,
+                               ApiWsEventStore eventStore,
+                               ApiWsEventPublisher eventPublisher) {
         this.objectMapper = objectMapper;
         this.properties = properties;
         this.accessTokenService = accessTokenService;
@@ -57,17 +69,35 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
         this.eventPublisher = eventPublisher;
     }
 
+    /**
+     * 处理连接建立事件，仅记录连接元信息。
+     *
+     * @param session 已建立的 WebSocket 会话。
+     */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         log.info("WS 连接建立：sessionId={}, ip={}", session.getId(), remoteIp(session));
     }
 
+    /**
+     * 处理连接关闭事件，执行会话反注册。
+     *
+     * @param session 已关闭的 WebSocket 会话。
+     * @param status 关闭状态码与原因。
+     */
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         sessionRegistry.unregister(session);
         log.info("WS 连接关闭：sessionId={}, status={}", session.getId(), status);
     }
 
+    /**
+     * 解析入站消息并按指令类型分发处理。
+     *
+     * @param session 当前 WebSocket 会话。
+     * @param message 客户端发送的文本消息。
+     * @throws Exception 当下游处理或发送消息失败时抛出。
+     */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         JsonNode root;
@@ -94,31 +124,35 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
             case "reauth" -> handleReauth(session, id, data);
             case "subscribe" -> handleSubscribe(session, id, data);
             default -> {
-                // ignore unknown message types for forward compatibility
             }
         }
     }
 
     /**
-     * 处理 {@code auth} 命令：绑定会话 uid 并可选执行 resume 回放。
+     * 处理 `auth` 指令，完成会话鉴权绑定并按需执行断线回放。
+     *
+     * @param session 当前 WebSocket 会话。
+     * @param id 客户端消息标识。
+     * @param data 指令参数体。
+     * @throws Exception 当回包或回放发送失败时抛出。
      */
     private void handleAuth(WebSocketSession session, String id, JsonNode data) throws Exception {
         if (data == null || !data.isObject()) {
-            sendErr(session, "auth", id, "validation_failed", "validation failed", null);
+            sendErr(session, "auth", id, CPProblemReason.VALIDATION_FAILED, "validation failed", null);
             return;
         }
         Integer apiVersion = data.has("api_version") && data.get("api_version").canConvertToInt()
                 ? data.get("api_version").asInt()
                 : null;
         if (apiVersion != null && apiVersion != 1) {
-            sendErr(session, "auth", id, "api_version_unsupported", "api version unsupported", null);
+            sendErr(session, "auth", id, CPProblemReason.API_VERSION_UNSUPPORTED, "api version unsupported", null);
             return;
         }
 
         String accessToken = text(data.get("access_token"));
         AccessTokenService.TokenInfo info = accessTokenService.verifyInfo(accessToken);
         if (info == null) {
-            sendErr(session, "auth", id, "unauthorized", "missing or invalid access token", null);
+            sendErr(session, "auth", id, CPProblemReason.UNAUTHORIZED, "missing or invalid access token", null);
             return;
         }
 
@@ -132,7 +166,6 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
         okData.put("server_id", serverInfoConfig.getServerId());
         sendOk(session, "auth", id, okData);
 
-        // resume (optional)
         JsonNode resume = data.get("resume");
         String lastEventId = resume != null && resume.isObject() ? text(resume.get("last_event_id")) : null;
         if (lastEventId != null && !lastEventId.isBlank()) {
@@ -141,24 +174,28 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 处理 {@code reauth} 命令：在同一连接上刷新 access_token（例如 HTTP refresh 后同步到 WS）。
+     * 处理 `reauth` 指令，刷新会话令牌并在用户切换时重建绑定关系。
+     *
+     * @param session 当前 WebSocket 会话。
+     * @param id 客户端消息标识。
+     * @param data 指令参数体。
+     * @throws Exception 当回包失败时抛出。
      */
     private void handleReauth(WebSocketSession session, String id, JsonNode data) throws Exception {
         if (data == null || !data.isObject()) {
-            sendErr(session, "reauth", id, "validation_failed", "validation failed", null);
+            sendErr(session, "reauth", id, CPProblemReason.VALIDATION_FAILED, "validation failed", null);
             return;
         }
         String accessToken = text(data.get("access_token"));
         AccessTokenService.TokenInfo info = accessTokenService.verifyInfo(accessToken);
         if (info == null) {
-            sendErr(session, "reauth", id, "unauthorized", "missing or invalid access token", null);
+            sendErr(session, "reauth", id, CPProblemReason.UNAUTHORIZED, "missing or invalid access token", null);
             return;
         }
         long uid = info.uid();
 
         Long oldUid = uidOf(session);
         if (oldUid == null || oldUid != uid) {
-            // treat as re-bind
             sessionRegistry.unregister(session);
             session.getAttributes().put(ApiWsSessionAttributes.UID, uid);
             sessionRegistry.register(uid, session);
@@ -172,18 +209,16 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 处理 {@code subscribe} 命令：设置“频道级订阅过滤”（可选优化）。
-     * <p>
-     * 约定：
-     * <ul>
-     *   <li>未调用 subscribe：服务端按默认推送模型推送所有相关事件</li>
-     *   <li>传空 cids：清除订阅过滤（恢复默认推送模型）</li>
-     * </ul>
+     * 处理 `subscribe` 指令，设置或清理频道级订阅过滤。
+     *
+     * @param session 当前 WebSocket 会话。
+     * @param id 客户端消息标识。
+     * @param data 指令参数体。
+     * @throws Exception 当回包失败时抛出。
      */
     private void handleSubscribe(WebSocketSession session, String id, JsonNode data) throws Exception {
-        // optional optimization; default behavior is "push everything relevant to current uid"
         if (uidOf(session) == null) {
-            sendErr(session, "subscribe", id, "unauthorized", "unauthorized", null);
+            sendErr(session, "subscribe", id, CPProblemReason.UNAUTHORIZED, "unauthorized", null);
             return;
         }
         Set<Long> cids = Set.of();
@@ -193,7 +228,7 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
                     .filter(v -> v != null && v > 0)
                     .collect(Collectors.toSet());
         }
-        if (cids == null || cids.isEmpty()) {
+        if (cids.isEmpty()) {
             session.getAttributes().remove(ApiWsSessionAttributes.SUB_CIDS);
         } else {
             session.getAttributes().put(ApiWsSessionAttributes.SUB_CIDS, cids);
@@ -204,7 +239,11 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 尝试从事件存储中回放 {@code last_event_id} 之后的事件；若无法回放则通知客户端 {@code resume.failed}。
+     * 尝试回放 `last_event_id` 之后的事件；回放失败时发送 `resume.failed`。
+     *
+     * @param session 当前 WebSocket 会话。
+     * @param lastEventId 客户端已接收的最后事件 ID。
+     * @throws Exception 当消息发送失败时抛出。
      */
     private void resumeOrFail(WebSocketSession session, String lastEventId) throws Exception {
         ApiWsEventStore.ResumeResult r = eventStore.resumeAfter(lastEventId, properties.getApi().getWs().getResumeMaxEvents());
@@ -220,7 +259,10 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 从会话属性读取 uid。
+     * 从会话属性中读取当前绑定用户 ID。
+     *
+     * @param session WebSocket 会话。
+     * @return 用户 ID；不存在或类型不匹配时返回 {@code null}。
      */
     private Long uidOf(WebSocketSession session) {
         Object v = session.getAttributes().get(ApiWsSessionAttributes.UID);
@@ -234,7 +276,10 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 将字符串解析为 long；失败返回 null。
+     * 将字符串解析为长整型。
+     *
+     * @param s 待解析字符串。
+     * @return 解析后的数值；为空或格式非法时返回 {@code null}。
      */
     private Long parseLongOrNull(String s) {
         if (s == null || s.isBlank()) {
@@ -248,7 +293,10 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 将 JSON 数组中的元素按“文本”取出（非文本则用 {@link JsonNode#toString()} 兜底）。
+     * 将 JSON 数组元素提取为字符串列表。
+     *
+     * @param arr JSON 数组节点。
+     * @return 字符串列表，忽略无法转换为文本的空值元素。
      */
     private List<String> streamTextArray(JsonNode arr) {
         java.util.ArrayList<String> out = new java.util.ArrayList<>();
@@ -262,7 +310,13 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 发送命令成功响应：{@code <cmd>.ok}。
+     * 发送命令成功响应 `{cmd}.ok`。
+     *
+     * @param session 目标 WebSocket 会话。
+     * @param cmd 指令名称。
+     * @param id 客户端消息标识。
+     * @param data 成功响应数据。
+     * @throws Exception 当消息发送失败时抛出。
      */
     private void sendOk(WebSocketSession session, String cmd, String id, JsonNode data) throws Exception {
         ObjectNode root = objectMapper.createObjectNode();
@@ -279,9 +333,43 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 发送命令失败响应：{@code <cmd>.err}。
+     * 基于标准错误枚举发送命令失败响应。
+     *
+     * @param session 目标 WebSocket 会话。
+     * @param cmd 指令名称。
+     * @param id 客户端消息标识。
+     * @param reason 标准错误原因枚举。
+     * @param message 错误描述。
+     * @param details 扩展错误详情。
+     * @throws Exception 当消息发送失败时抛出。
      */
-    private void sendErr(WebSocketSession session, String cmd, String id, String reason, String message, Map<String, Object> details) throws Exception {
+    private void sendErr(WebSocketSession session,
+                         String cmd,
+                         String id,
+                         CPProblemReason reason,
+                         String message,
+                         Map<String, Object> details) throws Exception {
+        CPProblemReason safeReason = reason != null ? reason : CPProblemReason.INTERNAL_ERROR;
+        sendErr(session, cmd, id, safeReason.code(), message, details);
+    }
+
+    /**
+     * 发送命令失败响应 `{cmd}.err`。
+     *
+     * @param session 目标 WebSocket 会话。
+     * @param cmd 指令名称。
+     * @param id 客户端消息标识。
+     * @param reason 错误代码。
+     * @param message 错误描述。
+     * @param details 扩展错误详情。
+     * @throws Exception 当消息发送失败时抛出。
+     */
+    private void sendErr(WebSocketSession session,
+                         String cmd,
+                         String id,
+                         String reason,
+                         String message,
+                         Map<String, Object> details) throws Exception {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("type", cmd + ".err");
         if (id != null) {
@@ -298,7 +386,11 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 发送 JSON 文本消息（会话关闭时忽略）。
+     * 发送 JSON 文本消息。
+     *
+     * @param session 目标 WebSocket 会话。
+     * @param json JSON 消息体。
+     * @throws Exception 当消息发送失败时抛出。
      */
     private void send(WebSocketSession session, JsonNode json) throws Exception {
         if (!session.isOpen()) {
@@ -308,7 +400,10 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 将节点转换为字符串值。
+     * 将 JSON 节点转换为字符串。
+     *
+     * @param n JSON 节点。
+     * @return 文本值；当节点为空返回 {@code null}。
      */
     private String text(JsonNode n) {
         if (n == null || n.isNull()) {
@@ -321,7 +416,10 @@ public class ApiWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 尝试解析远端 IP（优先 X-Forwarded-For）。
+     * 解析远端客户端 IP。
+     *
+     * @param session WebSocket 会话。
+     * @return 远端 IP；无法解析时返回 {@code unknown}。
      */
     private String remoteIp(WebSocketSession session) {
         try {

@@ -71,28 +71,25 @@ public abstract class AbstractSelectorNode<T> extends CPNodeComponent {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractSelectorNode.class);
 
+    /**
+     * 执行查询节点主流程：解析模式、查询实体并回写上下文。
+     *
+     * @param context 链路上下文
+     * @throws Exception 查询过程中的异常
+     */
     @Override
     protected final void process(CPFlowContext context) throws Exception {
-        // 1. 读取查询模式
         String mode = readMode(context);
         log.debug("[{}] 开始查询: mode={}", getNodeId(), mode);
-
-        // 2. 执行查询
         T entity = doSelect(mode, context);
-
-        // 3. 处理结果
         if (entity == null) {
             log.debug("[{}] 查询结果为空: mode={}", getNodeId(), mode);
             handleNotFound(mode, context);
             return;
         }
-
-        // 4. 写入上下文
         CPKey<T> resultKey = getResultKey();
         context.set(resultKey, entity);
         log.debug("[{}] 查询成功: mode={}, resultKey={}", getNodeId(), mode, resultKey.name());
-
-        // 5. 后置处理
         afterSuccess(mode, entity, context);
     }
 
@@ -166,6 +163,5 @@ public abstract class AbstractSelectorNode<T> extends CPNodeComponent {
      * @param context 上下文
      */
     protected void afterSuccess(String mode, T entity, CPFlowContext context) {
-        // 默认空实现
     }
 }

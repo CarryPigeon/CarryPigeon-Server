@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowConnectionInfo;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
@@ -41,38 +42,37 @@ public class EmailRateLimitChecker extends AbstractCheckerNode {
 
     private final CPCache cache;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取邮箱并校验发送频率
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        // 必填参数：邮箱
         String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL);
-
-        // 从上下文中读取连接信息（由分发器在链路开始时写入）
         CPFlowConnectionInfo connectionInfo = context.getConnectionInfo();
         String remoteIp = connectionInfo != null ? connectionInfo.getRemoteIp() : null;
         String remoteAddress = connectionInfo != null ? connectionInfo.getRemoteAddress() : null;
         if (remoteIp == null || remoteIp.isEmpty()) {
-            // 兜底：在测试或非 Netty 场景中可能没有 IP 信息
             remoteIp = "unknown";
         }
-
-        // 60 秒窗口限流
         String shortKey = buildShortWindowKey(remoteIp, email);
         int shortCount = increaseAndGet(shortKey, SHORT_WINDOW_SECONDS);
         if (shortCount > MAX_REQUESTS_PER_SHORT_WINDOW) {
             log.info("EmailRateLimitChecker hard fail: short window rate limited, " +
                             "remoteIp={}, remoteAddress={}, email={}, count={}, windowSeconds={}",
                     remoteIp, remoteAddress, email, shortCount, SHORT_WINDOW_SECONDS);
-            fail(CPProblem.of(429, "rate_limited", "too many email requests"));
+            fail(CPProblem.of(CPProblemReason.RATE_LIMITED, "too many email requests"));
         }
-
-        // 按天总次数限流
         String dailyKey = buildDailyWindowKey(remoteIp, email);
         int dailyCount = increaseAndGet(dailyKey, DAILY_WINDOW_SECONDS);
         if (dailyCount > MAX_REQUESTS_PER_DAY) {
             log.info("EmailRateLimitChecker hard fail: daily window rate limited, " +
                             "remoteIp={}, remoteAddress={}, email={}, count={}, windowSeconds={}",
                     remoteIp, remoteAddress, email, dailyCount, DAILY_WINDOW_SECONDS);
-            fail(CPProblem.of(429, "rate_limited", "too many email requests"));
+            fail(CPProblem.of(CPProblemReason.RATE_LIMITED, "too many email requests"));
         }
 
         log.debug("EmailRateLimitChecker pass: remoteIp={}, email={}, shortCount={}, dailyCount={}",
@@ -110,7 +110,6 @@ public class EmailRateLimitChecker extends AbstractCheckerNode {
                     next = parsed + 1;
                 }
             } catch (NumberFormatException e) {
-                // 非法值时回退为 1，并覆盖
                 log.warn("EmailRateLimitChecker found non-numeric value in cache, key={}, value={}", key, current);
             }
         }

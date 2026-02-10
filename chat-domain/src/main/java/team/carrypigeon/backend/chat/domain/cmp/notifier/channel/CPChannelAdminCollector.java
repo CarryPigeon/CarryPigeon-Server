@@ -27,6 +27,13 @@ public class CPChannelAdminCollector extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取频道并收集管理员用户 ID
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannel channel = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);

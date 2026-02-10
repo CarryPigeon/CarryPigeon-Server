@@ -32,6 +32,9 @@ public final class CPNodeChannelBanKeys {
     /** {@code List<CPChannelBan>}: 禁言列表。 */
     public static final CPKey<List> CHANNEL_BAN_ITEMS = CPKey.of("ChannelBanItems", List.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeChannelBanKeys() {
     }
 }

@@ -36,6 +36,9 @@ public final class CPNodeFileKeys {
     /** {@code String}: 一次性文件操作 token（用于 HTTP 上传/下载授权）。 */
     public static final CPKey<String> FILE_TOKEN = CPKey.of("FileToken", String.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeFileKeys() {
     }
 }

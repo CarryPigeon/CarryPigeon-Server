@@ -6,14 +6,17 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractResultNode;
 
 /**
- * Result node for endpoints that return no body (HTTP 204).
+ * 无响应体结果节点。
  * <p>
- * Controllers may still set their own HTTP status (e.g. via {@code ResponseEntity.noContent()}).
- * This node returns {@code null}, so {@code CPFlowKeys.RESPONSE} is not written.
+ * 适用于返回 `HTTP 204` 的接口；该节点返回 `null`，不写入业务响应体。
  */
 @Slf4j
 @LiteflowComponent("ApiNoContentResult")
 public class ApiNoContentResultNode extends AbstractResultNode<Void> {
+
+    /**
+     * 返回空结果。
+     */
     @Override
     protected Void build(CPFlowContext context) {
         log.debug("ApiNoContentResult success");

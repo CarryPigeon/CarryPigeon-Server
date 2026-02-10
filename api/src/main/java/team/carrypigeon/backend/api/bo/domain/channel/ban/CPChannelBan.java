@@ -55,6 +55,8 @@ public class CPChannelBan {
 
     /**
      * 判断禁言是否仍在有效期内。
+     *
+     *  仍在禁言期返回 { true}，否则返回 { false}。
      */
     public boolean isValid() {
         if (untilTime > 0) {

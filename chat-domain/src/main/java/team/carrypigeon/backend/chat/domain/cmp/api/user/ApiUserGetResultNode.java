@@ -10,10 +10,9 @@ import team.carrypigeon.backend.api.dao.database.file.FileInfoDao;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeUserKeys;
 
 /**
- * Public user profile response for {@code GET /api/users/{uid}}.
+ * 用户详情结果节点。
  * <p>
- * Input: {@link CPNodeUserKeys#USER_INFO} from {@code CPUserSelector}
- * Output: {@link team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys#RESPONSE}
+ * 将上下文中的用户实体映射为 `GET /api/users/{uid}` 响应体。
  */
 @Slf4j
 @AllArgsConstructor
@@ -22,6 +21,9 @@ public class ApiUserGetResultNode extends AbstractResultNode<ApiUserGetResultNod
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 构建用户详情响应。
+     */
     @Override
     protected UserProfile build(CPFlowContext context) {
         CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO);
@@ -34,6 +36,9 @@ public class ApiUserGetResultNode extends AbstractResultNode<ApiUserGetResultNod
         return resp;
     }
 
+    /**
+     * 根据头像文件 ID 生成下载路径。
+     */
     private String avatarPath(long avatarId) {
         if (avatarId <= 0) {
             return "";
@@ -45,6 +50,9 @@ public class ApiUserGetResultNode extends AbstractResultNode<ApiUserGetResultNod
         return "api/files/download/" + info.getShareKey();
     }
 
+    /**
+     * 用户详情响应体。
+     */
     public record UserProfile(String uid, String nickname, String avatar) {
     }
 }

@@ -14,9 +14,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * {@link ChannelBanDAO} 的数据库实现（MyBatis-Plus + Spring Cache）。
+ * 频道禁言 DAO 实现。
  * <p>
- * duration 单位：秒（seconds）。
+ * 基于 MyBatis-Plus 与缓存实现禁言记录查询与写入。
  */
 @Slf4j
 @Service
@@ -31,6 +31,12 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
         this.channelBanMapper = channelBanMapper;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 封禁记录 ID
+     * @return 匹配的封禁记录；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelBanById", key = "#id", unless = "#result == null")
     public CPChannelBan getById(long id) {
@@ -44,6 +50,12 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
         return result;
     }
 
+    /**
+     * 按频道查询数据列表。
+     *
+     * @param cid 频道 ID
+     * @return 频道下的封禁记录数组
+     */
     @Override
     @Cacheable(cacheNames = "channelBanByCid", key = "#cid")
     public CPChannelBan[] getByChannelId(long cid) {
@@ -58,6 +70,13 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
         return result;
     }
 
+    /**
+     * 按频道与用户联合查询数据。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 匹配的封禁记录；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "channelBanByUidCid", key = "#uid + ':' + #cid", unless = "#result == null")
     public CPChannelBan getByChannelIdAndUserId(long uid, long cid) {
@@ -74,6 +93,12 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
         return result;
     }
 
+    /**
+     * 保存封禁记录。
+     *
+     * @param channelBan 待保存的封禁实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelBanById", "channelBanByCid", "channelBanByUidCid"}, allEntries = true)
     public boolean save(CPChannelBan channelBan) {
@@ -90,6 +115,12 @@ public class ChannelBanDaoImpl implements ChannelBanDAO {
         return success;
     }
 
+    /**
+     * 删除封禁记录。
+     *
+     * @param channelBan 待删除的封禁实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = {"channelBanById", "channelBanByCid", "channelBanByUidCid"}, allEntries = true)
     public boolean delete(CPChannelBan channelBan) {

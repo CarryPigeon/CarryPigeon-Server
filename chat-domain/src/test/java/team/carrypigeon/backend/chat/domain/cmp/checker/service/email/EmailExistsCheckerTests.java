@@ -26,7 +26,7 @@ class EmailExistsCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(409, ex.getProblem().status());
-        assertEquals("email_exists", ex.getProblem().reason());
+        assertEquals("email_exists", ex.getProblem().reason().code());
     }
 
     @Test
@@ -84,11 +84,24 @@ class EmailExistsCheckerTests {
     private static final class TestableEmailExistsChecker extends EmailExistsChecker {
         private final String type;
 
+        /**
+         * 构造测试辅助对象。
+         *
+         * @param userDao 测试输入参数
+         * @param type 测试输入参数
+         */
         private TestableEmailExistsChecker(UserDao userDao, String type) {
             super(userDao);
             this.type = type;
         }
 
+        /**
+         * 测试辅助方法。
+         *
+         * @param key 测试输入参数
+         * @param clazz 测试输入参数
+         * @return 测试辅助方法返回结果
+         */
         @Override
         public <T> T getBindData(String key, Class<T> clazz) {
             if ("type".equals(key) && clazz == String.class) {

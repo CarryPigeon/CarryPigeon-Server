@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
 import team.carrypigeon.backend.chat.domain.attribute.CPNodeMessageKeys;
@@ -15,18 +16,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 消息列表请求绑定节点（HTTP：{@code GET /api/channels/{cid}/messages}）。
- *
- * <p>职责：解析 {@link MessageListRequest} 并写入 LiteFlow 上下文，供后续查询节点与结果节点使用。
- *
- * <p>输入：{@link CPFlowKeys#REQUEST} = {@link MessageListRequest}
- *
- * <p>输出（写入上下文）：
- * <ul>
- *   <li>{@link CPNodeChannelKeys#CHANNEL_INFO_ID}: channel id</li>
- *   <li>{@link CPNodeMessageKeys#MESSAGE_LIST_CURSOR_MID}: cursor decoded as message id</li>
- *   <li>{@link CPNodeMessageKeys#MESSAGE_LIST_COUNT}: clamped limit (max 50)</li>
- * </ul>
+ * 消息列表查询绑定节点。
+ * <p>
+ * 解析消息列表接口中的频道、游标与分页参数并写入上下文。
  */
 @Slf4j
 @LiteflowComponent("ApiMessageListBind")
@@ -52,7 +44,7 @@ public class ApiMessageListBindNode extends CPNodeComponent {
     protected void process(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof MessageListRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         long cid = parseId(req.cid(), "cid");
         int limit = req.limit() == null ? DEFAULT_LIMIT : req.limit();
@@ -80,7 +72,7 @@ public class ApiMessageListBindNode extends CPNodeComponent {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", field, "reason", "invalid", "message", "invalid id")
                     ))));
@@ -107,7 +99,7 @@ public class ApiMessageListBindNode extends CPNodeComponent {
         try {
             return Long.parseLong(raw);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "cursor_invalid", "cursor invalid"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.CURSOR_INVALID, "cursor invalid"));
         }
     }
 }

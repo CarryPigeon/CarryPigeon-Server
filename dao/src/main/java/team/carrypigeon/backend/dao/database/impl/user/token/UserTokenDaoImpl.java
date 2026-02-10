@@ -31,10 +31,15 @@ public class UserTokenDaoImpl implements UserTokenDao {
         this.userTokenMapper = userTokenMapper;
     }
 
+    /**
+     * 按令牌查询用户令牌。
+     *
+     * @param token 访问令牌字符串
+     * @return 匹配的令牌实体；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "userTokenByToken", key = "#token", unless = "#result == null")
     public CPUserToken getByToken(String token) {
-        // 为避免泄露敏感信息，这里不直接打印 token 内容，仅记录长度
         log.debug("UserTokenDaoImpl#getByToken - tokenLength={}", token == null ? 0 : token.length());
         LambdaQueryWrapper<UserTokenPO> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(UserTokenPO::getToken,token);
@@ -47,6 +52,12 @@ public class UserTokenDaoImpl implements UserTokenDao {
         return result;
     }
 
+    /**
+     * 按主键查询数据。
+     *
+     * @param id 令牌记录 ID
+     * @return 匹配的令牌实体；不存在时返回 {@code null}
+     */
     @Override
     @Cacheable(cacheNames = "userTokenByUid", key = "#id", unless = "#result == null")
     public CPUserToken getById(long id) {
@@ -60,6 +71,12 @@ public class UserTokenDaoImpl implements UserTokenDao {
         return result;
     }
 
+    /**
+     * 按用户查询令牌列表。
+     *
+     * @param uid 用户 ID
+     * @return 用户名下的令牌数组
+     */
     @Override
     @Cacheable(cacheNames = "userTokenByUid", key = "#uid")
     public CPUserToken[] getByUserId(long uid) {
@@ -74,6 +91,12 @@ public class UserTokenDaoImpl implements UserTokenDao {
         return result;
     }
 
+    /**
+     * 保存用户令牌数据。
+     *
+     * @param userToken 待保存的令牌实体
+     * @return {@code true} 表示写库成功
+     */
     @Override
     @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid"}, allEntries = true)
     public boolean save(CPUserToken userToken) {
@@ -90,6 +113,12 @@ public class UserTokenDaoImpl implements UserTokenDao {
         return success;
     }
 
+    /**
+     * 删除用户令牌数据。
+     *
+     * @param userToken 待删除的令牌实体
+     * @return {@code true} 表示删除成功
+     */
     @Override
     @CacheEvict(cacheNames = {"userTokenByToken","userTokenByUid"}, allEntries = true)
     public boolean delete(CPUserToken userToken) {

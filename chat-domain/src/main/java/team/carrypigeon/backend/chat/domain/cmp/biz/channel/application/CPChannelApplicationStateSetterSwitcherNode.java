@@ -8,6 +8,7 @@ import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplication;
 import team.carrypigeon.backend.api.bo.domain.channel.application.CPChannelApplicationStateEnum;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CheckResult;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -31,13 +32,20 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelApplicationKe
 @LiteflowComponent("ChannelApplicationStateSetterSwitcher")
 public class CPChannelApplicationStateSetterSwitcherNode extends CPNodeComponent {
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取审批结果并更新申请状态
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPChannelApplication channelApplicationInfo = requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO);
         Integer state = requireContext(context, CPNodeChannelApplicationKeys.CHANNEL_APPLICATION_INFO_STATE);
 
         if (channelApplicationInfo.getState() != null && channelApplicationInfo.getState() != CPChannelApplicationStateEnum.PENDING) {
-            fail(CPProblem.of(409, "application_already_processed", "application already processed"));
+            fail(CPProblem.of(CPProblemReason.APPLICATION_ALREADY_PROCESSED, "application already processed"));
         }
 
         CPChannelApplicationStateEnum stateEnum = CPChannelApplicationStateEnum.valueOf(state);
@@ -46,11 +54,7 @@ public class CPChannelApplicationStateSetterSwitcherNode extends CPNodeComponent
             validationFailed();
             return;
         }
-
-        // 更新申请状态
         channelApplicationInfo.setState(stateEnum);
-
-        // 根据状态写入 check_result，msg 用于后续 CheckerResultReader 分支
         String tag = switch (stateEnum) {
             case APPROVED -> "approved";
             case REJECTED -> "rejected";

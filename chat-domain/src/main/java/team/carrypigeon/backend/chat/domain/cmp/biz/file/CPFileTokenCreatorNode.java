@@ -28,12 +28,18 @@ public class CPFileTokenCreatorNode extends CPNodeComponent {
 
     private final FileTokenService fileTokenService;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前请求会话（用于生成令牌归属用户）
+     * @param context LiteFlow 上下文，读取文件信息并回写上传令牌
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         String op = requireBind(CPNodeBindKeys.KEY, String.class);
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
         String fileId = context.get(CPNodeFileKeys.FILE_INFO_ID);
-        // 默认 5 分钟有效期
         long ttlSec = 300L;
         String token = fileTokenService.createToken(uid, op, fileId, ttlSec);
         context.set(CPNodeFileKeys.FILE_TOKEN, token);

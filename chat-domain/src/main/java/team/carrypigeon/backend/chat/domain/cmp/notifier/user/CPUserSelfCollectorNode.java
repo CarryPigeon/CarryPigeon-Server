@@ -26,6 +26,13 @@ import java.util.Set;
 @LiteflowComponent("CPUserSelfCollector")
 public class CPUserSelfCollectorNode extends CPNodeComponent {
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（本节点不直接写回）
+     * @param context LiteFlow 上下文，读取会话用户并维护通知目标集合
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);

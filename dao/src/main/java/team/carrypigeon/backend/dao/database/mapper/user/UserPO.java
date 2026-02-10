@@ -12,35 +12,60 @@ import team.carrypigeon.backend.api.bo.domain.user.CPUserSexEnum;
 import java.time.LocalDateTime;
 
 /**
- * 数据库user表映射实体类
- * @author midreamsheep
- * */
+ * `user` 表持久化对象。
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Accessors(chain = true)
 @TableName("user")
 public class UserPO {
-    // 用户唯一id
+
+    /**
+     * 用户 ID。
+     */
     @TableId
     private Long id;
-    // 用户名
+
+    /**
+     * 用户名。
+     */
     private String username;
-    // 用户头像的资源id
+
+    /**
+     * 头像资源 ID。
+     */
     private Long avatar;
-    // 用户的邮箱
+
+    /**
+     * 邮箱地址。
+     */
     private String email;
-    // 用户的性别，0为未知，1为男性，2为女性
+
+    /**
+     * 性别值。
+     */
     private Integer sex;
-    // 用户简介
+
+    /**
+     * 个人简介。
+     */
     private String brief;
-    // 用户的生日
+
+    /**
+     * 出生时间。
+     */
     private LocalDateTime birthday;
-    // 用户的注册时间
+
+    /**
+     * 注册时间。
+     */
     private LocalDateTime registerTime;
 
     /**
-     * 将当前 PO 转换为领域对象（BO）。
+     * 将 PO 转换为 BO。
+     *
+     * @return 用户领域对象。
      */
     public CPUser toBo() {
         return new CPUser()
@@ -55,7 +80,10 @@ public class UserPO {
     }
 
     /**
-     * 从领域对象（BO）创建 PO。
+     * 从 BO 构建 PO。
+     *
+     * @param user 用户领域对象。
+     * @return 用户持久化对象。
      */
     public static UserPO fromBo(CPUser user) {
         return new UserPO()
@@ -68,5 +96,4 @@ public class UserPO {
                 .setBirthday(user.getBirthday())
                 .setRegisterTime(user.getRegisterTime());
     }
-
 }

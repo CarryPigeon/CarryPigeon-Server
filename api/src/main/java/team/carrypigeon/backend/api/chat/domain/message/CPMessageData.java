@@ -3,27 +3,38 @@ package team.carrypigeon.backend.api.chat.domain.message;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * cp的消息数据接口，用于封装不同的消息数据
- * */
+ * 消息数据协议。
+ * <p>
+ * 不同消息领域实现该接口以提供解析、摘要与领域标识能力。
+ */
 public interface CPMessageData {
+
     /**
-     * 用于解析消息数据并封装
-     * */
+     * 解析消息数据。
+     *
+     * @param data 消息 JSON 载荷。
+     * @return 解析后的消息对象；解析失败返回 {@code null}。
+     */
     CPMessageData parse(JsonNode data);
 
     /**
-     * 获取简略消息，主要用于消息向客户端的推送<br/>
-     * 例如：文本消息的简略消息为前20个字符，图片的简略信息为[image]
-     * */
+     * 获取消息摘要内容。
+     *
+     * @return 可用于列表预览或通知展示的摘要文本。
+     */
     String getSContent();
 
     /**
-     * 获取消息数据
-     * */
+     * 获取结构化消息数据。
+     *
+     * @return 消息 JSON 载荷。
+     */
     JsonNode getData();
 
     /**
-     * 获取消息域
-     * */
+     * 获取消息领域。
+     *
+     * @return 消息领域标识。
+     */
     String getDomain();
 }

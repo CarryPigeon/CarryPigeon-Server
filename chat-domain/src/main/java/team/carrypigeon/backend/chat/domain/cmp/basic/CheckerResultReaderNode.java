@@ -26,6 +26,13 @@ public class CheckerResultReaderNode extends CPNodeSwitchComponent {
     private static final String MODE_STATE = "state";
     private static final String MODE_MSG = "msg";
 
+    /**
+     * 执行节点处理逻辑并返回处理结果。
+     *
+     * @param context LiteFlow 上下文，提供校验结果读取源
+     * @return 规范化后的校验结果标识字符串
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected String process(CPFlowContext context) throws Exception {
         CheckResult result = requireContext(context, CPFlowKeys.CHECK_RESULT);
@@ -35,15 +42,12 @@ public class CheckerResultReaderNode extends CPNodeSwitchComponent {
         }
         switch (mode) {
             case MODE_STATE:
-                // 根据 state 返回 success 或 fail
                 String tag = result.state() ? "success" : "fail";
                 log.debug("CheckerResultReader: mode=state, state={}, tag={}", result.state(), tag);
                 return tag;
             case MODE_MSG:
-                // 直接返回自定义 msg 作为标签
                 String msg = result.msg();
                 if (msg == null || msg.isEmpty()) {
-                    // msg 为空时，退化为 state 模式
                     String fallback = result.state() ? "success" : "fail";
                     log.debug("CheckerResultReader: mode=msg but msg is empty, fallback tag={}", fallback);
                     return fallback;

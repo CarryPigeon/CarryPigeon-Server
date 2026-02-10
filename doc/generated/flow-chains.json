@@ -1,0 +1,139 @@
+{
+  "count": 33,
+  "items": [
+    {
+      "chain": "api_auth_email_codes",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_auth_refresh",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_auth_revoke",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_auth_tokens",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_channel_admins_delete",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_admins_put",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_application_decision",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_applications_create",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_applications_list",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_bans_delete",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_bans_list",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_bans_put",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_members_kick",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channel_members_list",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channels_create",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channels_delete",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channels_get",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channels_list",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_channels_patch",
+      "file": "api_channels.xml"
+    },
+    {
+      "chain": "api_domains_catalog",
+      "file": "api_public.xml"
+    },
+    {
+      "chain": "api_files_uploads_create",
+      "file": "api_files.xml"
+    },
+    {
+      "chain": "api_messages_create",
+      "file": "api_messages.xml"
+    },
+    {
+      "chain": "api_messages_delete",
+      "file": "api_messages.xml"
+    },
+    {
+      "chain": "api_messages_list",
+      "file": "api_messages.xml"
+    },
+    {
+      "chain": "api_plugins_catalog",
+      "file": "api_public.xml"
+    },
+    {
+      "chain": "api_read_state_update",
+      "file": "api_messages.xml"
+    },
+    {
+      "chain": "api_required_gate_check",
+      "file": "api_public.xml"
+    },
+    {
+      "chain": "api_server",
+      "file": "api_public.xml"
+    },
+    {
+      "chain": "api_unreads_list",
+      "file": "api_messages.xml"
+    },
+    {
+      "chain": "api_users_batch",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_users_get",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_users_me",
+      "file": "api_auth_users.xml"
+    },
+    {
+      "chain": "api_users_me_patch",
+      "file": "api_auth_users.xml"
+    }
+  ],
+  "kind": "api_flow_chains",
+  "source": "application-starter config/api_*.xml"
+}

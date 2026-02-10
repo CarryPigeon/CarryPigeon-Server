@@ -3,10 +3,10 @@ package team.carrypigeon.backend.chat.domain.controller.web.api;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.ContentDisposition;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +17,7 @@ import team.carrypigeon.backend.api.bo.domain.file.CPFileAccessScopeEnum;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -33,7 +34,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * File upload/download endpoints under {@code /api/files}.
+ * 文件 API 控制器。
+ * <p>
+ * 提供上传申请、上传完成回写与下载访问控制能力，并将访问失败统一映射为标准问题响应。
  */
 @RestController
 public class ApiFileController {
@@ -47,6 +50,16 @@ public class ApiFileController {
     private final FileService fileService;
     private final AccessTokenService accessTokenService;
 
+    /**
+     * 构造文件控制器。
+     *
+     * @param flowRunner API 责任链执行器。
+     * @param fileInfoDao 文件元信息数据访问对象。
+     * @param channelMemberDao 频道成员数据访问对象。
+     * @param fileTokenService 文件上传令牌服务。
+     * @param fileService 文件对象存储服务。
+     * @param accessTokenService Access Token 校验服务。
+     */
     public ApiFileController(ApiFlowRunner flowRunner,
                              FileInfoDao fileInfoDao,
                              ChannelMemberDao channelMemberDao,
@@ -62,11 +75,11 @@ public class ApiFileController {
     }
 
     /**
-     * Apply an upload slot (metadata + upload token).
-     * <p>
-     * Route: {@code POST /api/files/uploads}
-     * <p>
-     * Chain: {@code api_files_uploads_create}
+     * 申请文件上传槽位并返回上传令牌。
+     *
+     * @param body 上传申请参数。
+     * @param request HTTP 请求对象。
+     * @return 责任链写入的标准响应数据。
      */
     @PostMapping("/api/files/uploads")
     public Object applyUpload(@Valid @RequestBody FileUploadApplyRequest body, HttpServletRequest request) {
@@ -78,15 +91,12 @@ public class ApiFileController {
     }
 
     /**
-     * Upload binary for a previously created file id.
-     * <p>
-     * Route: {@code PUT /api/files/upload/{file_id}}
-     * <p>
-     * Authorization:
-     * <ul>
-     *   <li>Bearer access token (same as other /api endpoints)</li>
-     *   <li>One-time header {@code x-cp-upload-token}</li>
-     * </ul>
+     * 上传二进制文件内容并落库上传完成状态。
+     *
+     * @param fileId 文件 ID。
+     * @param request HTTP 请求对象。
+     * @return 无内容成功响应。
+     * @throws Exception 当读取请求体或写入对象存储失败时抛出。
      */
     @PutMapping("/api/files/upload/{file_id}")
     public ResponseEntity<Void> upload(@PathVariable("file_id") String fileId,
@@ -96,22 +106,22 @@ public class ApiFileController {
         String token = request.getHeader("x-cp-upload-token");
         FileTokenService.FileToken ft = fileTokenService.consume(token);
         if (ft == null || !"UPLOAD".equalsIgnoreCase(ft.getOp()) || ft.getUid() != uid || ft.getFileId() == null || !ft.getFileId().equals(fileId)) {
-            throw new CPProblemException(CPProblem.of(401, "unauthorized", "invalid upload token"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.UNAUTHORIZED, "invalid upload token"));
         }
 
         long id = parseLongId(fileId);
         CPFileInfo info = fileInfoDao.getById(id);
         if (info == null) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "file not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "file not found"));
         }
         if (info.getOwnerUid() != uid) {
-            throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
         }
 
         long expectedSize = info.getSize();
         long contentLength = request.getContentLengthLong();
         if (contentLength > 0 && contentLength != expectedSize) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
 
         try (InputStream in = request.getInputStream()) {
@@ -120,34 +130,28 @@ public class ApiFileController {
 
         info.setUploaded(true).setUploadedTime(TimeUtil.currentLocalDateTime());
         if (!fileInfoDao.save(info)) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "failed to save file info"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "failed to save file info"));
         }
 
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * Download file binary by share key.
+     * 按分享键下载文件。
      * <p>
-     * Route: {@code GET /api/files/download/{share_key}}
-     * <p>
-     * Access policy (P1):
-     * <ul>
-     *   <li>{@code share_key="server_avatar"} is public and does not require login.</li>
-     *   <li>Other files are controlled by {@code file_info.access_scope} (P2):</li>
-     *   <li>{@code PUBLIC}: no login required</li>
-     *   <li>{@code AUTH}: any logged-in user</li>
-     *   <li>{@code OWNER}: only uploader</li>
-     *   <li>{@code CHANNEL}: channel members only</li>
-     * </ul>
-     * <p>
-     * Note: message-level ACL (e.g. "file bound to a specific message id") is reserved for P3+ via {@code scope_mid}.
+     * 访问控制规则由 `access_scope` 与请求鉴权状态共同决定：
+     * `PUBLIC` 允许匿名访问，`AUTH` 需要登录态，`OWNER` 仅上传者可见，`CHANNEL` 仅频道成员可见。
+     *
+     * @param shareKey 文件分享键。
+     * @param request HTTP 请求对象。
+     * @return 文件流响应。
+     * @throws Exception 当文件读取失败时抛出。
      */
     @GetMapping("/api/files/download/{share_key}")
     public ResponseEntity<InputStreamResource> download(@PathVariable("share_key") String shareKey,
                                                         HttpServletRequest request) throws Exception {
         if (shareKey == null || shareKey.isBlank()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         if ("server_avatar".equals(shareKey)) {
             return streamObject("server_avatar", null, null);
@@ -155,34 +159,33 @@ public class ApiFileController {
 
         CPFileInfo info = resolveFileInfo(shareKey);
         if (info == null) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "file not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "file not found"));
         }
         if (!info.isUploaded()) {
-            throw new CPProblemException(CPProblem.of(404, "not_found", "file not found"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.NOT_FOUND, "file not found"));
         }
 
         CPFileAccessScopeEnum scope = info.getAccessScope() == null ? CPFileAccessScopeEnum.OWNER : info.getAccessScope();
         if (scope != CPFileAccessScopeEnum.PUBLIC) {
             Long uid = verifyBearerIfPresent(request);
             if (uid == null) {
-                throw new CPProblemException(CPProblem.of(401, "unauthorized", "missing or invalid access token"));
+                throw new CPProblemException(CPProblem.of(CPProblemReason.UNAUTHORIZED, "missing or invalid access token"));
             }
             if (scope == CPFileAccessScopeEnum.OWNER) {
                 if (info.getOwnerUid() != uid) {
-                    throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+                    throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
                 }
             } else if (scope == CPFileAccessScopeEnum.CHANNEL) {
                 long cid = info.getScopeCid();
                 if (cid <= 0) {
-                    throw new CPProblemException(CPProblem.of(500, "internal_error", "invalid file scope"));
+                    throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "invalid file scope"));
                 }
                 if (channelMemberDao.getMember(uid, cid) == null) {
-                    throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+                    throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
                 }
             } else if (scope == CPFileAccessScopeEnum.AUTH) {
-                // authenticated users can download
             } else {
-                throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+                throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
             }
         }
 
@@ -191,7 +194,18 @@ public class ApiFileController {
         return streamObject(info.getObjectName(), filename, contentType);
     }
 
-    private ResponseEntity<InputStreamResource> streamObject(String objectName, String filename, String contentType) throws Exception {
+    /**
+     * 从对象存储读取文件并构造下载响应头。
+     *
+     * @param objectName 对象存储键名。
+     * @param filename 下载文件名。
+     * @param contentType 文件 MIME 类型。
+     * @return 包含输入流的 HTTP 响应。
+     * @throws Exception 当对象存储读取失败时抛出。
+     */
+    private ResponseEntity<InputStreamResource> streamObject(String objectName,
+                                                             String filename,
+                                                             String contentType) throws Exception {
         InputStream in = fileService.downloadFile(objectName);
         InputStreamResource resource = new InputStreamResource(in);
         ResponseEntity.BodyBuilder builder = ResponseEntity.ok();
@@ -215,18 +229,37 @@ public class ApiFileController {
         return builder.body(resource);
     }
 
+    /**
+     * 根据分享键查询文件元信息。
+     *
+     * @param shareKey 文件分享键。
+     * @return 文件元信息；不存在时返回 {@code null}。
+     */
     private CPFileInfo resolveFileInfo(String shareKey) {
         return fileInfoDao.getByShareKey(shareKey.trim());
     }
 
+    /**
+     * 解析字符串 ID。
+     *
+     * @param str 待解析字符串。
+     * @return 解析后的文件 ID。
+     * @throws CPProblemException 当字符串不是合法整数时抛出。
+     */
     private long parseLongId(String str) {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
     }
 
+    /**
+     * 在请求携带 Bearer Token 时执行校验并返回用户 ID。
+     *
+     * @param request HTTP 请求对象。
+     * @return 用户 ID；未携带或校验失败时返回 {@code null}。
+     */
     private Long verifyBearerIfPresent(HttpServletRequest request) {
         String auth = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (auth == null || auth.isBlank()) {

@@ -9,31 +9,53 @@ import lombok.experimental.Accessors;
 import java.time.LocalDateTime;
 
 /**
- * 数据库中消息的映射类
- * */
+ * 消息领域对象。
+ * <p>
+ * 对应消息持久化实体，记录发送者、频道、领域与消息载荷。
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
 public class CPMessage {
-    // 消息id
-    private long id;
-    // 用户id
-    private long uid;
-    // 通道id
-    private long cid;
-    // 消息域，格式为 Domain:SubDomain
-    private String domain;
-    // 消息域版本（SemVer 字符串，例如 1.0.0）
-    private String domainVersion;
+
     /**
-     * Reply target message id (mid), 0 means not a reply.
-     * <p>
-     * JSON protocol uses {@code reply_to_mid} as a snowflake string.
+     * 消息 ID。
+     */
+    private long id;
+
+    /**
+     * 发送者用户 ID。
+     */
+    private long uid;
+
+    /**
+     * 频道 ID。
+     */
+    private long cid;
+
+    /**
+     * 消息领域，格式为 `Domain:SubDomain`。
+     */
+    private String domain;
+
+    /**
+     * 消息领域版本（SemVer）。
+     */
+    private String domainVersion;
+
+    /**
+     * 回复目标消息 ID，`0` 表示非回复消息。
      */
     private long replyToMid;
-    // 消息数据
+
+    /**
+     * 消息结构化载荷。
+     */
     private JsonNode data;
-    // 发送时间
+
+    /**
+     * 发送时间。
+     */
     private LocalDateTime sendTime;
 }

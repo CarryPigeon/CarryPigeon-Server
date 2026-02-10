@@ -1,32 +1,30 @@
 package team.carrypigeon.backend.chat.domain.cmp.api.auth;
 
 import com.yomahub.liteflow.annotation.LiteflowComponent;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
 import team.carrypigeon.backend.api.service.email.CPEmailService;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.SendEmailCodeRequest;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
-import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
-import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.security.SecureRandom;
 
 /**
- * Send a 6-digit email code for login.
+ * 发送邮箱验证码节点。
  * <p>
- * Route: {@code POST /api/auth/email_codes} (public)
+ * 路由：`POST /api/auth/email_codes`（公开接口）。
  * <p>
- * Input: {@link ApiFlowKeys#REQUEST} = {@link SendEmailCodeRequest}
- * Output: none (HTTP 204 is handled by controller)
- * <p>
- * Storage: code is stored in {@link CPCache} with a TTL and deleted when consumed by {@code /api/auth/tokens}.
+ * 行为：限流校验 -> 生成 6 位验证码 -> 写入缓存（TTL）-> 发送邮件。
  */
 @Slf4j
 @LiteflowComponent("ApiSendEmailCode")
@@ -51,14 +49,17 @@ public class ApiSendEmailCodeNode extends CPNodeComponent {
     @Value("${carrypigeon.email.code-subject:CarryPigeon 验证码}")
     private String subject;
 
+    /**
+     * 执行邮箱验证码发送流程。
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof SendEmailCodeRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         if (!mailEnabled) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "email service disabled"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "email service disabled"));
         }
         enforceRateLimit(req.email());
         String code = generate6DigitCode();
@@ -68,26 +69,35 @@ public class ApiSendEmailCodeNode extends CPNodeComponent {
         log.debug("ApiSendEmailCode success, email={}, expireSeconds={}", req.email(), expireSeconds);
     }
 
+    /**
+     * 生成邮箱验证码缓存键。
+     */
     private String emailCodeKey(String email) {
         return email + ":code";
     }
 
+    /**
+     * 校验发送频率限制（短窗口 + 日窗口）。
+     */
     private void enforceRateLimit(String email) {
         String remoteIp = resolveRemoteIp();
 
         String shortKey = "api:email_code:short:" + remoteIp + ":" + email;
         long shortCount = cache.increment(shortKey, 1L, SHORT_WINDOW_SECONDS);
         if (shortCount > MAX_REQUESTS_PER_SHORT_WINDOW) {
-            throw new CPProblemException(CPProblem.of(429, "rate_limited", "too many email requests"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.RATE_LIMITED, "too many email requests"));
         }
 
         String dailyKey = "api:email_code:day:" + remoteIp + ":" + email;
         long dailyCount = cache.increment(dailyKey, 1L, DAILY_WINDOW_SECONDS);
         if (dailyCount > MAX_REQUESTS_PER_DAY) {
-            throw new CPProblemException(CPProblem.of(429, "rate_limited", "too many email requests"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.RATE_LIMITED, "too many email requests"));
         }
     }
 
+    /**
+     * 尝试从请求上下文解析客户端 IP。
+     */
     private String resolveRemoteIp() {
         try {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -118,6 +128,9 @@ public class ApiSendEmailCodeNode extends CPNodeComponent {
         }
     }
 
+    /**
+     * 归一化验证码过期时间。
+     */
     private int normalizeExpireSeconds(int configured) {
         if (configured <= 0) {
             return 300;
@@ -125,11 +138,17 @@ public class ApiSendEmailCodeNode extends CPNodeComponent {
         return configured;
     }
 
+    /**
+     * 生成邮件正文内容。
+     */
     private String buildContent(String code, int expireSeconds) {
         int minutes = Math.max(1, expireSeconds / 60);
         return "您的验证码为：" + code + "，" + minutes + " 分钟内有效。";
     }
 
+    /**
+     * 生成 6 位数字验证码。
+     */
     private String generate6DigitCode() {
         int value = SECURE_RANDOM.nextInt(1_000_000);
         return String.format("%06d", value);

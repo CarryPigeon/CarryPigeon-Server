@@ -1,0 +1,27 @@
+{
+  "commands": [
+    "auth",
+    "ping",
+    "reauth",
+    "subscribe"
+  ],
+  "error_reasons": [
+    "api_version_unsupported",
+    "unauthorized",
+    "validation_failed"
+  ],
+  "event_types": [
+    "channel.changed",
+    "channels.changed",
+    "message.created",
+    "message.deleted",
+    "read_state.updated"
+  ],
+  "kind": "ws_protocol",
+  "source": "ApiWebSocketHandler + ApiWsEventPublisher",
+  "static_message_types": [
+    "event",
+    "pong",
+    "resume.failed"
+  ]
+}

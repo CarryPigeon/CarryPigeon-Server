@@ -55,17 +55,20 @@ public abstract class AbstractBindNode<R> extends CPNodeComponent {
         this.requestType = requestType;
     }
 
+    /**
+     * 执行绑定节点主流程：读取输入、构造输出并写入上下文。
+     *
+     * @param context 链路上下文
+     * @throws Exception 绑定过程中的异常
+     */
     @Override
     protected final void process(CPFlowContext context) throws Exception {
-        // 1. 从上下文读取请求 DTO
         Object raw = context.get(CPFlowKeys.REQUEST);
         if (raw == null) {
             log.error("[{}] 请求 DTO 不存在: key={}", getNodeId(), CPFlowKeys.REQUEST.name());
             validationFailed("request body is required");
             return;
         }
-
-        // 2. 类型校验
         if (!requestType.isInstance(raw)) {
             log.error("[{}] 请求 DTO 类型不匹配: expected={}, actual={}",
                     getNodeId(), requestType.getSimpleName(), raw.getClass().getSimpleName());
@@ -75,11 +78,7 @@ public abstract class AbstractBindNode<R> extends CPNodeComponent {
 
         @SuppressWarnings("unchecked")
         R request = (R) raw;
-
-        // 3. 参数校验
         validate(request, context);
-
-        // 4. 绑定参数到上下文
         bind(request, context);
 
         log.debug("[{}] 参数绑定完成: requestType={}", getNodeId(), requestType.getSimpleName());
@@ -105,7 +104,6 @@ public abstract class AbstractBindNode<R> extends CPNodeComponent {
      * @param context 上下文（用于访问其他数据）
      */
     protected void validate(R request, CPFlowContext context) {
-        // 默认空实现
     }
 
     /**

@@ -23,6 +23,11 @@ class CPChannelAdminCheckerTests {
         ChannelDao channelDao = mock(ChannelDao.class);
         ChannelMemberDao memberDao = mock(ChannelMemberDao.class);
         CPChannelAdminChecker checker = new CPChannelAdminChecker(channelDao, memberDao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return false;
@@ -37,7 +42,7 @@ class CPChannelAdminCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("not_channel_member", ex.getProblem().reason());
+        assertEquals("not_channel_member", ex.getProblem().reason().code());
     }
 
     @Test
@@ -45,6 +50,11 @@ class CPChannelAdminCheckerTests {
         ChannelDao channelDao = mock(ChannelDao.class);
         ChannelMemberDao memberDao = mock(ChannelMemberDao.class);
         CPChannelAdminChecker checker = new CPChannelAdminChecker(channelDao, memberDao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return false;
@@ -58,7 +68,7 @@ class CPChannelAdminCheckerTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("not_channel_admin", ex.getProblem().reason());
+        assertEquals("not_channel_admin", ex.getProblem().reason().code());
     }
 
     @Test
@@ -66,6 +76,11 @@ class CPChannelAdminCheckerTests {
         ChannelDao channelDao = mock(ChannelDao.class);
         ChannelMemberDao memberDao = mock(ChannelMemberDao.class);
         CPChannelAdminChecker checker = new CPChannelAdminChecker(channelDao, memberDao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return true;

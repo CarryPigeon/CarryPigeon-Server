@@ -4,6 +4,7 @@ import com.yomahub.liteflow.core.NodeSwitchComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPKey;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
@@ -79,16 +80,13 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
      * @throws Exception 处理过程中的异常
      */
     protected abstract String process(CPFlowContext context) throws Exception;
-
-    // ==================== 工具方法 ====================
-
     /**
      * 参数校验失败的快捷方法。
      *
      * @throws CPProblemException 总是抛出
      */
     protected void validationFailed() {
-        fail(CPProblem.of(422, "validation_failed", "validation failed"));
+        fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
     }
 
     /**
@@ -98,7 +96,7 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
      * @throws CPProblemException 总是抛出
      */
     protected void validationFailed(String message) {
-        fail(CPProblem.of(422, "validation_failed", message));
+        fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, message));
     }
 
     /**
@@ -117,17 +115,16 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
             log.error("[{}] 必填上下文参数缺失: key={}, type={}",
                     getNodeId(), key, type != null ? type.getSimpleName() : "null");
             throw new CPProblemException(
-                    CPProblem.of(422, "validation_failed", "missing required parameter: " + key)
+                    CPProblem.of(CPProblemReason.VALIDATION_FAILED, "missing required parameter: " + key)
             );
         }
         if (type != null && !type.isInstance(raw)) {
             log.error("[{}] 上下文参数类型不匹配: key={}, expected={}, actual={}",
                     getNodeId(), key, type.getSimpleName(), raw.getClass().getSimpleName());
             throw new CPProblemException(
-                    CPProblem.of(500, "internal_error", "context type mismatch: " + key)
+                    CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context type mismatch: " + key)
             );
         }
-        //noinspection unchecked
         return type != null ? type.cast(raw) : (T) raw;
     }
 
@@ -142,22 +139,22 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
      */
     protected <T> T requireContext(CPFlowContext context, CPKey<T> key) {
         if (context == null) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "context is null"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context is null"));
         }
         if (key == null) {
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "key is null"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "key is null"));
         }
         T value;
         try {
             value = context.get(key);
         } catch (IllegalStateException ex) {
             log.error("[{}] 上下文参数类型不匹配: key={}", getNodeId(), key.name(), ex);
-            throw new CPProblemException(CPProblem.of(500, "internal_error", "context type mismatch: " + key.name()));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "context type mismatch: " + key.name()));
         }
         if (value == null) {
             log.error("[{}] 必填上下文参数缺失: key={}, type={}",
                     getNodeId(), key.name(), key.type().getSimpleName());
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "missing required parameter: " + key.name()));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "missing required parameter: " + key.name()));
         }
         return value;
     }
@@ -177,7 +174,7 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
             log.error("[{}] 必填 bind 参数缺失: key={}, type={}",
                     getNodeId(), key, type != null ? type.getSimpleName() : "null");
             throw new CPProblemException(
-                    CPProblem.of(500, "internal_error", "missing bind parameter: " + key)
+                    CPProblem.of(CPProblemReason.INTERNAL_ERROR, "missing bind parameter: " + key)
             );
         }
         return value;
@@ -191,7 +188,7 @@ public abstract class CPNodeSwitchComponent extends NodeSwitchComponent {
      */
     protected void fail(CPProblem problem) {
         CPProblem safe = problem != null ? problem
-                : CPProblem.of(500, "internal_error", "internal error");
+                : CPProblem.of(CPProblemReason.INTERNAL_ERROR, "internal error");
         log.debug("[{}] 业务失败: status={}, reason={}, message={}",
                 getNodeId(), safe.status(), safe.reason(), safe.message());
         throw new CPProblemException(safe);

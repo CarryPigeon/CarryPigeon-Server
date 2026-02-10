@@ -29,6 +29,12 @@ public class CPMessageListerNode extends CPNodeComponent {
 
     private final ChannelMessageDao channelMessageDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取频道与分页参数并写入消息列表
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         Long cid = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO_ID);

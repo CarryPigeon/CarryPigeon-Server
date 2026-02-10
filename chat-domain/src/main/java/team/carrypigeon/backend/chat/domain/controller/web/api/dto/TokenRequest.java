@@ -6,15 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Token exchange request body for {@code POST /api/auth/tokens}.
- * <p>
- * JSON fields use snake_case:
- * {@code grant_type}, {@code email}, {@code code}, {@code client}.
+ * 令牌签发请求体。
+ *
+ * @param grantType 授权类型。
+ * @param email 邮箱地址。
+ * @param code 邮箱验证码。
+ * @param client 客户端信息。
  */
-public record TokenRequest(
-        @NotBlank String grantType,
-        @NotBlank @Email String email,
-        @NotBlank String code,
-        @NotNull @Valid ClientInfo client
-) {
+public record TokenRequest(@NotBlank String grantType,
+                           @NotBlank @Email String email,
+                           @NotBlank String code,
+                           @NotNull @Valid ClientInfo client) {
 }

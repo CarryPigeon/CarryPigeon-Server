@@ -21,12 +21,17 @@ import team.carrypigeon.backend.chat.domain.service.session.CPSessionCenterServi
 public class CPSessionRegisterNode extends CPNodeComponent {
 
     private final CPSessionCenterService cpSessionCenterService;
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param session 当前连接会话，写入用户标识供后续链路使用
+     * @param context LiteFlow 上下文，提供会话 UID 数据源
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         CPUser user = requireContext(context, CPNodeUserKeys.USER_INFO);
-        // 注册会话
         cpSessionCenterService.addSession(user.getId(), session);
-        // 将用户id注册进会话上下文
         session.setAttributeValue(CPChatDomainAttributes.CHAT_DOMAIN_USER_ID, user.getId());
     }
 }

@@ -19,6 +19,12 @@ import team.carrypigeon.backend.chat.domain.attribute.CPNodeChannelKeys;
  * */
 @LiteflowComponent("CPChannelUpdater")
 public class CPChannelUpdaterNode extends CPNodeComponent {
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，按请求字段增量更新频道实体
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPChannel channelInfo = requireContext(context, CPNodeChannelKeys.CHANNEL_INFO);

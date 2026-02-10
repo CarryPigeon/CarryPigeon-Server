@@ -11,9 +11,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * Simple in-memory file token service.
- * Tokens are one-time and have a short TTL, used to authorize
- * HTTP upload/download requests that are initiated via Netty.
+ * 文件令牌服务。
+ * <p>
+ * 负责一次性短期令牌的创建与消费。
  */
 @Slf4j
 @Service
@@ -23,19 +23,17 @@ public class FileTokenService {
     private final CPCache cpCache;
 
     /**
-     * Create a one-time token.
+     * 创建一次性文件令牌。
      *
-     * @param uid    owner user id
-     * @param op     operation, e.g. "UPLOAD" or "DOWNLOAD"
-     * @param fileId related file identifier (may be null for upload)
-     * @param ttlSec time-to-live in seconds
-     * @return generated token string
+     * @param uid 所属用户 ID。
+     * @param op 操作类型。
+     * @param fileId 关联文件 ID。
+     * @param ttlSec 令牌有效期（秒）。
+     * @return 生成的令牌字符串。
      */
     public String createToken(long uid, String op, String fileId, long ttlSec) {
         String token = UUID.randomUUID().toString().replace("-", "");
         LocalDateTime expireAt = TimeUtil.currentLocalDateTime().plusSeconds(ttlSec);
-        FileToken fileToken = new FileToken(token, uid, op, fileId, expireAt);
-        // encode as uid:op:fileId:expireAtMillis
         long expireMillis = TimeUtil.localDateTimeToMillis(expireAt);
         String encoded = uid + ":" + op + ":" + (fileId == null ? "" : fileId) + ":" + expireMillis;
         cpCache.set(buildCacheKey(token), encoded, (int) ttlSec);
@@ -45,7 +43,10 @@ public class FileTokenService {
     }
 
     /**
-     * Get and remove a token. Returns null if token does not exist or expired.
+     * 消费一次性文件令牌。
+     *
+     * @param token 令牌字符串。
+     * @return 解析后的令牌信息；令牌不存在、过期或格式错误返回 {@code null}。
      */
     public FileToken consume(String token) {
         if (token == null || token.isEmpty()) {
@@ -77,17 +78,46 @@ public class FileTokenService {
         }
     }
 
+    /**
+     * 生成令牌缓存键。
+     *
+     * @param token 令牌字符串。
+     * @return 缓存键。
+     */
     private String buildCacheKey(String token) {
         return "file:token:" + token;
     }
 
+    /**
+     * 文件令牌信息。
+     */
     @Data
     @AllArgsConstructor
     public static class FileToken {
+
+        /**
+         * 令牌字符串。
+         */
         private String token;
+
+        /**
+         * 用户 ID。
+         */
         private long uid;
+
+        /**
+         * 操作类型。
+         */
         private String op;
+
+        /**
+         * 文件 ID。
+         */
         private String fileId;
+
+        /**
+         * 过期时间。
+         */
         private LocalDateTime expireAt;
     }
 }

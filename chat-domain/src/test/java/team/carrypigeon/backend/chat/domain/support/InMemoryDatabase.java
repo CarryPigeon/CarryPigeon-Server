@@ -31,29 +31,33 @@ public class InMemoryDatabase {
     private final Map<Long, CPChannel> channels = new HashMap<>();
 
     private final Map<Long, CPChannelMember> channelMembers = new HashMap<>();
-    // uid -> members
     private final Map<Long, List<CPChannelMember>> channelMembersByUid = new HashMap<>();
-    // (uid,cid) -> member
     private final Map<String, CPChannelMember> channelMembersByUidCid = new HashMap<>();
 
     private final Map<Long, CPChannelApplication> channelApplications = new HashMap<>();
 
     private final Map<Long, CPChannelBan> channelBans = new HashMap<>();
-    // (uid,cid) -> ban
     private final Map<String, CPChannelBan> channelBansByUidCid = new HashMap<>();
 
     private final Map<Long, CPMessage> messages = new HashMap<>();
 
     private final Map<Long, CPChannelReadState> channelReadStates = new HashMap<>();
-    // (uid,cid) -> read state
     private final Map<String, CPChannelReadState> channelReadStatesByUidCid = new HashMap<>();
 
+    /**
+     * 生成测试用 ID。
+     *
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public long nextId() {
         return idGenerator.getAndIncrement();
     }
 
-    // -------- User --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param user 待保存的用户实体
+     */
     public void saveUser(CPUser user) {
         if (user.getId() == 0L) {
             user.setId(nextId());
@@ -61,10 +65,22 @@ public class InMemoryDatabase {
         users.put(user.getId(), user);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPUser getUserById(long id) {
         return users.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param email 用户邮箱
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPUser getUserByEmail(String email) {
         if (email == null) {
             return null;
@@ -75,8 +91,11 @@ public class InMemoryDatabase {
                 .orElse(null);
     }
 
-    // -------- UserToken --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param token 令牌字符串
+     */
     public void saveUserToken(CPUserToken token) {
         if (token.getId() == 0L) {
             token.setId(nextId());
@@ -87,20 +106,44 @@ public class InMemoryDatabase {
         }
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPUserToken getUserTokenById(long id) {
         return userTokens.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPUserToken[] getUserTokensByUserId(long uid) {
         return userTokens.values().stream()
                 .filter(t -> t.getUid() == uid)
                 .toArray(CPUserToken[]::new);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param token 令牌字符串
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPUserToken getUserTokenByToken(String token) {
         return userTokensByToken.get(token);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param token 令牌字符串
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteUserToken(CPUserToken token) {
         if (token == null) {
             return false;
@@ -112,8 +155,11 @@ public class InMemoryDatabase {
         return true;
     }
 
-    // -------- Channel --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param channel 频道实体
+     */
     public void saveChannel(CPChannel channel) {
         if (channel.getId() == 0L) {
             channel.setId(nextId());
@@ -121,10 +167,22 @@ public class InMemoryDatabase {
         channels.put(channel.getId(), channel);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannel getChannelById(long id) {
         return channels.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param channel 频道实体
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteChannel(CPChannel channel) {
         if (channel == null) {
             return false;
@@ -133,19 +191,33 @@ public class InMemoryDatabase {
         return true;
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannel[] getAllFixedChannel() {
-        // For tests we simply return all channels whose owner == -1
         return channels.values().stream()
                 .filter(c -> c.getOwner() == -1L)
                 .toArray(CPChannel[]::new);
     }
 
-    // -------- ChannelMember --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     private String memberKey(long uid, long cid) {
         return uid + ":" + cid;
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param member 频道成员实体
+     */
     public void saveChannelMember(CPChannelMember member) {
         if (member.getId() == 0L) {
             member.setId(nextId());
@@ -158,20 +230,45 @@ public class InMemoryDatabase {
         channelMembersByUidCid.put(memberKey(member.getUid(), member.getCid()), member);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelMember getChannelMemberById(long id) {
         return channelMembers.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelMember[] getAllChannelMember(long cid) {
         return channelMembers.values().stream()
                 .filter(m -> m.getCid() == cid)
                 .toArray(CPChannelMember[]::new);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelMember getChannelMember(long uid, long cid) {
         return channelMembersByUidCid.get(memberKey(uid, cid));
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelMember[] getAllMemberByUserId(long uid) {
         List<CPChannelMember> list = channelMembersByUid.get(uid);
         if (list == null) {
@@ -180,6 +277,12 @@ public class InMemoryDatabase {
         return list.toArray(new CPChannelMember[0]);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param member 频道成员实体
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteChannelMember(CPChannelMember member) {
         if (member == null) {
             return false;
@@ -193,8 +296,11 @@ public class InMemoryDatabase {
         return true;
     }
 
-    // -------- ChannelApplication --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param application 入群申请实体
+     */
     public void saveChannelApplication(CPChannelApplication application) {
         if (application.getId() == 0L) {
             application.setId(nextId());
@@ -202,10 +308,23 @@ public class InMemoryDatabase {
         channelApplications.put(application.getId(), application);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelApplication getChannelApplicationById(long id) {
         return channelApplications.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelApplication getChannelApplicationByUidAndCid(long uid, long cid) {
         return channelApplications.values().stream()
                 .filter(a -> Objects.equals(a.getUid(), uid) && Objects.equals(a.getCid(), cid))
@@ -213,18 +332,34 @@ public class InMemoryDatabase {
                 .orElse(null);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelApplication[] getChannelApplicationsByCid(long cid) {
         return channelApplications.values().stream()
                 .filter(a -> a.getCid() == cid)
                 .toArray(CPChannelApplication[]::new);
     }
 
-    // -------- ChannelBan --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     private String banKey(long uid, long cid) {
         return uid + ":" + cid;
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param ban 封禁实体
+     */
     public void saveChannelBan(CPChannelBan ban) {
         if (ban.getId() == 0L) {
             ban.setId(nextId());
@@ -236,20 +371,45 @@ public class InMemoryDatabase {
         channelBansByUidCid.put(banKey(ban.getUid(), ban.getCid()), ban);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelBan getChannelBanById(long id) {
         return channelBans.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelBan getChannelBanByChannelIdAndUserId(long uid, long cid) {
         return channelBansByUidCid.get(banKey(uid, cid));
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelBan[] getChannelBansByCid(long cid) {
         return channelBans.values().stream()
                 .filter(b -> b.getCid() == cid)
                 .toArray(CPChannelBan[]::new);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param ban 封禁实体
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteChannelBan(CPChannelBan ban) {
         if (ban == null) {
             return false;
@@ -259,12 +419,22 @@ public class InMemoryDatabase {
         return true;
     }
 
-    // -------- ChannelReadState --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     private String readStateKey(long uid, long cid) {
         return uid + ":" + cid;
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param state 已读状态实体
+     */
     public void saveChannelReadState(CPChannelReadState state) {
         if (state.getId() == 0L) {
             state.setId(nextId());
@@ -273,14 +443,33 @@ public class InMemoryDatabase {
         channelReadStatesByUidCid.put(readStateKey(state.getUid(), state.getCid()), state);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelReadState getChannelReadStateById(long id) {
         return channelReadStates.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param uid 用户 ID
+     * @param cid 频道 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPChannelReadState getChannelReadStateByUidAndCid(long uid, long cid) {
         return channelReadStatesByUidCid.get(readStateKey(uid, cid));
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param state 已读状态实体
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteChannelReadState(CPChannelReadState state) {
         if (state == null) {
             return false;
@@ -290,8 +479,11 @@ public class InMemoryDatabase {
         return true;
     }
 
-    // -------- Message --------
-
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param message 消息实体
+     */
     public void saveMessage(CPMessage message) {
         if (message.getId() == 0L) {
             message.setId(nextId());
@@ -299,10 +491,24 @@ public class InMemoryDatabase {
         messages.put(message.getId(), message);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param id 主键 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPMessage getMessageById(long id) {
         return messages.get(id);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param cid 频道 ID
+     * @param cursorMid 分页游标消息 ID
+     * @param count 单页条数
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public CPMessage[] getMessagesBeforeMid(long cid, long cursorMid, int count) {
         long safeCursor = cursorMid <= 0 ? Long.MAX_VALUE : cursorMid;
         return messages.values().stream()
@@ -312,6 +518,13 @@ public class InMemoryDatabase {
                 .toArray(CPMessage[]::new);
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param cid 频道 ID
+     * @param startMid 统计起始消息 ID
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public int getMessagesAfterMidCount(long cid, long startMid) {
         long safeStart = Math.max(0L, startMid);
         return (int) messages.values().stream()
@@ -319,6 +532,12 @@ public class InMemoryDatabase {
                 .count();
     }
 
+    /**
+     * 测试内存仓储操作。
+     *
+     * @param message 消息实体
+     * @return 与当前内存仓储操作对应的结果值
+     */
     public boolean deleteMessage(CPMessage message) {
         if (message == null) {
             return false;
@@ -327,8 +546,9 @@ public class InMemoryDatabase {
         return true;
     }
 
-    // -------- Utilities --------
-
+    /**
+     * 测试内存仓储操作。
+     */
     public void clearAll() {
         users.clear();
         userTokens.clear();

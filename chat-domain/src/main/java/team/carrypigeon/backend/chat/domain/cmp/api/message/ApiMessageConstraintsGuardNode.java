@@ -5,6 +5,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -67,7 +68,7 @@ public class ApiMessageConstraintsGuardNode extends CPNodeComponent {
         if (c.maxPayloadBytes() != null) {
             int bytes = data == null ? 0 : data.toString().getBytes(StandardCharsets.UTF_8).length;
             if (bytes > c.maxPayloadBytes()) {
-                throw new CPProblemException(CPProblem.of(422, "schema_invalid", "schema invalid",
+                throw new CPProblemException(CPProblem.of(CPProblemReason.SCHEMA_INVALID, "schema invalid",
                         Map.of("field_errors", List.of(
                                 Map.of("field", "data", "reason", "too_large", "message", "payload too large")
                         ))));
@@ -76,7 +77,7 @@ public class ApiMessageConstraintsGuardNode extends CPNodeComponent {
         if (c.maxDepth() != null) {
             int depth = maxDepth(data);
             if (depth > c.maxDepth()) {
-                throw new CPProblemException(CPProblem.of(422, "schema_invalid", "schema invalid",
+                throw new CPProblemException(CPProblem.of(CPProblemReason.SCHEMA_INVALID, "schema invalid",
                         Map.of("field_errors", List.of(
                                 Map.of("field", "data", "reason", "too_deep", "message", "payload too deep")
                         ))));
@@ -95,7 +96,6 @@ public class ApiMessageConstraintsGuardNode extends CPNodeComponent {
      * </ul>
      */
     private Constraints constraintsOf(String domain, String domainVersion) {
-        // defaults from doc/api
         if (CORE_TEXT_DOMAIN.equals(domain)) {
             return new Constraints(CORE_TEXT_MAX_PAYLOAD_BYTES, CORE_TEXT_MAX_DEPTH);
         }

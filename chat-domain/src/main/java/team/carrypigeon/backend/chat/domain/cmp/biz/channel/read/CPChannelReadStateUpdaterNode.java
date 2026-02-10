@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.channel.read.CPChannelReadState;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.read.ChannelReadStateDao;
@@ -32,6 +33,12 @@ public class CPChannelReadStateUpdaterNode extends CPNodeComponent {
     private final ChannelReadStateDao channelReadStateDao;
     private final ApiWsEventPublisher wsEventPublisher;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取频道消息并更新用户已读状态
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
@@ -53,8 +60,6 @@ public class CPChannelReadStateUpdaterNode extends CPNodeComponent {
                     .setLastReadMid(0L)
                     .setLastReadTime(0L);
         }
-
-        // Only move forward the read position.
         long oldMid = state.getLastReadMid();
         long oldTime = state.getLastReadTime();
         long newMid = lastReadMid;
@@ -77,7 +82,7 @@ public class CPChannelReadStateUpdaterNode extends CPNodeComponent {
         boolean success = channelReadStateDao.save(state);
         if (!success) {
             log.error("CPChannelReadStateUpdater save failed, uid={}, cid={}", uid, cid);
-            fail(CPProblem.of(500, "internal_error", "failed to save channel read state"));
+            fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "failed to save channel read state"));
         }
 
         context.set(CPNodeChannelReadStateKeys.CHANNEL_READ_STATE_INFO, state);

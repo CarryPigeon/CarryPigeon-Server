@@ -28,13 +28,13 @@ class CPMessageDeletePermissionCheckerNodeTests {
         missingMessage.set(CPFlowKeys.SESSION_UID, 1L);
         CPProblemException ex1 = assertThrows(CPProblemException.class, () -> node.process(null, missingMessage));
         assertEquals(422, ex1.getProblem().status());
-        assertEquals("validation_failed", ex1.getProblem().reason());
+        assertEquals("validation_failed", ex1.getProblem().reason().code());
 
         CPFlowContext missingOperator = new CPFlowContext();
         missingOperator.set(CPNodeMessageKeys.MESSAGE_INFO, new CPMessage());
         CPProblemException ex2 = assertThrows(CPProblemException.class, () -> node.process(null, missingOperator));
         assertEquals(422, ex2.getProblem().status());
-        assertEquals("validation_failed", ex2.getProblem().reason());
+        assertEquals("validation_failed", ex2.getProblem().reason().code());
     }
 
     @Test
@@ -48,7 +48,7 @@ class CPMessageDeletePermissionCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(422, ex.getProblem().status());
-        assertEquals("validation_failed", ex.getProblem().reason());
+        assertEquals("validation_failed", ex.getProblem().reason().code());
     }
 
     @Test
@@ -66,7 +66,7 @@ class CPMessageDeletePermissionCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(409, ex.getProblem().status());
-        assertEquals("conflict", ex.getProblem().reason());
+        assertEquals("conflict", ex.getProblem().reason().code());
     }
 
     @Test
@@ -105,7 +105,7 @@ class CPMessageDeletePermissionCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> node.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("forbidden", ex.getProblem().reason());
+        assertEquals("forbidden", ex.getProblem().reason().code());
     }
 
     @Test

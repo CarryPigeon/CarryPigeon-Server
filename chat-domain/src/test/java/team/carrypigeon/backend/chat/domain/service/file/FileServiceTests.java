@@ -78,6 +78,13 @@ class FileServiceTests {
         verify(minioClient, times(1)).removeObject(any());
     }
 
+    /**
+     * 测试辅助方法。
+     *
+     * @param service 测试输入参数
+     * @param bucketName 测试输入参数
+     * @throws Exception 执行过程中抛出的异常
+     */
     private static void setBucketName(FileService service, String bucketName) throws Exception {
         Field field = FileService.class.getDeclaredField("bucketName");
         field.setAccessible(true);

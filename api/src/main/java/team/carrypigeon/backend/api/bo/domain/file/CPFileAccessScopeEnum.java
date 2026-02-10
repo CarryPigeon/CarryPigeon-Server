@@ -3,39 +3,44 @@ package team.carrypigeon.backend.api.bo.domain.file;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * File access scope.
+ * 文件下载访问范围枚举。
  * <p>
- * This scope controls who can download a file from {@code GET /api/files/download/{share_key}}.
- * The scope is stored in {@code file_info.access_scope}.
+ * 该范围决定 `GET /api/files/download/{share_key}` 的可访问人群，
+ * 持久化时对应 `file_info.access_scope` 字段。
  */
 @Slf4j
 public enum CPFileAccessScopeEnum {
     /**
-     * Only the uploader (owner) can download.
+     * 仅上传者本人可下载。
      */
     OWNER,
+
     /**
-     * Any authenticated user can download.
+     * 任意已登录用户可下载。
      * <p>
-     * This is typically used for user/channel avatars inside the app.
+     * 常用于应用内头像等公共资源。
      */
     AUTH,
+
     /**
-     * Only members of the target channel can download.
+     * 仅目标频道成员可下载。
      * <p>
-     * Requires {@code file_info.scope_cid > 0}.
+     * 使用该范围时通常要求 `file_info.scope_cid > 0`。
      */
     CHANNEL,
+
     /**
-     * Anyone (including anonymous clients) can download.
+     * 全部用户可下载（包含匿名访问）。
      */
     PUBLIC;
 
     /**
-     * Parse an access scope string.
+     * 解析访问范围字符串。
      * <p>
-     * Unknown values fallback to {@link #OWNER} and are logged, to avoid failing the whole request when legacy/bad data
-     * is present in database.
+     * 当值为空或非法时回落到 {@link #OWNER}，避免脏数据导致整条请求失败。
+     *
+     * @param value 数据库存储的访问范围字符串
+     * @return 合法范围；非法值返回 {@link #OWNER}
      */
     public static CPFileAccessScopeEnum parseOrDefault(String value) {
         if (value == null || value.isBlank()) {
@@ -49,4 +54,3 @@ public enum CPFileAccessScopeEnum {
         }
     }
 }
-

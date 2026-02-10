@@ -3,6 +3,7 @@ package team.carrypigeon.backend.api.chat.domain.node;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 
 /**
@@ -36,7 +37,7 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
  *
  *     @Override
  *     protected CPProblem getProblem() {
- *         return CPProblem.of(403, "not_channel_member", "you are not a member of this channel");
+ *         return CPProblem.of(CPProblemReason.NOT_CHANNEL_MEMBER, "you are not a member of this channel");
  *     }
  * }
  * }</pre>
@@ -55,6 +56,12 @@ public abstract class AbstractGuardNode extends CPNodeComponent {
 
     private static final Logger log = LoggerFactory.getLogger(AbstractGuardNode.class);
 
+    /**
+     * 执行守卫节点主流程：检查条件并在失败时中断链路。
+     *
+     * @param context 链路上下文
+     * @throws Exception 校验过程中的异常
+     */
     @Override
     protected final void process(CPFlowContext context) throws Exception {
         boolean passed = check(context);
@@ -94,8 +101,8 @@ public abstract class AbstractGuardNode extends CPNodeComponent {
      * <ul>
      *   <li>401 unauthorized：未认证</li>
      *   <li>403 forbidden/not_channel_member：权限不足</li>
-     *   <li>403 channel_admin_required：需要管理员权限</li>
-     *   <li>403 channel_owner_required：需要所有者权限</li>
+     *   <li>403 not_channel_admin：需要管理员权限</li>
+     *   <li>403 not_channel_owner：需要所有者权限</li>
      * </ul>
      *
      * @return 错误信息

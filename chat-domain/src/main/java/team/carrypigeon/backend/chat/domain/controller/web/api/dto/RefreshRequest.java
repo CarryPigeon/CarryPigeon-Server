@@ -5,9 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * Refresh token request body for {@code POST /api/auth/refresh}.
- * <p>
- * JSON fields: {@code refresh_token}, {@code client}.
+ * 令牌刷新请求体。
+ *
+ * @param refreshToken 刷新令牌。
+ * @param client 客户端信息。
  */
 public record RefreshRequest(@NotBlank String refreshToken, @NotNull @Valid ClientInfo client) {
 }

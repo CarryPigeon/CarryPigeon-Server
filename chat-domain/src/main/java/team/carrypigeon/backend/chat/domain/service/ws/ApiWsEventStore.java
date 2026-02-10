@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.service.ws;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.chat.domain.controller.web.api.config.CpApiProperties;
 
 import java.util.ArrayList;
@@ -30,6 +31,11 @@ public class ApiWsEventStore {
     private final CpApiProperties properties;
     private final NavigableMap<Long, StoredEvent> events = new ConcurrentSkipListMap<>();
 
+    /**
+     * 构造 WS 事件存储。
+     *
+     * @param properties API 配置
+     */
     public ApiWsEventStore(CpApiProperties properties) {
         this.properties = properties;
     }
@@ -61,7 +67,7 @@ public class ApiWsEventStore {
         }
         Long earliest = events.firstKey();
         if (earliest != null && last < earliest) {
-            return new ResumeResult(List.of(), "event_too_old");
+            return new ResumeResult(List.of(), CPProblemReason.EVENT_TOO_OLD.code());
         }
         List<StoredEvent> out = new ArrayList<>();
         for (StoredEvent e : events.tailMap(last, false).values()) {
@@ -81,8 +87,6 @@ public class ApiWsEventStore {
         int ttlSeconds = properties.getApi().getWs().getEventStore().getTtlSeconds();
         long ttlMillis = Math.max(1, ttlSeconds) * 1000L;
         long now = System.currentTimeMillis();
-
-        // TTL eviction
         while (!events.isEmpty()) {
             StoredEvent first = events.firstEntry().getValue();
             if (first == null) {
@@ -94,8 +98,6 @@ public class ApiWsEventStore {
             }
             events.pollFirstEntry();
         }
-
-        // capacity eviction
         while (events.size() > capacity && !events.isEmpty()) {
             events.pollFirstEntry();
         }

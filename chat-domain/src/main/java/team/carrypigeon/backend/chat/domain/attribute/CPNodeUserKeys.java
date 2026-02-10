@@ -34,6 +34,9 @@ public final class CPNodeUserKeys {
     /** {@code List<CPUser>}: 用户列表（用于 batch 返回）。 */
     public static final CPKey<List> USER_INFO_LIST = CPKey.of("UserInfo_List", List.class);
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeUserKeys() {
     }
 }

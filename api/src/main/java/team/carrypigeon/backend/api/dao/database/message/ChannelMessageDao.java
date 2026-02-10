@@ -3,53 +3,57 @@ package team.carrypigeon.backend.api.dao.database.message;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 
 /**
- * Channel message DAO.
+ * 频道消息 DAO 接口。
  * <p>
- * This DAO intentionally uses {@code mid} (message id, snowflake long) as the stable cursor for pagination and unread
- * counting. Avoid using {@code send_time} as the cursor to prevent boundary bugs when multiple messages share the same
- * timestamp.
+ * 本接口以 `mid`（消息 ID）作为分页与游标基准，
+ * 避免仅使用时间戳带来的边界重复/遗漏问题。
  */
 public interface ChannelMessageDao {
+
     /**
-     * Get a message by id.
+     * 按消息 ID 查询。
      *
-     * @param id message id
+     * @param id 消息 ID
+     * @return 消息实体，不存在时返回 null
      */
     CPMessage getById(long id);
+
     /**
-     * List messages in a channel before a cursor message id (exclusive), ordered by id desc.
+     * 查询某频道在游标之前的消息（不含游标）。
      * <p>
-     * Cursor semantics:
-     * <ul>
-     *   <li>cursorMid &lt;= 0: treated as {@link Long#MAX_VALUE} (first page)</li>
-     *   <li>otherwise: list messages with {@code id &lt; cursorMid}</li>
-     * </ul>
+     * 约定：
+     * - `cursorMid <= 0` 视为首屏（使用最大游标）；
+     * - 否则返回 `id < cursorMid` 的消息。
      *
-     * @param cid       channel id
-     * @param cursorMid cursor message id (exclusive)
-     * @param count     max items, suggested range [1, 100]
+     * @param cid       频道 ID
+     * @param cursorMid 游标消息 ID（不包含）
+     * @param count     期望返回条数
+     * @return 消息数组
      */
     CPMessage[] listBefore(long cid, long cursorMid, int count);
 
     /**
-     * Count messages after a start message id (exclusive), in the given channel.
+     * 统计某频道在指定消息 ID 之后的消息数。
      *
-     * @param cid      channel id
-     * @param startMid last read message id (exclusive)
+     * @param cid      频道 ID
+     * @param startMid 起始消息 ID（不包含）
+     * @return 未读消息数量
      */
     int countAfter(long cid, long startMid);
 
     /**
-     * Save a message (insert or update).
+     * 保存消息（新增或更新）。
      *
-     * @param message message
+     * @param message 消息实体
+     * @return 保存是否成功
      */
     boolean save(CPMessage message);
 
     /**
-     * Delete a message.
+     * 删除消息。
      *
-     * @param message message
+     * @param message 消息实体
+     * @return 删除是否成功
      */
     boolean delete(CPMessage message);
 }

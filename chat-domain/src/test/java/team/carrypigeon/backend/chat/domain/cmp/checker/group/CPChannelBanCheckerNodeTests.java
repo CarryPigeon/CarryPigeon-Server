@@ -22,6 +22,11 @@ class CPChannelBanCheckerNodeTests {
     void process_softMode_noBan_shouldMarkSuccess() throws Exception {
         ChannelBanDAO dao = mock(ChannelBanDAO.class);
         CPChannelBanCheckerNode checker = new CPChannelBanCheckerNode(dao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return true;
@@ -44,6 +49,11 @@ class CPChannelBanCheckerNodeTests {
     void process_hardMode_validBan_shouldThrow() {
         ChannelBanDAO dao = mock(ChannelBanDAO.class);
         CPChannelBanCheckerNode checker = new CPChannelBanCheckerNode(dao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return false;
@@ -64,13 +74,18 @@ class CPChannelBanCheckerNodeTests {
 
         CPProblemException ex = assertThrows(CPProblemException.class, () -> checker.process(null, context));
         assertEquals(403, ex.getProblem().status());
-        assertEquals("user_muted", ex.getProblem().reason());
+        assertEquals("user_muted", ex.getProblem().reason().code());
     }
 
     @Test
     void process_softMode_validBan_shouldMarkFail() throws Exception {
         ChannelBanDAO dao = mock(ChannelBanDAO.class);
         CPChannelBanCheckerNode checker = new CPChannelBanCheckerNode(dao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return true;
@@ -102,6 +117,11 @@ class CPChannelBanCheckerNodeTests {
     void process_softMode_expiredBan_shouldDeleteAndMarkSuccess() throws Exception {
         ChannelBanDAO dao = mock(ChannelBanDAO.class);
         CPChannelBanCheckerNode checker = new CPChannelBanCheckerNode(dao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return true;
@@ -132,6 +152,11 @@ class CPChannelBanCheckerNodeTests {
     void process_softMode_expiredBan_whenDeleteFails_shouldStillMarkSuccess() throws Exception {
         ChannelBanDAO dao = mock(ChannelBanDAO.class);
         CPChannelBanCheckerNode checker = new CPChannelBanCheckerNode(dao) {
+            /**
+             * 测试辅助方法。
+             *
+             * @return 测试辅助方法返回结果
+             */
             @Override
             protected boolean isSoftMode() {
                 return true;

@@ -34,9 +34,15 @@ public class CPChannelMemberChangeNotifyBuilderNode extends CPNodeComponent {
 
     private final ObjectMapper objectMapper;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取成员变更数据并构建通知 payload
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        // 变更类型由 bind("key", ...) 指定
         String type = requireBind(CPNodeBindKeys.KEY, String.class);
         CPChannelMember member = requireContext(context, CPNodeChannelMemberKeys.CHANNEL_MEMBER_INFO);
 

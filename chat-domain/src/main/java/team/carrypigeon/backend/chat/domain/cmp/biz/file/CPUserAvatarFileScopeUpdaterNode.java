@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileAccessScopeEnum;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -32,6 +33,11 @@ public class CPUserAvatarFileScopeUpdaterNode extends CPNodeComponent {
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取头像文件并更新访问范围
+     */
     @Override
     protected void process(CPFlowContext context) {
         Long uid = requireContext(context, CPFlowKeys.SESSION_UID);
@@ -42,18 +48,18 @@ public class CPUserAvatarFileScopeUpdaterNode extends CPNodeComponent {
 
         CPFileInfo info = fileInfoDao.getById(avatarId);
         if (info == null || !info.isUploaded()) {
-            fail(CPProblem.of(422, "validation_failed", "validation failed"));
+            fail(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
             return;
         }
         if (info.getOwnerUid() != uid) {
-            fail(CPProblem.of(403, "forbidden", "forbidden"));
+            fail(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
             return;
         }
 
         if (info.getAccessScope() != CPFileAccessScopeEnum.AUTH) {
             info.setAccessScope(CPFileAccessScopeEnum.AUTH).setScopeCid(0L).setScopeMid(0L);
             if (!fileInfoDao.save(info)) {
-                fail(CPProblem.of(500, "internal_error", "failed to save file info"));
+                fail(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "failed to save file info"));
             }
         }
 

@@ -9,6 +9,7 @@ import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMember;
 import team.carrypigeon.backend.api.bo.domain.channel.member.CPChannelMemberAuthorityEnum;
 import team.carrypigeon.backend.api.bo.domain.message.CPMessage;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
 import team.carrypigeon.backend.api.dao.database.channel.member.ChannelMemberDao;
@@ -33,6 +34,12 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
 
     private final ChannelMemberDao channelMemberDao;
 
+    /**
+     * 执行当前节点的核心处理逻辑。
+     *
+     * @param context LiteFlow 上下文，读取消息与操作者并校验删除权限
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     protected void process(CPFlowContext context) throws Exception {
         CPMessage message = requireContext(context, CPNodeMessageKeys.MESSAGE_INFO);
@@ -47,15 +54,13 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
         if (now.isAfter(sendTime.plusSeconds(DELETE_WINDOW_SECONDS))) {
             log.info("CPMessageDeletePermissionChecker fail: delete timeout, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            fail(CPProblem.of(409, "conflict", "message delete timeout"));
+            fail(CPProblem.of(CPProblemReason.CONFLICT, "message delete timeout"));
         }
-        // 发送者本人可以删除
         if (operatorUid.equals(message.getUid())) {
             log.debug("CPMessageDeletePermissionChecker success: owner delete, mid={}, uid={}",
                     message.getId(), operatorUid);
             return;
         }
-        // 非发送者需要检查是否为频道管理员
         long cid = message.getCid();
         CPChannelMember member = select(context,
                 buildSelectKey("channel_member", java.util.Map.of("cid", cid, "uid", operatorUid)),
@@ -63,7 +68,7 @@ public class CPMessageDeletePermissionCheckerNode extends CPNodeComponent {
         if (member == null || member.getAuthority() != CPChannelMemberAuthorityEnum.ADMIN) {
             log.info("CPMessageDeletePermissionChecker fail: no permission, mid={}, operatorUid={}",
                     message.getId(), operatorUid);
-            fail(CPProblem.of(403, "forbidden", "no permission to delete message"));
+            fail(CPProblem.of(CPProblemReason.FORBIDDEN, "no permission to delete message"));
         }
         log.debug("CPMessageDeletePermissionChecker success: admin delete, mid={}, operatorUid={}",
                 message.getId(), operatorUid);

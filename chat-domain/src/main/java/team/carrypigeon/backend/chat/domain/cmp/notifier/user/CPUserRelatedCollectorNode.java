@@ -27,17 +27,21 @@ public class CPUserRelatedCollectorNode extends CPNodeComponent {
     private final ChannelMemberDao channelMemberDao;
 
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前调用会话（仅用于链路签名）
+     * @param context LiteFlow 上下文，读取用户与频道成员关系并汇总通知目标
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
-        // 获取用户信息
         Long userInfoId = requireContext(context, CPNodeUserKeys.USER_INFO_ID);
-        // 获取Set<Long>
         Set<Long> uids = context.get(CPNodeNotifierKeys.NOTIFIER_UIDS);
         if (uids == null){
             uids = new HashSet<>();
             context.set(CPNodeNotifierKeys.NOTIFIER_UIDS, uids);
         }
-        // 获取用户id
         CPChannelMember[] allMemberByUserId = select(context,
                 buildSelectKey("channel_member", "uid", userInfoId),
                 () -> channelMemberDao.getAllMemberByUserId(userInfoId));

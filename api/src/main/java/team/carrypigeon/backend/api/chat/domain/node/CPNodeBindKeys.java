@@ -21,6 +21,9 @@ public final class CPNodeBindKeys {
     /** 通知或路由相关节点使用的路由 key。 */
     public static final String ROUTE = "route";
 
+    /**
+     * 工具类不允许实例化。
+     */
     private CPNodeBindKeys() {
     }
 }

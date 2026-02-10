@@ -3,9 +3,14 @@ package team.carrypigeon.backend.chat.domain.controller.web.api.dto;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Internal request object used by LiteFlow for message creation.
- * <p>
- * This is built by controller from path/body and stored under {@link team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowKeys#REQUEST}.
+ * 消息创建内部请求。
+ *
+ * @param cid 频道 ID。
+ * @param domain 消息领域。
+ * @param domainVersion 消息领域版本。
+ * @param replyToMid 回复目标消息 ID。
+ * @param data 消息载荷。
+ * @param idempotencyKey 幂等键。
  */
 public record MessageCreateRequest(String cid,
                                    String domain,

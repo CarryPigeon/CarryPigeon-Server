@@ -6,9 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * Notification payload for channel member changes.
+ * 频道成员变更通知数据。
  * <p>
- * Used by pushes on route "/core/channel/member/list".
+ * 常用于 `/core/channel/member/list` 路由的推送负载。
  */
 @Data
 @AllArgsConstructor
@@ -17,18 +17,17 @@ import lombok.experimental.Accessors;
 public class CPChannelMemberNotificationData {
 
     /**
-     * Change type, e.g.:
-     * - "join"        : a user joined the channel
-     * - "leave"       : a member was removed from the channel
-     * - "admin_add"   : a member was promoted to admin
-     * - "admin_remove": a member was demoted from admin
+     * 变更类型，例如：join / leave / admin_add / admin_remove。
      */
     private String type;
 
-    /** Channel id */
+    /**
+     * 频道 ID。
+     */
     private long cid;
 
-    /** User id of the affected member */
+    /**
+     * 受影响的用户 ID。
+     */
     private long uid;
 }
-

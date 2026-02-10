@@ -7,6 +7,7 @@ import team.carrypigeon.backend.api.bo.domain.file.CPFileAccessScopeEnum;
 import team.carrypigeon.backend.api.bo.domain.file.CPFileInfo;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -20,7 +21,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bind {@code POST /api/channels} into channel context keys used by {@code CPChannelBuilder}.
+ * 频道创建请求绑定节点。
+ * <p>
+ * 解析 `POST /api/channels` 请求体，并将频道基础字段写入上下文，供后续构建与保存节点使用。
  */
 @Slf4j
 @AllArgsConstructor
@@ -29,15 +32,18 @@ public class ApiChannelCreateBindNode extends CPNodeComponent {
 
     private final FileInfoDao fileInfoDao;
 
+    /**
+     * 解析并绑定频道创建请求。
+     */
     @Override
     protected void process(CPFlowContext context) {
         Long ownerUid = requireContext(context, CPFlowKeys.SESSION_UID);
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof ChannelCreateRequest req)) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         if (req.name() == null || req.name().isBlank()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "name", "reason", "invalid", "message", "name is required")
                     ))));
@@ -59,6 +65,9 @@ public class ApiChannelCreateBindNode extends CPNodeComponent {
         log.debug("ApiChannelCreateBind success, cid={}, ownerUid={}", cid, ownerUid);
     }
 
+    /**
+     * 解析头像标识并校验头像文件归属与访问范围。
+     */
     private long resolveAvatarId(String avatar, long ownerUid) {
         if (avatar == null || avatar.isBlank()) {
             return 0L;
@@ -70,22 +79,21 @@ public class ApiChannelCreateBindNode extends CPNodeComponent {
         try {
             return Long.parseLong(raw);
         } catch (Exception ignored) {
-            // fallthrough
         }
         CPFileInfo info = fileInfoDao.getByShareKey(avatar);
         if (info == null || !info.isUploaded()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "avatar", "reason", "invalid", "message", "invalid avatar")
                     ))));
         }
         if (info.getOwnerUid() != ownerUid) {
-            throw new CPProblemException(CPProblem.of(403, "forbidden", "forbidden"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.FORBIDDEN, "forbidden"));
         }
         if (info.getAccessScope() != CPFileAccessScopeEnum.AUTH) {
             info.setAccessScope(CPFileAccessScopeEnum.AUTH).setScopeCid(0L).setScopeMid(0L);
             if (!fileInfoDao.save(info)) {
-                throw new CPProblemException(CPProblem.of(500, "internal_error", "failed to save file info"));
+                throw new CPProblemException(CPProblem.of(CPProblemReason.INTERNAL_ERROR, "failed to save file info"));
             }
         }
         return info.getId();

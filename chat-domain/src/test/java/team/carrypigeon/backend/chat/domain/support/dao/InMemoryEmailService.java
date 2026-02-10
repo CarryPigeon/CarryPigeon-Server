@@ -14,6 +14,13 @@ public class InMemoryEmailService implements CPEmailService {
     private volatile String lastSubject;
     private volatile String lastText;
 
+    /**
+     * 测试邮件服务辅助方法。
+     *
+     * @param to 收件人邮箱地址
+     * @param subject 邮件主题
+     * @param text 邮件正文
+     */
     @Override
     public void sendEmail(String to, String subject, String text) {
         this.lastTo = to;
@@ -21,18 +28,36 @@ public class InMemoryEmailService implements CPEmailService {
         this.lastText = text;
     }
 
+    /**
+     * 测试邮件服务辅助方法。
+     *
+     * @return 最近一次发送记录中的对应字段值
+     */
     public String getLastTo() {
         return lastTo;
     }
 
+    /**
+     * 测试邮件服务辅助方法。
+     *
+     * @return 最近一次发送记录中的对应字段值
+     */
     public String getLastSubject() {
         return lastSubject;
     }
 
+    /**
+     * 测试邮件服务辅助方法。
+     *
+     * @return 最近一次发送记录中的对应字段值
+     */
     public String getLastText() {
         return lastText;
     }
 
+    /**
+     * 测试邮件服务辅助方法。
+     */
     public void clear() {
         this.lastTo = null;
         this.lastSubject = null;

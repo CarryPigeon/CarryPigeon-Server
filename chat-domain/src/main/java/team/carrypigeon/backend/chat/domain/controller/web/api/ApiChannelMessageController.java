@@ -6,29 +6,28 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
+import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.chat.domain.controller.web.api.auth.ApiAuth;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.MessageCreateRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.MessageDeleteRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.MessageListRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.ReadStateUpdateRequest;
-import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.chat.domain.controller.web.api.flow.ApiFlowRunner;
 
 /**
- * Channel and message resources under {@code /api}.
+ * 频道消息 API 控制器。
  * <p>
- * All routes in this controller require {@code Authorization: Bearer <access_token>}.
- * Business logic is implemented in LiteFlow chains defined in {@code application-starter/src/main/resources/config/api.xml}.
- * <p>
- * Controller responsibilities:
- * <ul>
- *   <li>Extract path/query parameters and JSON body;</li>
- *   <li>Build a request DTO and store it under {@link ApiFlowKeys#REQUEST};</li>
- *   <li>Execute chain via {@link ApiFlowRunner};</li>
- *   <li>Return object from {@link ApiFlowKeys#RESPONSE} (or set HTTP status in controller when needed).</li>
- * </ul>
+ * 提供频道列表、消息列表、消息创建、消息删除、已读状态更新与未读统计路由。
  */
 @RestController
 public class ApiChannelMessageController {
@@ -42,16 +41,20 @@ public class ApiChannelMessageController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 构造频道消息控制器。
+     *
+     * @param flowRunner API 责任链执行器。
+     */
     public ApiChannelMessageController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * List channels current user can access.
-     * <p>
-     * Route: {@code GET /api/channels}
-     * <p>
-     * Chain: {@code api_channels_list}
+     * 查询当前用户可访问的频道列表。
+     *
+     * @param request HTTP 请求对象。
+     * @return 标准频道列表响应。
      */
     @GetMapping("/api/channels")
     public Object channels(HttpServletRequest request) {
@@ -62,11 +65,13 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * List messages in a channel with cursor pagination.
-     * <p>
-     * Route: {@code GET /api/channels/{cid}/messages}
-     * <p>
-     * Chain: {@code api_messages_list}
+     * 分页查询频道消息列表。
+     *
+     * @param cid 频道 ID。
+     * @param cursor 游标。
+     * @param limit 每页数量。
+     * @param request HTTP 请求对象。
+     * @return 标准消息列表响应。
      */
     @GetMapping("/api/channels/{cid}/messages")
     public Object messages(@PathVariable("cid") String cid,
@@ -81,13 +86,13 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * Create a message in a channel.
-     * <p>
-     * Route: {@code POST /api/channels/{cid}/messages}
-     * <p>
-     * Chain: {@code api_messages_create}
-     * <p>
-     * HTTP status: 201 on success.
+     * 在指定频道创建消息。
+     *
+     * @param cid 频道 ID。
+     * @param body 创建消息请求体。
+     * @param idempotencyKey 幂等键。
+     * @param request HTTP 请求对象。
+     * @return HTTP 201 与标准消息创建响应。
      */
     @PostMapping("/api/channels/{cid}/messages")
     public ResponseEntity<Object> create(@PathVariable("cid") String cid,
@@ -102,11 +107,11 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * Delete a message.
-     * <p>
-     * Route: {@code DELETE /api/messages/{mid}}
-     * <p>
-     * Chain: {@code api_messages_delete}
+     * 删除指定消息。
+     *
+     * @param mid 消息 ID。
+     * @param request HTTP 请求对象。
+     * @return HTTP 204 无内容响应。
      */
     @DeleteMapping("/api/messages/{mid}")
     public ResponseEntity<Void> delete(@PathVariable("mid") String mid, HttpServletRequest request) {
@@ -118,11 +123,12 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * Update read state for a channel.
-     * <p>
-     * Route: {@code PUT /api/channels/{cid}/read_state}
-     * <p>
-     * Chain: {@code api_read_state_update}
+     * 更新频道已读游标。
+     *
+     * @param cid 频道 ID。
+     * @param body 已读状态请求体。
+     * @param request HTTP 请求对象。
+     * @return 标准已读状态响应。
      */
     @PutMapping("/api/channels/{cid}/read_state")
     public Object updateReadState(@PathVariable("cid") String cid,
@@ -136,11 +142,10 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * List unread counts for each channel visible to the current user.
-     * <p>
-     * Route: {@code GET /api/unreads}
-     * <p>
-     * Chain: {@code api_unreads_list}
+     * 查询当前用户可见频道的未读统计。
+     *
+     * @param request HTTP 请求对象。
+     * @return 标准未读统计响应。
      */
     @GetMapping("/api/unreads")
     public Object unreads(HttpServletRequest request) {
@@ -151,7 +156,12 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * JSON body for {@code POST /api/channels/{cid}/messages}.
+     * 创建消息请求体。
+     *
+     * @param domain 消息领域标识。
+     * @param domainVersion 消息领域版本。
+     * @param replyToMid 回复目标消息 ID。
+     * @param data 消息载荷。
      */
     public record CreateMessageBody(@NotBlank String domain,
                                     String domainVersion,
@@ -160,7 +170,10 @@ public class ApiChannelMessageController {
     }
 
     /**
-     * JSON body for {@code PUT /api/channels/{cid}/read_state}.
+     * 已读状态更新请求体。
+     *
+     * @param lastReadMid 最后一条已读消息 ID。
+     * @param lastReadTime 最后已读时间戳。
      */
     public record ReadStateBody(@NotBlank String lastReadMid, Long lastReadTime) {
     }

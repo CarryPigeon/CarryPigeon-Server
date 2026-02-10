@@ -13,12 +13,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Result mapper for {@code GET /api/channels/{cid}/bans}.
+ * 频道禁言列表结果节点。
+ * <p>
+ * 将禁言记录集合转换为 API 响应结构。
  */
 @Slf4j
 @LiteflowComponent("ApiChannelBansResult")
 public class ApiChannelBansResultNode extends AbstractResultNode<ApiChannelBansResultNode.BansResponse> {
 
+    /**
+     * 构建禁言列表响应。
+     */
     @Override
     protected BansResponse build(CPFlowContext context) {
         @SuppressWarnings("unchecked")
@@ -39,10 +44,15 @@ public class ApiChannelBansResultNode extends AbstractResultNode<ApiChannelBansR
         return resp;
     }
 
+    /**
+     * 禁言列表响应体。
+     */
     public record BansResponse(List<BanItem> items) {
     }
 
+    /**
+     * 单个禁言响应项。
+     */
     public record BanItem(String cid, String uid, long until, String reason, long createTime) {
     }
 }
-

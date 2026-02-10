@@ -1,11 +1,6 @@
 /**
- * HTTP API 的 WebSocket 入口（/api/ws）控制层。
+ * API WebSocket 入口层。
  * <p>
- * 说明：
- * <ul>
- *   <li>该包只负责 WS 协议处理（auth/reauth/subscribe/ping/pong/resume）</li>
- *   <li>具体事件发布由 {@code team.carrypigeon.backend.chat.domain.service.ws} 模块负责</li>
- * </ul>
+ * 承担 `/api/ws` 协议解析、会话鉴权绑定与事件回放协同职责。
  */
 package team.carrypigeon.backend.chat.domain.controller.web.api.ws;
-

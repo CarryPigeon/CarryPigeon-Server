@@ -5,12 +5,12 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
-import team.carrypigeon.backend.chat.domain.controller.web.api.auth.ApiAuth;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
+import team.carrypigeon.backend.chat.domain.controller.web.api.auth.ApiAuth;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.UserIdRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.UserMePatchRequest;
 import team.carrypigeon.backend.chat.domain.controller.web.api.dto.UsersBatchRequest;
@@ -20,12 +20,9 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * User endpoints under {@code /api/users}.
+ * 用户 API 控制器。
  * <p>
- * Authentication:
- * {@link team.carrypigeon.backend.chat.domain.controller.web.api.auth.ApiAccessTokenFilter} validates the access token and
- * stores {@code uid} into request attribute {@link ApiAuth#REQ_ATTR_UID}.
- * Controllers then call {@link ApiAuth#requireUid(HttpServletRequest)} to retrieve it.
+ * 提供当前用户信息查询、资料更新、单用户查询与批量用户查询路由。
  */
 @RestController
 public class ApiUserController {
@@ -37,16 +34,20 @@ public class ApiUserController {
 
     private final ApiFlowRunner flowRunner;
 
+    /**
+     * 构造用户控制器。
+     *
+     * @param flowRunner API 责任链执行器。
+     */
     public ApiUserController(ApiFlowRunner flowRunner) {
         this.flowRunner = flowRunner;
     }
 
     /**
-     * Get current user profile.
-     * <p>
-     * Route: {@code GET /api/users/me} (requires {@code Authorization: Bearer <access_token>})
-     * <p>
-     * Chain: {@code api_users_me}
+     * 查询当前登录用户资料。
+     *
+     * @param request HTTP 请求对象。
+     * @return 标准用户资料响应。
      */
     @GetMapping("/api/users/me")
     public Object me(HttpServletRequest request) {
@@ -57,11 +58,11 @@ public class ApiUserController {
     }
 
     /**
-     * Patch current user profile.
-     * <p>
-     * Route: {@code PATCH /api/users/me} (requires {@code Authorization: Bearer <access_token>})
-     * <p>
-     * Chain: {@code api_users_me_patch}
+     * 更新当前登录用户资料。
+     *
+     * @param body 资料更新请求体。
+     * @param request HTTP 请求对象。
+     * @return 更新后的标准响应。
      */
     @PatchMapping("/api/users/me")
     public Object patchMe(@Valid @RequestBody UserMePatchRequest body, HttpServletRequest request) {
@@ -73,11 +74,11 @@ public class ApiUserController {
     }
 
     /**
-     * Get a user's public profile.
-     * <p>
-     * Route: {@code GET /api/users/{uid}} (requires {@code Authorization: Bearer <access_token>})
-     * <p>
-     * Chain: {@code api_users_get}
+     * 按用户 ID 查询公开资料。
+     *
+     * @param uid 用户 ID。
+     * @param request HTTP 请求对象。
+     * @return 标准用户资料响应。
      */
     @GetMapping("/api/users/{uid}")
     public Object get(@PathVariable("uid") String uid, HttpServletRequest request) {
@@ -89,11 +90,11 @@ public class ApiUserController {
     }
 
     /**
-     * Batch get user public profiles.
-     * <p>
-     * Route: {@code GET /api/users?ids=123,456}
-     * <p>
-     * Chain: {@code api_users_batch}
+     * 按 ID 列表批量查询用户公开资料。
+     *
+     * @param ids 逗号分隔的用户 ID 字符串。
+     * @param request HTTP 请求对象。
+     * @return 批量查询标准响应。
      */
     @GetMapping(value = "/api/users", params = "ids")
     public Object batch(@RequestParam("ids") String ids, HttpServletRequest request) {

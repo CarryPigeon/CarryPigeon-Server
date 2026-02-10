@@ -4,6 +4,7 @@ import com.yomahub.liteflow.annotation.LiteflowComponent;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblemException;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowKeys;
 import team.carrypigeon.backend.api.chat.domain.node.CPNodeComponent;
@@ -16,23 +17,28 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Bind {@code PUT /api/channels/{cid}/bans/{uid}}.
+ * 频道禁言新增/更新请求绑定节点。
+ * <p>
+ * 解析 `PUT /api/channels/{cid}/bans/{uid}` 请求并写入禁言参数。
  */
 @Slf4j
 @LiteflowComponent("ApiChannelBanUpsertBind")
 public class ApiChannelBanUpsertBindNode extends CPNodeComponent {
 
+    /**
+     * 解析并绑定禁言新增/更新参数。
+     */
     @Override
     protected void process(CPFlowContext context) {
         Object reqObj = context.get(CPFlowKeys.REQUEST);
         if (!(reqObj instanceof ChannelBanTargetRequest req) || req.body() == null) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed"));
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed"));
         }
         long cid = parseId(req.cid(), "cid");
         long uid = parseId(req.uid(), "uid");
         long until = req.body().until() == null ? 0L : req.body().until();
         if (until <= System.currentTimeMillis()) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", "until", "reason", "invalid", "message", "must be in the future")
                     ))));
@@ -45,15 +51,17 @@ public class ApiChannelBanUpsertBindNode extends CPNodeComponent {
         log.debug("ApiChannelBanUpsertBind success, cid={}, targetUid={}, until={}", cid, uid, until);
     }
 
+    /**
+     * 解析字符串形式的 ID。
+     */
     private long parseId(String str, String field) {
         try {
             return Long.parseLong(str);
         } catch (Exception e) {
-            throw new CPProblemException(CPProblem.of(422, "validation_failed", "validation failed",
+            throw new CPProblemException(CPProblem.of(CPProblemReason.VALIDATION_FAILED, "validation failed",
                     Map.of("field_errors", List.of(
                             Map.of("field", field, "reason", "invalid", "message", "invalid id")
                     ))));
         }
     }
 }
-

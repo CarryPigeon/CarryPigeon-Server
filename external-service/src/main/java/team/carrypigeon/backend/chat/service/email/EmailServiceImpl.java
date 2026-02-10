@@ -31,10 +31,16 @@ public class EmailServiceImpl implements CPEmailService {
         this.mailSender = mailSender;
     }
 
+    /**
+     * 发送邮件消息。
+     *
+     * @param to 收件人邮箱地址
+     * @param subject 邮件主题
+     * @param content 邮件正文文本
+     */
     @Override
     public void sendEmail(String to, String subject, String content) {
         if (!isEnable) {
-            // 邮件功能关闭时打一个调试日志，方便确认配置原因
             log.debug("email send skipped because spring.mail.enable=false, to={}, subject={}", to, subject);
             return;
         }
@@ -55,7 +61,6 @@ public class EmailServiceImpl implements CPEmailService {
             mailSender.send(message);
             log.info("email sent successfully, to={}, subject={}", to, subject);
         } catch (MailException e) {
-            // 记录失败原因，交给上层根据需要决定是否继续抛出
             log.error("failed to send email, to={}, subject={}", to, subject, e);
             throw e;
         }

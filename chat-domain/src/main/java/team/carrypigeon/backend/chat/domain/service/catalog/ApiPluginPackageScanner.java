@@ -76,12 +76,22 @@ public class ApiPluginPackageScanner {
      */
     private final AtomicLong lastRefreshAttemptMillis = new AtomicLong(0L);
 
+    /**
+     * 构造插件包扫描器。
+     *
+     * @param objectMapper JSON 读写组件
+     * @param properties   API 配置
+     * @param catalogIndex 扫描索引存储
+     */
     public ApiPluginPackageScanner(ObjectMapper objectMapper, CpApiProperties properties, ApiPluginCatalogIndex catalogIndex) {
         this.objectMapper = objectMapper;
         this.properties = properties;
         this.catalogIndex = catalogIndex;
     }
 
+    /**
+     * 在应用启动阶段执行目录扫描。
+     */
     @PostConstruct
     public void scanOnStartup() {
         CpApiProperties.PluginPackageScan cfg = properties.getApi().getPluginPackageScan();
@@ -271,8 +281,6 @@ public class ApiPluginPackageScanner {
             }
             List<String> supported = byVer.keySet().stream().sorted(ApiPluginPackageScanner::compareVersionString).toList();
             String recommended = supported.isEmpty() ? "1.0.0" : supported.getLast();
-
-            // choose constraints/contract sha based on recommended version
             DomainContractAccumulator rec = byVer.get(recommended);
             ApiPluginCatalogIndex.Constraints constraints = rec == null ? new ApiPluginCatalogIndex.Constraints(null, null) : rec.contract.constraints();
 
@@ -337,16 +345,12 @@ public class ApiPluginPackageScanner {
             item.setPermissions(readStringList(manifest.get("permissions")));
 
             item.setProvidesDomains(readProvidesDomains(manifest.get("provides_domains")));
-
-            // 默认下载指针指向本后端提供的 download 端点（相对路径）。
             CpApiProperties.Download dl = new CpApiProperties.Download();
             dl.setUrl(cfg.getDownloadBasePath().replaceAll("/+$", "") + "/" + pluginId + "/" + version);
             dl.setSha256(zipSha256);
             item.setDownload(dl);
 
             List<ResolvedContract> contracts = readContracts(zip, manifest.get("contracts"));
-
-            // PRD：每个 provides_domains 都必须有对应契约；这里从 provides_domains 中移除缺少契约的项，避免误导客户端。
             if (item.getProvidesDomains() != null && !item.getProvidesDomains().isEmpty()) {
                 Map<String, Boolean> hasContract = new HashMap<>();
                 for (ResolvedContract c : contracts) {
@@ -392,7 +396,6 @@ public class ApiPluginPackageScanner {
                 } else {
                     String schemaPath = text(c.get("schema_path"));
                     if (schemaPath == null || schemaPath.isBlank()) {
-                        // convention fallback: contracts/<domain>-<ver>.schema.json
                         schemaPath = "contracts/" + normalizeDomain(domain) + "-" + domainVersion + ".schema.json";
                     }
                     ZipEntry entry = zip.getEntry(schemaPath);
@@ -407,7 +410,6 @@ public class ApiPluginPackageScanner {
 
                 ApiPluginCatalogIndex.Constraints constraints = readConstraints(c.get("constraints"));
                 if (constraints.maxPayloadBytes() == null || constraints.maxDepth() == null) {
-                    // allow flat fields as well
                     Integer mb = intOrNull(c.get("max_payload_bytes"));
                     Integer md = intOrNull(c.get("max_depth"));
                     constraints = new ApiPluginCatalogIndex.Constraints(
@@ -712,6 +714,13 @@ public class ApiPluginPackageScanner {
         private final String minPluginVersion;
         private final ResolvedContract contract;
 
+        /**
+         * 构造领域契约聚合项。
+         *
+         * @param pluginId          插件标识
+         * @param minPluginVersion  最小插件版本
+         * @param contract          解析后的契约对象
+         */
         private DomainContractAccumulator(String pluginId, String minPluginVersion, ResolvedContract contract) {
             this.pluginId = pluginId;
             this.minPluginVersion = minPluginVersion;
@@ -755,6 +764,12 @@ public class ApiPluginPackageScanner {
             }
         }
 
+        /**
+         * 比较语义化版本顺序。
+         *
+         * @param o 待比较的语义化版本对象
+         * @return 小于 0 表示当前版本更小，等于 0 表示相同，大于 0 表示更大
+         */
         @Override
         public int compareTo(Semver o) {
             int c = Integer.compare(major, o.major);

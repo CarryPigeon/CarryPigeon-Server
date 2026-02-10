@@ -17,8 +17,12 @@ import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
  */
 @LiteflowComponent("DoNothing")
 public class DoNothingNode extends CPNodeComponent {
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param context LiteFlow 上下文（该节点不做任何读写）
+     */
     @Override
     protected void process(CPFlowContext context) {
-        // intentionally no-op
     }
 }

@@ -61,15 +61,12 @@ public class SimpleJsonSchemaValidator {
         if (ref != null && ref.isTextual()) {
             JsonNode resolved = resolveRef(ref.asText(), rootSchema);
             if (resolved == null) {
-                // Unsupported ref: treat as validation failure to avoid accepting unknown shapes.
                 errors.add(path + ": unsupported $ref");
                 return;
             }
             validate(resolved, data, path, errors, rootSchema);
             return;
         }
-
-        // const
         JsonNode constNode = schema.get("const");
         if (constNode != null && !constNode.isNull()) {
             if (!constNode.equals(data)) {
@@ -77,12 +74,9 @@ public class SimpleJsonSchemaValidator {
                 return;
             }
         }
-
-        // allOf/anyOf/oneOf (subset)
         if (!validateCompositions(schema, data, path, errors, rootSchema)) {
             return;
         }
-        // enum
         JsonNode enumNode = schema.get("enum");
         if (enumNode != null && enumNode.isArray()) {
             boolean ok = false;
@@ -100,7 +94,6 @@ public class SimpleJsonSchemaValidator {
 
         String type = selectType(schema, data);
         if (type == null) {
-            // If type not specified, infer object schema by presence of properties/required.
             if (schema.has("properties") || schema.has("required")) {
                 type = "object";
             } else {
@@ -125,18 +118,24 @@ public class SimpleJsonSchemaValidator {
                 }
             }
             default -> {
-                // unsupported type keyword - do not block
             }
         }
     }
 
+    /**
+     * 按对象规则校验 JSON 数据。
+     *
+     * @param schema 当前节点对应的 Schema 片段
+     * @param data 待校验的数据节点
+     * @param path 当前字段路径（用于错误定位）
+     * @param errors 累积错误列表
+     * @param rootSchema 根 Schema（用于 $ref 解析）
+     */
     private void validateObject(JsonNode schema, JsonNode data, String path, List<String> errors, JsonNode rootSchema) {
         if (data == null || !data.isObject()) {
             errors.add(path + ": expected object");
             return;
         }
-
-        // required
         Set<String> required = new HashSet<>();
         JsonNode req = schema.get("required");
         if (req != null && req.isArray()) {
@@ -151,8 +150,6 @@ public class SimpleJsonSchemaValidator {
                 errors.add(path + "." + r + ": required");
             }
         }
-
-        // properties
         JsonNode props = schema.get("properties");
         Map<String, JsonNode> propsMap = props != null && props.isObject() ? asFieldsMap(props) : Map.of();
 
@@ -183,6 +180,15 @@ public class SimpleJsonSchemaValidator {
         }
     }
 
+    /**
+     * 按数组规则校验 JSON 数据。
+     *
+     * @param schema 当前节点对应的 Schema 片段
+     * @param data 待校验的数据节点
+     * @param path 当前字段路径（用于错误定位）
+     * @param errors 累积错误列表
+     * @param rootSchema 根 Schema（用于 $ref 解析）
+     */
     private void validateArray(JsonNode schema, JsonNode data, String path, List<String> errors, JsonNode rootSchema) {
         if (data == null || !data.isArray()) {
             errors.add(path + ": expected array");
@@ -207,6 +213,14 @@ public class SimpleJsonSchemaValidator {
         }
     }
 
+    /**
+     * 按字符串规则校验 JSON 数据。
+     *
+     * @param schema 当前节点对应的 Schema 片段
+     * @param data 待校验的数据节点
+     * @param path 当前字段路径（用于错误定位）
+     * @param errors 累积错误列表
+     */
     private void validateString(JsonNode schema, JsonNode data, String path, List<String> errors) {
         if (data == null || !data.isTextual()) {
             errors.add(path + ": expected string");
@@ -230,6 +244,14 @@ public class SimpleJsonSchemaValidator {
         }
     }
 
+    /**
+     * 按整数规则校验 JSON 数据。
+     *
+     * @param schema 当前节点对应的 Schema 片段
+     * @param data 待校验的数据节点
+     * @param path 当前字段路径（用于错误定位）
+     * @param errors 累积错误列表
+     */
     private void validateInteger(JsonNode schema, JsonNode data, String path, List<String> errors) {
         if (data == null || !data.isIntegralNumber()) {
             errors.add(path + ": expected integer");
@@ -246,6 +268,14 @@ public class SimpleJsonSchemaValidator {
         }
     }
 
+    /**
+     * 按数字规则校验 JSON 数据。
+     *
+     * @param schema 当前节点对应的 Schema 片段
+     * @param data 待校验的数据节点
+     * @param path 当前字段路径（用于错误定位）
+     * @param errors 累积错误列表
+     */
     private void validateNumber(JsonNode schema, JsonNode data, String path, List<String> errors) {
         if (data == null || !data.isNumber()) {
             errors.add(path + ": expected number");
@@ -373,7 +403,6 @@ public class SimpleJsonSchemaValidator {
         if (ref == null || ref.isBlank() || rootSchema == null) {
             return null;
         }
-        // Only support local refs: "#/..."
         if (!ref.startsWith("#")) {
             return null;
         }
@@ -392,6 +421,12 @@ public class SimpleJsonSchemaValidator {
         }
     }
 
+    /**
+     * 将对象节点转换为字段映射。
+     *
+     * @param obj 对象类型 JSON 节点
+     * @return 字段名到子节点的映射；入参非法时返回空映射
+     */
     private Map<String, JsonNode> asFieldsMap(JsonNode obj) {
         java.util.LinkedHashMap<String, JsonNode> m = new java.util.LinkedHashMap<>();
         Iterator<Map.Entry<String, JsonNode>> it = obj.fields();
@@ -402,6 +437,12 @@ public class SimpleJsonSchemaValidator {
         return m;
     }
 
+    /**
+     * 将节点安全转换为 Integer。
+     *
+     * @param n 待转换的 JSON 数值节点
+     * @return 可解析时返回 Integer；否则返回 { null}
+     */
     private Integer intOrNull(JsonNode n) {
         if (n == null || n.isNull()) {
             return null;
@@ -419,6 +460,12 @@ public class SimpleJsonSchemaValidator {
         return null;
     }
 
+    /**
+     * 将节点安全转换为 Long。
+     *
+     * @param n 待转换的 JSON 数值节点
+     * @return 可解析时返回 Long；否则返回 { null}
+     */
     private Long longOrNull(JsonNode n) {
         if (n == null || n.isNull()) {
             return null;
@@ -436,6 +483,12 @@ public class SimpleJsonSchemaValidator {
         return null;
     }
 
+    /**
+     * 将节点安全转换为 Double。
+     *
+     * @param n 待转换的 JSON 数值节点
+     * @return 可解析时返回 Double；否则返回 { null}
+     */
     private Double doubleOrNull(JsonNode n) {
         if (n == null || n.isNull()) {
             return null;

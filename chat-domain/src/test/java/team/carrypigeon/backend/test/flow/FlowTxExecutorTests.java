@@ -70,19 +70,33 @@ class FlowTxExecutorTests {
     }
 
     private static final class SimplePlatformTransactionManager implements PlatformTransactionManager {
+        /**
+         * 创建一个新的事务状态对象。
+         *
+         * @param definition 事务定义（本测试实现未使用）
+         * @return 新建的 { SimpleTransactionStatus} 实例
+         */
         @Override
         public TransactionStatus getTransaction(TransactionDefinition definition) {
             return new SimpleTransactionStatus();
         }
 
+        /**
+         * 记录提交调用。
+         *
+         * @param status 当前事务状态对象
+         */
         @Override
         public void commit(TransactionStatus status) {
-            // no-op
         }
 
+        /**
+         * 记录回滚调用。
+         *
+         * @param status 当前事务状态对象
+         */
         @Override
         public void rollback(TransactionStatus status) {
-            // no-op
         }
     }
 }

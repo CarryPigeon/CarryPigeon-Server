@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.api.bo.connection.CPSession;
 import team.carrypigeon.backend.api.chat.domain.error.CPProblem;
+import team.carrypigeon.backend.api.chat.domain.error.CPProblemReason;
 import team.carrypigeon.backend.api.chat.domain.flow.CPFlowContext;
 import team.carrypigeon.backend.api.chat.domain.node.AbstractCheckerNode;
 import team.carrypigeon.backend.api.dao.cache.CPCache;
@@ -27,11 +28,16 @@ public class EmailCodeChecker extends AbstractCheckerNode {
 
     private final CPCache cache;
 
+    /**
+     * 执行节点处理逻辑并更新上下文。
+     *
+     * @param session 当前请求会话（仅用于节点签名）
+     * @param context LiteFlow 上下文，读取邮箱与验证码并进行一致性校验
+     * @throws Exception 执行过程中抛出的异常
+     */
     @Override
     public void process(CPSession session, CPFlowContext context) throws Exception {
         boolean soft = isSoftMode();
-
-        // 读取参数
         String email = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL);
         Integer code = requireContext(context, CPNodeValueKeyExtraConstants.EMAIL_CODE);
 
@@ -43,12 +49,11 @@ public class EmailCodeChecker extends AbstractCheckerNode {
                 return;
             }
             log.info("EmailCodeChecker hard fail: code error, email={}", email);
-            fail(CPProblem.of(422, "email_code_invalid", "email code error"));
+            fail(CPProblem.of(CPProblemReason.EMAIL_CODE_INVALID, "email code error"));
         }
         if (soft) {
             markSoftSuccess(context);
             log.debug("EmailCodeChecker soft success, email={}", email);
         }
-        // 校验通过，这里无需额外处理
     }
 }

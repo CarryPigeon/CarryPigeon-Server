@@ -18,17 +18,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * WS 事件发布器。
+ * WS 事件发布器（业务变更 -> 事件流）。
  * <p>
- * 职责：
+ * 核心职责：
  * <ul>
- *   <li>将业务变更映射为 WS 事件（event_type + payload）</li>
- *   <li>为每个事件生成单调递增的 {@code event_id}（雪花 ID）</li>
- *   <li>写入 {@link ApiWsEventStore} 形成可回放窗口（resume）</li>
- *   <li>向同一 uid 的所有在线 WS 会话推送事件</li>
+ *   <li>将领域对象映射为稳定的 `event_type + payload` 结构</li>
+ *   <li>为事件生成单调递增 `event_id`，支持客户端 resume</li>
+ *   <li>将事件写入 {@link ApiWsEventStore} 形成回放窗口</li>
+ *   <li>按 uid 广播到该用户的全部在线会话</li>
  * </ul>
  * <p>
- * 文档：{@code doc/api/12-WebSocket事件清单.md}
+ * 过滤语义：若会话设置了 {@code subscribe.cids}，仅推送命中频道事件。
  */
 @Slf4j
 @Service
@@ -158,6 +158,12 @@ public class ApiWsEventPublisher {
         }
     }
 
+    /**
+     * 转换为 WebSocket 事件封装对象。
+     *
+     * @param e 事件存储中的单条事件对象
+     * @return 形如 {type,data} 的标准事件信封 JSON
+     */
     public ObjectNode toEventEnvelope(ApiWsEventStore.StoredEvent e) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("type", "event");
@@ -187,7 +193,6 @@ public class ApiWsEventPublisher {
 
         Long cid = cidOf(event.payload());
         if (cid == null || cid <= 0) {
-            // 非频道事件（或 payload 未包含 cid），不进行过滤
             return true;
         }
 
@@ -208,7 +213,6 @@ public class ApiWsEventPublisher {
                             return true;
                         }
                     } catch (Exception ignored) {
-                        // ignore
                     }
                 }
             }
