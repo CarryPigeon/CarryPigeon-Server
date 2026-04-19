@@ -1,51 +1,164 @@
 # Repository Guidelines
 
+## Project Status
+- This repository is in a rewrite-style refactor stage.
+- Current architecture and rules are defined in `docs/`.
+- Do not restore old module structure or old dependencies by default.
+- Do not introduce new architecture ideas unless explicitly approved.
+
 ## Project Structure & Modules
 - Root is a Maven multi-module Spring Boot backend (`pom.xml`, Java 21).
-- Core modules:
-  - `api/`: protocol types (`CPPacket`, `CPResponse`) and public routes (see `doc/api.md`).
-  - `chat-domain/`: Netty controllers and business logic.
-  - `dao/`: persistence layer and database access.
-  - `common/`: shared utilities and base models.
-  - `connection/`: TCP/Netty transport, encryption, heartbeats.
-  - `external-service/`: integrations (e.g., email).
-  - `application-starter/`: runnable Spring Boot app, main class `team.carrypigeon.backend.starter.ApplicationStarter`.
-  - `distribution/`: packaging / distribution artifacts.
-- Tests live under `*/src/test/**`.
+- Current active modules:
+  - `application-starter/`: startup and runtime assembly only.
+  - `chat-domain/`: core business domain module.
+  - `infrastructure-basic/`: fixed global infrastructure.
+  - `infrastructure-service/`: pluggable external service infrastructure parent module.
+  - `distribution/`: reserved for later packaging, not part of current core work.
+
+## Module Responsibilities
+- `application-starter`
+  - Starts Spring Boot.
+  - Assembles runtime beans and configuration.
+  - Must not carry core business rules.
+- `chat-domain`
+  - Holds core business logic.
+  - Uses clean-architecture style package boundaries.
+  - Spring Boot and Lombok are treated as internal capabilities and may be used reasonably.
+- `infrastructure-basic`
+  - Holds fixed infrastructure such as logging, JSON, ID, time, configuration support, and infrastructure exceptions.
+  - Must not hold replaceable external service implementations.
+- `infrastructure-service`
+  - Holds replaceable external service infrastructure.
+  - Must be split by service into `{service-name}-api` and `{service-name}-impl`.
+
+## Dependency Rules
+- Allowed:
+  - `application-starter` -> `chat-domain`
+  - `application-starter` -> `infrastructure-basic`
+  - `application-starter` -> `infrastructure-service/*-api`
+  - `application-starter` -> `infrastructure-service/*-impl`
+  - `chat-domain` -> `infrastructure-basic`
+  - `chat-domain` -> `infrastructure-service/*-api`
+  - `*-impl` -> corresponding `*-api`
+  - `*-impl` -> `infrastructure-basic`
+- Forbidden:
+  - `chat-domain` -> any `*-impl`
+  - `chat-domain` -> `application-starter`
+  - `infrastructure-basic` -> `chat-domain`
+  - `infrastructure-basic` -> any `*-impl`
+  - `*-api` -> `chat-domain`
+  - `*-api` -> `application-starter`
+  - `*-api` -> any other `*-impl`
+  - `*-impl` -> `chat-domain`
+
+## Package Structure Rules
+- Base packages:
+  - `team.carrypigeon.backend.starter`
+  - `team.carrypigeon.backend.chat.domain`
+  - `team.carrypigeon.backend.infrastructure.basic`
+  - `team.carrypigeon.backend.infrastructure.service`
+- `chat-domain` must be organized by `features` first, then by layer.
+- Keep `shared`.
+- Keep feature-level `config`.
+- Keep `repository` in the domain layer as business-semantic abstraction.
+- Database reads and writes must be implemented through `infrastructure-service`, not directly in `chat-domain`.
 
 ## Build, Test & Run
 - Build all modules:
   - `mvn clean install`
+- Run all tests:
+  - `mvn test -DskipTests=false`
 - Run the application locally:
   - `mvn -pl application-starter -am spring-boot:run`
-- Run tests (skipped by default in the root POM):
-  - `mvn test -DskipTests=false`
+- Note:
+  - Repository-local Maven config is enabled through `.mvn/maven.config`.
+  - Local repo currently points to `/tmp/carrypigeon-m2/repository` to avoid readonly mount issues in this environment.
+
+## Dependency Policy
+- Current baseline dependencies are kept minimal and introduced gradually.
+- Do not add new dependencies unless there is a concrete current need and a clear module owner.
+- Spring Boot and Lombok are the baseline.
+- Hutool is already approved for Snowflake ID generation.
+- Replaceable external service dependencies must go to `infrastructure-service/*-impl`, not `infrastructure-basic`.
+
+## Configuration Rules
+- Runtime config entry is `application-starter/src/main/resources/application.yaml`.
+- Keep configuration minimal.
+- Do not add placeholder config for future features.
+- Project custom config prefix is `cp`.
+- Current fixed infra config already includes Snowflake ID settings under `cp.infrastructure.id.*`.
+
+## Logging & Infrastructure
+- Logging is unified on Log4j2.
+- Default log output directory is `./service-logs`.
+- It can be overridden by:
+  - JVM property: `-Dcp.log.home=...`
+  - Env var: `CP_LOG_HOME=...`
+- Fixed infrastructure facade is `InfrastructureBasics`.
+
+## External Services & Docker
+- Docker currently provides only external services, not the application container itself.
+- Current compose services:
+  - MySQL
+  - Redis
+  - MinIO
+- Docker files:
+  - `docker-compose.yaml`
+  - `.env.example`
+- Do not containerize the application by default unless explicitly requested.
 
 ## Coding Style & Naming
-- Language: Java 21, Spring Boot 3.5.x, Lombok, Log4j2.
-- Use 4-space indentation, Unix line endings, and UTF-8 encoding.
-- Package pattern: `team.carrypigeon.backend.<module>[.<feature>]`.
-- Follow existing naming:
-  - Protocol/VO/result: `CP*VO`, `CP*Result`, `CP*ResultItem`.
-  - Controllers annotated with `@CPControllerTag(path = "/core/...")`.
-- Prefer constructor or builder-based initialization over public field mutation.
+- Language: Java 21.
+- Use 4-space indentation, Unix line endings, and UTF-8.
+- Prefer constructor-based initialization.
+- Keep naming explicit and stable.
+- Do not create vague utility buckets.
 
-## Testing Guidelines
-- Framework: JUnit 5 (`org.junit.jupiter.api`), Spring Boot test starter.
-- Co-locate tests next to the module under `src/test/java`.
-- Name test classes `<Name>Tests` and methods `methodName_condition_expected()`.
-- For business logic, test both success and error codes (`CPResponse.code` 100/200/300/404/500).
+## Comment Rules
+- Follow `docs/注释规范.md`.
+- Important classes and boundary methods should explain responsibility, boundary, inputs, outputs, or constraints.
+- Test classes and test methods also require comments describing what contract is being validated.
 
-## Commit & Pull Request Guidelines
-- Use Conventional Commit style; the repo primarily uses `feat: ...`.
-  - Examples: `feat: add channel ban list API`, `fix: handle invalid token login`.
-- Keep commits focused and buildable.
-- PRs should include:
-  - Clear description, motivation, and scope.
-  - Links to related issues or docs (e.g., sections in `doc/api.md`).
-  - Notes on config changes (ports, security settings) and how you tested.
+## Testing Rules
+- Framework: JUnit 5 and Spring Boot test starter.
+- Tests live under each module's `src/test/java`.
+- Test class naming: `<Name>Tests`
+- Test method naming: `methodName_condition_expected()`
+- Business tests should cover both success and failure paths.
+- Response-code related tests should cover `CPResponse.code` values `100`, `200`, `300`, `404`, and `500` where applicable.
 
-## Security & Configuration
-- Sensitive settings (ports, keys, email configs) should come from Spring Boot configuration, not hard-coded.
-- When adding routes or connection features, verify they respect the ECC + AES handshake and `CPResponse` error conventions described in `doc/api.md`.
+## AI Collaboration Rules
+- AI must follow the rules in:
+  - `docs/AI协作开发规范.md`
+  - `docs/变更审核清单.md`
+  - `docs/任务单模板.md`
+- AI temporary materials must go to:
+  - `ai-agent-workplace/`
+- Use `ai-agent-workplace/` for:
+  - task drafts
+  - analysis notes
+  - comparison drafts
+  - intermediate generated artifacts
+- Do not scatter temporary AI files into the repository root or source directories.
+- Final rules belong in `docs/`.
+- Final code belongs in the proper module source directories.
 
+## Review & Change Control
+- Any architectural change must be approved first.
+- Any long-term rule change must be written back to `docs/`.
+- Do not treat “it compiles” as sufficient acceptance.
+- Review against architecture, dependency, configuration, exception, comment, and test rules before considering work complete.
+
+## Recommended Reference Docs
+- `docs/架构文档.md`
+- `docs/包结构规范.md`
+- `docs/依赖引入规范.md`
+- `docs/注释规范.md`
+- `docs/基建文档.md`
+- `docs/配置规范.md`
+- `docs/异常与错误码规范.md`
+- `docs/测试规范.md`
+- `docs/Docker配置.md`
+- `docs/AI协作开发规范.md`
+- `docs/变更审核清单.md`
+- `docs/任务单模板.md`

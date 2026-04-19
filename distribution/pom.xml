@@ -20,19 +20,7 @@
     <dependencies>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
             <artifactId>chat-domain</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>dao</artifactId>
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>

@@ -14,13 +14,10 @@
     <version>1.0.0</version>
     <packaging>pom</packaging>
     <modules>
-        <module>api</module>
-        <module>dao</module>
-        <module>common</module>
         <module>chat-domain</module>
-        <module>external-service</module>
+        <module>infrastructure-basic</module>
+        <module>infrastructure-service</module>
         <module>application-starter</module>
-        <module>distribution</module>
     </modules>
 
     <properties>
@@ -34,6 +31,7 @@
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
         <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
         <checkstyle.version>10.21.3</checkstyle.version>
+        <hutool.version>5.8.36</hutool.version>
     </properties>
 
     <dependencies>
@@ -48,6 +46,10 @@
                     <groupId>org.junit.vintage</groupId>
                     <artifactId>junit-vintage-engine</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <!--引入Lombok-->
@@ -59,10 +61,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-log4j2</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
         </dependency>
         <!--引入测试包junit-->
         <dependency>
@@ -78,11 +76,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
-        </dependency>
-        <!--引入AOP框架-->
-        <dependency>
-            <groupId>org.aspectj</groupId>
-            <artifactId>aspectjweaver</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
@@ -90,22 +89,7 @@
         <dependencies>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>common</artifactId>
-                <version>1.0.0</version>
-            </dependency>
-            <dependency>
-                <groupId>CarryPigeon</groupId>
                 <artifactId>chat-domain</artifactId>
-                <version>1.0.0</version>
-            </dependency>
-            <dependency>
-                <groupId>CarryPigeon</groupId>
-                <artifactId>api</artifactId>
-                <version>1.0.0</version>
-            </dependency>
-            <dependency>
-                <groupId>CarryPigeon</groupId>
-                <artifactId>dao</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
@@ -115,14 +99,18 @@
             </dependency>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>external-service</artifactId>
+                <artifactId>infrastructure-basic</artifactId>
                 <version>1.0.0</version>
             </dependency>
-            <!--引入liteflow-->
             <dependency>
-                <groupId>com.yomahub</groupId>
-                <artifactId>liteflow-spring-boot-starter</artifactId>
-                <version>2.15.1</version>
+                <groupId>CarryPigeon</groupId>
+                <artifactId>infrastructure-service</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-core</artifactId>
+                <version>${hutool.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -164,50 +152,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>checkstyle</id>
-            <activation>
-                <property>
-                    <name>checkstyle</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>${maven-checkstyle-plugin.version}</version>
-                        <dependencies>
-                            <dependency>
-                                <groupId>com.puppycrawl.tools</groupId>
-                                <artifactId>checkstyle</artifactId>
-                                <version>${checkstyle.version}</version>
-                            </dependency>
-                        </dependencies>
-                        <configuration>
-                            <configLocation>config/checkstyle/checkstyle.xml</configLocation>
-                            <propertyExpansion>checkstyle.suppressions.file=config/checkstyle/suppressions.xml</propertyExpansion>
-                            <encoding>${project.build.sourceEncoding}</encoding>
-                            <consoleOutput>true</consoleOutput>
-                            <failsOnError>true</failsOnError>
-                            <includeTestSourceDirectory>false</includeTestSourceDirectory>
-                            <linkXRef>false</linkXRef>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>checkstyle</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>check</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

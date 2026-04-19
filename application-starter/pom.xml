@@ -32,27 +32,11 @@
     <dependencies>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
             <artifactId>chat-domain</artifactId>
         </dependency>
         <dependency>
             <groupId>CarryPigeon</groupId>
-            <artifactId>common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>dao</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>external-service</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.yomahub</groupId>
-            <artifactId>liteflow-spring-boot-starter</artifactId>
+            <artifactId>infrastructure-basic</artifactId>
         </dependency>
     </dependencies>
 

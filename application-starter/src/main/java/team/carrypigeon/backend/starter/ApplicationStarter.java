@@ -5,24 +5,24 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
  * Spring Boot 启动入口。
  * <p>
- * 该类只负责启动容器与基础框架能力开关，不承载业务逻辑。
- * 阅读项目时可从此处作为入口，然后进入 `chat-domain` 的 Controller 与 Flow 链路。
+ * 职责：启动 Spring 容器，并作为最终运行时的装配入口。
+ * 边界：该类只负责框架能力开关与组件扫描，不承载核心业务规则。
+ * 依赖：业务能力来自 `chat-domain`，固定基础设施能力来自 `infrastructure-basic`，
+ * 具体外部实现后续由 `infrastructure-service` 的 `*-impl` 在启动层完成装配。
  */
 @SpringBootApplication
 @EnableScheduling
-@EnableTransactionManagement
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
 @Slf4j
 public class ApplicationStarter {
     /**
      * Spring Boot 应用入口。
      *
-     * @param args 启动参数
+     * @param args 启动参数，仅用于传递运行环境相关配置，不参与业务语义处理
      */
     public static void main(String[] args) {
         log.info("Application is starting...");

@@ -1,7 +1,8 @@
+# Build outputs
 target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+**/target/
+build/
+**/build/
 
 ### IntelliJ IDEA ###
 .idea/
@@ -19,14 +20,11 @@ target/
 .sts4-cache
 
 ### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
 
 ### VS Code ###
 .vscode/
@@ -34,10 +32,17 @@ build/
 ### Mac OS ###
 .DS_Store
 
+# Runtime and local environment
 service-logs/
 .m2/
 .claude/
+.codex
+.env
 
 # Maven/Java transient files
 *.lastUpdated
 *.log
+
+# Keep AI workspace directory, ignore temporary inner artifacts by default.
+ai-agent-workplace/*
+!ai-agent-workplace/README.md
