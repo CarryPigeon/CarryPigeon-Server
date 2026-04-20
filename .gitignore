@@ -46,3 +46,4 @@ service-logs/
 # Keep AI workspace directory, ignore temporary inner artifacts by default.
 ai-agent-workplace/*
 !ai-agent-workplace/README.md
+!ai-agent-workplace/*.md

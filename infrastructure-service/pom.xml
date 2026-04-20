@@ -13,6 +13,14 @@
     <name>infrastructure-service</name>
     <description>infrastructure-service</description>
     <packaging>pom</packaging>
+    <modules>
+        <module>database-api</module>
+        <module>database-impl</module>
+        <module>cache-api</module>
+        <module>cache-impl</module>
+        <module>storage-api</module>
+        <module>storage-impl</module>
+    </modules>
     <properties>
         <java.version>21</java.version>
     </properties>

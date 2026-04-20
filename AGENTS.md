@@ -142,6 +142,36 @@
 - Do not scatter temporary AI files into the repository root or source directories.
 - Final rules belong in `docs/`.
 - Final code belongs in the proper module source directories.
+- Before substantial implementation, AI must first form a task sheet under `ai-agent-workplace/` or explicitly align with one already confirmed by the user.
+- A task sheet must at minimum record:
+  - task goal
+  - affected modules
+  - allowed modification scope
+  - forbidden boundaries
+  - governing docs
+  - acceptance criteria
+- For tasks involving module structure, dependency changes, new external-service integrations, configuration expansion, or architecture-sensitive refactors, AI must obtain explicit user confirmation before coding.
+- AI must keep implementation within the confirmed task sheet boundary. If the actual impact expands, update the task sheet first and regain confirmation when needed.
+- After implementation, AI must self-check against `docs/变更审核清单.md` and clearly state:
+  - what changed
+  - why it changed
+  - affected modules/files
+  - whether tests were added and run
+  - whether docs were added or updated
+  - unresolved risks or unfinished items
+- If no new long-term project rule is introduced, do not modify `docs/` just to repeat task-local decisions.
+- AI workflow artifacts intended for traceability should use stable text files in `ai-agent-workplace/` and should not be left only in chat output.
+- Task sheet filenames in `ai-agent-workplace/` must use:
+  - `{{time}}-{{author}}-{{task}}-{{state}}.md`
+- Naming fields:
+  - `time`: timestamp like `20260420-132451`
+  - `author`: stable author identifier such as `ai` or agreed human/agent name
+  - `task`: short kebab-case task identifier
+  - `state`: enum-like marker used to show task status
+- Allowed `state` values:
+  - `current`
+  - `done`
+- While a task is active, use `current`; after completion, rename the file to `done`.
 
 ## Review & Change Control
 - Any architectural change must be approved first.

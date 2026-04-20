@@ -3,6 +3,28 @@ spring:
     # 职责：定义当前运行时应用名称。
     # 边界：这里只保留当前启动骨架实际需要的最小应用配置。
     name: CarryPigeonBackend
+  datasource:
+    # 职责：定义数据库连接地址，供 database-impl 使用。
+    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 职责：定义数据库连接用户名。
+    username: carrypigeon
+    # 职责：定义数据库连接密码。
+    password: carrypigeon123
+    # 职责：显式指定 MySQL 驱动，避免启动阶段歧义。
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      # 职责：定义 Redis 主机地址，供 cache-impl 使用。
+      host: 127.0.0.1
+      # 职责：定义 Redis 服务端口。
+      port: 6379
+      # 职责：定义 Redis 访问密码。
+      password: carrypigeon123
+  flyway:
+    # 职责：启用数据库迁移基础能力。
+    enabled: true
+    # 职责：保留第一阶段数据库迁移脚本默认扫描位置。
+    locations: classpath:db/migration
 
 cp:
   infrastructure:
@@ -13,3 +35,25 @@ cp:
       # 职责：配置当前节点的雪花 ID datacenterId。
       # 约束：取值范围为 0..31，多数据中心或多环境部署时应区分。
       datacenter-id: 1
+    service:
+      database:
+        # 职责：控制数据库服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义数据库健康检查使用的最小 SQL。
+        health-query: SELECT 1
+      cache:
+        # 职责：控制缓存服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义字符串缓存默认 TTL。
+        default-ttl: 5m
+      storage:
+        # 职责：控制对象存储服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义 MinIO 连接地址。
+        endpoint: http://127.0.0.1:9000
+        # 职责：定义 MinIO 访问身份。
+        access-key: carrypigeon
+        # 职责：定义 MinIO 访问密钥。
+        secret-key: carrypigeon123
+        # 职责：定义当前对象存储默认 bucket。
+        bucket: carrypigeon
