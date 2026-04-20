@@ -27,6 +27,21 @@ spring:
     locations: classpath:db/migration
 
 cp:
+  chat:
+    server:
+      realtime:
+        # 职责：控制 Netty 实时通道是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义 Netty 实时通道监听地址。
+        host: 0.0.0.0
+        # 职责：定义 Netty WebSocket 服务监听端口。
+        port: 18080
+        # 职责：定义 Netty WebSocket 握手路径。
+        path: /ws
+        # 职责：定义 Netty boss 线程数。
+        boss-threads: 1
+        # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
+        worker-threads: 0
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。
