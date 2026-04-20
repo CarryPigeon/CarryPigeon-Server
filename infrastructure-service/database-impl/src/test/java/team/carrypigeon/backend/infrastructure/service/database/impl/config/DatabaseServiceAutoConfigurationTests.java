@@ -6,6 +6,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 
@@ -36,10 +38,12 @@ class DatabaseServiceAutoConfigurationTests {
                 )
                 .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
-                .run(context -> {
+                 .run(context -> {
+                    assertThat(context).hasSingleBean(AuthAccountDatabaseService.class);
+                    assertThat(context).hasSingleBean(AuthRefreshSessionDatabaseService.class);
                     assertThat(context).hasSingleBean(DatabaseHealthService.class);
-                    assertThat(context).hasSingleBean(TransactionRunner.class);
-                    assertThat(context).hasSingleBean(JdbcClientSupport.class);
+                     assertThat(context).hasSingleBean(TransactionRunner.class);
+                     assertThat(context).hasSingleBean(JdbcClientSupport.class);
                 });
     }
 
@@ -54,10 +58,12 @@ class DatabaseServiceAutoConfigurationTests {
                 .withPropertyValues("cp.infrastructure.service.database.enabled=false")
                 .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
-                .run(context -> {
+                 .run(context -> {
+                    assertThat(context).doesNotHaveBean(AuthAccountDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(AuthRefreshSessionDatabaseService.class);
                     assertThat(context).doesNotHaveBean(DatabaseHealthService.class);
-                    assertThat(context).doesNotHaveBean(TransactionRunner.class);
-                    assertThat(context).doesNotHaveBean(JdbcClientSupport.class);
-                });
+                     assertThat(context).doesNotHaveBean(TransactionRunner.class);
+                     assertThat(context).doesNotHaveBean(JdbcClientSupport.class);
+                 });
     }
 }

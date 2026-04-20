@@ -9,8 +9,12 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
 
@@ -50,6 +54,30 @@ public class DatabaseServiceAutoConfiguration {
             DatabaseServiceProperties properties
     ) {
         return new JdbcDatabaseHealthService(jdbcClientSupport, properties);
+    }
+
+    /**
+     * 创建鉴权账户数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 鉴权账户数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AuthAccountDatabaseService authAccountDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcAuthAccountDatabaseService(jdbcClient);
+    }
+
+    /**
+     * 创建刷新会话数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 刷新会话数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcAuthRefreshSessionDatabaseService(jdbcClient);
     }
 
     /**

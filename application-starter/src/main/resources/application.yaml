@@ -28,6 +28,17 @@ spring:
 
 cp:
   chat:
+    auth:
+      jwt:
+        # 职责：定义本服务端 JWT issuer，用于校验 token 来源。
+        issuer: carrypigeon-local
+        # 职责：定义本地开发默认 HS256 签名密钥。
+        # 约束：生产环境必须通过外部配置覆盖，避免多环境共享默认密钥。
+        secret: carrypigeon-local-development-secret-change-me
+        # 职责：定义 access token 的有效期。
+        access-token-ttl: 30m
+        # 职责：定义 refresh token 的有效期。
+        refresh-token-ttl: 14d
     server:
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。

@@ -1,14 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.http;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringBootConfiguration;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -20,19 +17,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * ServerController 协议测试。
  * 职责：验证 HTTP 基础入口的统一响应码与异常映射契约。
- * 边界：不验证 Netty 通道生命周期，只验证 Spring MVC 入口层。
+ * 边界：不验证 Netty 通道生命周期，只验证协议层请求到响应的稳定行为。
  */
-@WebMvcTest(ServerController.class)
-@Import({ServerApplicationService.class, GlobalExceptionHandler.class})
 class ServerControllerTests {
 
-    @SpringBootConfiguration
-    @ComponentScan(basePackages = "team.carrypigeon.backend.chat.domain")
-    static class TestApplication {
-    }
-
-    @Autowired
     private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(new ServerController(new ServerApplicationService()))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
     /**
      * 验证基础概览接口成功路径返回统一成功响应。
@@ -58,5 +54,4 @@ class ServerControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
     }
-
 }
