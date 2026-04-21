@@ -8,6 +8,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -33,8 +34,15 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+            AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            if (principal == null) {
+                log.warn("Closing realtime channel because authenticated principal is missing after handshake");
+                context.close();
+                return;
+            }
             String sessionId = idGenerator.nextStringId();
             context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(sessionId);
+            log.info("Realtime channel connected for account {} with session {}", principal.accountId(), sessionId);
             context.writeAndFlush(toFrame("welcome", sessionId, "realtime channel connected"));
             return;
         }
@@ -50,7 +58,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     protected void channelRead0(ChannelHandlerContext context, TextWebSocketFrame frame) {
         String payload = frame.text();
         String sessionId = context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get();
-        log.debug("Received realtime text frame from session {}: {}", sessionId, payload);
+        log.debug("Received realtime text frame from session {}", sessionId);
         context.writeAndFlush(toFrame("echo", sessionId, payload));
     }
 

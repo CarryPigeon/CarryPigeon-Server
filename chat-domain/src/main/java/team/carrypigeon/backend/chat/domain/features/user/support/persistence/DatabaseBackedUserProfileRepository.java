@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.starter.config;
+package team.carrypigeon.backend.chat.domain.features.user.support.persistence;
 
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
@@ -7,15 +7,15 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.UserPr
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 
 /**
- * 用户资料仓储运行时适配器。
- * 职责：在启动装配层完成 user 领域模型与 database-api 契约模型之间的转换。
+ * 基于 database-api 的用户资料仓储适配器。
+ * 职责：在 user feature 内完成领域模型与 database-api 契约模型之间的转换。
  * 边界：不包含 SQL 与数据库驱动细节，具体持久化由 database-impl 提供。
  */
-public class StarterUserProfileRepository implements UserProfileRepository {
+public class DatabaseBackedUserProfileRepository implements UserProfileRepository {
 
     private final UserProfileDatabaseService userProfileDatabaseService;
 
-    public StarterUserProfileRepository(UserProfileDatabaseService userProfileDatabaseService) {
+    public DatabaseBackedUserProfileRepository(UserProfileDatabaseService userProfileDatabaseService) {
         this.userProfileDatabaseService = userProfileDatabaseService;
     }
 

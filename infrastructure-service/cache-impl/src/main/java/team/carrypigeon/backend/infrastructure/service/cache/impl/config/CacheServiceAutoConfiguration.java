@@ -6,10 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.health.RedisCacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCacheService;
+import team.carrypigeon.backend.infrastructure.service.cache.impl.startup.CacheInitializationCheck;
 
 /**
  * 缓存服务自动配置。
@@ -44,5 +46,17 @@ public class CacheServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public CacheHealthService cacheHealthService(StringRedisTemplate redisTemplate) {
         return new RedisCacheHealthService(redisTemplate);
+    }
+
+    /**
+     * 创建缓存初始化检查。
+     *
+     * @param cacheHealthService 缓存健康检查服务
+     * @return 共享初始化检查契约下的缓存检查
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "cacheInitializationCheck")
+    public InitializationCheck cacheInitializationCheck(CacheHealthService cacheHealthService) {
+        return new CacheInitializationCheck(cacheHealthService);
     }
 }

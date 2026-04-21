@@ -21,7 +21,8 @@ class RealtimeServerPropertiesTests {
     void defaultConstructor_called_returnsMinimalRuntimeConfig() {
         RealtimeServerProperties properties = new RealtimeServerProperties();
 
-        assertEquals("0.0.0.0", properties.host());
+        assertEquals(false, properties.enabled());
+        assertEquals("127.0.0.1", properties.host());
         assertEquals(18080, properties.port());
         assertEquals("/ws", properties.path());
     }

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.starter.config;
+package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -7,18 +7,19 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import jakarta.annotation.PreDestroy;
 import java.net.InetSocketAddress;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
-import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
 
 /**
  * Netty 实时通道运行时。
- * 职责：在启动层托管 Netty WebSocket 服务的线程组、端口绑定和关闭过程。
- * 边界：这里只负责基础设施装配，不承载任何聊天业务分发逻辑。
+ * 职责：在 server feature 内托管 Netty WebSocket 服务的线程组、端口绑定和关闭过程。
+ * 边界：这里只负责 feature 运行时装配，不承载任何聊天业务分发逻辑。
  */
-@Slf4j
 public class RealtimeServerRuntime implements SmartLifecycle {
+
+    private static final Logger log = LoggerFactory.getLogger(RealtimeServerRuntime.class);
 
     private final RealtimeServerProperties properties;
     private final RealtimeChannelInitializer initializer;

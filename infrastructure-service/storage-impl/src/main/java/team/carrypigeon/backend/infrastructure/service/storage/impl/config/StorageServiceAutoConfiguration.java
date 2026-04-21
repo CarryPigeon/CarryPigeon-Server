@@ -6,10 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioStorageHealthService;
+import team.carrypigeon.backend.infrastructure.service.storage.impl.startup.StorageInitializationCheck;
 
 /**
  * 对象存储自动配置。
@@ -60,5 +62,17 @@ public class StorageServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public StorageHealthService storageHealthService(MinioClient minioClient, MinioStorageProperties properties) {
         return new MinioStorageHealthService(minioClient, properties);
+    }
+
+    /**
+     * 创建对象存储初始化检查。
+     *
+     * @param storageHealthService 对象存储健康检查服务
+     * @return 共享初始化检查契约下的对象存储检查
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "storageInitializationCheck")
+    public InitializationCheck storageInitializationCheck(StorageHealthService storageHealthService) {
+        return new StorageInitializationCheck(storageHealthService);
     }
 }

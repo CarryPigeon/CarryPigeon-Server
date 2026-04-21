@@ -1,10 +1,10 @@
-package team.carrypigeon.backend.starter.config;
+package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -12,8 +12,8 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 实时通道启动装配。
- * 职责：在 application-starter 中完成 Netty 通道属性绑定、处理链创建与生命周期托管。
- * 边界：不承载业务控制器和消息规则，只负责运行时装配。
+ * 职责：在 server feature 内完成 Netty 通道属性绑定、处理链创建与生命周期托管。
+ * 边界：不承载业务控制器和消息规则，只负责该 feature 的运行时装配。
  */
 @Configuration
 @EnableConfigurationProperties(RealtimeServerProperties.class)
@@ -27,6 +27,7 @@ public class RealtimeServerConfiguration {
      * @param jsonProvider 项目统一 JSON 门面
      * @param idGenerator 项目统一 ID 生成器
      * @param timeProvider 项目统一时间提供器
+     * @param authTokenService 项目 access token 校验服务
      * @return Netty 通道初始化器
      */
     @Bean
@@ -34,9 +35,10 @@ public class RealtimeServerConfiguration {
             RealtimeServerProperties properties,
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            AuthTokenService authTokenService
     ) {
-        return new RealtimeChannelInitializer(properties, jsonProvider, idGenerator, timeProvider);
+        return new RealtimeChannelInitializer(properties, jsonProvider, idGenerator, timeProvider, authTokenService);
     }
 
     /**
@@ -44,7 +46,7 @@ public class RealtimeServerConfiguration {
      *
      * @param properties 实时通道配置
      * @param initializer Netty 通道初始化器
-     * @return 启动层托管的实时服务运行时
+     * @return feature 内托管的实时服务运行时
      */
     @Bean
     public RealtimeServerRuntime realtimeServerRuntime(

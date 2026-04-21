@@ -20,7 +20,12 @@ class AuthJwtPropertiesTests {
     @Test
     @DisplayName("constructor missing issuer and ttl uses stable defaults")
     void constructor_missingIssuerAndTtl_usesStableDefaults() {
-        AuthJwtProperties properties = new AuthJwtProperties("", "test-secret", null, null);
+        AuthJwtProperties properties = new AuthJwtProperties(
+                "",
+                "test-secret-test-secret-test-secret",
+                null,
+                null
+        );
 
         assertEquals("carrypigeon", properties.issuer());
         assertEquals(Duration.ofMinutes(30), properties.accessTokenTtl());
@@ -36,6 +41,18 @@ class AuthJwtPropertiesTests {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new AuthJwtProperties("carrypigeon", "", Duration.ofMinutes(30), Duration.ofDays(14))
+        );
+    }
+
+    /**
+     * 验证过弱的 JWT secret 会在配置对象创建阶段被拒绝。
+     */
+    @Test
+    @DisplayName("constructor weak secret throws exception")
+    void constructor_weakSecret_throwsException() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new AuthJwtProperties("carrypigeon", "short-secret", Duration.ofMinutes(30), Duration.ofDays(14))
         );
     }
 }

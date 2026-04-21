@@ -21,12 +21,17 @@ public record AuthJwtProperties(
         Duration refreshTokenTtl
 ) {
 
+    private static final int MIN_SECRET_LENGTH = 32;
+
     public AuthJwtProperties {
         if (issuer == null || issuer.isBlank()) {
             issuer = "carrypigeon";
         }
         if (secret == null || secret.isBlank()) {
             throw new IllegalArgumentException("cp.chat.auth.jwt.secret must not be blank");
+        }
+        if (secret.length() < MIN_SECRET_LENGTH) {
+            throw new IllegalArgumentException("cp.chat.auth.jwt.secret must be at least 32 characters");
         }
         if (accessTokenTtl == null) {
             accessTokenTtl = Duration.ofMinutes(30);

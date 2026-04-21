@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.starter.config;
+package team.carrypigeon.backend.chat.domain.features.user.support.persistence;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -12,11 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * StarterUserProfileRepository 契约测试。
- * 职责：验证 starter 层用户资料仓储适配器的领域模型与 database-api 契约模型映射行为。
+ * DatabaseBackedUserProfileRepository 契约测试。
+ * 职责：验证 user feature 内部仓储适配器的领域模型与 database-api 契约模型映射行为。
  * 边界：不访问真实数据库，只验证运行时适配转换。
  */
-class StarterUserProfileRepositoryTests {
+class DatabaseBackedUserProfileRepositoryTests {
 
     private static final Instant BASE_TIME = Instant.parse("2026-04-21T12:00:00Z");
 
@@ -28,7 +28,7 @@ class StarterUserProfileRepositoryTests {
     void findByAccountId_existingRecord_mapsToDomainModel() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
         databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
-        StarterUserProfileRepository repository = new StarterUserProfileRepository(databaseService);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
 
         Optional<UserProfile> result = repository.findByAccountId(1001L);
 
@@ -46,7 +46,7 @@ class StarterUserProfileRepositoryTests {
     @DisplayName("save domain model writes database record")
     void save_domainModel_writesDatabaseRecord() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        StarterUserProfileRepository repository = new StarterUserProfileRepository(databaseService);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
         UserProfile userProfile = new UserProfile(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
 
         UserProfile result = repository.save(userProfile);
@@ -65,7 +65,7 @@ class StarterUserProfileRepositoryTests {
     @DisplayName("update domain model writes database record")
     void update_domainModel_writesDatabaseRecord() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        StarterUserProfileRepository repository = new StarterUserProfileRepository(databaseService);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
         UserProfile userProfile = new UserProfile(1001L, "new-name", "", "new bio", BASE_TIME, BASE_TIME);
 
         UserProfile result = repository.update(userProfile);

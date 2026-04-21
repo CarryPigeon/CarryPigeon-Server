@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
@@ -44,6 +45,7 @@ class StorageServiceAutoConfigurationTests {
                     assertThat(context).hasSingleBean(MinioClient.class);
                     assertThat(context).hasSingleBean(ObjectStorageService.class);
                     assertThat(context).hasSingleBean(StorageHealthService.class);
+                    assertThat(context).hasSingleBean(InitializationCheck.class);
                 });
     }
 
@@ -66,6 +68,7 @@ class StorageServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(ObjectStorageService.class);
                     assertThat(context).doesNotHaveBean(StorageHealthService.class);
+                    assertThat(context).doesNotHaveBean(InitializationCheck.class);
                 });
     }
 }

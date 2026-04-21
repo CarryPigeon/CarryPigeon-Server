@@ -6,6 +6,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -22,17 +23,20 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final JsonProvider jsonProvider;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
+    private final AuthTokenService authTokenService;
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            AuthTokenService authTokenService
     ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
+        this.authTokenService = authTokenService;
     }
 
     @Override
@@ -40,6 +44,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
+        pipeline.addLast(new RealtimeAccessTokenHandshakeHandler(properties.path(), authTokenService));
         pipeline.addLast(RealtimeChannelHandler.idleStateHandler());
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
         pipeline.addLast(new RealtimeChannelHandler(jsonProvider, idGenerator, timeProvider));

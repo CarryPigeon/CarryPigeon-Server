@@ -42,9 +42,11 @@ cp:
     server:
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
-        enabled: true
+        # 约束：默认关闭，避免在未完成握手鉴权与部署隔离前暴露独立监听端口。
+        enabled: false
         # 职责：定义 Netty 实时通道监听地址。
-        host: 0.0.0.0
+        # 约束：默认仅绑定本机回环地址，需在明确部署场景下再外放。
+        host: 127.0.0.1
         # 职责：定义 Netty WebSocket 服务监听端口。
         port: 18080
         # 职责：定义 Netty WebSocket 握手路径。

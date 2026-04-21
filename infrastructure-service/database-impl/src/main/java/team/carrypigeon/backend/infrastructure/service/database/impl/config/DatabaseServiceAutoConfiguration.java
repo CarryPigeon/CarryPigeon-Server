@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
@@ -18,6 +19,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAu
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcUserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.startup.DatabaseInitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
 
 /**
@@ -56,6 +58,18 @@ public class DatabaseServiceAutoConfiguration {
             DatabaseServiceProperties properties
     ) {
         return new JdbcDatabaseHealthService(jdbcClientSupport, properties);
+    }
+
+    /**
+     * 创建数据库初始化检查。
+     *
+     * @param databaseHealthService 数据库健康检查服务
+     * @return 共享初始化检查契约下的数据库检查
+     */
+    @Bean
+    @ConditionalOnMissingBean(name = "databaseInitializationCheck")
+    public InitializationCheck databaseInitializationCheck(DatabaseHealthService databaseHealthService) {
+        return new DatabaseInitializationCheck(databaseHealthService);
     }
 
     /**

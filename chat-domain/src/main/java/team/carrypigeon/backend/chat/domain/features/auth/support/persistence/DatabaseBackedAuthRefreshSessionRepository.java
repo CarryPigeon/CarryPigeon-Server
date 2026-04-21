@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.starter.config;
+package team.carrypigeon.backend.chat.domain.features.auth.support.persistence;
 
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
@@ -7,15 +7,17 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRe
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 
 /**
- * 刷新会话仓储运行时适配器。
- * 职责：在启动装配层完成 refresh session 领域模型与 database-api 契约模型之间的转换。
+ * 基于 database-api 的刷新会话仓储适配器。
+ * 职责：在 auth feature 内完成 refresh session 领域模型与 database-api 契约模型之间的转换。
  * 边界：不包含 SQL 与数据库驱动细节，具体持久化由 database-impl 提供。
  */
-public class StarterAuthRefreshSessionRepository implements AuthRefreshSessionRepository {
+public class DatabaseBackedAuthRefreshSessionRepository implements AuthRefreshSessionRepository {
 
     private final AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService;
 
-    public StarterAuthRefreshSessionRepository(AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService) {
+    public DatabaseBackedAuthRefreshSessionRepository(
+            AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService
+    ) {
         this.authRefreshSessionDatabaseService = authRefreshSessionDatabaseService;
     }
 

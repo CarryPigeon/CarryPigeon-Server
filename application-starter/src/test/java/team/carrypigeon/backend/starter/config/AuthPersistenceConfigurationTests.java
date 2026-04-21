@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
+import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceAutoConfiguration;
@@ -15,21 +16,19 @@ import static org.mockito.Mockito.mock;
 
 /**
  * AuthPersistenceConfiguration 装配测试。
- * 职责：验证 starter 层是否将 auth 仓储抽象装配到 database-api/database-impl 提供的数据库服务能力。
+ * 职责：验证 starter 运行时是否能发现 chat-domain 中的 auth 仓储装配配置。
  * 边界：不访问真实数据库，只验证 Spring Bean 装配边界。
  */
 class AuthPersistenceConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(
-                    DatabaseServiceAutoConfiguration.class,
-                    AuthPersistenceConfiguration.class
-            ));
+            .withConfiguration(AutoConfigurations.of(DatabaseServiceAutoConfiguration.class))
+            .withUserConfiguration(AuthPersistenceConfiguration.class);
 
     /**
      * 验证开启数据库服务时会注册 auth 仓储适配器 Bean。
      * 输入：数据库服务开关、JdbcClient 与事务管理器。
-     * 输出：starter 层存在 auth 领域仓储抽象 Bean。
+     * 输出：运行时存在 auth 领域仓储抽象 Bean。
      */
     @Test
     @DisplayName("configuration with database service registers auth repositories")
@@ -50,7 +49,7 @@ class AuthPersistenceConfigurationTests {
     /**
      * 验证关闭数据库服务时不会注册 auth 仓储适配器 Bean。
      * 输入：关闭数据库服务并提供数据库相关基础 Bean。
-     * 输出：starter 层不存在 auth 领域仓储抽象 Bean。
+     * 输出：运行时不存在 auth 领域仓储抽象 Bean。
      */
     @Test
     @DisplayName("configuration without database service does not register auth repositories")

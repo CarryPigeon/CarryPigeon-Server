@@ -286,7 +286,12 @@ class AuthApplicationServiceTests {
                 new PrefixPasswordHasher(),
                 token -> "hash::" + token,
                 authTokenService,
-                new AuthJwtProperties("test-issuer", "test-secret", Duration.ofMinutes(30), Duration.ofDays(14)),
+                new AuthJwtProperties(
+                        "test-issuer",
+                        "test-secret-test-secret-test-secret",
+                        Duration.ofMinutes(30),
+                        Duration.ofDays(14)
+                ),
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                 transactionRunner
