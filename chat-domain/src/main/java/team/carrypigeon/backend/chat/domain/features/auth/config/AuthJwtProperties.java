@@ -26,7 +26,7 @@ public record AuthJwtProperties(
             issuer = "carrypigeon";
         }
         if (secret == null || secret.isBlank()) {
-            secret = "carrypigeon-local-development-secret-change-me";
+            throw new IllegalArgumentException("cp.chat.auth.jwt.secret must not be blank");
         }
         if (accessTokenTtl == null) {
             accessTokenTtl = Duration.ofMinutes(30);

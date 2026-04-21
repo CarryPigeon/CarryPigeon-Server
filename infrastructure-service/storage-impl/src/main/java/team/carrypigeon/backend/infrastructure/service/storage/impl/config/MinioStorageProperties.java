@@ -22,7 +22,28 @@ public record MinioStorageProperties(
         String bucket
 ) {
 
+    public MinioStorageProperties {
+        if (endpoint == null || endpoint.isBlank()) {
+            endpoint = "http://127.0.0.1:9000";
+        }
+        if (accessKey == null) {
+            accessKey = "";
+        }
+        if (secretKey == null) {
+            secretKey = "";
+        }
+        if (bucket == null || bucket.isBlank()) {
+            bucket = "carrypigeon";
+        }
+        if (enabled && accessKey.isBlank()) {
+            throw new IllegalArgumentException("cp.infrastructure.service.storage.access-key must not be blank when storage is enabled");
+        }
+        if (enabled && secretKey.isBlank()) {
+            throw new IllegalArgumentException("cp.infrastructure.service.storage.secret-key must not be blank when storage is enabled");
+        }
+    }
+
     public MinioStorageProperties() {
-        this(true, "http://127.0.0.1:9000", "carrypigeon", "carrypigeon123", "carrypigeon");
+        this(false, null, null, null, null);
     }
 }

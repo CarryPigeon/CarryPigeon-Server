@@ -7,9 +7,9 @@ spring:
     # 职责：定义数据库连接地址，供 database-impl 使用。
     url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     # 职责：定义数据库连接用户名。
-    username: carrypigeon
+    username: ${MYSQL_USERNAME:}
     # 职责：定义数据库连接密码。
-    password: carrypigeon123
+    password: ${MYSQL_PASSWORD:}
     # 职责：显式指定 MySQL 驱动，避免启动阶段歧义。
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
@@ -19,7 +19,7 @@ spring:
       # 职责：定义 Redis 服务端口。
       port: 6379
       # 职责：定义 Redis 访问密码。
-      password: carrypigeon123
+      password: ${REDIS_PASSWORD:}
   flyway:
     # 职责：启用数据库迁移基础能力。
     enabled: true
@@ -34,7 +34,7 @@ cp:
         issuer: carrypigeon-local
         # 职责：定义本地开发默认 HS256 签名密钥。
         # 约束：生产环境必须通过外部配置覆盖，避免多环境共享默认密钥。
-        secret: carrypigeon-local-development-secret-change-me
+        secret: ${CP_CHAT_AUTH_JWT_SECRET:}
         # 职责：定义 access token 的有效期。
         access-token-ttl: 30m
         # 职责：定义 refresh token 的有效期。
@@ -78,8 +78,8 @@ cp:
         # 职责：定义 MinIO 连接地址。
         endpoint: http://127.0.0.1:9000
         # 职责：定义 MinIO 访问身份。
-        access-key: carrypigeon
+        access-key: ${MINIO_ROOT_USER:}
         # 职责：定义 MinIO 访问密钥。
-        secret-key: carrypigeon123
+        secret-key: ${MINIO_ROOT_PASSWORD:}
         # 职责：定义当前对象存储默认 bucket。
         bucket: carrypigeon

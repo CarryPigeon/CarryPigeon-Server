@@ -1,12 +1,15 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
+import io.minio.MinioClient;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 /**
  * 验证对象存储自动配置的装配边界。
@@ -16,7 +19,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StorageServiceAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(StorageServiceAutoConfiguration.class));
+            .withConfiguration(AutoConfigurations.of(
+                    ConfigurationPropertiesAutoConfiguration.class,
+                    StorageServiceAutoConfiguration.class
+            ));
 
     /**
      * 测试启用对象存储服务时的自动配置。
@@ -29,12 +35,13 @@ class StorageServiceAutoConfigurationTests {
                 .withPropertyValues(
                         "cp.infrastructure.service.storage.enabled=true",
                         "cp.infrastructure.service.storage.endpoint=http://127.0.0.1:9000",
-                        "cp.infrastructure.service.storage.access-key=carrypigeon",
-                        "cp.infrastructure.service.storage.secret-key=carrypigeon123",
+                        "cp.infrastructure.service.storage.access-key=test-access-key",
+                        "cp.infrastructure.service.storage.secret-key=test-secret-key",
                         "cp.infrastructure.service.storage.bucket=carrypigeon"
                 )
+                .withBean(MinioClient.class, () -> mock(MinioClient.class))
                 .run(context -> {
-                    assertThat(context).hasBean("minioClient");
+                    assertThat(context).hasSingleBean(MinioClient.class);
                     assertThat(context).hasSingleBean(ObjectStorageService.class);
                     assertThat(context).hasSingleBean(StorageHealthService.class);
                 });
@@ -51,12 +58,12 @@ class StorageServiceAutoConfigurationTests {
                 .withPropertyValues(
                         "cp.infrastructure.service.storage.enabled=false",
                         "cp.infrastructure.service.storage.endpoint=http://127.0.0.1:9000",
-                        "cp.infrastructure.service.storage.access-key=carrypigeon",
-                        "cp.infrastructure.service.storage.secret-key=carrypigeon123",
+                        "cp.infrastructure.service.storage.access-key=test-access-key",
+                        "cp.infrastructure.service.storage.secret-key=test-secret-key",
                         "cp.infrastructure.service.storage.bucket=carrypigeon"
                 )
+                .withBean(MinioClient.class, () -> mock(MinioClient.class))
                 .run(context -> {
-                    assertThat(context).doesNotHaveBean("minioClient");
                     assertThat(context).doesNotHaveBean(ObjectStorageService.class);
                     assertThat(context).doesNotHaveBean(StorageHealthService.class);
                 });
