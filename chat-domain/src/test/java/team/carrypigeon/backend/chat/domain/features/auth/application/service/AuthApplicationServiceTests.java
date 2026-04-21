@@ -24,11 +24,14 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,11 +46,11 @@ class AuthApplicationServiceTests {
     private static final Instant BASE_TIME = Instant.parse("2026-04-20T12:00:00Z");
 
     /**
-     * 验证注册成功时会返回账户结果并保存哈希后的密码。
+     * 验证注册成功时会返回账户结果、保存哈希后的密码并初始化默认资料。
      */
     @Test
-    @DisplayName("register new account returns result and stores hashed password")
-    void register_newAccount_returnsResultAndStoresHashedPassword() {
+    @DisplayName("register new account returns result stores hashed password and provisions default profile")
+    void register_newAccount_returnsResultStoresHashedPasswordAndProvisionsDefaultProfile() {
         Fixture fixture = new Fixture();
 
         RegisterResult result = fixture.service.register(new RegisterCommand("carry-user", "password123"));
@@ -56,6 +59,10 @@ class AuthApplicationServiceTests {
         assertEquals("carry-user", result.username());
         assertTrue(fixture.accountRepository.findByUsername("carry-user").isPresent());
         assertNotEquals("password123", fixture.accountRepository.findByUsername("carry-user").orElseThrow().passwordHash());
+        UserProfile userProfile = fixture.userProfileRepository.findByAccountId(1001L).orElseThrow();
+        assertEquals("carry-user", userProfile.nickname());
+        assertEquals("", userProfile.avatarUrl());
+        assertEquals("", userProfile.bio());
     }
 
     /**
@@ -73,6 +80,34 @@ class AuthApplicationServiceTests {
         );
 
         assertEquals("username already exists", exception.getMessage());
+    }
+
+    /**
+     * 验证默认资料初始化失败时注册事务会整体回滚，避免留下没有资料的账户。
+     */
+    @Test
+    @DisplayName("register profile provisioning failure rolls back account creation")
+    void register_profileProvisioningFailure_rollsBackAccountCreation() {
+        InMemoryAuthAccountRepository accountRepository = new InMemoryAuthAccountRepository();
+        InMemoryAuthRefreshSessionRepository refreshSessionRepository = new InMemoryAuthRefreshSessionRepository();
+        InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
+        userProfileRepository.failOnSave = true;
+        AuthApplicationService service = service(
+                accountRepository,
+                refreshSessionRepository,
+                userProfileRepository,
+                new FakeAuthTokenService(),
+                new SnapshotTransactionRunner(accountRepository, userProfileRepository)
+        );
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.register(new RegisterCommand("carry-user", "password123"))
+        );
+
+        assertEquals("profile provisioning failed", exception.getMessage());
+        assertFalse(accountRepository.findByUsername("carry-user").isPresent());
+        assertFalse(userProfileRepository.findByAccountId(1001L).isPresent());
     }
 
     /**
@@ -226,17 +261,35 @@ class AuthApplicationServiceTests {
 
         private final InMemoryAuthAccountRepository accountRepository = new InMemoryAuthAccountRepository();
         private final InMemoryAuthRefreshSessionRepository refreshSessionRepository = new InMemoryAuthRefreshSessionRepository();
+        private final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
         private final FakeAuthTokenService tokenService = new FakeAuthTokenService();
-        private final AuthApplicationService service = new AuthApplicationService(
+        private final AuthApplicationService service = service(
                 accountRepository,
                 refreshSessionRepository,
+                userProfileRepository,
+                tokenService,
+                new NoopTransactionRunner()
+        );
+    }
+
+    private static AuthApplicationService service(
+            AuthAccountRepository accountRepository,
+            AuthRefreshSessionRepository refreshSessionRepository,
+            UserProfileRepository userProfileRepository,
+            AuthTokenService authTokenService,
+            TransactionRunner transactionRunner
+    ) {
+        return new AuthApplicationService(
+                accountRepository,
+                refreshSessionRepository,
+                userProfileRepository,
                 new PrefixPasswordHasher(),
                 token -> "hash::" + token,
-                tokenService,
+                authTokenService,
                 new AuthJwtProperties("test-issuer", "test-secret", Duration.ofMinutes(30), Duration.ofDays(14)),
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                new NoopTransactionRunner()
+                transactionRunner
         );
     }
 
@@ -253,6 +306,15 @@ class AuthApplicationServiceTests {
         public AuthAccount save(AuthAccount account) {
             accounts.put(account.username(), account);
             return account;
+        }
+
+        private Map<String, AuthAccount> snapshot() {
+            return new HashMap<>(accounts);
+        }
+
+        private void restore(Map<String, AuthAccount> snapshot) {
+            accounts.clear();
+            accounts.putAll(snapshot);
         }
     }
 
@@ -283,6 +345,41 @@ class AuthApplicationServiceTests {
                     session.createdAt(),
                     BASE_TIME
             ));
+        }
+    }
+
+    private static class InMemoryUserProfileRepository implements UserProfileRepository {
+
+        private final Map<Long, UserProfile> profiles = new HashMap<>();
+        private boolean failOnSave;
+
+        @Override
+        public Optional<UserProfile> findByAccountId(long accountId) {
+            return Optional.ofNullable(profiles.get(accountId));
+        }
+
+        @Override
+        public UserProfile save(UserProfile userProfile) {
+            if (failOnSave) {
+                throw new IllegalStateException("profile provisioning failed");
+            }
+            profiles.put(userProfile.accountId(), userProfile);
+            return userProfile;
+        }
+
+        @Override
+        public UserProfile update(UserProfile userProfile) {
+            profiles.put(userProfile.accountId(), userProfile);
+            return userProfile;
+        }
+
+        private Map<Long, UserProfile> snapshot() {
+            return new HashMap<>(profiles);
+        }
+
+        private void restore(Map<Long, UserProfile> snapshot) {
+            profiles.clear();
+            profiles.putAll(snapshot);
         }
     }
 
@@ -344,6 +441,41 @@ class AuthApplicationServiceTests {
         @Override
         public void runInTransaction(Runnable action) {
             action.run();
+        }
+    }
+
+    private static class SnapshotTransactionRunner implements TransactionRunner {
+
+        private final InMemoryAuthAccountRepository accountRepository;
+        private final InMemoryUserProfileRepository userProfileRepository;
+
+        private SnapshotTransactionRunner(
+                InMemoryAuthAccountRepository accountRepository,
+                InMemoryUserProfileRepository userProfileRepository
+        ) {
+            this.accountRepository = accountRepository;
+            this.userProfileRepository = userProfileRepository;
+        }
+
+        @Override
+        public <T> T runInTransaction(java.util.function.Supplier<T> action) {
+            Map<String, AuthAccount> accountSnapshot = accountRepository.snapshot();
+            Map<Long, UserProfile> profileSnapshot = userProfileRepository.snapshot();
+            try {
+                return action.get();
+            } catch (RuntimeException exception) {
+                accountRepository.restore(accountSnapshot);
+                userProfileRepository.restore(profileSnapshot);
+                throw exception;
+            }
+        }
+
+        @Override
+        public void runInTransaction(Runnable action) {
+            runInTransaction(() -> {
+                action.run();
+                return null;
+            });
         }
     }
 }

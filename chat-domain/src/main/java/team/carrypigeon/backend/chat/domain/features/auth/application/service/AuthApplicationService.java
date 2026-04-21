@@ -18,6 +18,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -33,6 +35,7 @@ public class AuthApplicationService {
 
     private final AuthAccountRepository authAccountRepository;
     private final AuthRefreshSessionRepository authRefreshSessionRepository;
+    private final UserProfileRepository userProfileRepository;
     private final PasswordHasher passwordHasher;
     private final TokenHasher tokenHasher;
     private final AuthTokenService authTokenService;
@@ -44,6 +47,7 @@ public class AuthApplicationService {
     public AuthApplicationService(
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
+            UserProfileRepository userProfileRepository,
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
             AuthTokenService authTokenService,
@@ -54,6 +58,7 @@ public class AuthApplicationService {
     ) {
         this.authAccountRepository = authAccountRepository;
         this.authRefreshSessionRepository = authRefreshSessionRepository;
+        this.userProfileRepository = userProfileRepository;
         this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
         this.authTokenService = authTokenService;
@@ -85,6 +90,14 @@ public class AuthApplicationService {
             );
 
             AuthAccount savedAccount = authAccountRepository.save(account);
+            userProfileRepository.save(new UserProfile(
+                    savedAccount.id(),
+                    savedAccount.username(),
+                    "",
+                    "",
+                    savedAccount.createdAt(),
+                    savedAccount.updatedAt()
+            ));
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });
     }

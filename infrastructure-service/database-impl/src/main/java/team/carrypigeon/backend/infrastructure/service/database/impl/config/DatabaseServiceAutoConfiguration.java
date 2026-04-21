@@ -11,11 +11,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcUserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
 
 /**
@@ -78,6 +80,18 @@ public class DatabaseServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService(JdbcClient jdbcClient) {
         return new JdbcAuthRefreshSessionDatabaseService(jdbcClient);
+    }
+
+    /**
+     * 创建用户资料数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 用户资料数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public UserProfileDatabaseService userProfileDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcUserProfileDatabaseService(jdbcClient);
     }
 
     /**
