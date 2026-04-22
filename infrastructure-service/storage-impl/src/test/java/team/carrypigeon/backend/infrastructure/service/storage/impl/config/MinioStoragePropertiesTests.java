@@ -19,7 +19,7 @@ class MinioStoragePropertiesTests {
      */
     @Test
     void constructor_default_usesStableDefaults() {
-        MinioStorageProperties properties = new MinioStorageProperties();
+        MinioStorageProperties properties = new MinioStorageProperties(false, null, null, null, null);
 
         assertEquals(false, properties.enabled());
         assertEquals("http://127.0.0.1:9000", properties.endpoint());

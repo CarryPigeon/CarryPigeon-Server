@@ -19,7 +19,7 @@ class RealtimeServerPropertiesTests {
     @Test
     @DisplayName("default constructor returns minimal runtime config")
     void defaultConstructor_called_returnsMinimalRuntimeConfig() {
-        RealtimeServerProperties properties = new RealtimeServerProperties();
+        RealtimeServerProperties properties = new RealtimeServerProperties(false, "127.0.0.1", 18080, "/ws", 1, 0);
 
         assertEquals(false, properties.enabled());
         assertEquals("127.0.0.1", properties.host());

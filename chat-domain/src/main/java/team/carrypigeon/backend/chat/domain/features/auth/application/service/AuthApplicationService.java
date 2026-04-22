@@ -15,6 +15,10 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthToken
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
@@ -36,6 +40,8 @@ public class AuthApplicationService {
     private final AuthAccountRepository authAccountRepository;
     private final AuthRefreshSessionRepository authRefreshSessionRepository;
     private final UserProfileRepository userProfileRepository;
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
     private final PasswordHasher passwordHasher;
     private final TokenHasher tokenHasher;
     private final AuthTokenService authTokenService;
@@ -48,6 +54,8 @@ public class AuthApplicationService {
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
             UserProfileRepository userProfileRepository,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
             AuthTokenService authTokenService,
@@ -59,6 +67,8 @@ public class AuthApplicationService {
         this.authAccountRepository = authAccountRepository;
         this.authRefreshSessionRepository = authRefreshSessionRepository;
         this.userProfileRepository = userProfileRepository;
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
         this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
         this.authTokenService = authTokenService;
@@ -97,6 +107,13 @@ public class AuthApplicationService {
                     "",
                     savedAccount.createdAt(),
                     savedAccount.updatedAt()
+            ));
+            Channel defaultChannel = channelRepository.findDefaultChannel()
+                    .orElseThrow(() -> ProblemException.fail("default_channel_missing", "default channel does not exist"));
+            channelMemberRepository.save(new ChannelMember(
+                    defaultChannel.id(),
+                    savedAccount.id(),
+                    timeProvider.nowInstant()
             ));
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });

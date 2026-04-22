@@ -35,9 +35,27 @@ public class RealtimeServerRuntime implements SmartLifecycle {
 
     @Override
     public void start() {
-        if (running || !properties.enabled()) {
+        if (running) {
+            log.info("Realtime Netty server start skipped because runtime is already running");
             return;
         }
+        if (!properties.enabled()) {
+            log.info(
+                    "Realtime Netty server start skipped because realtime is disabled (host={}, port={}, path={})",
+                    properties.host(),
+                    properties.port(),
+                    properties.path()
+            );
+            return;
+        }
+        log.info(
+                "Starting realtime Netty server on {}:{}{} with bossThreads={} workerThreads={}",
+                properties.host(),
+                properties.port(),
+                properties.path(),
+                properties.bossThreads(),
+                properties.workerThreads()
+        );
         bossGroup = new NioEventLoopGroup(Math.max(1, properties.bossThreads()));
         workerGroup = properties.workerThreads() > 0
                 ? new NioEventLoopGroup(properties.workerThreads())

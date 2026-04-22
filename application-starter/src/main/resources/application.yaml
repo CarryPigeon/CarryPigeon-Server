@@ -40,6 +40,9 @@ cp:
         # 职责：定义 refresh token 的有效期。
         refresh-token-ttl: 14d
     server:
+      # 职责：定义当前服务实例在消息模型中实际使用的稳定 serverId。
+      # 约束：多服务端部署时必须按实例明确区分，避免跨实例消息来源混淆。
+      id: carrypigeon-local
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
         # 约束：默认关闭，避免在未完成握手鉴权与部署隔离前暴露独立监听端口。

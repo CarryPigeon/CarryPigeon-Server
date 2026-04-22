@@ -12,12 +12,18 @@ import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcAuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcMessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcUserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.startup.DatabaseInitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
@@ -106,6 +112,42 @@ public class DatabaseServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public UserProfileDatabaseService userProfileDatabaseService(JdbcClient jdbcClient) {
         return new JdbcUserProfileDatabaseService(jdbcClient);
+    }
+
+    /**
+     * 创建频道数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 频道数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelDatabaseService channelDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcChannelDatabaseService(jdbcClient);
+    }
+
+    /**
+     * 创建频道成员数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 频道成员数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelMemberDatabaseService channelMemberDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcChannelMemberDatabaseService(jdbcClient);
+    }
+
+    /**
+     * 创建消息数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 消息数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MessageDatabaseService messageDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcMessageDatabaseService(jdbcClient);
     }
 
     /**

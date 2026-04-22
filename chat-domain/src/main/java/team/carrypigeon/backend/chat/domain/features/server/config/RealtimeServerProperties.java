@@ -35,7 +35,4 @@ public record RealtimeServerProperties(
         }
     }
 
-    public RealtimeServerProperties() {
-        this(false, "127.0.0.1", 18080, "/ws", 1, 0);
-    }
 }

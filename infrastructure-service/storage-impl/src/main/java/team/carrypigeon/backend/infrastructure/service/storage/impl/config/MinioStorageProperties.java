@@ -43,7 +43,4 @@ public record MinioStorageProperties(
         }
     }
 
-    public MinioStorageProperties() {
-        this(false, null, null, null, null);
-    }
 }

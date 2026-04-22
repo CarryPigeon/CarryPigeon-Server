@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -24,6 +25,10 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -63,6 +68,7 @@ class AuthApplicationServiceTests {
         assertEquals("carry-user", userProfile.nickname());
         assertEquals("", userProfile.avatarUrl());
         assertEquals("", userProfile.bio());
+        assertTrue(fixture.channelMemberRepository.exists(1L, 1001L));
     }
 
     /**
@@ -91,13 +97,17 @@ class AuthApplicationServiceTests {
         InMemoryAuthAccountRepository accountRepository = new InMemoryAuthAccountRepository();
         InMemoryAuthRefreshSessionRepository refreshSessionRepository = new InMemoryAuthRefreshSessionRepository();
         InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
+        InMemoryChannelRepository channelRepository = new InMemoryChannelRepository();
+        InMemoryChannelMemberRepository channelMemberRepository = new InMemoryChannelMemberRepository();
         userProfileRepository.failOnSave = true;
         AuthApplicationService service = service(
                 accountRepository,
                 refreshSessionRepository,
                 userProfileRepository,
+                channelRepository,
+                channelMemberRepository,
                 new FakeAuthTokenService(),
-                new SnapshotTransactionRunner(accountRepository, userProfileRepository)
+                new SnapshotTransactionRunner(accountRepository, userProfileRepository, channelMemberRepository)
         );
 
         IllegalStateException exception = assertThrows(
@@ -108,6 +118,7 @@ class AuthApplicationServiceTests {
         assertEquals("profile provisioning failed", exception.getMessage());
         assertFalse(accountRepository.findByUsername("carry-user").isPresent());
         assertFalse(userProfileRepository.findByAccountId(1001L).isPresent());
+        assertFalse(channelMemberRepository.exists(1L, 1001L));
     }
 
     /**
@@ -262,11 +273,15 @@ class AuthApplicationServiceTests {
         private final InMemoryAuthAccountRepository accountRepository = new InMemoryAuthAccountRepository();
         private final InMemoryAuthRefreshSessionRepository refreshSessionRepository = new InMemoryAuthRefreshSessionRepository();
         private final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
+        private final InMemoryChannelRepository channelRepository = new InMemoryChannelRepository();
+        private final InMemoryChannelMemberRepository channelMemberRepository = new InMemoryChannelMemberRepository();
         private final FakeAuthTokenService tokenService = new FakeAuthTokenService();
         private final AuthApplicationService service = service(
                 accountRepository,
                 refreshSessionRepository,
                 userProfileRepository,
+                channelRepository,
+                channelMemberRepository,
                 tokenService,
                 new NoopTransactionRunner()
         );
@@ -276,6 +291,8 @@ class AuthApplicationServiceTests {
             AuthAccountRepository accountRepository,
             AuthRefreshSessionRepository refreshSessionRepository,
             UserProfileRepository userProfileRepository,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
             AuthTokenService authTokenService,
             TransactionRunner transactionRunner
     ) {
@@ -283,6 +300,8 @@ class AuthApplicationServiceTests {
                 accountRepository,
                 refreshSessionRepository,
                 userProfileRepository,
+                channelRepository,
+                channelMemberRepository,
                 new PrefixPasswordHasher(),
                 token -> "hash::" + token,
                 authTokenService,
@@ -388,6 +407,53 @@ class AuthApplicationServiceTests {
         }
     }
 
+    private static class InMemoryChannelRepository implements ChannelRepository {
+
+        private final Channel channel = new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME);
+
+        @Override
+        public Optional<Channel> findDefaultChannel() {
+            return Optional.of(channel);
+        }
+
+        @Override
+        public Optional<Channel> findById(long channelId) {
+            return Optional.of(channel);
+        }
+    }
+
+    private static class InMemoryChannelMemberRepository implements ChannelMemberRepository {
+
+        private final Map<Long, List<Long>> membersByChannelId = new HashMap<>();
+
+        @Override
+        public boolean exists(long channelId, long accountId) {
+            return membersByChannelId.getOrDefault(channelId, List.of()).contains(accountId);
+        }
+
+        @Override
+        public void save(ChannelMember channelMember) {
+            membersByChannelId.computeIfAbsent(channelMember.channelId(), ignored -> new java.util.ArrayList<>())
+                    .add(channelMember.accountId());
+        }
+
+        @Override
+        public List<Long> findAccountIdsByChannelId(long channelId) {
+            return membersByChannelId.getOrDefault(channelId, List.of());
+        }
+
+        private Map<Long, List<Long>> snapshot() {
+            Map<Long, List<Long>> snapshot = new HashMap<>();
+            membersByChannelId.forEach((channelId, accountIds) -> snapshot.put(channelId, new java.util.ArrayList<>(accountIds)));
+            return snapshot;
+        }
+
+        private void restore(Map<Long, List<Long>> snapshot) {
+            membersByChannelId.clear();
+            snapshot.forEach((channelId, accountIds) -> membersByChannelId.put(channelId, new java.util.ArrayList<>(accountIds)));
+        }
+    }
+
     private static class PrefixPasswordHasher implements PasswordHasher {
 
         @Override
@@ -453,24 +519,29 @@ class AuthApplicationServiceTests {
 
         private final InMemoryAuthAccountRepository accountRepository;
         private final InMemoryUserProfileRepository userProfileRepository;
+        private final InMemoryChannelMemberRepository channelMemberRepository;
 
         private SnapshotTransactionRunner(
                 InMemoryAuthAccountRepository accountRepository,
-                InMemoryUserProfileRepository userProfileRepository
+                InMemoryUserProfileRepository userProfileRepository,
+                InMemoryChannelMemberRepository channelMemberRepository
         ) {
             this.accountRepository = accountRepository;
             this.userProfileRepository = userProfileRepository;
+            this.channelMemberRepository = channelMemberRepository;
         }
 
         @Override
         public <T> T runInTransaction(java.util.function.Supplier<T> action) {
             Map<String, AuthAccount> accountSnapshot = accountRepository.snapshot();
             Map<Long, UserProfile> profileSnapshot = userProfileRepository.snapshot();
+            Map<Long, List<Long>> channelMemberSnapshot = channelMemberRepository.snapshot();
             try {
                 return action.get();
             } catch (RuntimeException exception) {
                 accountRepository.restore(accountSnapshot);
                 userProfileRepository.restore(profileSnapshot);
+                channelMemberRepository.restore(channelMemberSnapshot);
                 throw exception;
             }
         }

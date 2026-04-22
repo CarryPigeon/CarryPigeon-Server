@@ -6,8 +6,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import java.util.function.Supplier;
+import org.springframework.beans.factory.ObjectProvider;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -24,19 +28,64 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final AuthTokenService authTokenService;
+    private final RealtimeSessionRegistry realtimeSessionRegistry;
+    private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthTokenService authTokenService
+            AuthTokenService authTokenService,
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            ObjectProvider<MessageApplicationService> messageApplicationServiceProvider
     ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.authTokenService = authTokenService;
+        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.messageApplicationServiceSupplier = messageApplicationServiceProvider::getIfAvailable;
+    }
+
+    public RealtimeChannelInitializer(
+            RealtimeServerProperties properties,
+            JsonProvider jsonProvider,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            AuthTokenService authTokenService,
+            RealtimeSessionRegistry realtimeSessionRegistry
+    ) {
+        this(
+                properties,
+                jsonProvider,
+                idGenerator,
+                timeProvider,
+                authTokenService,
+                realtimeSessionRegistry,
+                new ObjectProvider<>() {
+                    @Override
+                    public MessageApplicationService getObject(Object... args) {
+                        return null;
+                    }
+
+                    @Override
+                    public MessageApplicationService getIfAvailable() {
+                        return null;
+                    }
+
+                    @Override
+                    public MessageApplicationService getIfUnique() {
+                        return null;
+                    }
+
+                    @Override
+                    public MessageApplicationService getObject() {
+                        return null;
+                    }
+                }
+        );
     }
 
     @Override
@@ -47,6 +96,12 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         pipeline.addLast(new RealtimeAccessTokenHandshakeHandler(properties.path(), authTokenService));
         pipeline.addLast(RealtimeChannelHandler.idleStateHandler());
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
-        pipeline.addLast(new RealtimeChannelHandler(jsonProvider, idGenerator, timeProvider));
+        pipeline.addLast(new RealtimeChannelHandler(
+                jsonProvider,
+                idGenerator,
+                timeProvider,
+                realtimeSessionRegistry,
+                messageApplicationServiceSupplier
+        ));
     }
 }

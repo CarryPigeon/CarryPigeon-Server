@@ -98,6 +98,8 @@ class RealtimeServerConfigurationTests {
                 .run(context -> {
                     assertThat(context).hasBean("realtimeServerRuntime");
                     assertThat(context).hasBean("realtimeChannelInitializer");
+                    assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isTrue();
+                    assertThat(context.getBean(RealtimeServerProperties.class).port()).isEqualTo(28080);
                 });
     }
 
@@ -107,8 +109,8 @@ class RealtimeServerConfigurationTests {
      * 输出：server feature 中不存在 Netty 运行时 Bean 定义。
      */
     @Test
-    @DisplayName("configuration disabled does not register runtime bean")
-    void configuration_disabled_doesNotRegisterRuntimeBean() {
+    @DisplayName("configuration disabled still registers runtime bean")
+    void configuration_disabled_stillRegistersRuntimeBean() {
         contextRunner
                 .withPropertyValues(
                         "spring.main.lazy-initialization=true",
@@ -121,6 +123,10 @@ class RealtimeServerConfigurationTests {
                         "cp.infrastructure.id.worker-id=1",
                         "cp.infrastructure.id.datacenter-id=1"
                 )
-                .run(context -> assertThat(context).doesNotHaveBean("realtimeServerRuntime"));
+                .run(context -> {
+                    assertThat(context).hasBean("realtimeServerRuntime");
+                    assertThat(context).hasBean("realtimeChannelInitializer");
+                    assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isFalse();
+                });
     }
 }
