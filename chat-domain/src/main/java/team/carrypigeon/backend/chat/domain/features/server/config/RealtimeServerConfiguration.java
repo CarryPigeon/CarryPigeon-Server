@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -62,6 +63,7 @@ public class RealtimeServerConfiguration {
      * @param authTokenService 项目 access token 校验服务
      * @param realtimeSessionRegistry 实时会话注册表
      * @param messageApplicationServiceProvider 消息应用服务提供器
+     * @param realtimeInboundMessageDispatcherProvider realtime 入站消息分发器提供器
      * @return Netty 通道初始化器
      */
     @Bean
@@ -72,7 +74,8 @@ public class RealtimeServerConfiguration {
             TimeProvider timeProvider,
             AuthTokenService authTokenService,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService> messageApplicationServiceProvider
+            ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService> messageApplicationServiceProvider,
+            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         return new RealtimeChannelInitializer(
                 properties,
@@ -81,7 +84,8 @@ public class RealtimeServerConfiguration {
                 timeProvider,
                 authTokenService,
                 realtimeSessionRegistry,
-                messageApplicationServiceProvider
+                messageApplicationServiceProvider,
+                realtimeInboundMessageDispatcherProvider
         );
     }
 

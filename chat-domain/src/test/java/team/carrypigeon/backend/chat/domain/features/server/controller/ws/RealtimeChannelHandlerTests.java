@@ -18,11 +18,15 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.support.Aut
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeMessageHandlingConfiguration;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -52,11 +56,53 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"content":"hello world"}
+                {"type":"send_channel_text_message","channelId":1,"body":"hello world"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
         assertNotNull(frame);
+    }
+
+    /**
+     * 验证统一发送命令在 text 消息场景下也能走通当前主链路。
+     */
+    @Test
+    @DisplayName("channel read generic send message command with text type broadcasts persisted message id")
+    void channelRead_genericSendMessageCommandWithTextType_broadcastsPersistedMessageId() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = channel(registry, service(registry));
+        sender.attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(new AuthenticatedPrincipal(1001L, "carry-user"));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/ws", null, null));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"send_channel_message","channelId":1,"messageType":"text","body":"hello generic world"}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+    }
+
+    /**
+     * 验证统一发送命令收到当前未支持的消息类型时会回写问题消息。
+     */
+    @Test
+    @DisplayName("channel read generic send message command with unsupported type returns problem payload")
+    void channelRead_genericSendMessageCommandWithUnsupportedType_returnsProblemPayload() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = channel(registry, service(registry));
+        sender.attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(new AuthenticatedPrincipal(1001L, "carry-user"));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/ws", null, null));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"send_channel_message","channelId":1,"messageType":"file","body":"ignored"}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+        assertTrue(frame.text().contains("\"type\":\"problem\""));
+        assertTrue(frame.text().contains("unsupported realtime message type"));
     }
 
     /**
@@ -72,14 +118,14 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"content":"  "}
+                {"type":"send_channel_text_message","channelId":1,"body":"  "}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
         assertNotNull(frame);
         assertTrue(frame.text().contains("\"type\":\"problem\""));
         assertTrue(frame.text().contains("\"code\":200"));
-        assertTrue(frame.text().contains("content must not be blank"));
+        assertTrue(frame.text().contains("body must not be blank"));
     }
 
     /**
@@ -95,7 +141,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"content":"hello world"}
+                {"type":"send_channel_text_message","channelId":1,"body":"hello world"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -125,12 +171,21 @@ class RealtimeChannelHandlerTests {
 
     private static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
         Supplier<MessageApplicationService> supplier = () -> service;
+        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
+        ChannelMessagePluginRegistry pluginRegistry = messagePluginConfiguration.channelMessagePluginRegistry(
+                List.of(messagePluginConfiguration.textChannelMessagePlugin())
+        );
+        RealtimeMessageHandlingConfiguration realtimeMessageHandlingConfiguration = new RealtimeMessageHandlingConfiguration();
+        RealtimeInboundMessageDispatcher dispatcher = realtimeMessageHandlingConfiguration.realtimeInboundMessageDispatcher(
+                List.of(realtimeMessageHandlingConfiguration.sendChannelMessageRealtimeHandler())
+        );
         return new EmbeddedChannel(new RealtimeChannelHandler(
                 new JsonProvider(new ObjectMapper()),
                 () -> 9001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 registry,
-                supplier
+                supplier,
+                () -> dispatcher
         ));
     }
 
@@ -175,6 +230,11 @@ class RealtimeChannelHandlerTests {
                     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
                         return List.of();
                     }
+
+                    @Override
+                    public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+                        return List.of();
+                    }
                 },
                 new MessageRealtimePublisher() {
                     @Override
@@ -190,6 +250,7 @@ class RealtimeChannelHandlerTests {
                         }
                     }
                 },
+                new ChannelMessagePluginRegistry(List.of(new MessagePluginConfiguration().textChannelMessagePlugin())),
                 new ServerIdentityProperties("carrypigeon-local"),
                 () -> 7001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
@@ -248,9 +309,15 @@ class RealtimeChannelHandlerTests {
                     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
                         return List.of();
                     }
+
+                    @Override
+                    public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+                        return List.of();
+                    }
                 },
                 (message, recipientAccountIds) -> {
                 },
+                new ChannelMessagePluginRegistry(List.of(new MessagePluginConfiguration().textChannelMessagePlugin())),
                 new ServerIdentityProperties("carrypigeon-local"),
                 () -> 7001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),

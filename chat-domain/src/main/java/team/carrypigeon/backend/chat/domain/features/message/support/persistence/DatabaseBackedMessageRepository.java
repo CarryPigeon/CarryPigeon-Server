@@ -33,6 +33,14 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 .toList();
     }
 
+    @Override
+    public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+        return messageDatabaseService.searchByChannelId(channelId, keyword, limit)
+                .stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
     private ChannelMessage toDomainModel(MessageRecord record) {
         return new ChannelMessage(
                 record.messageId(),
@@ -41,7 +49,9 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 record.channelId(),
                 record.senderId(),
                 record.messageType(),
-                record.content(),
+                record.body(),
+                record.previewText(),
+                record.searchableText(),
                 record.payload(),
                 record.metadata(),
                 record.status(),
@@ -57,7 +67,9 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 message.channelId(),
                 message.senderId(),
                 message.messageType(),
-                message.content(),
+                message.body(),
+                message.previewText(),
+                message.searchableText(),
                 message.payload(),
                 message.metadata(),
                 message.status(),

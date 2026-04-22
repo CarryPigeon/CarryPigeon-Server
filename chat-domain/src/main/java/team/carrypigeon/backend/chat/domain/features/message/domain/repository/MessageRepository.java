@@ -27,4 +27,14 @@ public interface MessageRepository {
      * @return 历史消息列表，按 messageId 倒序排列
      */
     List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
+
+    /**
+     * 在频道内按关键字搜索消息。
+     *
+     * @param channelId 频道 ID
+     * @param keyword 搜索关键字
+     * @param limit 返回条数
+     * @return 搜索命中消息列表
+     */
+    List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit);
 }

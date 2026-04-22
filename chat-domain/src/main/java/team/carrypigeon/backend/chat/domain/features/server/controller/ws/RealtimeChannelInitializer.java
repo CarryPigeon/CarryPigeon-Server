@@ -11,6 +11,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -30,6 +31,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final AuthTokenService authTokenService;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
     private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
+    private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
@@ -38,7 +40,8 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             TimeProvider timeProvider,
             AuthTokenService authTokenService,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<MessageApplicationService> messageApplicationServiceProvider
+            ObjectProvider<MessageApplicationService> messageApplicationServiceProvider,
+            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;
@@ -47,6 +50,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         this.authTokenService = authTokenService;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.messageApplicationServiceSupplier = messageApplicationServiceProvider::getIfAvailable;
+        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
     }
 
     public RealtimeChannelInitializer(
@@ -84,6 +88,27 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                     public MessageApplicationService getObject() {
                         return null;
                     }
+                },
+                new ObjectProvider<>() {
+                    @Override
+                    public RealtimeInboundMessageDispatcher getObject(Object... args) {
+                        return null;
+                    }
+
+                    @Override
+                    public RealtimeInboundMessageDispatcher getIfAvailable() {
+                        return null;
+                    }
+
+                    @Override
+                    public RealtimeInboundMessageDispatcher getIfUnique() {
+                        return null;
+                    }
+
+                    @Override
+                    public RealtimeInboundMessageDispatcher getObject() {
+                        return null;
+                    }
                 }
         );
     }
@@ -101,7 +126,8 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 idGenerator,
                 timeProvider,
                 realtimeSessionRegistry,
-                messageApplicationServiceSupplier
+                messageApplicationServiceSupplier,
+                realtimeInboundMessageDispatcherSupplier
         ));
     }
 }

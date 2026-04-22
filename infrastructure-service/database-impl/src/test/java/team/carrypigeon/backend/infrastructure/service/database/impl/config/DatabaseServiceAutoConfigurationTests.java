@@ -15,6 +15,12 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Mess
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -31,8 +37,8 @@ class DatabaseServiceAutoConfigurationTests {
 
     /**
      * 测试启用数据库服务时的自动配置。
-     * 输入：启用开关、健康检查 SQL、JdbcClient 与事务管理器。
-     * 期望：成功装配数据库健康检查、事务运行器和 JDBC 支持入口。
+     * 输入：启用开关、健康检查 SQL、JdbcClient、MyBatis mapper mock 与事务管理器。
+     * 期望：成功装配数据库健康检查、事务运行器与业务数据库服务 Bean。
      */
     @Test
     void autoConfiguration_enabled_registersDatabaseBeans() {
@@ -42,6 +48,12 @@ class DatabaseServiceAutoConfigurationTests {
                         "cp.infrastructure.service.database.health-query=SELECT 1"
                 )
                 .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
+                .withBean(AuthAccountMapper.class, () -> mock(AuthAccountMapper.class))
+                .withBean(AuthRefreshSessionMapper.class, () -> mock(AuthRefreshSessionMapper.class))
+                .withBean(UserProfileMapper.class, () -> mock(UserProfileMapper.class))
+                .withBean(ChannelMapper.class, () -> mock(ChannelMapper.class))
+                .withBean(ChannelMemberMapper.class, () -> mock(ChannelMemberMapper.class))
+                .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
                     assertThat(context).hasSingleBean(AuthAccountDatabaseService.class);
@@ -67,6 +79,12 @@ class DatabaseServiceAutoConfigurationTests {
         contextRunner
                 .withPropertyValues("cp.infrastructure.service.database.enabled=false")
                 .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
+                .withBean(AuthAccountMapper.class, () -> mock(AuthAccountMapper.class))
+                .withBean(AuthRefreshSessionMapper.class, () -> mock(AuthRefreshSessionMapper.class))
+                .withBean(UserProfileMapper.class, () -> mock(UserProfileMapper.class))
+                .withBean(ChannelMapper.class, () -> mock(ChannelMapper.class))
+                .withBean(ChannelMemberMapper.class, () -> mock(ChannelMemberMapper.class))
+                .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(AuthAccountDatabaseService.class);

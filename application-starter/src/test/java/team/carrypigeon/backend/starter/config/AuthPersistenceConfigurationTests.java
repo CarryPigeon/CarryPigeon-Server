@@ -2,14 +2,12 @@ package team.carrypigeon.backend.starter.config;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.PlatformTransactionManager;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceAutoConfiguration;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -22,12 +20,11 @@ import static org.mockito.Mockito.mock;
 class AuthPersistenceConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(DatabaseServiceAutoConfiguration.class))
             .withUserConfiguration(AuthPersistenceConfiguration.class);
 
     /**
      * 验证开启数据库服务时会注册 auth 仓储适配器 Bean。
-     * 输入：数据库服务开关、JdbcClient 与事务管理器。
+     * 输入：数据库服务开关与 database-api 服务契约 mock。
      * 输出：运行时存在 auth 领域仓储抽象 Bean。
      */
     @Test
@@ -38,8 +35,8 @@ class AuthPersistenceConfigurationTests {
                         "cp.infrastructure.service.database.enabled=true",
                         "cp.infrastructure.service.database.health-query=SELECT 1"
                 )
-                .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
-                .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
+                .withBean(AuthAccountDatabaseService.class, () -> mock(AuthAccountDatabaseService.class))
+                .withBean(AuthRefreshSessionDatabaseService.class, () -> mock(AuthRefreshSessionDatabaseService.class))
                 .run(context -> {
                     assertThat(context).hasSingleBean(AuthAccountRepository.class);
                     assertThat(context).hasSingleBean(AuthRefreshSessionRepository.class);
@@ -56,8 +53,8 @@ class AuthPersistenceConfigurationTests {
     void configuration_withoutDatabaseService_doesNotRegisterAuthRepositories() {
         contextRunner
                 .withPropertyValues("cp.infrastructure.service.database.enabled=false")
-                .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
-                .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
+                .withBean(AuthAccountDatabaseService.class, () -> mock(AuthAccountDatabaseService.class))
+                .withBean(AuthRefreshSessionDatabaseService.class, () -> mock(AuthRefreshSessionDatabaseService.class))
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(AuthAccountRepository.class);
                     assertThat(context).doesNotHaveBean(AuthRefreshSessionRepository.class);

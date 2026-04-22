@@ -13,13 +13,19 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
+import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -55,7 +61,29 @@ class MessageApplicationServiceTests {
         assertEquals(5001L, fixture.messageRepository.savedMessages.getFirst().messageId());
         assertEquals(5001L, fixture.publisher.publishedMessages.getFirst().messageId());
         assertEquals("carrypigeon-local", result.serverId());
+        assertEquals("hello world", result.body());
+        assertEquals("hello world", result.previewText());
         assertIterableEquals(List.of(1001L, 1002L), fixture.publisher.recipientAccountIds.getFirst());
+    }
+
+    /**
+     * 验证通用消息发送入口在 text 草稿场景下保持既有 text 消息语义。
+     */
+    @Test
+    @DisplayName("send channel message text draft preserves text semantics")
+    void sendChannelMessage_textDraft_preservesTextSemantics() {
+        Fixture fixture = new Fixture();
+
+        ChannelMessageResult result = fixture.service.sendChannelMessage(
+                new SendChannelMessageCommand(1001L, 1L, new TextChannelMessageDraft("hello plugin world"))
+        );
+
+        assertEquals("text", result.messageType());
+        assertEquals("hello plugin world", result.body());
+        assertEquals("hello plugin world", result.previewText());
+        assertEquals(null, result.payload());
+        assertEquals(null, result.metadata());
+        assertEquals("sent", result.status());
     }
 
     /**
@@ -76,6 +104,26 @@ class MessageApplicationServiceTests {
     }
 
     /**
+     * 验证按频道搜索消息时会返回匹配关键字的消息。
+     */
+    @Test
+    @DisplayName("search channel messages valid query returns matching messages")
+    void searchChannelMessages_validQuery_returnsMatchingMessages() {
+        Fixture fixture = new Fixture();
+        fixture.messageRepository.searchResults.add(new ChannelMessage(
+                5003L, "carrypigeon-local", 1L, 1L, 1002L, "text",
+                "hello body", "[文本消息] hello body", "hello body", null, null, "sent", BASE_TIME.plusSeconds(2)
+        ));
+
+        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+                new SearchChannelMessagesQuery(1001L, 1L, "hello", 20)
+        );
+
+        assertEquals(1, result.messages().size());
+        assertEquals("[文本消息] hello body", result.messages().getFirst().previewText());
+    }
+
+    /**
      * 验证按频道查询历史消息时会返回倒序消息和下一页游标。
      */
     @Test
@@ -83,10 +131,10 @@ class MessageApplicationServiceTests {
     void getChannelMessageHistory_member_returnsMessagesAndNextCursor() {
         Fixture fixture = new Fixture();
         fixture.messageRepository.history.add(new ChannelMessage(
-                5002L, "carrypigeon-local", 1L, 1L, 1002L, "text", "second", null, null, "sent", BASE_TIME.plusSeconds(1)
+                5002L, "carrypigeon-local", 1L, 1L, 1002L, "text", "second", "[文本消息] second", "second", null, null, "sent", BASE_TIME.plusSeconds(1)
         ));
         fixture.messageRepository.history.add(new ChannelMessage(
-                5001L, "carrypigeon-local", 1L, 1L, 1001L, "text", "first", null, null, "sent", BASE_TIME
+                5001L, "carrypigeon-local", 1L, 1L, 1001L, "text", "first", "[文本消息] first", "first", null, null, "sent", BASE_TIME
         ));
 
         ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
@@ -121,11 +169,13 @@ class MessageApplicationServiceTests {
         private final InMemoryChannelMemberRepository channelMemberRepository = new InMemoryChannelMemberRepository();
         private final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
         private final RecordingMessageRealtimePublisher publisher = new RecordingMessageRealtimePublisher();
+        private final ChannelMessagePluginRegistry pluginRegistry = new ChannelMessagePluginRegistry(List.of(new TextChannelMessagePlugin()));
         private final MessageApplicationService service = new MessageApplicationService(
                 channelRepository,
                 channelMemberRepository,
                 messageRepository,
                 publisher,
+                pluginRegistry,
                 new ServerIdentityProperties("carrypigeon-local"),
                 new FixedIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
@@ -177,6 +227,7 @@ class MessageApplicationServiceTests {
 
         private final List<ChannelMessage> savedMessages = new ArrayList<>();
         private final List<ChannelMessage> history = new ArrayList<>();
+        private final List<ChannelMessage> searchResults = new ArrayList<>();
 
         @Override
         public ChannelMessage save(ChannelMessage message) {
@@ -187,6 +238,11 @@ class MessageApplicationServiceTests {
         @Override
         public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
             return history;
+        }
+
+        @Override
+        public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+            return searchResults;
         }
     }
 
@@ -222,4 +278,5 @@ class MessageApplicationServiceTests {
             action.run();
         }
     }
+
 }

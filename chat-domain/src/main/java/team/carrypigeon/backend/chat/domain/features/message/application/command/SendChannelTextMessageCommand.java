@@ -7,7 +7,7 @@ package team.carrypigeon.backend.chat.domain.features.message.application.comman
  *
  * @param accountId 发送者账户 ID
  * @param channelId 目标频道 ID
- * @param content 文本内容
+ * @param body 文本正文
  */
-public record SendChannelTextMessageCommand(long accountId, long channelId, String content) {
+public record SendChannelTextMessageCommand(long accountId, long channelId, String body) {
 }

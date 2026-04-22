@@ -14,6 +14,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.support.Aut
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -54,7 +55,7 @@ class ChannelMessageControllerTests {
         mockMvc = authenticatedMockMvc();
         when(messageApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
                 List.of(new ChannelMessageResult(
-                        5001L, "carrypigeon-local", 1L, 1L, 1001L, "text", "hello world", null, null, "sent",
+                        5001L, "carrypigeon-local", 1L, 1L, 1001L, "text", "hello world", "[文本消息] hello world", null, null, "sent",
                         Instant.parse("2026-04-22T00:00:00Z")
                 )),
                 5001L
@@ -65,7 +66,30 @@ class ChannelMessageControllerTests {
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data.messages[0].messageId").value(5001L))
                 .andExpect(jsonPath("$.data.messages[0].serverId").value("carrypigeon-local"))
+                .andExpect(jsonPath("$.data.messages[0].body").value("hello world"))
+                .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] hello world"))
                 .andExpect(jsonPath("$.data.nextCursor").value(5001L));
+    }
+
+    /**
+     * 验证已认证成员可以在频道内搜索消息。
+     */
+    @Test
+    @DisplayName("search channel messages authenticated request returns code 100")
+    void searchChannelMessages_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+                List.of(new ChannelMessageResult(
+                        5002L, "carrypigeon-local", 1L, 1L, 1001L, "text", "search body", "[文本消息] search body", null, null, "sent",
+                        Instant.parse("2026-04-22T00:00:00Z")
+                ))
+        ));
+
+        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.messages[0].messageId").value(5002L))
+                .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] search body"));
     }
 
     /**

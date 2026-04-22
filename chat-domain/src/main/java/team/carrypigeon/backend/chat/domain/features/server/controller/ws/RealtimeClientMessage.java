@@ -7,7 +7,17 @@ package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
  *
  * @param type 命令类型
  * @param channelId 频道 ID
- * @param content 文本内容
+ * @param messageType 消息类型
+ * @param body 消息正文主体
+ * @param payload 结构化载荷
+ * @param metadata 元数据
  */
-public record RealtimeClientMessage(String type, Long channelId, String content) {
+public record RealtimeClientMessage(
+        String type,
+        Long channelId,
+        String messageType,
+        String body,
+        String payload,
+        String metadata
+) {
 }

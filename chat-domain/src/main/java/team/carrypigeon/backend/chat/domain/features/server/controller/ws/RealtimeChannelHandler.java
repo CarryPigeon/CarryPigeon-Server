@@ -10,8 +10,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -32,6 +32,23 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final TimeProvider timeProvider;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
     private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
+    private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
+
+    public RealtimeChannelHandler(
+            JsonProvider jsonProvider,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            Supplier<MessageApplicationService> messageApplicationServiceSupplier,
+            Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier
+    ) {
+        this.jsonProvider = jsonProvider;
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.messageApplicationServiceSupplier = messageApplicationServiceSupplier;
+        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherSupplier;
+    }
 
     public RealtimeChannelHandler(
             JsonProvider jsonProvider,
@@ -40,11 +57,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             RealtimeSessionRegistry realtimeSessionRegistry,
             Supplier<MessageApplicationService> messageApplicationServiceSupplier
     ) {
-        this.jsonProvider = jsonProvider;
-        this.idGenerator = idGenerator;
-        this.timeProvider = timeProvider;
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.messageApplicationServiceSupplier = messageApplicationServiceSupplier;
+        this(jsonProvider, idGenerator, timeProvider, realtimeSessionRegistry, messageApplicationServiceSupplier, () -> null);
     }
 
     @Override
@@ -85,20 +98,17 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 context.writeAndFlush(problemFrame(sessionId, 200, "type must not be blank"));
                 return;
             }
-            if (!"send_channel_text_message".equals(request.type())) {
-                context.writeAndFlush(problemFrame(sessionId, 200, "unsupported realtime message type"));
-                return;
-            }
             MessageApplicationService messageApplicationService = messageApplicationServiceSupplier.get();
             if (messageApplicationService == null) {
                 context.writeAndFlush(problemFrame(sessionId, 500, "realtime message service is unavailable"));
                 return;
             }
-            messageApplicationService.sendChannelTextMessage(new SendChannelTextMessageCommand(
-                    principal.accountId(),
-                    request.channelId() == null ? 0L : request.channelId(),
-                    request.content()
-            ));
+            RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
+            if (dispatcher == null) {
+                context.writeAndFlush(problemFrame(sessionId, 500, "realtime message dispatcher is unavailable"));
+                return;
+            }
+            dispatcher.dispatch(principal, request, messageApplicationService);
         } catch (ProblemException exception) {
             context.writeAndFlush(problemFrame(sessionId, problemCode(exception), exception.getMessage()));
         } catch (InfrastructureException exception) {

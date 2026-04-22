@@ -13,7 +13,8 @@ import java.time.Instant;
  * @param channelId 频道 ID
  * @param senderId 发送者账户 ID
  * @param messageType 消息类型
- * @param content 文本内容
+ * @param body 消息正文主体
+ * @param previewText 预览文本
  * @param payload 结构化载荷
  * @param metadata 元数据
  * @param status 消息状态
@@ -26,7 +27,8 @@ public record ChannelMessageResponse(
         long channelId,
         long senderId,
         String messageType,
-        String content,
+        String body,
+        String previewText,
         String payload,
         String metadata,
         String status,

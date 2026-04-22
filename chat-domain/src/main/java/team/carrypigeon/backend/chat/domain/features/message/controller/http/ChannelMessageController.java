@@ -14,10 +14,13 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.support.Aut
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
+import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageHistoryResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageResponse;
+import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageSearchResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
 
 /**
@@ -68,6 +71,32 @@ public class ChannelMessageController {
         ));
     }
 
+    /**
+     * 在频道内按关键字搜索消息。
+     *
+     * @param channelId 频道 ID
+     * @param keyword 搜索关键字
+     * @param limit 返回条数
+     * @param request 当前 HTTP 请求
+     * @return 统一响应包装的搜索结果
+     */
+    @GetMapping("/{channelId}/messages/search")
+    public CPResponse<ChannelMessageSearchResponse> searchChannelMessages(
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "20") @Min(value = 1, message = "limit must be between 1 and 100")
+            @Max(value = 100, message = "limit must be between 1 and 100") int limit,
+            HttpServletRequest request
+    ) {
+        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageSearchResult result = messageApplicationService.searchChannelMessages(
+                new SearchChannelMessagesQuery(principal.accountId(), channelId, keyword, limit)
+        );
+        return CPResponse.success(new ChannelMessageSearchResponse(
+                result.messages().stream().map(this::toResponse).toList()
+        ));
+    }
+
     private ChannelMessageResponse toResponse(ChannelMessageResult result) {
         return new ChannelMessageResponse(
                 result.messageId(),
@@ -76,7 +105,8 @@ public class ChannelMessageController {
                 result.channelId(),
                 result.senderId(),
                 result.messageType(),
-                result.content(),
+                result.body(),
+                result.previewText(),
                 result.payload(),
                 result.metadata(),
                 result.status(),

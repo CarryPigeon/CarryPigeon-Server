@@ -37,11 +37,40 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
                 "channel_message",
                 null,
                 timeProvider.nowMillis(),
-                message
+                new RealtimeChannelMessagePayload(
+                        message.messageId(),
+                        message.serverId(),
+                        message.conversationId(),
+                        message.channelId(),
+                        message.senderId(),
+                        message.messageType(),
+                        message.body(),
+                        message.previewText(),
+                        message.payload(),
+                        message.metadata(),
+                        message.status(),
+                        message.createdAt()
+                )
         ));
         for (Long recipientAccountId : recipientAccountIds) {
             realtimeSessionRegistry.getChannels(recipientAccountId)
                     .forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(frameText)));
         }
+    }
+
+    private record RealtimeChannelMessagePayload(
+            long messageId,
+            String serverId,
+            long conversationId,
+            long channelId,
+            long senderId,
+            String messageType,
+            String body,
+            String previewText,
+            String payload,
+            String metadata,
+            String status,
+            java.time.Instant createdAt
+    ) {
     }
 }
