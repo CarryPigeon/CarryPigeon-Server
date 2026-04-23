@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
@@ -48,9 +49,15 @@ public class RealtimeServerConfiguration {
     public MessageRealtimePublisher messageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
     ) {
-        return new NettyMessageRealtimePublisher(realtimeSessionRegistry, jsonProvider, timeProvider);
+        return new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                timeProvider,
+                messageAttachmentPayloadResolver
+        );
     }
 
     /**

@@ -5,6 +5,7 @@ import java.util.Collection;
 import org.springframework.context.annotation.Primary;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeServerMessage;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -20,15 +21,18 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
     private final RealtimeSessionRegistry realtimeSessionRegistry;
     private final JsonProvider jsonProvider;
     private final TimeProvider timeProvider;
+    private final MessageAttachmentPayloadResolver messageAttachmentPayloadResolver;
 
     public NettyMessageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
     ) {
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.jsonProvider = jsonProvider;
         this.timeProvider = timeProvider;
+        this.messageAttachmentPayloadResolver = messageAttachmentPayloadResolver;
     }
 
     @Override
@@ -46,7 +50,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
                         message.messageType(),
                         message.body(),
                         message.previewText(),
-                        message.payload(),
+                        messageAttachmentPayloadResolver.resolve(message.messageType(), message.payload()),
                         message.metadata(),
                         message.status(),
                         message.createdAt()

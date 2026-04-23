@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -11,9 +12,11 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -24,12 +27,20 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeMessageHandlingConfiguration;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
+import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,7 +67,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"body":"hello world"}
+                {"type":"send_channel_text_message","channel_id":1,"body":"hello world"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -76,7 +87,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_message","channelId":1,"messageType":"text","body":"hello generic world"}
+                {"type":"send_channel_message","channel_id":1,"message_type":"text","body":"hello generic world"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -96,7 +107,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_message","channelId":1,"messageType":"file","body":"ignored"}
+                {"type":"send_channel_message","channel_id":1,"message_type":"unknown","body":"ignored"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -118,7 +129,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"body":"  "}
+                {"type":"send_channel_text_message","channel_id":1,"body":"  "}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -141,7 +152,7 @@ class RealtimeChannelHandlerTests {
         sender.readOutbound();
 
         sender.writeInbound(new TextWebSocketFrame("""
-                {"type":"send_channel_text_message","channelId":1,"body":"hello world"}
+                {"type":"send_channel_text_message","channel_id":1,"body":"hello world"}
                 """));
 
         TextWebSocketFrame frame = sender.readOutbound();
@@ -172,15 +183,26 @@ class RealtimeChannelHandlerTests {
     private static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
         Supplier<MessageApplicationService> supplier = () -> service;
         MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+        ObjectStorageService objectStorageService = storageService();
+        JsonProvider jsonProvider = jsonProvider();
         ChannelMessagePluginRegistry pluginRegistry = messagePluginConfiguration.channelMessagePluginRegistry(
-                List.of(messagePluginConfiguration.textChannelMessagePlugin())
+                List.of(
+                        messagePluginConfiguration.textChannelMessagePlugin(),
+                        messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy),
+                        messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )
         );
         RealtimeMessageHandlingConfiguration realtimeMessageHandlingConfiguration = new RealtimeMessageHandlingConfiguration();
         RealtimeInboundMessageDispatcher dispatcher = realtimeMessageHandlingConfiguration.realtimeInboundMessageDispatcher(
-                List.of(realtimeMessageHandlingConfiguration.sendChannelMessageRealtimeHandler())
+                List.of(
+                        realtimeMessageHandlingConfiguration.sendChannelMessageRealtimeHandler(),
+                        realtimeMessageHandlingConfiguration.sendFileMessageRealtimeHandler(jsonProvider),
+                        realtimeMessageHandlingConfiguration.sendVoiceMessageRealtimeHandler(jsonProvider)
+                )
         );
         return new EmbeddedChannel(new RealtimeChannelHandler(
-                new JsonProvider(new ObjectMapper()),
+                jsonProvider,
                 () -> 9001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 registry,
@@ -190,6 +212,11 @@ class RealtimeChannelHandlerTests {
     }
 
     private static MessageApplicationService service(RealtimeSessionRegistry registry) {
+        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+        ObjectStorageService objectStorageService = storageService();
+        JsonProvider jsonProvider = jsonProvider();
+        ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
         return new MessageApplicationService(
                 new ChannelRepository() {
                     @Override
@@ -239,7 +266,7 @@ class RealtimeChannelHandlerTests {
                 new MessageRealtimePublisher() {
                     @Override
                     public void publish(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
-                        String payload = new JsonProvider(new ObjectMapper()).toJson(new RealtimeServerMessage(
+                        String payload = jsonProvider().toJson(new RealtimeServerMessage(
                                 "channel_message",
                                 null,
                                 Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
@@ -250,7 +277,13 @@ class RealtimeChannelHandlerTests {
                         }
                     }
                 },
-                new ChannelMessagePluginRegistry(List.of(new MessagePluginConfiguration().textChannelMessagePlugin())),
+                new ChannelMessagePluginRegistry(List.of(
+                        messagePluginConfiguration.textChannelMessagePlugin(),
+                        messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy),
+                        messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )),
+                objectKeyPolicy,
+                new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
                 new ServerIdentityProperties("carrypigeon-local"),
                 () -> 7001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
@@ -264,11 +297,23 @@ class RealtimeChannelHandlerTests {
                     public void runInTransaction(Runnable action) {
                         action.run();
                     }
-                }
+                },
+                objectStorageServiceProvider
         );
     }
 
+    private static JsonProvider jsonProvider() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new JsonProvider(objectMapper);
+    }
+
     private static MessageApplicationService failingService() {
+        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+        ObjectStorageService objectStorageService = storageService();
+        JsonProvider jsonProvider = jsonProvider();
+        ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
         return new MessageApplicationService(
                 new ChannelRepository() {
                     @Override
@@ -317,7 +362,13 @@ class RealtimeChannelHandlerTests {
                 },
                 (message, recipientAccountIds) -> {
                 },
-                new ChannelMessagePluginRegistry(List.of(new MessagePluginConfiguration().textChannelMessagePlugin())),
+                new ChannelMessagePluginRegistry(List.of(
+                        messagePluginConfiguration.textChannelMessagePlugin(),
+                        messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy),
+                        messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )),
+                objectKeyPolicy,
+                new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
                 new ServerIdentityProperties("carrypigeon-local"),
                 () -> 7001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
@@ -331,7 +382,56 @@ class RealtimeChannelHandlerTests {
                     public void runInTransaction(Runnable action) {
                         action.run();
                     }
-                }
+                },
+                objectStorageServiceProvider
         );
+    }
+
+    private static ObjectStorageService storageService() {
+        return new ObjectStorageService() {
+            @Override
+            public StorageObject put(PutObjectCommand command) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public Optional<StorageObject> get(GetObjectCommand command) {
+                return Optional.of(StorageObject.metadata(command.objectKey(), "application/octet-stream", 1024));
+            }
+
+            @Override
+            public void delete(team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand command) {
+                throw new UnsupportedOperationException();
+            }
+
+            @Override
+            public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
+                throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    private static ObjectProvider<ObjectStorageService> objectProvider(ObjectStorageService objectStorageService) {
+        return new ObjectProvider<>() {
+            @Override
+            public ObjectStorageService getObject(Object... args) {
+                return objectStorageService;
+            }
+
+            @Override
+            public ObjectStorageService getIfAvailable() {
+                return objectStorageService;
+            }
+
+            @Override
+            public ObjectStorageService getIfUnique() {
+                return objectStorageService;
+            }
+
+            @Override
+            public ObjectStorageService getObject() {
+                return objectStorageService;
+            }
+        };
     }
 }

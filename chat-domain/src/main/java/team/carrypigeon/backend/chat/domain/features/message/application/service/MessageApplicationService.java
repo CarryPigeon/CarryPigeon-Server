@@ -1,13 +1,18 @@
 package team.carrypigeon.backend.chat.domain.features.message.application.service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.UploadChannelMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
@@ -17,17 +22,22 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
+import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
  * 消息应用服务。
- * 职责：编排频道消息发送、历史查询与搜索用例。
- * 边界：当前阶段仅内建 text 插件，不在应用层直接展开文件、语音或富文本规则。
+ * 职责：编排频道消息发送、历史查询、搜索与附件上传用例。
+ * 边界：应用层只编排消息规则和稳定存储抽象，不直接依赖对象存储实现。
  */
 @Service
 public class MessageApplicationService {
@@ -40,10 +50,13 @@ public class MessageApplicationService {
     private final MessageRepository messageRepository;
     private final MessageRealtimePublisher messageRealtimePublisher;
     private final ChannelMessagePluginRegistry channelMessagePluginRegistry;
+    private final MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy;
+    private final MessageAttachmentPayloadResolver messageAttachmentPayloadResolver;
     private final ServerIdentityProperties serverIdentityProperties;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
+    private final ObjectProvider<ObjectStorageService> objectStorageServiceProvider;
 
     public MessageApplicationService(
             ChannelRepository channelRepository,
@@ -51,20 +64,26 @@ public class MessageApplicationService {
             MessageRepository messageRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
             ServerIdentityProperties serverIdentityProperties,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner
+            TransactionRunner transactionRunner,
+            ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.messageRepository = messageRepository;
         this.messageRealtimePublisher = messageRealtimePublisher;
         this.channelMessagePluginRegistry = channelMessagePluginRegistry;
+        this.messageAttachmentObjectKeyPolicy = messageAttachmentObjectKeyPolicy;
+        this.messageAttachmentPayloadResolver = messageAttachmentPayloadResolver;
         this.serverIdentityProperties = serverIdentityProperties;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
+        this.objectStorageServiceProvider = objectStorageServiceProvider;
     }
 
     /**
@@ -150,6 +169,45 @@ public class MessageApplicationService {
         return new ChannelMessageSearchResult(messages);
     }
 
+    /**
+     * 上传 file / voice 消息发送前使用的附件对象。
+     *
+     * @param command 上传命令
+     * @return 可继续用于消息发送链路的 canonical 附件信息
+     */
+    public ChannelMessageAttachmentUploadResult uploadChannelMessageAttachment(UploadChannelMessageAttachmentCommand command) {
+        validateUploadCommand(command);
+        Channel channel = requireChannel(command.channelId());
+        requireMembership(channel.id(), command.accountId());
+        ObjectStorageService objectStorageService = requireObjectStorageService();
+        String normalizedMessageType = command.messageType().trim().toLowerCase();
+        String normalizedFilename = messageAttachmentObjectKeyPolicy.normalizeFilename(command.filename());
+        String resolvedContentType = resolveContentType(normalizedMessageType, command.contentType());
+        String objectKey = messageAttachmentObjectKeyPolicy.buildObjectKey(
+                channel.id(),
+                normalizedMessageType,
+                command.accountId(),
+                idGenerator.nextLongId(),
+                normalizedFilename
+        );
+        try (InputStream content = command.content()) {
+            StorageObject storageObject = objectStorageService.put(new PutObjectCommand(
+                    objectKey,
+                    content,
+                    command.size(),
+                    resolvedContentType
+            ));
+            return new ChannelMessageAttachmentUploadResult(
+                    storageObject.objectKey(),
+                    normalizedFilename,
+                    storageObject.contentType(),
+                    storageObject.size()
+            );
+        } catch (IOException exception) {
+            throw ProblemException.fail("attachment_stream_close_failed", "failed to close upload content");
+        }
+    }
+
     private void validateSendCommand(SendChannelTextMessageCommand command) {
         if (command.accountId() <= 0) {
             throw ProblemException.validationFailed("accountId must be greater than 0");
@@ -192,6 +250,28 @@ public class MessageApplicationService {
         }
     }
 
+    private void validateUploadCommand(UploadChannelMessageAttachmentCommand command) {
+        if (command.accountId() <= 0) {
+            throw ProblemException.validationFailed("accountId must be greater than 0");
+        }
+        if (command.channelId() <= 0) {
+            throw ProblemException.validationFailed("channelId must be greater than 0");
+        }
+        String normalizedMessageType = command.messageType() == null ? null : command.messageType().trim().toLowerCase();
+        if (!"file".equals(normalizedMessageType) && !"voice".equals(normalizedMessageType)) {
+            throw ProblemException.validationFailed("messageType must be file or voice");
+        }
+        if (command.filename() == null || command.filename().isBlank()) {
+            throw ProblemException.validationFailed("filename must not be blank");
+        }
+        if (command.size() <= 0) {
+            throw ProblemException.validationFailed("file must not be empty");
+        }
+        if (command.content() == null) {
+            throw ProblemException.validationFailed("file content must not be null");
+        }
+    }
+
     private void validateSearchQuery(SearchChannelMessagesQuery query) {
         if (query.accountId() <= 0) {
             throw ProblemException.validationFailed("accountId must be greater than 0");
@@ -228,11 +308,26 @@ public class MessageApplicationService {
                 message.messageType(),
                 message.body(),
                 message.previewText(),
-                message.payload(),
+                messageAttachmentPayloadResolver.resolve(message.messageType(), message.payload()),
                 message.metadata(),
                 message.status(),
                 message.createdAt()
         );
+    }
+
+    private ObjectStorageService requireObjectStorageService() {
+        ObjectStorageService objectStorageService = objectStorageServiceProvider.getIfAvailable();
+        if (objectStorageService == null) {
+            throw ProblemException.fail("storage_service_unavailable", "storage service is unavailable");
+        }
+        return objectStorageService;
+    }
+
+    private String resolveContentType(String messageType, String contentType) {
+        if (contentType != null && !contentType.isBlank()) {
+            return contentType.trim();
+        }
+        return "voice".equals(messageType) ? "audio/mpeg" : "application/octet-stream";
     }
 
     private record PersistedMessage(ChannelMessage message, List<Long> recipientAccountIds) {

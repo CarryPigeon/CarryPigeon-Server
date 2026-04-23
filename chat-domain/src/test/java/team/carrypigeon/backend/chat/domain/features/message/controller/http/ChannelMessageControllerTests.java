@@ -7,11 +7,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -90,6 +93,84 @@ class ChannelMessageControllerTests {
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data.messages[0].messageId").value(5002L))
                 .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] search body"));
+    }
+
+    /**
+     * 验证已认证成员可以上传频道消息附件。
+     */
+    @Test
+    @DisplayName("upload channel message attachment authenticated request returns code 100")
+    void uploadChannelMessageAttachment_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.uploadChannelMessageAttachment(any())).thenReturn(
+                new ChannelMessageAttachmentUploadResult(
+                        "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+                        "demo.pdf",
+                        "application/pdf",
+                        123L
+                )
+        );
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.objectKey").value("channels/1/messages/file/accounts/1001/5001-demo.pdf"))
+                .andExpect(jsonPath("$.data.filename").value("demo.pdf"))
+                .andExpect(jsonPath("$.data.mimeType").value("application/pdf"))
+                .andExpect(jsonPath("$.data.size").value(123L));
+    }
+
+    /**
+     * 验证附件上传参数错误时会返回 200 响应码。
+     */
+    @Test
+    @DisplayName("upload channel message attachment invalid type returns code 200")
+    void uploadChannelMessageAttachment_invalidType_returnsCode200() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.uploadChannelMessageAttachment(any()))
+                .thenThrow(ProblemException.validationFailed("messageType must be file or voice"));
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "image"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    /**
+     * 验证非成员上传附件时会返回 300 响应码。
+     */
+    @Test
+    @DisplayName("upload channel message attachment non member returns code 300")
+    void uploadChannelMessageAttachment_nonMember_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.uploadChannelMessageAttachment(any()))
+                .thenThrow(ProblemException.forbidden("channel_member_required", "channel membership is required"));
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
+    /**
+     * 验证附件上传未预期异常会被映射为 500 响应码。
+     */
+    @Test
+    @DisplayName("upload channel message attachment unexpected failure returns code 500")
+    void uploadChannelMessageAttachment_unexpectedFailure_returnsCode500() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.uploadChannelMessageAttachment(any()))
+                .thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
     }
 
     /**

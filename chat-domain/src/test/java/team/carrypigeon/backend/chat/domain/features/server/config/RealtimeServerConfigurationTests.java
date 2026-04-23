@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.lang.reflect.Field;
 import java.time.Clock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,10 @@ import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -34,7 +39,7 @@ class RealtimeServerConfigurationTests {
                     TimeAutoConfiguration.class,
                     RealtimeServerConfiguration.class
             ))
-            .withUserConfiguration(TestSupportConfiguration.class);
+            .withUserConfiguration(TestSupportConfiguration.class, MessagePluginConfiguration.class);
 
     @Configuration
     static class TestSupportConfiguration {
@@ -128,5 +133,27 @@ class RealtimeServerConfigurationTests {
                     assertThat(context).hasBean("realtimeChannelInitializer");
                     assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isFalse();
                 });
+    }
+
+    /**
+     * 验证 realtime 发布器会复用已装配的附件 payload resolver Bean。
+     */
+    @Test
+    @DisplayName("message realtime publisher reuses shared attachment payload resolver bean")
+    void messageRealtimePublisher_reusesSharedAttachmentPayloadResolverBean() throws Exception {
+        RealtimeServerConfiguration configuration = new RealtimeServerConfiguration();
+        MessageAttachmentPayloadResolver resolver = new MessageAttachmentPayloadResolver(null, null);
+
+        MessageRealtimePublisher publisher = configuration.messageRealtimePublisher(
+                new team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry(),
+                null,
+                null,
+                resolver
+        );
+
+        assertThat(publisher).isInstanceOf(NettyMessageRealtimePublisher.class);
+        Field field = NettyMessageRealtimePublisher.class.getDeclaredField("messageAttachmentPayloadResolver");
+        field.setAccessible(true);
+        assertThat(field.get(publisher)).isSameAs(resolver);
     }
 }
