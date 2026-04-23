@@ -5,9 +5,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckFailureException;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
@@ -86,7 +86,7 @@ class InitializationCheckConfigurationTests {
                 });
     }
 
-    @Configuration
+    @TestConfiguration
     static class PassingChecksConfiguration {
 
         @Bean
@@ -100,7 +100,7 @@ class InitializationCheckConfigurationTests {
         }
     }
 
-    @Configuration
+    @TestConfiguration
     static class FailingRequiredCheckConfiguration {
 
         @Bean
@@ -124,7 +124,7 @@ class InitializationCheckConfigurationTests {
         }
     }
 
-    @Configuration
+    @TestConfiguration
     static class FailingRequiredCheckAndLifecycleConfiguration {
 
         private static final TestSmartLifecycle LIFECYCLE = new TestSmartLifecycle();

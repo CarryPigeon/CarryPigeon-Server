@@ -115,11 +115,16 @@
 验证记录：
 - `mvn -pl chat-domain -am -Dtest=MessageAttachmentObjectKeyPolicyTests,MessageAttachmentPayloadResolverTests,FileChannelMessagePluginTests,VoiceChannelMessagePluginTests,MessageApplicationServiceTests,RealtimeServerConfigurationTests,NettyMessageRealtimePublisherTests -Dsurefire.failIfNoSpecifiedTests=false test -DskipTests=false` ✅
 - `mvn -pl chat-domain -am test -DskipTests=false` ✅
+- 全项目回归评估：
+  - `mvn test -DskipTests=false` ✅
+  - 结果：全仓测试通过，涉及 `infrastructure-basic`、`database-api`、`storage-api`、`chat-domain`、`database-impl`、`cache-api`、`cache-impl`、`storage-impl`、`application-starter` 等模块
+  - 结论：当前与本轮修改直接相关的回归/装配/模块级测试已经覆盖到位，未发现必须在本轮继续补充项目级回归测试或新增集成测试的缺口
 - 尝试对修改文件执行 `lsp_diagnostics`，但当前环境中的 Java LSP 初始化超时 / 退出，未能返回有效诊断结果；最终以 Maven 编译与测试门禁完成验证。
 
 残留风险：
 - 当前未发现本轮范围内残留风险。
 - `MessageAttachmentPayloadResolver` 的 warning logging 已通过测试子类覆盖 presign fallback 记录路径；运行时仍使用实际 Log4j2 warning 输出。
+- 全项目回归评估后，当前未发现由于本轮优化引出的额外项目级测试缺口。
 
 知识沉淀 / 是否回写 docs：
 - 本轮仅为局部优化，未形成新的长期仓库规则，不回写 `docs/`。
