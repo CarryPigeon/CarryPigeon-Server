@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
+import java.util.Map;
+
 /**
  * 实时通道客户端消息。
  * 职责：定义 WebSocket 文本命令的最小入站协议结构。
@@ -17,7 +19,7 @@ public record RealtimeClientMessage(
         Long channelId,
         String messageType,
         String body,
-        String payload,
-        String metadata
+        Map<String, Object> payload,
+        Map<String, Object> metadata
 ) {
 }
