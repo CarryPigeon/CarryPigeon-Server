@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.starter;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 职责：验证 starter 模块在当前消息附件链路场景下的最小装配能力。
  * 边界：不依赖真实外部服务，只验证关键 Bean 的上下文级装配结果。
  */
+@Tag("smoke")
 class ApplicationStarterSmokeTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

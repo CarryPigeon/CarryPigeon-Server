@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 职责：验证默认频道查询入口的统一响应码与异常映射契约。
  * 边界：不验证真实数据库访问，只验证协议层请求到响应的稳定行为。
  */
+@Tag("contract")
 class ChannelControllerTests {
 
     private ChannelApplicationService channelApplicationService;

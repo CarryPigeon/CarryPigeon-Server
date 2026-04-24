@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAccountRecord;
@@ -23,6 +24,7 @@ import static org.mockito.Mockito.when;
  * 职责：验证鉴权账户 MyBatis-Plus 数据库服务的关键查询、写入与失败语义。
  * 边界：不访问真实数据库，只验证 mapper 交互后的稳定行为。
  */
+@Tag("contract")
 class MybatisPlusAuthAccountDatabaseServiceTests {
 
     private static final Instant CREATED_AT = Instant.parse("2026-04-20T12:00:00Z");

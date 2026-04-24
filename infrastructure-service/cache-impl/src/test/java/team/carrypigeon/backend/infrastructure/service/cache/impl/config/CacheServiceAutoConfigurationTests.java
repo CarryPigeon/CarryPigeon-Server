@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -16,6 +17,7 @@ import static org.mockito.Mockito.mock;
  * 职责：确保 cache-impl 只在启用条件满足时注册缓存服务相关 Bean。
  * 边界：不连接真实 Redis，只验证自动配置的上下文装配行为。
  */
+@Tag("contract")
 class CacheServiceAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

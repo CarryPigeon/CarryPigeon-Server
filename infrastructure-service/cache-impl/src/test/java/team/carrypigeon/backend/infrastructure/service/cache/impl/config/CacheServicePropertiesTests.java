@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.cache.impl.config;
 
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：确保 cache-impl 的默认开关和默认 TTL 稳定可用。
  * 边界：不验证 Spring 绑定流程，只验证配置对象自身默认值。
  */
+@Tag("unit")
 class CacheServicePropertiesTests {
 
     /**

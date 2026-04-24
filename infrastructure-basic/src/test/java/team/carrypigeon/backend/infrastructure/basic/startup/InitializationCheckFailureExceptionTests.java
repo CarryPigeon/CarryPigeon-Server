@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.startup;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：确保启动期阻塞异常能输出稳定、可定位的信息。
  * 边界：不验证异常传播链，只验证消息语义。
  */
+@Tag("unit")
 class InitializationCheckFailureExceptionTests {
 
     /**

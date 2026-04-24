@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.when;
  * 职责：验证刷新会话 MyBatis-Plus 数据库服务的关键查询、写入、撤销与失败语义。
  * 边界：不访问真实数据库，只验证 mapper 交互后的稳定行为。
  */
+@Tag("contract")
 class MybatisPlusAuthRefreshSessionDatabaseServiceTests {
 
     private static final Instant EXPIRES_AT = Instant.parse("2026-05-01T12:00:00Z");

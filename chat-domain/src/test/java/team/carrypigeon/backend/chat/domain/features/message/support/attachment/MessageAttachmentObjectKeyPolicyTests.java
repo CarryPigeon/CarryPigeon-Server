@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.support.attachment
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证附件 objectKey 的统一构建规则和发送者范围判断规则。
  * 边界：只验证本地规则，不涉及对象存储访问。
  */
+@Tag("unit")
 class MessageAttachmentObjectKeyPolicyTests {
 
     /**

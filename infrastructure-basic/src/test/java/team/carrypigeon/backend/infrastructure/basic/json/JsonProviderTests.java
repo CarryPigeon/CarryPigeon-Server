@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.basic.json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：确保 JsonProvider 能基于统一 ObjectMapper 对外提供简洁 JSON 能力。
  * 边界：不验证 Jackson 自动配置，只验证 Provider 委托行为。
  */
+@Tag("unit")
 class JsonProviderTests {
 
     /**

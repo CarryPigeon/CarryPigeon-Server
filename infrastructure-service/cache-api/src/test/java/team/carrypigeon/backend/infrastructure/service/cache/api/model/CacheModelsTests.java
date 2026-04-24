@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.cache.api.model;
 
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保缓存键、缓存 TTL 和缓存条目遵守稳定输入约束。
  * 边界：不验证 Redis 行为，只验证 API 值对象自身语义。
  */
+@Tag("unit")
 class CacheModelsTests {
 
     /**

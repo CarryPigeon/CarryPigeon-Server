@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：确保 database-impl 的默认开关和健康检查 SQL 稳定可用。
  * 边界：不验证 Spring 绑定流程，只验证配置对象自身默认值。
  */
+@Tag("unit")
 class DatabaseServicePropertiesTests {
 
     /**

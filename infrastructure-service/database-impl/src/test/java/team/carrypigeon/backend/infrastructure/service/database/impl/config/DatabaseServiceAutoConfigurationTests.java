@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -30,6 +31,7 @@ import static org.mockito.Mockito.mock;
  * 职责：确保 database-impl 只在启用条件满足时注册数据库服务相关 Bean。
  * 边界：不访问真实数据库，只验证自动配置的上下文装配行为。
  */
+@Tag("contract")
 class DatabaseServiceAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

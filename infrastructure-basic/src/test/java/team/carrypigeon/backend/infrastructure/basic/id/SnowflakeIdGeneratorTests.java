@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.basic.id;
 
 import cn.hutool.core.lang.Snowflake;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：确保项目统一 ID 入口能生成正数且连续调用不重复。
  * 边界：不验证 Hutool Snowflake 内部算法，只验证项目侧使用契约。
  */
+@Tag("unit")
 class SnowflakeIdGeneratorTests {
 
     /**

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保对象键、TTL 和对象模型遵守稳定输入约束。
  * 边界：不验证 MinIO 行为，只验证 API 值对象和命令自身语义。
  */
+@Tag("unit")
 class StorageModelsTests {
 
     /**

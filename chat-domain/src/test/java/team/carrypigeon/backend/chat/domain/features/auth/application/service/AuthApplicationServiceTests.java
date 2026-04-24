@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.RefreshTokenCommand;
@@ -46,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证注册、登录、刷新和注销用例的应用层编排契约。
  * 边界：不验证 HTTP 协议层与真实数据库访问，只使用内存替身验证业务语义。
  */
+@Tag("contract")
 class AuthApplicationServiceTests {
 
     private static final Instant BASE_TIME = Instant.parse("2026-04-20T12:00:00Z");

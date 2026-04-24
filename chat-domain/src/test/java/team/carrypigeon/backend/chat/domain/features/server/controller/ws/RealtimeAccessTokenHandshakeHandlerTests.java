@@ -11,6 +11,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * 职责：验证 WebSocket 握手阶段的 Bearer access token 校验与通道主体绑定行为。
  * 边界：不验证 Netty 协议升级细节，只验证握手鉴权处理器本身。
  */
+@Tag("contract")
 class RealtimeAccessTokenHandshakeHandlerTests {
 
     /**

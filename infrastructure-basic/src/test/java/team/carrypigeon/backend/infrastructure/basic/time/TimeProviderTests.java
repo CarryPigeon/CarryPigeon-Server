@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：确保 TimeProvider 基于注入的 Clock 返回稳定时间。
  * 边界：不验证系统真实时间，只验证项目侧时间访问契约。
  */
+@Tag("unit")
 class TimeProviderTests {
 
     /**

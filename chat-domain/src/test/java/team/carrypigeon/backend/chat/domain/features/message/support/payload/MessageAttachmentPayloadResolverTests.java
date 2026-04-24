@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证 file / voice 消息在出站阶段的附件访问字段派生语义。
  * 边界：不验证真实对象存储访问，只验证 payload 解析和回退行为。
  */
+@Tag("contract")
 class MessageAttachmentPayloadResolverTests {
 
     /**

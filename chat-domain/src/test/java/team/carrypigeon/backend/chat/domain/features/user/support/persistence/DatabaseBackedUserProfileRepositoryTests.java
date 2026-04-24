@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
@@ -16,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证 user feature 内部仓储适配器的领域模型与 database-api 契约模型映射行为。
  * 边界：不访问真实数据库，只验证运行时适配转换。
  */
+@Tag("contract")
 class DatabaseBackedUserProfileRepositoryTests {
 
     private static final Instant BASE_TIME = Instant.parse("2026-04-21T12:00:00Z");

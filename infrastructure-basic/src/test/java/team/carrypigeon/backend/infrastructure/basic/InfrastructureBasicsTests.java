@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.infrastructure.basic.id.SnowflakeIdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * 职责：确保上层模块可通过一个简洁入口访问 ID、时间、JSON 三类固定基建能力。
  * 边界：不验证各基础能力内部行为。
  */
+@Tag("unit")
 class InfrastructureBasicsTests {
 
     /**

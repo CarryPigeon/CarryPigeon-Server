@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -32,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 职责：验证注册、登录、刷新与注销入口的统一响应码与异常映射契约。
  * 边界：不验证真实数据库与密码哈希实现，只验证协议层请求到响应的稳定行为。
  */
+@Tag("contract")
 class AuthControllerTests {
 
     private AuthApplicationService authApplicationService;

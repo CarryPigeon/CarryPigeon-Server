@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.when;
  * 职责：验证频道 MyBatis-Plus 数据库服务的关键查询契约与失败语义。
  * 边界：不访问真实数据库，只验证 mapper 交互后的稳定行为。
  */
+@Tag("contract")
 class MybatisPlusChannelDatabaseServiceTests {
 
     /**

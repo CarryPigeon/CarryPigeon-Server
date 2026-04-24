@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.startup;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：确保共享启动检查结果能稳定表达通过与失败状态。
  * 边界：只验证结果模型本身，不验证具体检查实现。
  */
+@Tag("unit")
 class InitializationCheckResultTests {
 
     /**

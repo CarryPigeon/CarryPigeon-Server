@@ -1,7 +1,10 @@
 package team.carrypigeon.backend.chat.domain.shared.controller.advice;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.validation.BindException;
+import org.springframework.validation.FieldError;
 import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -12,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 职责：验证业务问题异常到 CPResponse 响应码的稳定映射。
  * 边界：不通过生产 HTTP demo 端点构造错误，只验证统一异常处理契约。
  */
+@Tag("contract")
 class GlobalExceptionHandlerTests {
 
     private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
@@ -59,5 +63,22 @@ class GlobalExceptionHandlerTests {
         );
 
         assertEquals(500, response.code());
+    }
+
+    /**
+     * 验证请求绑定失败会映射到 200 响应码。
+     * 输入：带字段错误的 BindException。
+     * 输出：统一响应码为 200，且消息保持可读。
+     */
+    @Test
+    @DisplayName("handle validation bind exception returns code 200")
+    void handleValidationException_bindException_returnsCode200() {
+        BindException exception = new BindException(new Object(), "request");
+        exception.addError(new FieldError("request", "username", "username is invalid"));
+
+        CPResponse<Void> response = handler.handleValidationException(exception);
+
+        assertEquals(200, response.code());
+        assertEquals("username is invalid", response.message());
     }
 }

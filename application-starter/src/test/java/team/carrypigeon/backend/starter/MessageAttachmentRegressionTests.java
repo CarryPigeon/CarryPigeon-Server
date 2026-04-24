@@ -2,6 +2,7 @@ package team.carrypigeon.backend.starter;
 
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 职责：验证 starter 级 Spring 装配下的附件上传、消息发送、历史查询与搜索的关键回归链路。
  * 边界：不依赖真实外部服务，使用内存替身验证跨层语义。
  */
+@Tag("regression")
 class MessageAttachmentRegressionTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

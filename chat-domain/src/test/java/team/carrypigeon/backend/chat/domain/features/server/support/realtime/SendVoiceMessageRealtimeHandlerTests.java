@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -43,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证语音消息 realtime handler 的路由和委托发送行为。
  * 边界：不验证完整 WebSocket 协议处理链，只验证 handler 自身语义。
  */
+@Tag("contract")
 class SendVoiceMessageRealtimeHandlerTests {
 
     /**

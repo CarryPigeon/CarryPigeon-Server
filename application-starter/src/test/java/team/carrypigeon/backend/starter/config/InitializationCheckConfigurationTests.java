@@ -3,6 +3,7 @@ package team.carrypigeon.backend.starter.config;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * 职责：验证 starter 是否只负责编排并执行共享初始化检查契约。
  * 边界：不接入真实外部服务，只验证执行器装配与失败语义。
  */
+@Tag("smoke")
 class InitializationCheckConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

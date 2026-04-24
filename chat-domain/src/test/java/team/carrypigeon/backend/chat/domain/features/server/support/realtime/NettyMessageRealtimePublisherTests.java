@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
@@ -35,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * 职责：验证 realtime 下发时 file / voice 消息会派生可访问附件字段。
  * 边界：不验证完整 Netty 握手与鉴权链，只验证发布器出站载荷语义。
  */
+@Tag("contract")
 class NettyMessageRealtimePublisherTests {
 
     /**

@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：验证当前登录用户资料查询与更新用例的应用层编排契约。
  * 边界：不验证 HTTP 协议层与真实数据库访问，只使用内存替身验证业务语义。
  */
+@Tag("contract")
 class UserProfileApplicationServiceTests {
 
     private static final Instant BASE_TIME = Instant.parse("2026-04-21T12:00:00Z");

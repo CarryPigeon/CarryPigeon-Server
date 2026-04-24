@@ -2,6 +2,7 @@ package team.carrypigeon.backend.starter.config;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.mock;
  * 职责：验证 starter 运行时是否能发现 chat-domain 中的 auth 仓储装配配置。
  * 边界：不访问真实数据库，只验证 Spring Bean 装配边界。
  */
+@Tag("contract")
 class AuthPersistenceConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

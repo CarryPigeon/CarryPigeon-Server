@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureErrorCode;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保常用 JSON 字符串、泛型对象和 JsonNode 转换行为稳定。
  * 边界：不验证 Jackson 内部机制，只验证项目封装契约。
  */
+@Tag("unit")
 class JsonsTests {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -71,5 +74,7 @@ class JsonsTests {
         );
 
         assertEquals(InfrastructureErrorCode.JSON_DESERIALIZE_FAILED, exception.getErrorCode());
+        assertEquals("Failed to deserialize json", exception.getMessage());
+        assertNotNull(exception.getCause());
     }
 }

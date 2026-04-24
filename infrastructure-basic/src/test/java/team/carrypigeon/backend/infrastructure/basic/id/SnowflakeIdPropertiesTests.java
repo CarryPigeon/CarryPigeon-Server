@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.id;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保 workerId 与 datacenterId 有稳定默认值并符合 Hutool Snowflake 范围约束。
  * 边界：不验证 Spring Boot 配置绑定，只验证属性对象自身约束。
  */
+@Tag("unit")
 class SnowflakeIdPropertiesTests {
 
     /**

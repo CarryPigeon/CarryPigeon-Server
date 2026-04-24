@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureErrorCode;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保基础配置校验能区分有效文本和空白文本。
  * 边界：不验证 Spring 配置绑定流程，只验证项目侧基础校验行为。
  */
+@Tag("unit")
 class ConfigurationSupportTests {
 
     /**

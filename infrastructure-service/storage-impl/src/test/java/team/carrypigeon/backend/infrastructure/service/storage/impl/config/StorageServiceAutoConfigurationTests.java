@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
 import io.minio.MinioClient;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -17,6 +18,7 @@ import static org.mockito.Mockito.mock;
  * 职责：确保 storage-impl 只在启用条件满足时注册对象存储相关 Bean。
  * 边界：不访问真实 MinIO，只验证自动配置的上下文装配行为。
  */
+@Tag("contract")
 class StorageServiceAutoConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

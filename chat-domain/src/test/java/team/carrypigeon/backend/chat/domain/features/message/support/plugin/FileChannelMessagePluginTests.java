@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.FileChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin.ChannelMessageBuildContext;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：验证文件消息插件的预览、检索与对象引用校验语义。
  * 边界：不访问真实对象存储，只验证 storage-api 抽象交互后的稳定行为。
  */
+@Tag("contract")
 class FileChannelMessagePluginTests {
 
     /**

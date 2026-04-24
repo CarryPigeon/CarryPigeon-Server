@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：确保 storage-impl 只为非敏感连接信息保留最小默认值，不为访问凭据提供固定回退。
  * 边界：不验证 Spring 绑定流程，只验证配置对象自身默认值。
  */
+@Tag("unit")
 class MinioStoragePropertiesTests {
 
     /**

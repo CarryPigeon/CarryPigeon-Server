@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.controller.support;
 import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 职责：验证 Bearer access token 校验与请求身份绑定行为。
  * 边界：不验证 JWT 加密细节，只验证 HTTP 拦截契约。
  */
+@Tag("contract")
 class AuthAccessTokenInterceptorTests {
 
     /**

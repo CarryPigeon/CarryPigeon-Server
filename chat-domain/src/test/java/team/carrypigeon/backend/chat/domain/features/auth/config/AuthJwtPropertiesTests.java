@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.config;
 import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：验证鉴权 JWT 配置的默认值与关键敏感配置校验边界。
  * 边界：不验证 Spring 绑定流程，只验证配置语义本身。
  */
+@Tag("unit")
 class AuthJwtPropertiesTests {
 
     /**

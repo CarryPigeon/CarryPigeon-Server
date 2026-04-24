@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 职责：验证默认频道查询用例的应用层编排契约。
  * 边界：不验证 HTTP 协议层与真实数据库访问，只使用内存替身验证业务语义。
  */
+@Tag("contract")
 class ChannelApplicationServiceTests {
 
     /**

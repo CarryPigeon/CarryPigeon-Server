@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.exception;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
  * 职责：确保异常能稳定携带错误码和原始 cause。
  * 边界：不验证业务异常语义。
  */
+@Tag("unit")
 class InfrastructureExceptionTests {
 
     /**

@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.lang.reflect.Field;
 import java.time.Clock;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -13,9 +13,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -25,11 +22,12 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * RealtimeServerConfiguration 装配测试。
- * 职责：验证 server feature 是否按配置开关装配 Netty 实时通道运行时。
- * 边界：不实际绑定端口，只验证 Spring Bean 装配边界。
+ * RealtimeServerConfiguration 装配契约测试。
+ * 职责：验证 server feature 是否按配置装配实时通道运行时相关 Bean。
+ * 边界：不实际绑定端口，也不验证发布器工厂内部字段注入细节。
  */
-class RealtimeServerConfigurationTests {
+@Tag("contract")
+class RealtimeServerConfigurationContextTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
@@ -82,8 +80,6 @@ class RealtimeServerConfigurationTests {
 
     /**
      * 验证开启实时通道配置时会注册实时通道运行时相关 Bean 定义。
-     * 输入：开启实时通道并启用懒加载，避免测试真实绑定端口。
-     * 输出：server feature 中存在 Netty 运行时与初始化器 Bean 定义。
      */
     @Test
     @DisplayName("configuration enabled registers runtime bean")
@@ -109,9 +105,7 @@ class RealtimeServerConfigurationTests {
     }
 
     /**
-     * 验证关闭实时通道配置时不会注册实时通道运行时 Bean 定义。
-     * 输入：关闭实时通道并启用懒加载。
-     * 输出：server feature 中不存在 Netty 运行时 Bean 定义。
+     * 验证关闭实时通道配置时不会变更属性语义，并保持当前装配行为。
      */
     @Test
     @DisplayName("configuration disabled still registers runtime bean")
@@ -133,27 +127,5 @@ class RealtimeServerConfigurationTests {
                     assertThat(context).hasBean("realtimeChannelInitializer");
                     assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isFalse();
                 });
-    }
-
-    /**
-     * 验证 realtime 发布器会复用已装配的附件 payload resolver Bean。
-     */
-    @Test
-    @DisplayName("message realtime publisher reuses shared attachment payload resolver bean")
-    void messageRealtimePublisher_reusesSharedAttachmentPayloadResolverBean() throws Exception {
-        RealtimeServerConfiguration configuration = new RealtimeServerConfiguration();
-        MessageAttachmentPayloadResolver resolver = new MessageAttachmentPayloadResolver(null, null);
-
-        MessageRealtimePublisher publisher = configuration.messageRealtimePublisher(
-                new team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry(),
-                null,
-                null,
-                resolver
-        );
-
-        assertThat(publisher).isInstanceOf(NettyMessageRealtimePublisher.class);
-        Field field = NettyMessageRealtimePublisher.class.getDeclaredField("messageAttachmentPayloadResolver");
-        field.setAccessible(true);
-        assertThat(field.get(publisher)).isSameAs(resolver);
     }
 }

@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.basic.logging;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.MDC;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * 职责：确保统一日志字段能被写入、忽略、移除和清理。
  * 边界：不验证 Log4j2 输出格式，只验证 MDC 操作契约。
  */
+@Tag("unit")
 class LogContextsTests {
 
     @AfterEach
