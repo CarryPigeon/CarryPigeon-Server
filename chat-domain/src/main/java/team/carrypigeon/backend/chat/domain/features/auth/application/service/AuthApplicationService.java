@@ -17,6 +17,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
@@ -113,7 +114,9 @@ public class AuthApplicationService {
             channelMemberRepository.save(new ChannelMember(
                     defaultChannel.id(),
                     savedAccount.id(),
-                    timeProvider.nowInstant()
+                    ChannelMemberRole.MEMBER,
+                    timeProvider.nowInstant(),
+                    null
             ));
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });

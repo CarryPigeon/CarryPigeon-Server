@@ -30,6 +30,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * NettyMessageRealtimePublisher 契约测试。
@@ -128,6 +129,47 @@ class NettyMessageRealtimePublisherTests {
         assertNotNull(frame);
         String payload = jsonProvider.readTree(frame.text()).path("data").path("payload").asText();
         assertFalse(jsonProvider.readTree(payload).has("access_url"));
+    }
+
+    /**
+     * 验证撤回更新会通过独立的消息更新事件类型下发给在线成员。
+     */
+    @Test
+    @DisplayName("publish update recalled message uses updated event type")
+    void publishUpdate_recalledMessage_usesUpdatedEventType() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1001L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
+        );
+
+        publisher.publishUpdate(new ChannelMessage(
+                5010L,
+                "carrypigeon-local",
+                1L,
+                1L,
+                1001L,
+                "text",
+                "[消息已撤回]",
+                "[消息已撤回]",
+                null,
+                null,
+                null,
+                "recalled",
+                Instant.parse("2026-04-22T00:00:00Z")
+        ), List.of(1001L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNotNull(frame);
+        assertTrue(frame.text().contains("\"type\":\"channel_message_updated\""));
+        assertTrue(frame.text().contains("\"status\":\"recalled\""));
+        assertTrue(frame.text().contains("\"message_id\":5010"));
     }
 
     private static JsonProvider jsonProvider() {

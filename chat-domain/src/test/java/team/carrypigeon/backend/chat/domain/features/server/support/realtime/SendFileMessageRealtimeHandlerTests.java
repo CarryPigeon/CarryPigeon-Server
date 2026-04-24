@@ -13,8 +13,13 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
@@ -86,6 +91,12 @@ class SendFileMessageRealtimeHandlerTests {
         return new MessageApplicationService(
                 channelRepository(),
                 channelMemberRepository(),
+                new ChannelAuditLogRepository() {
+                    @Override
+                    public void append(ChannelAuditLog channelAuditLog) {
+                    }
+                },
+                new ChannelGovernancePolicy(),
                 messageRepository,
                 (message, recipients) -> {
                 },
@@ -183,6 +194,17 @@ class SendFileMessageRealtimeHandlerTests {
             }
 
             @Override
+            public java.util.Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+                return java.util.Optional.of(new ChannelMember(
+                        channelId,
+                        accountId,
+                        ChannelMemberRole.MEMBER,
+                        Instant.parse("2026-04-22T00:00:00Z"),
+                        null
+                ));
+            }
+
+            @Override
             public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
             }
 
@@ -199,6 +221,18 @@ class SendFileMessageRealtimeHandlerTests {
 
         @Override
         public ChannelMessage save(ChannelMessage message) {
+            this.savedMessage = message;
+            return message;
+        }
+
+        @Override
+        public java.util.Optional<ChannelMessage> findById(long messageId) {
+            return java.util.Optional.ofNullable(savedMessage)
+                    .filter(message -> message.messageId() == messageId);
+        }
+
+        @Override
+        public ChannelMessage update(ChannelMessage message) {
             this.savedMessage = message;
             return message;
         }

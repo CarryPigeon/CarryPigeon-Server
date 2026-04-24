@@ -10,7 +10,10 @@ import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
@@ -18,7 +21,10 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
@@ -55,6 +61,9 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(UserProfileMapper.class, () -> mock(UserProfileMapper.class))
                 .withBean(ChannelMapper.class, () -> mock(ChannelMapper.class))
                 .withBean(ChannelMemberMapper.class, () -> mock(ChannelMemberMapper.class))
+                .withBean(ChannelInviteMapper.class, () -> mock(ChannelInviteMapper.class))
+                .withBean(ChannelBanMapper.class, () -> mock(ChannelBanMapper.class))
+                .withBean(ChannelAuditLogMapper.class, () -> mock(ChannelAuditLogMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
@@ -62,6 +71,9 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).hasSingleBean(AuthRefreshSessionDatabaseService.class);
                     assertThat(context).hasSingleBean(ChannelDatabaseService.class);
                     assertThat(context).hasSingleBean(ChannelMemberDatabaseService.class);
+                    assertThat(context).hasSingleBean(ChannelInviteDatabaseService.class);
+                    assertThat(context).hasSingleBean(ChannelBanDatabaseService.class);
+                    assertThat(context).hasSingleBean(ChannelAuditLogDatabaseService.class);
                     assertThat(context).hasSingleBean(MessageDatabaseService.class);
                     assertThat(context).hasSingleBean(UserProfileDatabaseService.class);
                     assertThat(context).hasSingleBean(DatabaseHealthService.class);
@@ -86,6 +98,9 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(UserProfileMapper.class, () -> mock(UserProfileMapper.class))
                 .withBean(ChannelMapper.class, () -> mock(ChannelMapper.class))
                 .withBean(ChannelMemberMapper.class, () -> mock(ChannelMemberMapper.class))
+                .withBean(ChannelInviteMapper.class, () -> mock(ChannelInviteMapper.class))
+                .withBean(ChannelBanMapper.class, () -> mock(ChannelBanMapper.class))
+                .withBean(ChannelAuditLogMapper.class, () -> mock(ChannelAuditLogMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
@@ -93,6 +108,9 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(AuthRefreshSessionDatabaseService.class);
                     assertThat(context).doesNotHaveBean(ChannelDatabaseService.class);
                     assertThat(context).doesNotHaveBean(ChannelMemberDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(ChannelInviteDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(ChannelBanDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(ChannelAuditLogDatabaseService.class);
                     assertThat(context).doesNotHaveBean(MessageDatabaseService.class);
                     assertThat(context).doesNotHaveBean(UserProfileDatabaseService.class);
                     assertThat(context).doesNotHaveBean(DatabaseHealthService.class);

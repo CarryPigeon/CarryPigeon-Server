@@ -12,7 +12,10 @@ import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
@@ -21,13 +24,19 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.health.Jdbc
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelAuditLogDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusMessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusUserProfileDatabaseService;
@@ -144,6 +153,42 @@ public class DatabaseServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public ChannelMemberDatabaseService channelMemberDatabaseService(ChannelMemberMapper channelMemberMapper) {
         return new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+    }
+
+    /**
+     * 创建频道邀请数据库服务。
+     *
+     * @param channelInviteMapper 频道邀请 Mapper
+     * @return 频道邀请数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelInviteDatabaseService channelInviteDatabaseService(ChannelInviteMapper channelInviteMapper) {
+        return new MybatisPlusChannelInviteDatabaseService(channelInviteMapper);
+    }
+
+    /**
+     * 创建频道封禁数据库服务。
+     *
+     * @param channelBanMapper 频道封禁 Mapper
+     * @return 频道封禁数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelBanDatabaseService channelBanDatabaseService(ChannelBanMapper channelBanMapper) {
+        return new MybatisPlusChannelBanDatabaseService(channelBanMapper);
+    }
+
+    /**
+     * 创建频道审计日志数据库服务。
+     *
+     * @param channelAuditLogMapper 频道审计日志 Mapper
+     * @return 频道审计日志数据库服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelAuditLogDatabaseService channelAuditLogDatabaseService(ChannelAuditLogMapper channelAuditLogMapper) {
+        return new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
     }
 
     /**

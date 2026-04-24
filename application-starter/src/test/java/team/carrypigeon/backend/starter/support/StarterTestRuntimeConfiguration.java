@@ -18,7 +18,11 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefre
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInvite;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
@@ -173,6 +177,12 @@ public class StarterTestRuntimeConfiguration {
             public Optional<Channel> findById(long channelId) {
                 return Optional.ofNullable(state.channelsById.get(channelId));
             }
+
+            @Override
+            public Channel save(Channel channel) {
+                state.channelsById.put(channel.id(), channel);
+                return channel;
+            }
         };
     }
 
@@ -185,19 +195,78 @@ public class StarterTestRuntimeConfiguration {
         return new ChannelMemberRepository() {
             @Override
             public boolean exists(long channelId, long accountId) {
-                return state.channelMemberAccountIds.getOrDefault(channelId, List.of()).contains(accountId);
+                return state.channelMembersByChannelId.getOrDefault(channelId, List.of()).stream()
+                        .anyMatch(member -> member.accountId() == accountId);
             }
 
             @Override
             public void save(ChannelMember channelMember) {
-                state.channelMemberAccountIds
+                state.channelMembersByChannelId
                         .computeIfAbsent(channelMember.channelId(), ignored -> new ArrayList<>())
-                        .add(channelMember.accountId());
+                        .add(channelMember);
+            }
+
+            @Override
+            public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+                return state.channelMembersByChannelId.getOrDefault(channelId, List.of()).stream()
+                        .filter(member -> member.accountId() == accountId)
+                        .findFirst();
+            }
+
+            @Override
+            public List<ChannelMember> findByChannelId(long channelId) {
+                return List.copyOf(state.channelMembersByChannelId.getOrDefault(channelId, List.of()));
             }
 
             @Override
             public List<Long> findAccountIdsByChannelId(long channelId) {
-                return List.copyOf(state.channelMemberAccountIds.getOrDefault(channelId, List.of()));
+                return state.channelMembersByChannelId.getOrDefault(channelId, List.of()).stream()
+                        .map(ChannelMember::accountId)
+                        .toList();
+            }
+        };
+    }
+
+    /**
+     * 创建内存频道邀请仓储。
+     */
+    @Bean
+    @Primary
+    public ChannelInviteRepository channelInviteRepository() {
+        return new ChannelInviteRepository() {
+            @Override
+            public Optional<ChannelInvite> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public void save(ChannelInvite channelInvite) {
+            }
+
+            @Override
+            public void update(ChannelInvite channelInvite) {
+            }
+        };
+    }
+
+    /**
+     * 创建内存频道封禁仓储。
+     */
+    @Bean
+    @Primary
+    public ChannelBanRepository channelBanRepository() {
+        return new ChannelBanRepository() {
+            @Override
+            public Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public void save(ChannelBan channelBan) {
+            }
+
+            @Override
+            public void update(ChannelBan channelBan) {
             }
         };
     }
@@ -212,6 +281,22 @@ public class StarterTestRuntimeConfiguration {
             @Override
             public ChannelMessage save(ChannelMessage message) {
                 state.messagesByChannelId.computeIfAbsent(message.channelId(), ignored -> new ArrayList<>()).add(message);
+                return message;
+            }
+
+            @Override
+            public Optional<ChannelMessage> findById(long messageId) {
+                return state.messagesByChannelId.values().stream()
+                        .flatMap(List::stream)
+                        .filter(message -> message.messageId() == messageId)
+                        .findFirst();
+            }
+
+            @Override
+            public ChannelMessage update(ChannelMessage message) {
+                List<ChannelMessage> messages = state.messagesByChannelId.computeIfAbsent(message.channelId(), ignored -> new ArrayList<>());
+                messages.removeIf(existing -> existing.messageId() == message.messageId());
+                messages.add(message);
                 return message;
             }
 
@@ -281,7 +366,7 @@ public class StarterTestRuntimeConfiguration {
         private final Map<Long, AuthRefreshSession> refreshSessionsById = new ConcurrentHashMap<>();
         private final Map<Long, UserProfile> userProfilesByAccountId = new ConcurrentHashMap<>();
         private final Map<Long, Channel> channelsById = new ConcurrentHashMap<>();
-        private final Map<Long, List<Long>> channelMemberAccountIds = new ConcurrentHashMap<>();
+        private final Map<Long, List<ChannelMember>> channelMembersByChannelId = new ConcurrentHashMap<>();
         private final Map<Long, List<ChannelMessage>> messagesByChannelId = new ConcurrentHashMap<>();
         private final Map<String, StorageObject> storageObjectsByKey = new ConcurrentHashMap<>();
         private Channel defaultChannel;
@@ -299,7 +384,7 @@ public class StarterTestRuntimeConfiguration {
             refreshSessionsById.clear();
             userProfilesByAccountId.clear();
             channelsById.clear();
-            channelMemberAccountIds.clear();
+            channelMembersByChannelId.clear();
             messagesByChannelId.clear();
             storageObjectsByKey.clear();
             defaultChannel = new Channel(

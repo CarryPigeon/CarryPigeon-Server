@@ -26,6 +26,18 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
+    public java.util.Optional<ChannelMessage> findById(long messageId) {
+        return messageDatabaseService.findById(messageId)
+                .map(this::toDomainModel);
+    }
+
+    @Override
+    public ChannelMessage update(ChannelMessage message) {
+        messageDatabaseService.update(toRecord(message));
+        return message;
+    }
+
+    @Override
     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return messageDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit)
                 .stream()

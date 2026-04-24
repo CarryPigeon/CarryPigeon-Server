@@ -6,9 +6,14 @@ import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.UploadChannelMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
@@ -43,10 +48,14 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 public class MessageApplicationService {
 
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
+    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
+    private static final String RECALLED_MESSAGE_PLACEHOLDER = "[消息已撤回]";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelAuditLogRepository channelAuditLogRepository;
+    private final ChannelGovernancePolicy channelGovernancePolicy;
     private final MessageRepository messageRepository;
     private final MessageRealtimePublisher messageRealtimePublisher;
     private final ChannelMessagePluginRegistry channelMessagePluginRegistry;
@@ -61,6 +70,8 @@ public class MessageApplicationService {
     public MessageApplicationService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
+            ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelGovernancePolicy channelGovernancePolicy,
             MessageRepository messageRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
@@ -74,6 +85,8 @@ public class MessageApplicationService {
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
+        this.channelAuditLogRepository = channelAuditLogRepository;
+        this.channelGovernancePolicy = channelGovernancePolicy;
         this.messageRepository = messageRepository;
         this.messageRealtimePublisher = messageRealtimePublisher;
         this.channelMessagePluginRegistry = channelMessagePluginRegistry;
@@ -96,7 +109,8 @@ public class MessageApplicationService {
         validateSendCommand(command);
         PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
             Channel channel = requireChannel(command.channelId());
-            requireMembership(channel.id(), command.accountId());
+            ChannelMember member = requireMembership(channel.id(), command.accountId());
+            channelGovernancePolicy.requireCanSendMessage(channel, member, timeProvider.nowInstant());
             ChannelMessagePlugin plugin = channelMessagePluginRegistry.require(command.draft().type());
             ChannelMessage message = plugin.createMessage(new ChannelMessagePlugin.ChannelMessageBuildContext(
                     idGenerator.nextLongId(),
@@ -126,6 +140,36 @@ public class MessageApplicationService {
                 command.channelId(),
                 new TextChannelMessageDraft(command.body())
         ));
+    }
+
+    /**
+     * 撤回频道消息。
+     *
+     * @param command 撤回命令
+     * @return 撤回后的稳定消息结果
+     */
+    public ChannelMessageResult recallChannelMessage(RecallChannelMessageCommand command) {
+        validateRecallCommand(command);
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            ChannelMember operator = requireMembership(channel.id(), command.accountId());
+            ChannelMessage existingMessage = requireMessage(command.messageId());
+            if (existingMessage.channelId() != channel.id()) {
+                throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
+            }
+            ChannelMember senderMember = channelMemberRepository.findByChannelIdAndAccountId(channel.id(), existingMessage.senderId())
+                    .orElse(null);
+            channelGovernancePolicy.requireCanRecallMessage(channel, operator, existingMessage, senderMember);
+            if (isRecalled(existingMessage)) {
+                return new PersistedMessage(existingMessage, channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            }
+            ChannelMessage recalledMessage = messageRepository.update(toRecalledMessage(existingMessage));
+            appendRecallAudit(channel.id(), operator.accountId(), recalledMessage.messageId(), recalledMessage.senderId());
+            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
+            return new PersistedMessage(recalledMessage, recipientAccountIds);
+        });
+        messageRealtimePublisher.publishUpdate(persistedMessage.message(), persistedMessage.recipientAccountIds());
+        return toResult(persistedMessage.message());
     }
 
     /**
@@ -178,7 +222,8 @@ public class MessageApplicationService {
     public ChannelMessageAttachmentUploadResult uploadChannelMessageAttachment(UploadChannelMessageAttachmentCommand command) {
         validateUploadCommand(command);
         Channel channel = requireChannel(command.channelId());
-        requireMembership(channel.id(), command.accountId());
+        ChannelMember member = requireMembership(channel.id(), command.accountId());
+        channelGovernancePolicy.requireCanSendMessage(channel, member, timeProvider.nowInstant());
         ObjectStorageService objectStorageService = requireObjectStorageService();
         String normalizedMessageType = command.messageType().trim().toLowerCase();
         String normalizedFilename = messageAttachmentObjectKeyPolicy.normalizeFilename(command.filename());
@@ -217,6 +262,18 @@ public class MessageApplicationService {
         }
         if (command.body() == null || command.body().isBlank()) {
             throw ProblemException.validationFailed("body must not be blank");
+        }
+    }
+
+    private void validateRecallCommand(RecallChannelMessageCommand command) {
+        if (command.accountId() <= 0) {
+            throw ProblemException.validationFailed("accountId must be greater than 0");
+        }
+        if (command.channelId() <= 0) {
+            throw ProblemException.validationFailed("channelId must be greater than 0");
+        }
+        if (command.messageId() <= 0) {
+            throw ProblemException.validationFailed("messageId must be greater than 0");
         }
     }
 
@@ -292,10 +349,9 @@ public class MessageApplicationService {
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_NOT_FOUND_MESSAGE));
     }
 
-    private void requireMembership(long channelId, long accountId) {
-        if (!channelMemberRepository.exists(channelId, accountId)) {
-            throw ProblemException.forbidden("channel_member_required", MEMBERSHIP_REQUIRED_MESSAGE);
-        }
+    private ChannelMember requireMembership(long channelId, long accountId) {
+        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
+                .orElseThrow(() -> ProblemException.forbidden("channel_member_required", MEMBERSHIP_REQUIRED_MESSAGE));
     }
 
     private ChannelMessageResult toResult(ChannelMessage message) {
@@ -313,6 +369,45 @@ public class MessageApplicationService {
                 message.status(),
                 message.createdAt()
         );
+    }
+
+    private ChannelMessage requireMessage(long messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+    }
+
+    private ChannelMessage toRecalledMessage(ChannelMessage message) {
+        return new ChannelMessage(
+                message.messageId(),
+                message.serverId(),
+                message.conversationId(),
+                message.channelId(),
+                message.senderId(),
+                message.messageType(),
+                RECALLED_MESSAGE_PLACEHOLDER,
+                RECALLED_MESSAGE_PLACEHOLDER,
+                "",
+                null,
+                null,
+                "recalled",
+                message.createdAt()
+        );
+    }
+
+    private void appendRecallAudit(long channelId, long actorAccountId, long messageId, long senderId) {
+        channelAuditLogRepository.append(new ChannelAuditLog(
+                idGenerator.nextLongId(),
+                channelId,
+                actorAccountId,
+                "MESSAGE_RECALLED",
+                senderId,
+                "{\"messageId\":" + messageId + ",\"senderAccountId\":" + senderId + "}",
+                timeProvider.nowInstant()
+        ));
+    }
+
+    private boolean isRecalled(ChannelMessage message) {
+        return "recalled".equals(message.status());
     }
 
     private ObjectStorageService requireObjectStorageService() {

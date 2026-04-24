@@ -24,4 +24,14 @@ public interface ChannelRepository {
      * @return 命中时返回频道，未命中时返回空
      */
     Optional<Channel> findById(long channelId);
+
+    /**
+     * 保存频道。
+     *
+     * @param channel 待保存频道
+     * @return 已保存频道
+     */
+    default Channel save(Channel channel) {
+        throw new UnsupportedOperationException("channel save is not supported");
+    }
 }

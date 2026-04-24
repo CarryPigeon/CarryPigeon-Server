@@ -1,0 +1,13 @@
+package team.carrypigeon.backend.chat.domain.features.channel.application.command;
+
+/**
+ * 解除频道封禁命令。
+ * 职责：承载频道成员解除封禁用例所需的最小输入。
+ * 边界：只表达应用层命令，不承载治理规则判断。
+ *
+ * @param operatorAccountId 操作人账户 ID
+ * @param channelId 频道 ID
+ * @param targetAccountId 目标账户 ID
+ */
+public record UnbanChannelMemberCommand(long operatorAccountId, long channelId, long targetAccountId) {
+}

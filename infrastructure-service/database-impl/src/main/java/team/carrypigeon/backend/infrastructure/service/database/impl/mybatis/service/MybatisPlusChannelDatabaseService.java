@@ -48,6 +48,17 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         }
     }
 
+    @Override
+    public void insert(ChannelRecord record) {
+        try {
+            channelMapper.insert(toEntity(record));
+        } catch (DataAccessException exception) {
+            throw new DatabaseServiceException("failed to insert channel", exception);
+        } catch (RuntimeException exception) {
+            throw new DatabaseServiceException("failed to insert channel", exception);
+        }
+    }
+
     private ChannelRecord toRecord(ChannelEntity entity) {
         return new ChannelRecord(
                 entity.getId(),
@@ -58,5 +69,17 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+    }
+
+    private ChannelEntity toEntity(ChannelRecord record) {
+        ChannelEntity entity = new ChannelEntity();
+        entity.setId(record.id());
+        entity.setConversationId(record.conversationId());
+        entity.setName(record.name());
+        entity.setType(record.type());
+        entity.setDefaultChannel(record.defaultChannel());
+        entity.setCreatedAt(record.createdAt());
+        entity.setUpdatedAt(record.updatedAt());
+        return entity;
     }
 }

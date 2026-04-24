@@ -19,6 +19,22 @@ public interface MessageRepository {
     ChannelMessage save(ChannelMessage message);
 
     /**
+     * 按消息 ID 查询消息。
+     *
+     * @param messageId 消息 ID
+     * @return 命中时返回消息
+     */
+    java.util.Optional<ChannelMessage> findById(long messageId);
+
+    /**
+     * 更新已存在的频道消息。
+     *
+     * @param message 待更新消息
+     * @return 已更新消息
+     */
+    ChannelMessage update(ChannelMessage message);
+
+    /**
      * 查询频道历史消息。
      *
      * @param channelId 频道 ID

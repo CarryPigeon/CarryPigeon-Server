@@ -9,7 +9,15 @@ import java.time.Instant;
  *
  * @param channelId 频道 ID
  * @param accountId 账户 ID
+ * @param role 固定角色
  * @param joinedAt 加入时间
+ * @param mutedUntil 禁言截止时间；为空表示当前未禁言
  */
-public record ChannelMemberRecord(long channelId, long accountId, Instant joinedAt) {
+public record ChannelMemberRecord(
+        long channelId,
+        long accountId,
+        String role,
+        Instant joinedAt,
+        Instant mutedUntil
+) {
 }

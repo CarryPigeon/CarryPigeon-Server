@@ -65,6 +65,44 @@ class MessageApplicationServiceQueryTests {
     }
 
     /**
+     * 验证撤回后的消息仍保留在历史记录中，但输出为已撤回占位文本。
+     */
+    @Test
+    @DisplayName("get channel message history recalled message keeps stable identity with redacted content")
+    void getChannelMessageHistory_recalledMessage_keepsStableIdentityWithRedactedContent() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.history.add(new ChannelMessage(
+                5008L, "carrypigeon-local", 1L, 1L, 1002L, "text", "[消息已撤回]", "[消息已撤回]", null, null, null, "recalled",
+                MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(1)
+        ));
+
+        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+                new GetChannelMessageHistoryQuery(1001L, 1L, null, 20)
+        );
+
+        assertEquals(1, result.messages().size());
+        assertEquals(5008L, result.messages().getFirst().messageId());
+        assertEquals("recalled", result.messages().getFirst().status());
+        assertEquals("[消息已撤回]", result.messages().getFirst().previewText());
+        assertEquals(null, result.messages().getFirst().payload());
+    }
+
+    /**
+     * 验证搜索结果不会再命中撤回前的内容。
+     */
+    @Test
+    @DisplayName("search channel messages recalled content no longer matches")
+    void searchChannelMessages_recalledContent_noLongerMatches() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+                new SearchChannelMessagesQuery(1001L, 1L, "hello", 20)
+        );
+
+        assertEquals(0, result.messages().size());
+    }
+
+    /**
      * 验证频道不存在时历史查询会返回不存在问题语义。
      */
     @Test

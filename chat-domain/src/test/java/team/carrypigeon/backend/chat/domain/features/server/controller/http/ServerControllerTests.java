@@ -1,12 +1,16 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -24,10 +28,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ServerControllerTests {
 
     private MockMvc mockMvc;
+    private ServerApplicationService serverApplicationService;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ServerController(new ServerApplicationService()))
+        serverApplicationService = new ServerApplicationService(
+                new ServerIdentityProperties("carrypigeon-local"),
+                "CarryPigeonBackend"
+        );
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ServerController(serverApplicationService),
+                        new ServerWellKnownController(serverApplicationService)
+                )
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -55,5 +68,26 @@ class ServerControllerTests {
                         .content("{\"content\":\"\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
+    }
+
+    /**
+     * 验证公开源信息接口可匿名访问并返回最小公开字段。
+     */
+    @Test
+    @DisplayName("well known server document anonymous request returns code 100")
+    void wellKnownServerDocument_anonymousRequest_returnsCode100() throws Exception {
+        mockMvc.perform(get("/.well-known/carrypigeon-server"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.server_id").value("carrypigeon-local"))
+                .andExpect(jsonPath("$.data.server_name").value("CarryPigeonBackend"))
+                .andExpect(jsonPath("$.data.register_enabled").value(true))
+                .andExpect(jsonPath("$.data.login_methods[0]").value("username_password"));
+    }
+
+    private MappingJackson2HttpMessageConverter snakeCaseConverter() {
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 }

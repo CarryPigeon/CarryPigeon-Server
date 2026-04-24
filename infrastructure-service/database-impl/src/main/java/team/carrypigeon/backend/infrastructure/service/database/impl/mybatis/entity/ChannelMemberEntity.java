@@ -13,7 +13,9 @@ public class ChannelMemberEntity {
 
     private Long channelId;
     private Long accountId;
+    private String role;
     private Instant joinedAt;
+    private Instant mutedUntil;
 
     public Long getChannelId() {
         return channelId;
@@ -37,5 +39,21 @@ public class ChannelMemberEntity {
 
     public void setJoinedAt(Instant joinedAt) {
         this.joinedAt = joinedAt;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public Instant getMutedUntil() {
+        return mutedUntil;
+    }
+
+    public void setMutedUntil(Instant mutedUntil) {
+        this.mutedUntil = mutedUntil;
     }
 }

@@ -43,6 +43,38 @@ class MybatisPlusMessageDatabaseServiceTests {
     }
 
     /**
+     * 验证按消息 ID 查询时会稳定映射消息记录。
+     */
+    @Test
+    @DisplayName("find by id existing row maps record")
+    void findById_existingRow_mapsRecord() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        when(messageMapper.findById(5001L)).thenReturn(entity());
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        MessageRecord record = service.findById(5001L).orElseThrow();
+
+        assertEquals(5001L, record.messageId());
+        assertEquals("carrypigeon-local", record.serverId());
+        assertEquals("hello world", record.body());
+    }
+
+    /**
+     * 验证更新消息时会调用 mapper 更新入口。
+     */
+    @Test
+    @DisplayName("update valid record delegates to mapper")
+    void update_validRecord_delegatesToMapper() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        when(messageMapper.updateMessage(any(MessageEntity.class))).thenReturn(1);
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        service.update(record());
+
+        verify(messageMapper).updateMessage(any(MessageEntity.class));
+    }
+
+    /**
      * 验证按频道查询历史消息时会保留游标查询结果顺序。
      */
     @Test
@@ -112,6 +144,46 @@ class MybatisPlusMessageDatabaseServiceTests {
         );
 
         assertEquals("failed to search channel messages", exception.getMessage());
+        assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证按消息 ID 查询失败时会包装成稳定数据库服务异常。
+     */
+    @Test
+    @DisplayName("find by id data access failure wraps database service exception")
+    void findById_dataAccessFailure_wrapsDatabaseServiceException() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        DataRetrievalFailureException cause = new DataRetrievalFailureException("database down");
+        when(messageMapper.findById(5001L)).thenThrow(cause);
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        DatabaseServiceException exception = assertThrows(
+                DatabaseServiceException.class,
+                () -> service.findById(5001L)
+        );
+
+        assertEquals("failed to query message", exception.getMessage());
+        assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证更新失败时会包装成稳定数据库服务异常。
+     */
+    @Test
+    @DisplayName("update data access failure wraps database service exception")
+    void update_dataAccessFailure_wrapsDatabaseServiceException() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        DataRetrievalFailureException cause = new DataRetrievalFailureException("database down");
+        when(messageMapper.updateMessage(any(MessageEntity.class))).thenThrow(cause);
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        DatabaseServiceException exception = assertThrows(
+                DatabaseServiceException.class,
+                () -> service.update(record())
+        );
+
+        assertEquals("failed to update message", exception.getMessage());
         assertSame(cause, exception.getCause());
     }
 

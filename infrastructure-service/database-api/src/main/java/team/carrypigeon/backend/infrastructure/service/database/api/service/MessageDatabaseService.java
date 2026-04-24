@@ -18,6 +18,21 @@ public interface MessageDatabaseService {
     void insert(MessageRecord record);
 
     /**
+     * 按消息 ID 查询消息记录。
+     *
+     * @param messageId 消息 ID
+     * @return 命中时返回消息记录
+     */
+    java.util.Optional<MessageRecord> findById(long messageId);
+
+    /**
+     * 更新已有消息记录。
+     *
+     * @param record 待更新消息记录
+     */
+    void update(MessageRecord record);
+
+    /**
      * 按频道查询游标之前的历史消息。
      *
      * @param channelId 频道 ID

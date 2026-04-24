@@ -24,4 +24,13 @@ public interface ChannelDatabaseService {
      * @return 命中时返回频道记录
      */
     Optional<ChannelRecord> findById(long channelId);
+
+    /**
+     * 写入新的频道记录。
+     *
+     * @param record 待持久化频道记录
+     */
+    default void insert(ChannelRecord record) {
+        throw new UnsupportedOperationException("channel insert is not supported");
+    }
 }

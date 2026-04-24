@@ -25,6 +25,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.support.security.HmacJ
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.Sha256TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
@@ -166,6 +168,23 @@ public class StarterRegressionConfiguration {
     }
 
     /**
+     * 创建频道治理规则组件。
+     */
+    @Bean
+    public ChannelGovernancePolicy channelGovernancePolicy() {
+        return new ChannelGovernancePolicy();
+    }
+
+    /**
+     * 创建测试用频道审计仓储替身。
+     */
+    @Bean
+    public ChannelAuditLogRepository channelAuditLogRepository() {
+        return channelAuditLog -> {
+        };
+    }
+
+    /**
      * 创建消息实时发布器替身。
      */
     @Bean
@@ -234,6 +253,8 @@ public class StarterRegressionConfiguration {
     public MessageApplicationService messageApplicationService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
+            ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelGovernancePolicy channelGovernancePolicy,
             MessageRepository messageRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
@@ -248,6 +269,8 @@ public class StarterRegressionConfiguration {
         return new MessageApplicationService(
                 channelRepository,
                 channelMemberRepository,
+                channelAuditLogRepository,
+                channelGovernancePolicy,
                 messageRepository,
                 messageRealtimePublisher,
                 channelMessagePluginRegistry,

@@ -1,11 +1,13 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
-import java.time.Instant;
 import java.util.List;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
 
 /**
  * 频道成员 Mapper。
@@ -18,20 +20,14 @@ public interface ChannelMemberMapper {
     /**
      * 插入新的频道成员关系。
      *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
-     * @param joinedAt 加入时间
+     * @param entity 成员实体
      * @return 受影响行数
      */
     @Insert("""
-            INSERT INTO chat_channel_member (channel_id, account_id, joined_at)
-            VALUES (#{channelId}, #{accountId}, #{joinedAt})
+            INSERT INTO chat_channel_member (channel_id, account_id, role, joined_at, muted_until)
+            VALUES (#{channelId}, #{accountId}, #{role}, #{joinedAt}, #{mutedUntil})
             """)
-    int insertMembership(
-            @Param("channelId") long channelId,
-            @Param("accountId") long accountId,
-            @Param("joinedAt") Instant joinedAt
-    );
+    int insertMembership(ChannelMemberEntity entity);
 
     /**
      * 查询成员关系是否存在。
@@ -46,6 +42,62 @@ public interface ChannelMemberMapper {
             WHERE channel_id = #{channelId} AND account_id = #{accountId}
             """)
     long countMembership(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
+    /**
+     * 查询活跃成员实体。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账户 ID
+     * @return 命中时返回成员实体
+     */
+    @Select("""
+            SELECT channel_id, account_id, role, joined_at, muted_until
+            FROM chat_channel_member
+            WHERE channel_id = #{channelId} AND account_id = #{accountId}
+            """)
+    ChannelMemberEntity findByChannelIdAndAccountId(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
+    /**
+     * 更新活跃成员实体。
+     *
+     * @param entity 成员实体
+     * @return 受影响行数
+     */
+    @Update("""
+            UPDATE chat_channel_member
+            SET role = #{role},
+                joined_at = #{joinedAt},
+                muted_until = #{mutedUntil}
+            WHERE channel_id = #{channelId} AND account_id = #{accountId}
+            """)
+    int updateMembership(ChannelMemberEntity entity);
+
+    /**
+     * 删除活跃成员实体。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账户 ID
+     * @return 受影响行数
+     */
+    @Delete("""
+            DELETE FROM chat_channel_member
+            WHERE channel_id = #{channelId} AND account_id = #{accountId}
+            """)
+    int deleteMembership(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
+    /**
+     * 查询频道下的全部活跃成员实体。
+     *
+     * @param channelId 频道 ID
+     * @return 成员实体列表
+     */
+    @Select("""
+            SELECT channel_id, account_id, role, joined_at, muted_until
+            FROM chat_channel_member
+            WHERE channel_id = #{channelId}
+            ORDER BY joined_at ASC, account_id ASC
+            """)
+    List<ChannelMemberEntity> findByChannelId(@Param("channelId") long channelId);
 
     /**
      * 查询频道下的全部成员账户 ID。

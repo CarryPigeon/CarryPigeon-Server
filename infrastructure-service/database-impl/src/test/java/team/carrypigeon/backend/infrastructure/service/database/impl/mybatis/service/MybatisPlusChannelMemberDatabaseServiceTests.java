@@ -47,12 +47,125 @@ class MybatisPlusChannelMemberDatabaseServiceTests {
     @DisplayName("insert valid record maps composite key fields")
     void insert_validRecord_mapsCompositeKeyFields() {
         ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
-        when(channelMemberMapper.insertMembership(1L, 1001L, Instant.parse("2026-04-22T00:00:00Z"))).thenReturn(1);
         MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
 
-        service.insert(new ChannelMemberRecord(1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")));
+        service.insert(new ChannelMemberRecord(
+                1L,
+                1001L,
+                "MEMBER",
+                Instant.parse("2026-04-22T00:00:00Z"),
+                Instant.parse("2026-04-22T00:05:00Z")
+        ));
 
-        verify(channelMemberMapper).insertMembership(1L, 1001L, Instant.parse("2026-04-22T00:00:00Z"));
+        verify(channelMemberMapper).insertMembership(any());
+    }
+
+    /**
+     * 验证查询成员记录时会返回包含角色与禁言字段的完整契约。
+     */
+    @Test
+    @DisplayName("find by channel and account existing row returns governance fields")
+    void findByChannelIdAndAccountId_existingRow_returnsGovernanceFields() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity entity =
+                new team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity();
+        entity.setChannelId(1L);
+        entity.setAccountId(1001L);
+        entity.setRole("ADMIN");
+        entity.setJoinedAt(Instant.parse("2026-04-22T00:00:00Z"));
+        entity.setMutedUntil(Instant.parse("2026-04-22T00:05:00Z"));
+        when(channelMemberMapper.findByChannelIdAndAccountId(1L, 1001L)).thenReturn(entity);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        ChannelMemberRecord record = service.findByChannelIdAndAccountId(1L, 1001L).orElseThrow();
+
+        assertEquals("ADMIN", record.role());
+        assertEquals(Instant.parse("2026-04-22T00:05:00Z"), record.mutedUntil());
+    }
+
+    /**
+     * 验证更新成员记录失败时会包装成稳定数据库服务异常。
+     */
+    @Test
+    @DisplayName("update data access failure wraps database service exception")
+    void update_dataAccessFailure_wrapsDatabaseServiceException() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        DataRetrievalFailureException cause = new DataRetrievalFailureException("database down");
+        when(channelMemberMapper.updateMembership(any())).thenThrow(cause);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        DatabaseServiceException exception = assertThrows(
+                DatabaseServiceException.class,
+                () -> service.update(new ChannelMemberRecord(1L, 1001L, "ADMIN", Instant.parse("2026-04-22T00:00:00Z"), null))
+        );
+
+        assertEquals("failed to update channel membership", exception.getMessage());
+        assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证删除成员记录时会把复合键下发给 mapper。
+     */
+    @Test
+    @DisplayName("delete valid key delegates to mapper")
+    void delete_validKey_delegatesToMapper() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        service.delete(1L, 1001L);
+
+        verify(channelMemberMapper).deleteMembership(1L, 1001L);
+    }
+
+    /**
+     * 验证删除成员记录失败时会包装成稳定数据库服务异常。
+     */
+    @Test
+    @DisplayName("delete data access failure wraps database service exception")
+    void delete_dataAccessFailure_wrapsDatabaseServiceException() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        DataRetrievalFailureException cause = new DataRetrievalFailureException("database down");
+        when(channelMemberMapper.deleteMembership(1L, 1001L)).thenThrow(cause);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        DatabaseServiceException exception = assertThrows(
+                DatabaseServiceException.class,
+                () -> service.delete(1L, 1001L)
+        );
+
+        assertEquals("failed to delete channel membership", exception.getMessage());
+        assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证按频道查询成员列表时会映射完整成员记录集合。
+     */
+    @Test
+    @DisplayName("find by channel existing rows maps member records")
+    void findByChannelId_existingRows_mapsMemberRecords() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity ownerEntity =
+                new team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity();
+        ownerEntity.setChannelId(1L);
+        ownerEntity.setAccountId(1001L);
+        ownerEntity.setRole("OWNER");
+        ownerEntity.setJoinedAt(Instant.parse("2026-04-22T00:00:00Z"));
+        ownerEntity.setMutedUntil(null);
+        team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity memberEntity =
+                new team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity();
+        memberEntity.setChannelId(1L);
+        memberEntity.setAccountId(1002L);
+        memberEntity.setRole("MEMBER");
+        memberEntity.setJoinedAt(Instant.parse("2026-04-22T00:01:00Z"));
+        memberEntity.setMutedUntil(null);
+        when(channelMemberMapper.findByChannelId(1L)).thenReturn(List.of(ownerEntity, memberEntity));
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        List<ChannelMemberRecord> records = service.findByChannelId(1L);
+
+        assertEquals(2, records.size());
+        assertEquals("OWNER", records.get(0).role());
+        assertEquals(1002L, records.get(1).accountId());
     }
 
     /**

@@ -33,6 +33,29 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     @Override
+    public java.util.Optional<MessageRecord> findById(long messageId) {
+        try {
+            return java.util.Optional.ofNullable(messageMapper.findById(messageId))
+                    .map(this::toRecord);
+        } catch (DataAccessException exception) {
+            throw new DatabaseServiceException("failed to query message", exception);
+        } catch (RuntimeException exception) {
+            throw new DatabaseServiceException("failed to query message", exception);
+        }
+    }
+
+    @Override
+    public void update(MessageRecord record) {
+        try {
+            messageMapper.updateMessage(toEntity(record));
+        } catch (DataAccessException exception) {
+            throw new DatabaseServiceException("failed to update message", exception);
+        } catch (RuntimeException exception) {
+            throw new DatabaseServiceException("failed to update message", exception);
+        }
+    }
+
+    @Override
     public List<MessageRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         try {
             return messageMapper.findByChannelIdBefore(channelId, cursorMessageId, limit)

@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -92,6 +93,51 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data.messages[0].messageId").value(5002L))
                 .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] search body"));
+    }
+
+    /**
+     * 验证已认证成员可以通过 HTTP 撤回消息，并收到稳定消息 ID 的撤回结果。
+     */
+    @Test
+    @DisplayName("recall channel message authenticated request returns code 100")
+    void recallChannelMessage_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.recallChannelMessage(any())).thenReturn(new ChannelMessageResult(
+                5009L,
+                "carrypigeon-local",
+                1L,
+                1L,
+                1001L,
+                "text",
+                "[消息已撤回]",
+                "[消息已撤回]",
+                null,
+                null,
+                "recalled",
+                Instant.parse("2026-04-22T00:00:00Z")
+        ));
+
+        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.messageId").value(5009L))
+                .andExpect(jsonPath("$.data.status").value("recalled"))
+                .andExpect(jsonPath("$.data.previewText").value("[消息已撤回]"));
+    }
+
+    /**
+     * 验证撤回权限不足时会返回 300 响应码。
+     */
+    @Test
+    @DisplayName("recall channel message forbidden returns code 300")
+    void recallChannelMessage_forbidden_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.recallChannelMessage(any()))
+                .thenThrow(ProblemException.forbidden("channel_message_recall_forbidden", "channel message recall is not allowed"));
+
+        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
     }
 
     /**

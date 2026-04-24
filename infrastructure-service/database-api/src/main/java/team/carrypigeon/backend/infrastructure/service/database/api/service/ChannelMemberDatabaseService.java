@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
+import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 
 /**
@@ -25,6 +26,40 @@ public interface ChannelMemberDatabaseService {
      * @param record 待持久化成员记录
      */
     void insert(ChannelMemberRecord record);
+
+    /**
+     * 查询活跃成员记录。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账户 ID
+     * @return 命中时返回成员记录
+     */
+    Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId);
+
+    /**
+     * 更新已存在的成员记录。
+     *
+     * @param record 待更新成员记录
+     */
+    void update(ChannelMemberRecord record);
+
+    /**
+     * 删除已存在的成员记录。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账户 ID
+     */
+    void delete(long channelId, long accountId);
+
+    /**
+     * 查询频道下的全部成员记录。
+     *
+     * @param channelId 频道 ID
+     * @return 成员记录列表
+     */
+    default List<ChannelMemberRecord> findByChannelId(long channelId) {
+        return List.of();
+    }
 
     /**
      * 查询频道下的全部成员账户 ID。

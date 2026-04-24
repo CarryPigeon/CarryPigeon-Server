@@ -14,6 +14,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,28 @@ class MybatisPlusChannelDatabaseServiceTests {
 
         assertEquals("failed to query channel by id", exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证写入频道记录时会委托给 mapper。
+     */
+    @Test
+    @DisplayName("insert valid record delegates to mapper")
+    void insert_validRecord_delegatesToMapper() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        service.insert(new ChannelRecord(
+                9L,
+                9L,
+                "project-alpha",
+                "private",
+                false,
+                Instant.parse("2026-04-24T12:00:00Z"),
+                Instant.parse("2026-04-24T12:00:00Z")
+        ));
+
+        verify(channelMapper).insert(org.mockito.ArgumentMatchers.<ChannelEntity>any());
     }
 
     private static ChannelEntity entity() {

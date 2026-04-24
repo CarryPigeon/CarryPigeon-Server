@@ -37,8 +37,17 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
 
     @Override
     public void publish(ChannelMessage message, Collection<Long> recipientAccountIds) {
+        publish("channel_message", message, recipientAccountIds);
+    }
+
+    @Override
+    public void publishUpdate(ChannelMessage message, Collection<Long> recipientAccountIds) {
+        publish("channel_message_updated", message, recipientAccountIds);
+    }
+
+    private void publish(String eventType, ChannelMessage message, Collection<Long> recipientAccountIds) {
         String frameText = jsonProvider.toJson(new RealtimeServerMessage(
-                "channel_message",
+                eventType,
                 null,
                 timeProvider.nowMillis(),
                 new RealtimeChannelMessagePayload(

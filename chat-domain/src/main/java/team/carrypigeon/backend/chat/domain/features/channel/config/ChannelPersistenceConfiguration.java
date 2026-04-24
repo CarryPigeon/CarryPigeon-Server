@@ -3,11 +3,20 @@ package team.carrypigeon.backend.chat.domain.features.channel.config;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelAuditLogRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelBanRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 
 /**
@@ -39,5 +48,38 @@ public class ChannelPersistenceConfiguration {
     @Bean
     public ChannelMemberRepository channelMemberRepository(ChannelMemberDatabaseService channelMemberDatabaseService) {
         return new DatabaseBackedChannelMemberRepository(channelMemberDatabaseService);
+    }
+
+    /**
+     * 创建频道邀请仓储适配器。
+     *
+     * @param channelInviteDatabaseService 频道邀请数据库服务契约
+     * @return 面向领域的频道邀请仓储实现
+     */
+    @Bean
+    public ChannelInviteRepository channelInviteRepository(ChannelInviteDatabaseService channelInviteDatabaseService) {
+        return new DatabaseBackedChannelInviteRepository(channelInviteDatabaseService);
+    }
+
+    /**
+     * 创建频道封禁仓储适配器。
+     *
+     * @param channelBanDatabaseService 频道封禁数据库服务契约
+     * @return 面向领域的频道封禁仓储实现
+     */
+    @Bean
+    public ChannelBanRepository channelBanRepository(ChannelBanDatabaseService channelBanDatabaseService) {
+        return new DatabaseBackedChannelBanRepository(channelBanDatabaseService);
+    }
+
+    /**
+     * 创建频道审计日志仓储适配器。
+     *
+     * @param channelAuditLogDatabaseService 频道审计日志数据库服务契约
+     * @return 面向领域的频道审计日志仓储实现
+     */
+    @Bean
+    public ChannelAuditLogRepository channelAuditLogRepository(ChannelAuditLogDatabaseService channelAuditLogDatabaseService) {
+        return new DatabaseBackedChannelAuditLogRepository(channelAuditLogDatabaseService);
     }
 }

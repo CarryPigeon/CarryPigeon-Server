@@ -29,6 +29,12 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
         return channelDatabaseService.findById(channelId).map(this::toDomainModel);
     }
 
+    @Override
+    public Channel save(Channel channel) {
+        channelDatabaseService.insert(toRecord(channel));
+        return channel;
+    }
+
     private Channel toDomainModel(ChannelRecord record) {
         return new Channel(
                 record.id(),
@@ -38,6 +44,18 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 record.defaultChannel(),
                 record.createdAt(),
                 record.updatedAt()
+        );
+    }
+
+    private ChannelRecord toRecord(Channel channel) {
+        return new ChannelRecord(
+                channel.id(),
+                channel.conversationId(),
+                channel.name(),
+                channel.type(),
+                channel.defaultChannel(),
+                channel.createdAt(),
+                channel.updatedAt()
         );
     }
 }

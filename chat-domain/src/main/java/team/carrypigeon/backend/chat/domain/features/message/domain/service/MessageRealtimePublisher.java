@@ -17,4 +17,14 @@ public interface MessageRealtimePublisher {
      * @param recipientAccountIds 目标账户 ID 列表
      */
     void publish(ChannelMessage message, Collection<Long> recipientAccountIds);
+
+    /**
+     * 向指定账户实时分发消息更新事件。
+     *
+     * @param message 已持久化的更新后业务消息
+     * @param recipientAccountIds 目标账户 ID 列表
+     */
+    default void publishUpdate(ChannelMessage message, Collection<Long> recipientAccountIds) {
+        publish(message, recipientAccountIds);
+    }
 }

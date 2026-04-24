@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.UploadChannelMessageAttachmentCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
@@ -142,6 +143,27 @@ public class ChannelMessageController {
                 result.mimeType(),
                 result.size()
         ));
+    }
+
+    /**
+     * 撤回频道消息。
+     *
+     * @param channelId 频道 ID
+     * @param messageId 消息 ID
+     * @param request 当前 HTTP 请求
+     * @return 撤回后的稳定消息结果
+     */
+    @PostMapping("/{channelId}/messages/{messageId}/recall")
+    public CPResponse<ChannelMessageResponse> recallChannelMessage(
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
+            HttpServletRequest request
+    ) {
+        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageResult result = messageApplicationService.recallChannelMessage(
+                new RecallChannelMessageCommand(principal.accountId(), channelId, messageId)
+        );
+        return CPResponse.success(toResponse(result));
     }
 
     private ChannelMessageResponse toResponse(ChannelMessageResult result) {

@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
 import java.util.List;
+import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
@@ -26,15 +28,54 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     @Override
     public void save(ChannelMember channelMember) {
-        channelMemberDatabaseService.insert(new ChannelMemberRecord(
-                channelMember.channelId(),
-                channelMember.accountId(),
-                channelMember.joinedAt()
-        ));
+        channelMemberDatabaseService.insert(toRecord(channelMember));
+    }
+
+    @Override
+    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+        return channelMemberDatabaseService.findByChannelIdAndAccountId(channelId, accountId)
+                .map(this::toDomain);
+    }
+
+    @Override
+    public void update(ChannelMember channelMember) {
+        channelMemberDatabaseService.update(toRecord(channelMember));
+    }
+
+    @Override
+    public void delete(long channelId, long accountId) {
+        channelMemberDatabaseService.delete(channelId, accountId);
+    }
+
+    @Override
+    public List<ChannelMember> findByChannelId(long channelId) {
+        return channelMemberDatabaseService.findByChannelId(channelId).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override
     public List<Long> findAccountIdsByChannelId(long channelId) {
         return channelMemberDatabaseService.findAccountIdsByChannelId(channelId);
+    }
+
+    private ChannelMember toDomain(ChannelMemberRecord record) {
+        return new ChannelMember(
+                record.channelId(),
+                record.accountId(),
+                ChannelMemberRole.valueOf(record.role()),
+                record.joinedAt(),
+                record.mutedUntil()
+        );
+    }
+
+    private ChannelMemberRecord toRecord(ChannelMember channelMember) {
+        return new ChannelMemberRecord(
+                channelMember.channelId(),
+                channelMember.accountId(),
+                channelMember.role().name(),
+                channelMember.joinedAt(),
+                channelMember.mutedUntil()
+        );
     }
 }

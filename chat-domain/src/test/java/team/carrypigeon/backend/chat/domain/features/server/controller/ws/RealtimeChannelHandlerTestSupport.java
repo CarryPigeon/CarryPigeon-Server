@@ -12,8 +12,13 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
@@ -110,6 +115,17 @@ final class RealtimeChannelHandlerTestSupport {
                     }
 
                     @Override
+                    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+                        return Optional.of(new ChannelMember(
+                                channelId,
+                                accountId,
+                                ChannelMemberRole.MEMBER,
+                                Instant.parse("2026-04-22T00:00:00Z"),
+                                null
+                        ));
+                    }
+
+                    @Override
                     public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
                     }
 
@@ -118,9 +134,25 @@ final class RealtimeChannelHandlerTestSupport {
                         return List.of(1001L, 1002L);
                     }
                 },
+                new ChannelAuditLogRepository() {
+                    @Override
+                    public void append(ChannelAuditLog channelAuditLog) {
+                    }
+                },
+                new ChannelGovernancePolicy(),
                 new MessageRepository() {
                     @Override
                     public ChannelMessage save(ChannelMessage message) {
+                        return message;
+                    }
+
+                    @Override
+                    public Optional<ChannelMessage> findById(long messageId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public ChannelMessage update(ChannelMessage message) {
                         return message;
                     }
 
@@ -146,6 +178,11 @@ final class RealtimeChannelHandlerTestSupport {
                         for (Long recipientAccountId : recipientAccountIds) {
                             registry.getChannels(recipientAccountId).forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(payload)));
                         }
+                    }
+
+                    @Override
+                    public void publishUpdate(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+                        publish(message, recipientAccountIds);
                     }
                 },
                 pluginRegistry,
@@ -197,6 +234,17 @@ final class RealtimeChannelHandlerTestSupport {
                     }
 
                     @Override
+                    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+                        return Optional.of(new ChannelMember(
+                                channelId,
+                                accountId,
+                                ChannelMemberRole.MEMBER,
+                                Instant.parse("2026-04-22T00:00:00Z"),
+                                null
+                        ));
+                    }
+
+                    @Override
                     public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
                     }
 
@@ -205,9 +253,25 @@ final class RealtimeChannelHandlerTestSupport {
                         return List.of(1001L);
                     }
                 },
+                new ChannelAuditLogRepository() {
+                    @Override
+                    public void append(ChannelAuditLog channelAuditLog) {
+                    }
+                },
+                new ChannelGovernancePolicy(),
                 new MessageRepository() {
                     @Override
                     public ChannelMessage save(ChannelMessage message) {
+                        throw new IllegalStateException("boom");
+                    }
+
+                    @Override
+                    public Optional<ChannelMessage> findById(long messageId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public ChannelMessage update(ChannelMessage message) {
                         throw new IllegalStateException("boom");
                     }
 
