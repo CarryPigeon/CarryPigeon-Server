@@ -48,6 +48,9 @@ class RealtimeAccessTokenHandshakeHandlerTests {
         assertNotNull(principal);
         assertEquals(1001L, principal.accountId());
         assertEquals("carry-user", principal.username());
+        assertNotNull(channel.attr(RealtimeChannelSession.REQUEST_ID_KEY).get());
+        assertEquals(channel.attr(RealtimeChannelSession.REQUEST_ID_KEY).get(), channel.attr(RealtimeChannelSession.TRACE_ID_KEY).get());
+        assertEquals("/ws", channel.attr(RealtimeChannelSession.ROUTE_KEY).get());
         assertSame(request, channel.readInbound());
     }
 

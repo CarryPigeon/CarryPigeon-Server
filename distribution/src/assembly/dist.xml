@@ -52,14 +52,13 @@
             <outputDirectory>config</outputDirectory>
             <includes>
                 <include>application.yaml</include>
-                <include>log4j2_config.xml</include>
             </includes>
         </fileSet>
         <fileSet>
-            <directory>${project.basedir}/../application-starter/src/main/resources/config</directory>
+            <directory>${project.basedir}/../infrastructure-basic/src/main/resources</directory>
             <outputDirectory>config</outputDirectory>
             <includes>
-                <include>*.xml</include>
+                <include>log4j2-spring.xml</include>
             </includes>
         </fileSet>
     </fileSets>

@@ -11,10 +11,12 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.HttpRequestMdcFilter;
 
 /**
  * WebSocket 握手 access token 校验处理器。
@@ -43,6 +45,12 @@ public class RealtimeAccessTokenHandshakeHandler extends ChannelInboundHandlerAd
             context.fireChannelRead(message);
             return;
         }
+
+        String requestId = resolveRequestId(request);
+        String traceId = resolveTraceId(request, requestId);
+        context.channel().attr(RealtimeChannelSession.REQUEST_ID_KEY).set(requestId);
+        context.channel().attr(RealtimeChannelSession.TRACE_ID_KEY).set(traceId);
+        context.channel().attr(RealtimeChannelSession.ROUTE_KEY).set(path);
 
         String authorization = request.headers().get(HttpHeaderNames.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
@@ -77,5 +85,15 @@ public class RealtimeAccessTokenHandshakeHandler extends ChannelInboundHandlerAd
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.length);
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=UTF-8");
         context.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private String resolveRequestId(FullHttpRequest request) {
+        String requestId = request.headers().get(HttpRequestMdcFilter.REQUEST_ID_HEADER);
+        return requestId == null || requestId.isBlank() ? UUID.randomUUID().toString() : requestId;
+    }
+
+    private String resolveTraceId(FullHttpRequest request, String requestId) {
+        String traceId = request.headers().get(HttpRequestMdcFilter.TRACE_ID_HEADER);
+        return traceId == null || traceId.isBlank() ? requestId : traceId;
     }
 }

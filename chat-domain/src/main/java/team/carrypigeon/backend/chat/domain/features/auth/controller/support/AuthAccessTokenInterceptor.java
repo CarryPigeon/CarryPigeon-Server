@@ -6,6 +6,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
 
 /**
  * Access token HTTP 拦截器。
@@ -32,7 +34,14 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
         }
 
         AuthTokenClaims claims = authTokenService.parseAccessToken(authorization.substring(BEARER_PREFIX.length()));
-        authRequestContext.bind(request, new AuthenticatedPrincipal(Long.parseLong(claims.subject()), claims.username()));
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(Long.parseLong(claims.subject()), claims.username());
+        authRequestContext.bind(request, principal);
+        LogContexts.uid(Long.toString(principal.accountId()));
         return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception exception) {
+        LogContexts.remove(LogKeys.UID);
     }
 }

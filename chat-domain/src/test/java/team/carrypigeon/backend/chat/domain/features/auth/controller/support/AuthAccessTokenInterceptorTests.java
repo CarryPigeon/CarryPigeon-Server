@@ -10,8 +10,11 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
+import org.slf4j.MDC;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -40,6 +43,24 @@ class AuthAccessTokenInterceptorTests {
         AuthenticatedPrincipal principal = context.requirePrincipal(request);
         assertEquals(1001L, principal.accountId());
         assertEquals("carry-user", principal.username());
+        assertEquals("1001", MDC.get(LogKeys.UID));
+    }
+
+    /**
+     * 验证 afterCompletion 会移除 uid 日志上下文字段。
+     */
+    @Test
+    @DisplayName("afterCompletion removes uid from mdc")
+    void afterCompletion_existingUid_removesMdcValue() {
+        AuthRequestContext context = new AuthRequestContext();
+        AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(new FakeAuthTokenService(), context);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer access-token");
+
+        interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
+        interceptor.afterCompletion(request, new MockHttpServletResponse(), new Object(), null);
+
+        assertNull(MDC.get(LogKeys.UID));
     }
 
     /**

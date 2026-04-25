@@ -17,6 +17,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -63,22 +64,30 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
-            AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
-            if (principal == null) {
-                log.warn("Closing realtime channel because authenticated principal is missing after handshake");
-                context.close();
-                return;
-            }
-            String sessionId = idGenerator.nextStringId();
-            context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(sessionId);
-            realtimeSessionRegistry.register(principal.accountId(), context.channel());
-            log.info("Realtime channel connected for account {} with session {}", principal.accountId(), sessionId);
-            context.writeAndFlush(toFrame("welcome", sessionId, new RealtimeNoticePayload("realtime channel connected")));
+            withMdc(context, () -> {
+                AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+                if (principal == null) {
+                    log.warn("Closing realtime channel because authenticated principal is missing after handshake");
+                    context.close();
+                    return;
+                }
+                String sessionId = idGenerator.nextStringId();
+                context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(sessionId);
+                realtimeSessionRegistry.register(principal.accountId(), context.channel());
+                log.info("Realtime channel connected for account {} with session {}", principal.accountId(), sessionId);
+                context.writeAndFlush(toFrame("welcome", sessionId, new RealtimeNoticePayload("realtime channel connected")));
+            });
             return;
         }
         if (event instanceof IdleStateEvent) {
-            String sessionId = context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get();
-            context.writeAndFlush(toFrame("heartbeat", sessionId, new RealtimeNoticePayload("pong")));
+            withMdc(context, () -> {
+                AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+                String sessionId = context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get();
+                if (principal == null || sessionId == null || sessionId.isBlank()) {
+                    return;
+                }
+                context.writeAndFlush(toFrame("heartbeat", sessionId, new RealtimeNoticePayload("pong")));
+            });
             return;
         }
         super.userEventTriggered(context, event);
@@ -86,52 +95,58 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, TextWebSocketFrame frame) {
-        String sessionId = context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get();
-        AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
-        if (principal == null) {
-            context.writeAndFlush(problemFrame(sessionId, 300, "authentication is required"));
-            return;
-        }
-        try {
-            RealtimeClientMessage request = jsonProvider.fromJson(frame.text(), RealtimeClientMessage.class);
-            if (request == null || request.type() == null || request.type().isBlank()) {
-                context.writeAndFlush(problemFrame(sessionId, 200, "type must not be blank"));
+        withMdc(context, () -> {
+            String sessionId = context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get();
+            AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            if (principal == null) {
+                context.writeAndFlush(problemFrame(sessionId, 300, "authentication is required"));
                 return;
             }
-            MessageApplicationService messageApplicationService = messageApplicationServiceSupplier.get();
-            if (messageApplicationService == null) {
-                context.writeAndFlush(problemFrame(sessionId, 500, "realtime message service is unavailable"));
-                return;
+            try {
+                RealtimeClientMessage request = jsonProvider.fromJson(frame.text(), RealtimeClientMessage.class);
+                if (request == null || request.type() == null || request.type().isBlank()) {
+                    context.writeAndFlush(problemFrame(sessionId, 200, "type must not be blank"));
+                    return;
+                }
+                MessageApplicationService messageApplicationService = messageApplicationServiceSupplier.get();
+                if (messageApplicationService == null) {
+                    context.writeAndFlush(problemFrame(sessionId, 500, "realtime message service is unavailable"));
+                    return;
+                }
+                RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
+                if (dispatcher == null) {
+                    context.writeAndFlush(problemFrame(sessionId, 500, "realtime message dispatcher is unavailable"));
+                    return;
+                }
+                dispatcher.dispatch(principal, request, messageApplicationService);
+            } catch (ProblemException exception) {
+                context.writeAndFlush(problemFrame(sessionId, problemCode(exception), exception.getMessage()));
+            } catch (InfrastructureException exception) {
+                context.writeAndFlush(problemFrame(sessionId, 200, "request body is invalid"));
+            } catch (RuntimeException exception) {
+                log.warn("Failed to handle realtime message for session {}", sessionId, exception);
+                context.writeAndFlush(problemFrame(sessionId, 500, "internal server error"));
             }
-            RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
-            if (dispatcher == null) {
-                context.writeAndFlush(problemFrame(sessionId, 500, "realtime message dispatcher is unavailable"));
-                return;
-            }
-            dispatcher.dispatch(principal, request, messageApplicationService);
-        } catch (ProblemException exception) {
-            context.writeAndFlush(problemFrame(sessionId, problemCode(exception), exception.getMessage()));
-        } catch (InfrastructureException exception) {
-            context.writeAndFlush(problemFrame(sessionId, 200, "request body is invalid"));
-        } catch (RuntimeException exception) {
-            log.warn("Failed to handle realtime message for session {}", sessionId, exception);
-            context.writeAndFlush(problemFrame(sessionId, 500, "internal server error"));
-        }
+        });
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
-        AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
-        if (principal != null) {
-            realtimeSessionRegistry.unregister(principal.accountId(), context.channel());
-        }
+        withMdc(context, () -> {
+            AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            if (principal != null) {
+                realtimeSessionRegistry.unregister(principal.accountId(), context.channel());
+            }
+        });
         super.channelInactive(context);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
-        log.warn("Closing realtime channel because of exception", cause);
-        context.close();
+        withMdc(context, () -> {
+            log.warn("Closing realtime channel because of exception", cause);
+            context.close();
+        });
     }
 
     /**
@@ -164,6 +179,21 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             case NOT_FOUND -> 404;
             case INTERNAL -> 500;
         };
+    }
+
+    private void withMdc(ChannelHandlerContext context, Runnable action) {
+        AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        try {
+            LogContexts.traceId(context.channel().attr(RealtimeChannelSession.TRACE_ID_KEY).get());
+            LogContexts.requestId(context.channel().attr(RealtimeChannelSession.REQUEST_ID_KEY).get());
+            LogContexts.route(context.channel().attr(RealtimeChannelSession.ROUTE_KEY).get());
+            if (principal != null) {
+                LogContexts.uid(Long.toString(principal.accountId()));
+            }
+            action.run();
+        } finally {
+            LogContexts.clear();
+        }
     }
 
     private record RealtimeNoticePayload(String message) {
