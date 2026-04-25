@@ -21,11 +21,12 @@ public class RealtimeMessageHandlingConfiguration {
     /**
      * 创建频道消息实时入站处理器。
      *
+     * @param jsonProvider 项目统一 JSON 门面
      * @return 频道消息实时入站处理器
      */
     @Bean
-    public RealtimeInboundMessageHandler sendChannelMessageRealtimeHandler() {
-        return new SendChannelMessageRealtimeHandler();
+    public RealtimeInboundMessageHandler sendChannelMessageRealtimeHandler(JsonProvider jsonProvider) {
+        return new SendChannelMessageRealtimeHandler(jsonProvider);
     }
 
     /**

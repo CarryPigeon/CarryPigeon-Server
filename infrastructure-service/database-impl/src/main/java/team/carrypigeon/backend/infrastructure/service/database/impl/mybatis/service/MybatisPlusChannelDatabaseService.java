@@ -38,6 +38,20 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     }
 
     @Override
+    public Optional<ChannelRecord> findSystemChannel() {
+        try {
+            ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
+                    .eq(ChannelEntity::getType, "system")
+                    .last("LIMIT 1"));
+            return Optional.ofNullable(entity).map(this::toRecord);
+        } catch (DataAccessException exception) {
+            throw new DatabaseServiceException("failed to query system channel", exception);
+        } catch (RuntimeException exception) {
+            throw new DatabaseServiceException("failed to query system channel", exception);
+        }
+    }
+
+    @Override
     public Optional<ChannelRecord> findById(long channelId) {
         try {
             return Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord);

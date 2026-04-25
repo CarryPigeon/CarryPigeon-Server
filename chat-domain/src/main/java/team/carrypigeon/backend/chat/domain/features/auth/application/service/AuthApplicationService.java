@@ -118,6 +118,25 @@ public class AuthApplicationService {
                     timeProvider.nowInstant(),
                     null
             ));
+            Channel systemChannel = channelRepository.findSystemChannel()
+                    .orElseGet(() -> channelRepository.save(new Channel(
+                            idGenerator.nextLongId(),
+                            idGenerator.nextLongId(),
+                            "system",
+                            "system",
+                            false,
+                            timeProvider.nowInstant(),
+                            timeProvider.nowInstant()
+                    )));
+            if (!channelMemberRepository.exists(systemChannel.id(), savedAccount.id())) {
+                channelMemberRepository.save(new ChannelMember(
+                        systemChannel.id(),
+                        savedAccount.id(),
+                        ChannelMemberRole.MEMBER,
+                        timeProvider.nowInstant(),
+                        null
+                ));
+            }
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });
     }

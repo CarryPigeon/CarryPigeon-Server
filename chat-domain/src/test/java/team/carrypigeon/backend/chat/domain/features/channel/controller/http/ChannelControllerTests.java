@@ -72,6 +72,25 @@ class ChannelControllerTests {
     }
 
     /**
+     * 验证已认证请求可以读取 system 频道。
+     */
+    @Test
+    @DisplayName("get system channel authenticated request returns code 100")
+    void getSystemChannel_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.getSystemChannel(any())).thenReturn(new ChannelResult(
+                2L, 2L, "system", "system", false,
+                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
+        ));
+
+        mockMvc.perform(get("/api/channels/system"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.channelId").value(2L))
+                .andExpect(jsonPath("$.data.type").value("system"));
+    }
+
+    /**
      * 验证已认证请求可以创建 private channel。
      */
     @Test

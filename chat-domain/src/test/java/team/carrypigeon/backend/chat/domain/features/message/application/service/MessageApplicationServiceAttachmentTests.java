@@ -159,6 +159,30 @@ class MessageApplicationServiceAttachmentTests {
     }
 
     /**
+     * 验证 file 插件未启用时上传前校验会阻断附件链路。
+     */
+    @Test
+    @DisplayName("upload channel message attachment file plugin disabled throws validation problem")
+    void uploadChannelMessageAttachment_filePluginDisabled_throwsValidationProblem() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.uploadChannelMessageAttachment(new UploadChannelMessageAttachmentCommand(
+                        1001L,
+                        1L,
+                        "file",
+                        "demo.txt",
+                        "text/plain",
+                        4L,
+                        new ByteArrayInputStream("demo".getBytes())
+                ))
+        );
+
+        assertEquals("message type is not enabled", exception.getMessage());
+    }
+
+    /**
      * 验证 file 历史消息读取时会派生临时访问 URL。
      */
     @Test

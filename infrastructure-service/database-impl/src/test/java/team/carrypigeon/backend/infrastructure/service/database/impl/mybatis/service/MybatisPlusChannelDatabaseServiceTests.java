@@ -86,6 +86,29 @@ class MybatisPlusChannelDatabaseServiceTests {
         verify(channelMapper).insert(org.mockito.ArgumentMatchers.<ChannelEntity>any());
     }
 
+    /**
+     * 验证查询 system 频道时会稳定映射频道记录。
+     */
+    @Test
+    @DisplayName("find system channel existing row maps record")
+    void findSystemChannel_existingRow_mapsRecord() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        ChannelEntity systemEntity = entity();
+        systemEntity.setId(2L);
+        systemEntity.setConversationId(2L);
+        systemEntity.setName("system");
+        systemEntity.setType("system");
+        systemEntity.setDefaultChannel(false);
+        when(channelMapper.selectOne(org.mockito.ArgumentMatchers.<LambdaQueryWrapper<ChannelEntity>>any())).thenReturn(systemEntity);
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        ChannelRecord record = service.findSystemChannel().orElseThrow();
+
+        assertEquals(2L, record.id());
+        assertEquals("system", record.name());
+        assertEquals("system", record.type());
+    }
+
     private static ChannelEntity entity() {
         ChannelEntity entity = new ChannelEntity();
         entity.setId(1L);

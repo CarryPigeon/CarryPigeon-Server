@@ -22,11 +22,17 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
@@ -98,13 +104,102 @@ final class MessageApplicationServiceTestSupport {
             JsonProvider jsonProvider,
             MessageAttachmentObjectKeyPolicy objectKeyPolicy
     ) {
-        List<team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin> plugins = new ArrayList<>();
-        plugins.add(new TextChannelMessagePlugin());
+        List<ChannelMessagePluginRegistration> registrations = new ArrayList<>();
+        registrations.add(registration(
+                "builtin-text-message",
+                new ChannelMessagePluginDescriptor(
+                        "builtin-text-message",
+                        "text",
+                        "text",
+                        "Built-in text channel message plugin",
+                        true,
+                        List.of("message.sent", "message.recalled"),
+                        List.of("message:text:send"),
+                        "always_available"
+                ),
+                new TextChannelMessagePlugin()
+        ));
+        registrations.add(registration(
+                "builtin-plugin-message",
+                new ChannelMessagePluginDescriptor(
+                        "builtin-plugin-message",
+                        "plugin",
+                        "plugin",
+                        "Built-in plugin channel message plugin",
+                        true,
+                        List.of("message.sent", "message.recalled"),
+                        List.of("message:plugin:send"),
+                        "always_available"
+                ),
+                new PluginChannelMessagePlugin(jsonProvider)
+        ));
+        registrations.add(registration(
+                "builtin-custom-message",
+                new ChannelMessagePluginDescriptor(
+                        "builtin-custom-message",
+                        "custom",
+                        "custom",
+                        "Built-in custom channel message plugin",
+                        true,
+                        List.of("message.sent", "message.recalled"),
+                        List.of("message:custom:send"),
+                        "always_available"
+                ),
+                new CustomChannelMessagePlugin(jsonProvider)
+        ));
+        registrations.add(registration(
+                "builtin-system-message",
+                new ChannelMessagePluginDescriptor(
+                        "builtin-system-message",
+                        "system",
+                        "system",
+                        "Built-in system channel message plugin",
+                        false,
+                        List.of("message.sent", "message.recalled"),
+                        List.of("message:system:send"),
+                        "internal_only"
+                ),
+                new SystemChannelMessagePlugin(jsonProvider)
+        ));
         if (storageService != null) {
-            plugins.add(new FileChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy));
-            plugins.add(new VoiceChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy));
+            registrations.add(registration(
+                    "builtin-file-message",
+                    new ChannelMessagePluginDescriptor(
+                            "builtin-file-message",
+                            "file",
+                            "file",
+                            "Built-in file channel message plugin",
+                            true,
+                            List.of("message.sent", "message.recalled"),
+                            List.of("message:file:send"),
+                            "requires_object_storage"
+                    ),
+                    new FileChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy)
+            ));
+            registrations.add(registration(
+                    "builtin-voice-message",
+                    new ChannelMessagePluginDescriptor(
+                            "builtin-voice-message",
+                            "voice",
+                            "voice",
+                            "Built-in voice channel message plugin",
+                            true,
+                            List.of("message.sent", "message.recalled"),
+                            List.of("message:voice:send"),
+                            "requires_object_storage"
+                    ),
+                    new VoiceChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy)
+            ));
         }
-        return new ChannelMessagePluginRegistry(plugins);
+        return new ChannelMessagePluginRegistry(registrations);
+    }
+
+    private static ChannelMessagePluginRegistration registration(
+            String pluginKey,
+            ChannelMessagePluginDescriptor descriptor,
+            ChannelMessagePlugin plugin
+    ) {
+        return new ChannelMessagePluginRegistration(descriptor, plugin);
     }
 
     static JsonProvider jsonProvider() {
@@ -144,6 +239,11 @@ final class MessageApplicationServiceTestSupport {
         @Override
         public Optional<Channel> findDefaultChannel() {
             return Optional.ofNullable(channel);
+        }
+
+        @Override
+        public Optional<Channel> findSystemChannel() {
+            return Optional.ofNullable(channel != null && "system".equals(channel.type()) ? channel : null);
         }
 
         @Override

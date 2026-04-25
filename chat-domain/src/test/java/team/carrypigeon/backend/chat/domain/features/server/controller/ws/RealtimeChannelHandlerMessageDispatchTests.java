@@ -61,6 +61,46 @@ class RealtimeChannelHandlerMessageDispatchTests {
     }
 
     /**
+     * 验证统一发送命令在 plugin 消息场景下也能走通当前主链路。
+     */
+    @Test
+    @DisplayName("channel read generic send message command with plugin type broadcasts persisted message id")
+    void channelRead_genericSendMessageCommandWithPluginType_broadcastsPersistedMessageId() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        sender.attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(new AuthenticatedPrincipal(1001L, "carry-user"));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/ws", null, null));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"send_channel_message","channel_id":1,"message_type":"plugin","body":"mc bridge","payload":{"plugin_key":"mc-bridge","event":"player_join"}}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+    }
+
+    /**
+     * 验证统一发送命令在 custom 消息场景下也能走通当前主链路。
+     */
+    @Test
+    @DisplayName("channel read generic send message command with custom type broadcasts persisted message id")
+    void channelRead_genericSendMessageCommandWithCustomType_broadcastsPersistedMessageId() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        sender.attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(new AuthenticatedPrincipal(1001L, "carry-user"));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/ws", null, null));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"send_channel_message","channel_id":1,"message_type":"custom","body":"status card","payload":{"card":"server-status"}}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+    }
+
+    /**
      * 验证统一发送命令收到当前未支持的消息类型时会回写问题消息。
      */
     @Test

@@ -71,6 +71,8 @@ class AuthApplicationServiceTests {
         assertEquals("", userProfile.avatarUrl());
         assertEquals("", userProfile.bio());
         assertTrue(fixture.channelMemberRepository.exists(1L, 1001L));
+        assertTrue(fixture.channelMemberRepository.exists(1002L, 1001L));
+        assertTrue(fixture.channelRepository.findSystemChannel().isPresent());
     }
 
     /**
@@ -411,16 +413,31 @@ class AuthApplicationServiceTests {
 
     private static class InMemoryChannelRepository implements ChannelRepository {
 
-        private final Channel channel = new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME);
+        private final Map<Long, Channel> channels = new HashMap<>();
+
+        private InMemoryChannelRepository() {
+            channels.put(1L, new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME));
+        }
 
         @Override
         public Optional<Channel> findDefaultChannel() {
-            return Optional.of(channel);
+            return Optional.ofNullable(channels.get(1L));
+        }
+
+        @Override
+        public Optional<Channel> findSystemChannel() {
+            return channels.values().stream().filter(channel -> "system".equals(channel.type())).findFirst();
         }
 
         @Override
         public Optional<Channel> findById(long channelId) {
-            return Optional.of(channel);
+            return Optional.ofNullable(channels.get(channelId));
+        }
+
+        @Override
+        public Channel save(Channel channel) {
+            channels.put(channel.id(), channel);
+            return channel;
         }
     }
 

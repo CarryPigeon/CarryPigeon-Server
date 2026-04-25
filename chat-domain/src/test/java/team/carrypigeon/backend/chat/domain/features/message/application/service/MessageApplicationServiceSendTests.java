@@ -10,6 +10,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.SendSystemChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.draft.CustomChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.application.draft.PluginChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -65,6 +68,93 @@ class MessageApplicationServiceSendTests {
         assertEquals(null, result.payload());
         assertEquals(null, result.metadata());
         assertEquals("sent", result.status());
+    }
+
+    /**
+     * 验证 plugin 草稿会走通当前通用发送主链路。
+     */
+    @Test
+    @DisplayName("send channel message plugin draft persists plugin message")
+    void sendChannelMessage_pluginDraft_persistsPluginMessage() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ChannelMessageResult result = fixture.service.sendChannelMessage(
+                new SendChannelMessageCommand(1001L, 1L, new PluginChannelMessageDraft(
+                        "mc bridge",
+                        "mc-bridge",
+                        "{\"event\":\"player_join\"}",
+                        null
+                ))
+        );
+
+        assertEquals("plugin", result.messageType());
+        assertEquals("mc bridge", result.body());
+        assertEquals("[插件消息] mc bridge", result.previewText());
+    }
+
+    /**
+     * 验证 custom 草稿会走通当前通用发送主链路。
+     */
+    @Test
+    @DisplayName("send channel message custom draft persists custom message")
+    void sendChannelMessage_customDraft_persistsCustomMessage() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ChannelMessageResult result = fixture.service.sendChannelMessage(
+                new SendChannelMessageCommand(1001L, 1L, new CustomChannelMessageDraft(
+                        "status card",
+                        "{\"card\":\"server-status\"}",
+                        null
+                ))
+        );
+
+        assertEquals("custom", result.messageType());
+        assertEquals("status card", result.body());
+        assertEquals("[自定义消息] status card", result.previewText());
+    }
+
+    /**
+     * 验证内部 system 消息发送会在 system 频道中持久化并实时分发。
+     */
+    @Test
+    @DisplayName("send system channel message valid command persists and publishes system message")
+    void sendSystemChannelMessage_validCommand_persistsAndPublishesSystemMessage() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.channelRepository.channel = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
+                2L,
+                2L,
+                "system-announcement",
+                "system",
+                false,
+                MessageApplicationServiceTestSupport.BASE_TIME,
+                MessageApplicationServiceTestSupport.BASE_TIME
+        );
+
+        ChannelMessageResult result = fixture.service.sendSystemChannelMessage(
+                new SendSystemChannelMessageCommand(1001L, 2L, "maintenance notice", "{\"severity\":\"info\"}", null)
+        );
+
+        assertEquals("system", result.messageType());
+        assertEquals("maintenance notice", result.body());
+        assertEquals("[系统消息] maintenance notice", result.previewText());
+    }
+
+    /**
+     * 验证非 system 频道不能发送 system 消息。
+     */
+    @Test
+    @DisplayName("send system channel message non system channel throws forbidden problem")
+    void sendSystemChannelMessage_nonSystemChannel_throwsForbiddenProblem() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.sendSystemChannelMessage(
+                        new SendSystemChannelMessageCommand(1001L, 1L, "maintenance notice", "{\"severity\":\"info\"}", null)
+                )
+        );
+
+        assertEquals("system message requires system channel", exception.getMessage());
     }
 
     /**

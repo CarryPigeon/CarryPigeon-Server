@@ -9,7 +9,7 @@ import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
 
 /**
  * 服务端公开源信息 HTTP 入口。
- * 职责：提供 `/.well-known/carrypigeon-server` 的最小匿名可读协议能力。
+ * 职责：提供 `/.well-known/carrypigeon-server` 的权威匿名可读公开源契约。
  * 边界：只承接协议层请求，不承载服务端元数据组装逻辑。
  */
 @RestController

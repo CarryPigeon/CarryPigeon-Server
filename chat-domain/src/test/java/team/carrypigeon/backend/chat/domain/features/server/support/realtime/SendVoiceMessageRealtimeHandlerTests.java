@@ -23,6 +23,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
@@ -102,9 +105,21 @@ class SendVoiceMessageRealtimeHandlerTests {
                 (message, recipients) -> {
                 },
                 new ChannelMessagePluginRegistry(List.of(
-                        new TextChannelMessagePlugin(),
-                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy),
-                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                        registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                        registration(
+                                "builtin-file-message",
+                                "file",
+                                "file",
+                                "requires_object_storage",
+                                new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                        ),
+                        registration(
+                                "builtin-voice-message",
+                                "voice",
+                                "voice",
+                                "requires_object_storage",
+                                new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                        )
                 )),
                 objectKeyPolicy,
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
@@ -120,6 +135,28 @@ class SendVoiceMessageRealtimeHandlerTests {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         return new JsonProvider(objectMapper);
+    }
+
+    private static ChannelMessagePluginRegistration registration(
+            String pluginKey,
+            String messageType,
+            String publicPluginKey,
+            String availabilityCondition,
+            ChannelMessagePlugin plugin
+    ) {
+        return new ChannelMessagePluginRegistration(
+                new ChannelMessagePluginDescriptor(
+                        pluginKey,
+                        messageType,
+                        publicPluginKey,
+                        "test plugin",
+                        true,
+                        List.of("message.sent", "message.recalled"),
+                        List.of("message:" + messageType + ":send"),
+                        availabilityCondition
+                ),
+                plugin
+        );
     }
 
     private static ObjectStorageService storageService() {
@@ -174,6 +211,11 @@ class SendVoiceMessageRealtimeHandlerTests {
         return new ChannelRepository() {
             @Override
             public java.util.Optional<Channel> findDefaultChannel() {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public java.util.Optional<Channel> findSystemChannel() {
                 return java.util.Optional.empty();
             }
 

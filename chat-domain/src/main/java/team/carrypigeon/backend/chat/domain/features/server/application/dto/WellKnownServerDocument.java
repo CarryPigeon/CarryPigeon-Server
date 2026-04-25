@@ -11,11 +11,15 @@ import java.util.List;
  * @param serverName 当前服务端公开名称
  * @param registerEnabled 是否允许注册
  * @param loginMethods 当前支持的登录方式列表
+ * @param publicCapabilities 当前服务端已稳定公开的能力标识列表
+ * @param publicPlugins 当前服务端已公开的最小插件/消息类型标识列表
  */
 public record WellKnownServerDocument(
         String serverId,
         String serverName,
         boolean registerEnabled,
-        List<String> loginMethods
+        List<String> loginMethods,
+        List<String> publicCapabilities,
+        List<String> publicPlugins
 ) {
 }

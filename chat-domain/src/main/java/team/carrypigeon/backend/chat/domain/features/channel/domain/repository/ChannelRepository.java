@@ -18,6 +18,13 @@ public interface ChannelRepository {
     Optional<Channel> findDefaultChannel();
 
     /**
+     * 查询 system 频道。
+     *
+     * @return 命中时返回 system 频道，未命中时返回空
+     */
+    Optional<Channel> findSystemChannel();
+
+    /**
      * 按频道 ID 查询频道。
      *
      * @param channelId 频道 ID

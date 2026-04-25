@@ -56,14 +56,37 @@ class DatabaseBackedChannelRepositoryTests {
         assertEquals("private", databaseService.insertedRecord.type());
     }
 
+    /**
+     * 验证查询 system 频道时会转换成领域模型。
+     */
+    @Test
+    @DisplayName("find system channel existing record maps to domain model")
+    void findSystemChannel_existingRecord_mapsToDomainModel() {
+        FakeChannelDatabaseService databaseService = new FakeChannelDatabaseService();
+        databaseService.systemRecord = new ChannelRecord(10L, 10L, "system", "system", false, BASE_TIME, BASE_TIME);
+        DatabaseBackedChannelRepository repository = new DatabaseBackedChannelRepository(databaseService);
+
+        Optional<Channel> result = repository.findSystemChannel();
+
+        assertTrue(result.isPresent());
+        assertEquals("system", result.orElseThrow().type());
+        assertEquals("system", result.orElseThrow().name());
+    }
+
     private static class FakeChannelDatabaseService implements ChannelDatabaseService {
 
         private ChannelRecord record;
+        private ChannelRecord systemRecord;
         private ChannelRecord insertedRecord;
 
         @Override
         public Optional<ChannelRecord> findDefaultChannel() {
             return Optional.empty();
+        }
+
+        @Override
+        public Optional<ChannelRecord> findSystemChannel() {
+            return Optional.ofNullable(systemRecord);
         }
 
         @Override

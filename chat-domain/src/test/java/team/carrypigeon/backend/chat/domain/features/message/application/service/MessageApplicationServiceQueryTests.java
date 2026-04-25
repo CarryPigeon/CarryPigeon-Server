@@ -88,6 +88,71 @@ class MessageApplicationServiceQueryTests {
     }
 
     /**
+     * 验证 plugin 消息在历史查询中保持结构化 payload 与 metadata。
+     */
+    @Test
+    @DisplayName("get channel message history plugin message keeps payload and metadata")
+    void getChannelMessageHistory_pluginMessage_keepsPayloadAndMetadata() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.history.add(new ChannelMessage(
+                5009L, "carrypigeon-local", 1L, 1L, 1002L, "plugin", "mc bridge", "[插件消息] mc bridge", "mc bridge mc-bridge",
+                "{\"plugin_key\":\"mc-bridge\",\"payload\":{\"event\":\"player_join\"}}", "{\"trace\":true}", "sent",
+                MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2)
+        ));
+
+        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+                new GetChannelMessageHistoryQuery(1001L, 1L, null, 20)
+        );
+
+        assertEquals("plugin", result.messages().getFirst().messageType());
+        assertEquals("{\"plugin_key\":\"mc-bridge\",\"payload\":{\"event\":\"player_join\"}}", result.messages().getFirst().payload());
+        assertEquals("{\"trace\":true}", result.messages().getFirst().metadata());
+    }
+
+    /**
+     * 验证 custom 消息在搜索结果中保持自定义预览文本。
+     */
+    @Test
+    @DisplayName("search channel messages custom message keeps preview text")
+    void searchChannelMessages_customMessage_keepsPreviewText() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.searchResults.add(new ChannelMessage(
+                5010L, "carrypigeon-local", 1L, 1L, 1002L, "custom",
+                "status card", "[自定义消息] status card", "status card",
+                "{\"card\":\"server-status\"}", null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(3)
+        ));
+
+        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+                new SearchChannelMessagesQuery(1001L, 1L, "status", 20)
+        );
+
+        assertEquals(1, result.messages().size());
+        assertEquals("custom", result.messages().getFirst().messageType());
+        assertEquals("[自定义消息] status card", result.messages().getFirst().previewText());
+    }
+
+    /**
+     * 验证 system 消息在历史查询中保持稳定预览文本。
+     */
+    @Test
+    @DisplayName("get channel message history system message keeps preview text")
+    void getChannelMessageHistory_systemMessage_keepsPreviewText() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.history.add(new ChannelMessage(
+                5011L, "carrypigeon-local", 2L, 2L, 1001L, "system",
+                "maintenance notice", "[系统消息] maintenance notice", "maintenance notice",
+                "{\"severity\":\"info\"}", null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(4)
+        ));
+
+        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+                new GetChannelMessageHistoryQuery(1001L, 1L, null, 20)
+        );
+
+        assertEquals("system", result.messages().getFirst().messageType());
+        assertEquals("[系统消息] maintenance notice", result.messages().getFirst().previewText());
+    }
+
+    /**
      * 验证搜索结果不会再命中撤回前的内容。
      */
     @Test

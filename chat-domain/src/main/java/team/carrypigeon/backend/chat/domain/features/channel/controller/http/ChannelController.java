@@ -19,6 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.application.command
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreatePrivateChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetSystemChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.InviteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.KickChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.MuteChannelMemberCommand;
@@ -76,6 +77,19 @@ public class ChannelController {
     public CPResponse<ChannelResponse> getDefaultChannel(HttpServletRequest request) {
         AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
         ChannelResult result = channelApplicationService.getDefaultChannel(new GetDefaultChannelCommand(principal.accountId()));
+        return CPResponse.success(toChannelResponse(result));
+    }
+
+    /**
+     * 查询当前服务端 canonical system 频道。
+     *
+     * @param request 当前 HTTP 请求
+     * @return 统一响应包装的 system 频道结果
+     */
+    @GetMapping("/system")
+    public CPResponse<ChannelResponse> getSystemChannel(HttpServletRequest request) {
+        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        ChannelResult result = channelApplicationService.getSystemChannel(new GetSystemChannelCommand(principal.accountId()));
         return CPResponse.success(toChannelResponse(result));
     }
 

@@ -15,7 +15,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.SendSystemChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.UploadChannelMessageAttachmentCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.draft.SystemChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
@@ -140,6 +142,34 @@ public class MessageApplicationService {
                 command.channelId(),
                 new TextChannelMessageDraft(command.body())
         ));
+    }
+
+    /**
+     * 发送内部 system 频道消息。
+     *
+     * @param command system 消息发送命令
+     * @return 已持久化并已用于实时分发的 system 消息结果
+     */
+    public ChannelMessageResult sendSystemChannelMessage(SendSystemChannelMessageCommand command) {
+        validateSystemSendCommand(command);
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            requireSystemChannel(channel);
+            ChannelMessagePlugin plugin = channelMessagePluginRegistry.require("system");
+            ChannelMessage message = plugin.createMessage(new ChannelMessagePlugin.ChannelMessageBuildContext(
+                    idGenerator.nextLongId(),
+                    serverIdentityProperties.id(),
+                    channel.conversationId(),
+                    channel.id(),
+                    command.operatorAccountId(),
+                    timeProvider.nowInstant()
+            ), new SystemChannelMessageDraft(command.body(), command.payload(), command.metadata()));
+            ChannelMessage savedMessage = messageRepository.save(message);
+            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
+            return new PersistedMessage(savedMessage, recipientAccountIds);
+        });
+        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
+        return toResult(persistedMessage.message());
     }
 
     /**
@@ -277,6 +307,15 @@ public class MessageApplicationService {
         }
     }
 
+    private void validateSystemSendCommand(SendSystemChannelMessageCommand command) {
+        if (command.operatorAccountId() <= 0) {
+            throw ProblemException.validationFailed("operatorAccountId must be greater than 0");
+        }
+        if (command.channelId() <= 0) {
+            throw ProblemException.validationFailed("channelId must be greater than 0");
+        }
+    }
+
     private void validateSendCommand(SendChannelMessageCommand command) {
         if (command.accountId() <= 0) {
             throw ProblemException.validationFailed("accountId must be greater than 0");
@@ -318,6 +357,9 @@ public class MessageApplicationService {
         if (!"file".equals(normalizedMessageType) && !"voice".equals(normalizedMessageType)) {
             throw ProblemException.validationFailed("messageType must be file or voice");
         }
+        if (normalizedMessageType != null && !channelMessagePluginRegistry.supports(normalizedMessageType)) {
+            throw ProblemException.validationFailed("message type is not enabled");
+        }
         if (command.filename() == null || command.filename().isBlank()) {
             throw ProblemException.validationFailed("filename must not be blank");
         }
@@ -352,6 +394,12 @@ public class MessageApplicationService {
     private ChannelMember requireMembership(long channelId, long accountId) {
         return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
                 .orElseThrow(() -> ProblemException.forbidden("channel_member_required", MEMBERSHIP_REQUIRED_MESSAGE));
+    }
+
+    private void requireSystemChannel(Channel channel) {
+        if (!"system".equals(channel.type())) {
+            throw ProblemException.forbidden("system_channel_required", "system message requires system channel");
+        }
     }
 
     private ChannelMessageResult toResult(ChannelMessage message) {

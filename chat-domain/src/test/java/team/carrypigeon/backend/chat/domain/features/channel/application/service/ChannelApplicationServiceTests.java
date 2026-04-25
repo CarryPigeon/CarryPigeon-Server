@@ -16,6 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.application.command
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreatePrivateChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetSystemChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.InviteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.KickChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.MuteChannelMemberCommand;
@@ -78,6 +79,42 @@ class ChannelApplicationServiceTests {
         assertEquals(1L, result.conversationId());
         assertEquals("public", result.name());
         assertEquals("public", result.type());
+    }
+
+    /**
+     * 验证 system 频道存在且当前账户为成员时会返回稳定结果。
+     */
+    @Test
+    @DisplayName("get system channel existing member returns result")
+    void getSystemChannel_existingMember_returnsResult() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(2L, systemChannel());
+        context.channelMemberRepository.save(new ChannelMember(2L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
+        ChannelApplicationService service = context.createService();
+
+        ChannelResult result = service.getSystemChannel(new GetSystemChannelCommand(1001L));
+
+        assertEquals(2L, result.channelId());
+        assertEquals("system", result.type());
+    }
+
+    /**
+     * 验证 system 频道成员列表对普通成员不可见。
+     */
+    @Test
+    @DisplayName("list channel members system channel throws forbidden problem")
+    void listChannelMembers_systemChannel_throwsForbiddenProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(2L, systemChannel());
+        context.channelMemberRepository.save(new ChannelMember(2L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.listChannelMembers(new ListChannelMembersQuery(1001L, 2L))
+        );
+
+        assertEquals("system channel member list is not available", exception.getMessage());
     }
 
     /**
@@ -389,6 +426,10 @@ class ChannelApplicationServiceTests {
         return new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME);
     }
 
+    private static Channel systemChannel() {
+        return new Channel(2L, 2L, "system", "system", false, BASE_TIME, BASE_TIME);
+    }
+
     private static UserProfile profile(long accountId, String nickname) {
         return new UserProfile(accountId, nickname, "", "", BASE_TIME, BASE_TIME);
     }
@@ -432,6 +473,11 @@ class ChannelApplicationServiceTests {
         @Override
         public Optional<Channel> findDefaultChannel() {
             return Optional.ofNullable(defaultChannel);
+        }
+
+        @Override
+        public Optional<Channel> findSystemChannel() {
+            return channels.values().stream().filter(channel -> "system".equals(channel.type())).findFirst();
         }
 
         @Override

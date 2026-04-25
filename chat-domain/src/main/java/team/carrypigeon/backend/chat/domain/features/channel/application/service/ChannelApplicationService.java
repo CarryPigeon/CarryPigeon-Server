@@ -8,6 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.application.command
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreatePrivateChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetSystemChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.KickChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.MuteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.PromoteChannelMemberCommand;
@@ -103,6 +104,24 @@ public class ChannelApplicationService {
         }
         Channel channel = channelRepository.findDefaultChannel()
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_NOT_FOUND_MESSAGE));
+        return toResult(channel);
+    }
+
+    /**
+     * 查询当前服务端 canonical system 频道。
+     *
+     * @param command system 频道查询命令
+     * @return system 频道结果
+     */
+    public ChannelResult getSystemChannel(GetSystemChannelCommand command) {
+        if (command.accountId() <= 0) {
+            throw ProblemException.validationFailed("accountId must be greater than 0");
+        }
+        Channel channel = channelRepository.findSystemChannel()
+                .orElseThrow(() -> ProblemException.notFound("system channel does not exist"));
+        if (!channelMemberRepository.exists(channel.id(), command.accountId())) {
+            throw ProblemException.forbidden("system_channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
+        }
         return toResult(channel);
     }
 
@@ -230,6 +249,9 @@ public class ChannelApplicationService {
     public List<ChannelMemberResult> listChannelMembers(ListChannelMembersQuery query) {
         validateListChannelMembersQuery(query);
         Channel channel = requireChannel(query.channelId());
+        if ("system".equals(channel.type())) {
+            throw ProblemException.forbidden("system_channel_members_hidden", "system channel member list is not available");
+        }
         ChannelMember operator = requireMember(channel.id(), query.accountId());
         channelGovernancePolicy.requireCanListMembers(operator);
         return channelMemberRepository.findByChannelId(channel.id()).stream()

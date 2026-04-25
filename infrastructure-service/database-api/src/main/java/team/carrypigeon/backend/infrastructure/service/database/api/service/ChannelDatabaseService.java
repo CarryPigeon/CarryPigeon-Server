@@ -18,6 +18,13 @@ public interface ChannelDatabaseService {
     Optional<ChannelRecord> findDefaultChannel();
 
     /**
+     * 查询 system 频道。
+     *
+     * @return 命中时返回 system 频道记录
+     */
+    Optional<ChannelRecord> findSystemChannel();
+
+    /**
      * 按频道 ID 查询频道。
      *
      * @param channelId 频道 ID

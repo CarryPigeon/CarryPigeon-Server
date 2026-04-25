@@ -5,7 +5,7 @@ package team.carrypigeon.backend.chat.domain.features.message.application.draft;
  * 职责：表达消息在持久化前、由插件负责解释的最小输入结构。
  * 边界：这里只表达插件分派所需的稳定字段，不直接承载协议层细节。
  */
-public sealed interface ChannelMessageDraft permits TextChannelMessageDraft, FileChannelMessageDraft, VoiceChannelMessageDraft {
+public sealed interface ChannelMessageDraft permits TextChannelMessageDraft, FileChannelMessageDraft, VoiceChannelMessageDraft, PluginChannelMessageDraft, CustomChannelMessageDraft, SystemChannelMessageDraft {
 
     /**
      * 返回当前草稿所属的稳定消息类型。
