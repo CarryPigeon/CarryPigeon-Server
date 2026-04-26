@@ -65,6 +65,28 @@ services:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - carrypigeon-minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - carrypigeon-network
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-08T15-39-49Z
+    container_name: carrypigeon-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >-
+        mc alias set carrypigeon http://minio:9000 "${MINIO_ROOT_USER:-carrypigeon}" "${MINIO_ROOT_PASSWORD:-carrypigeon123}" &&
+        mc mb --ignore-existing carrypigeon/"${MINIO_BUCKET:-carrypigeon}"
     networks:
       - carrypigeon-network
 

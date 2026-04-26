@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.context.annotation.Primary;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -103,22 +102,11 @@ public class RealtimeServerConfiguration {
      * @param initializer Netty 通道初始化器
      * @return feature 内托管的实时服务运行时
      */
-    @Bean(initMethod = "start", destroyMethod = "stop")
+    @Bean(destroyMethod = "stop")
     public RealtimeServerRuntime realtimeServerRuntime(
             RealtimeServerProperties properties,
             RealtimeChannelInitializer initializer
     ) {
         return new RealtimeServerRuntime(properties, initializer);
-    }
-
-    /**
-     * 创建 realtime 运行时启动触发器。
-     *
-     * @param runtime realtime 运行时
-     * @return 在单例初始化完成后触发 runtime.start 的启动器
-     */
-    @Bean
-    public SmartInitializingSingleton realtimeServerRuntimeStarter(RealtimeServerRuntime runtime) {
-        return runtime::start;
     }
 }

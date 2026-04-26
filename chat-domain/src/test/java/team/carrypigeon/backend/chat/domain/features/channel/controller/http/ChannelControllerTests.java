@@ -71,6 +71,15 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.data.type").value("public"));
     }
 
+    @Test
+    @DisplayName("get default channel anonymous request returns code 300")
+    void getDefaultChannel_anonymousRequest_returnsCode300() throws Exception {
+        mockMvc.perform(get("/api/channels/default"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300))
+                .andExpect(jsonPath("$.message").value("authentication is required"));
+    }
+
     /**
      * 验证已认证请求可以读取 system 频道。
      */
@@ -113,6 +122,20 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.data.type").value("private"));
     }
 
+    @Test
+    @DisplayName("create private channel invalid request returns code 200")
+    void createPrivateChannel_invalidRequest_returnsCode200() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(post("/api/channels/private")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{" +
+                                "\"name\":\"\"" +
+                                "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
     /**
      * 验证 OWNER / ADMIN 邀请接口会返回邀请结果。
      */
@@ -140,6 +163,22 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
     }
 
+    @Test
+    @DisplayName("invite channel member forbidden returns code 300")
+    void inviteChannelMember_forbidden_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.inviteChannelMember(any()))
+                .thenThrow(ProblemException.forbidden("channel_invite_forbidden", "channel invite requires owner or admin role"));
+
+        mockMvc.perform(post("/api/channels/9/invites")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{" +
+                                "\"inviteeAccountId\":1002" +
+                                "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
     /**
      * 验证接受邀请接口会返回 ACCEPTED 结果。
      */
@@ -160,6 +199,18 @@ class ChannelControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+    }
+
+    @Test
+    @DisplayName("accept channel invite missing invitation returns code 404")
+    void acceptChannelInvite_missingInvitation_returnsCode404() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.acceptChannelInvite(any()))
+                .thenThrow(ProblemException.notFound("channel invite does not exist"));
+
+        mockMvc.perform(post("/api/channels/9/invites/accept"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404));
     }
 
     /**
@@ -185,6 +236,17 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data[0].accountId").value(1001L))
                 .andExpect(jsonPath("$.data[0].role").value("OWNER"));
+    }
+
+    @Test
+    @DisplayName("list channel members unexpected failure returns code 500")
+    void listChannelMembers_unexpectedFailure_returnsCode500() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.listChannelMembers(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(get("/api/channels/9/members"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
     }
 
     /**

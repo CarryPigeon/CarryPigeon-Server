@@ -3,8 +3,11 @@ package team.carrypigeon.backend.starter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.ConfigurableApplicationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
@@ -52,5 +55,33 @@ class ApplicationStarterSmokeTests {
             assertThat(context).hasSingleBean(MessageAttachmentObjectKeyPolicy.class);
             assertThat(context).hasSingleBean(MessageAttachmentPayloadResolver.class);
         });
+    }
+
+    /**
+     * 验证通过真实 SpringApplication 启动路径也能完成最小 starter 装配。
+     */
+    @Test
+    @DisplayName("spring application startup registers key beans with test runtime configuration")
+    void springApplicationStartup_registersKeyBeansWithTestRuntimeConfiguration() {
+        try (ConfigurableApplicationContext context = new SpringApplicationBuilder(
+                BasicInfrastructureAutoConfiguration.class,
+                JacksonAutoConfiguration.class,
+                StarterTestRuntimeConfiguration.class,
+                StarterRegressionConfiguration.class,
+                InitializationCheckConfiguration.class
+        )
+                .web(WebApplicationType.NONE)
+                .properties(
+                        "spring.main.banner-mode=off",
+                        "spring.main.allow-bean-definition-overriding=true",
+                        "cp.infrastructure.id.worker-id=1",
+                        "cp.infrastructure.id.datacenter-id=1"
+                )
+                .run()) {
+            assertThat(context.getBeansOfType(InitializationCheckRunner.class)).hasSize(1);
+            assertThat(context.getBeansOfType(AuthApplicationService.class)).hasSize(1);
+            assertThat(context.getBeansOfType(MessageApplicationService.class)).hasSize(1);
+            assertThat(context.getBeansOfType(ChannelMessageController.class)).hasSize(1);
+        }
     }
 }

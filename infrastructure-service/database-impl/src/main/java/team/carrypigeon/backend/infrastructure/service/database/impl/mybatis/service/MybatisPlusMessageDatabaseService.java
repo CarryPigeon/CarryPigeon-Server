@@ -23,64 +23,64 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
 
     @Override
     public void insert(MessageRecord record) {
-        try {
+        executeVoid(() -> {
             messageMapper.insert(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert message", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert message", exception);
-        }
+        }, "failed to insert message");
     }
 
     @Override
     public java.util.Optional<MessageRecord> findById(long messageId) {
-        try {
-            return java.util.Optional.ofNullable(messageMapper.findById(messageId))
-                    .map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query message", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query message", exception);
-        }
+        return execute(
+                () -> java.util.Optional.ofNullable(messageMapper.findById(messageId))
+                        .map(this::toRecord),
+                "failed to query message"
+        );
     }
 
     @Override
     public void update(MessageRecord record) {
-        try {
+        executeVoid(() -> {
             messageMapper.updateMessage(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to update message", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to update message", exception);
-        }
+        }, "failed to update message");
     }
 
     @Override
     public List<MessageRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-        try {
-            return messageMapper.findByChannelIdBefore(channelId, cursorMessageId, limit)
-                    .stream()
-                    .map(this::toRecord)
-                    .toList();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel messages", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel messages", exception);
-        }
+        return execute(
+                () -> messageMapper.findByChannelIdBefore(channelId, cursorMessageId, limit)
+                        .stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query channel messages"
+        );
     }
 
     @Override
     public List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit) {
+        return execute(
+                () -> messageMapper.searchByChannelId(channelId, keyword, limit)
+                        .stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to search channel messages"
+        );
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            return messageMapper.searchByChannelId(channelId, keyword, limit)
-                    .stream()
-                    .map(this::toRecord)
-                    .toList();
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to search channel messages", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to search channel messages", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
     }
 
     private MessageRecord toRecord(MessageEntity entity) {
@@ -117,5 +117,15 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         entity.setStatus(record.status());
         entity.setCreatedAt(record.createdAt());
         return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+        void run();
     }
 }

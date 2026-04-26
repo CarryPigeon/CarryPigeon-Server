@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
@@ -39,7 +40,22 @@ class MybatisPlusMessageDatabaseServiceTests {
 
         service.insert(record());
 
-        verify(messageMapper).insert(any(MessageEntity.class));
+        ArgumentCaptor<MessageEntity> entityCaptor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageMapper).insert(entityCaptor.capture());
+        MessageEntity entity = entityCaptor.getValue();
+        assertEquals(5001L, entity.getMessageId());
+        assertEquals("carrypigeon-local", entity.getServerId());
+        assertEquals(1L, entity.getConversationId());
+        assertEquals(1L, entity.getChannelId());
+        assertEquals(1001L, entity.getSenderId());
+        assertEquals("text", entity.getMessageType());
+        assertEquals("hello world", entity.getBody());
+        assertEquals("[文本消息] hello world", entity.getPreviewText());
+        assertEquals("hello world", entity.getSearchableText());
+        assertEquals(null, entity.getPayload());
+        assertEquals(null, entity.getMetadata());
+        assertEquals("sent", entity.getStatus());
+        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getCreatedAt());
     }
 
     /**
@@ -71,7 +87,13 @@ class MybatisPlusMessageDatabaseServiceTests {
 
         service.update(record());
 
-        verify(messageMapper).updateMessage(any(MessageEntity.class));
+        ArgumentCaptor<MessageEntity> entityCaptor = ArgumentCaptor.forClass(MessageEntity.class);
+        verify(messageMapper).updateMessage(entityCaptor.capture());
+        MessageEntity entity = entityCaptor.getValue();
+        assertEquals(5001L, entity.getMessageId());
+        assertEquals("carrypigeon-local", entity.getServerId());
+        assertEquals("sent", entity.getStatus());
+        assertEquals("[文本消息] hello world", entity.getPreviewText());
     }
 
     /**

@@ -123,6 +123,29 @@ class ChannelMessageAttachmentControllerTests {
                 .andExpect(jsonPath("$.code").value(500));
     }
 
+    @Test
+    @DisplayName("upload channel message attachment anonymous request returns code 300")
+    void uploadChannelMessageAttachment_anonymousRequest_returnsCode300() throws Exception {
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
+    @Test
+    @DisplayName("upload channel message attachment missing filename returns code 200")
+    void uploadChannelMessageAttachment_missingFilename_returnsCode200() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "", "application/pdf", "demo".getBytes()))
+                        .param("messageType", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("filename must not be blank"));
+    }
+
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(new ChannelMessageController(messageApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))

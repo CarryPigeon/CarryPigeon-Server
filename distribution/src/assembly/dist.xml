@@ -7,30 +7,14 @@
         <format>zip</format>
     </formats>
 
-    <!-- 项目模块输出到modules目录 -->
-    <moduleSets>
-        <moduleSet>
-            <useAllReactorProjects>true</useAllReactorProjects>
-            <includes>
-                <include>CarryPigeon:chat-domain</include>
-                <include>CarryPigeon:infrastructure-service</include>
-            </includes>
-            <binaries>
-                <outputDirectory>module</outputDirectory>
-                <unpack>false</unpack>
-            </binaries>
-        </moduleSet>
-    </moduleSets>
-
-    <!-- 第三方依赖输出到lib目录 -->
     <dependencySets>
         <dependencySet>
             <outputDirectory>libs</outputDirectory>
-            <useProjectArtifact>false</useProjectArtifact> <!-- 不包含项目自身 -->
-            <scope>runtime</scope> <!-- 包含运行时依赖 -->
+            <useProjectArtifact>false</useProjectArtifact>
+            <scope>runtime</scope>
             <unpack>false</unpack>
             <excludes>
-                <exclude>CarryPigeon:*</exclude> <!-- 排除本项目模块 -->
+                <exclude>CarryPigeon:application-starter</exclude>
             </excludes>
         </dependencySet>
     </dependencySets>
@@ -38,12 +22,13 @@
     <fileSets>
         <fileSet>
             <directory>${project.basedir}/../application-starter/target</directory>
-            <outputDirectory>.</outputDirectory>
+            <outputDirectory>app</outputDirectory>
             <includes>
                 <include>application-starter-*.jar</include>
             </includes>
             <excludes>
                 <exclude>*-exec.jar</exclude>
+                <exclude>*-exec.jar.original</exclude>
             </excludes>
         </fileSet>
 
@@ -59,6 +44,24 @@
             <outputDirectory>config</outputDirectory>
             <includes>
                 <include>log4j2-spring.xml</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
+            <includes>
+                <include>stop.sh</include>
+                <include>start-background.sh</include>
+                <include>start.sh</include>
+                <include>start.bat</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>README.md</include>
             </includes>
         </fileSet>
     </fileSets>

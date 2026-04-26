@@ -95,6 +95,41 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] search body"));
     }
 
+    @Test
+    @DisplayName("search channel messages forbidden returns code 300")
+    void searchChannelMessages_forbidden_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.searchChannelMessages(any()))
+                .thenThrow(ProblemException.forbidden("channel_member_required", "channel membership is required"));
+
+        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
+    @Test
+    @DisplayName("search channel messages missing channel returns code 404")
+    void searchChannelMessages_missingChannel_returnsCode404() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.searchChannelMessages(any()))
+                .thenThrow(ProblemException.notFound("channel does not exist"));
+
+        mockMvc.perform(get("/api/channels/9/messages/search?keyword=search&limit=20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    @DisplayName("search channel messages unexpected failure returns code 500")
+    void searchChannelMessages_unexpectedFailure_returnsCode500() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.searchChannelMessages(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
+    }
+
     /**
      * 验证已认证成员可以通过 HTTP 撤回消息，并收到稳定消息 ID 的撤回结果。
      */
@@ -138,6 +173,29 @@ class ChannelMessageQueryControllerTests {
         mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(300));
+    }
+
+    @Test
+    @DisplayName("recall channel message missing message returns code 404")
+    void recallChannelMessage_missingMessage_returnsCode404() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.recallChannelMessage(any()))
+                .thenThrow(ProblemException.notFound("message does not exist"));
+
+        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    @DisplayName("recall channel message unexpected failure returns code 500")
+    void recallChannelMessage_unexpectedFailure_returnsCode500() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.recallChannelMessage(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
     }
 
     /**

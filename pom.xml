@@ -18,6 +18,7 @@
         <module>infrastructure-basic</module>
         <module>infrastructure-service</module>
         <module>application-starter</module>
+        <module>distribution</module>
     </modules>
 
     <properties>

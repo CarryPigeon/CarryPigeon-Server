@@ -49,6 +49,11 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 @Service
 public class MessageApplicationService {
 
+    private static final String SYSTEM_MESSAGE_TYPE = "system";
+    private static final String FILE_MESSAGE_TYPE = "file";
+    private static final String VOICE_MESSAGE_TYPE = "voice";
+    private static final String RECALLED_STATUS = "recalled";
+    private static final String MESSAGE_RECALLED_AUDIT_ACTION = "MESSAGE_RECALLED";
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
     private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
@@ -112,15 +117,15 @@ public class MessageApplicationService {
         PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember member = requireMembership(channel.id(), command.accountId());
-            channelGovernancePolicy.requireCanSendMessage(channel, member, timeProvider.nowInstant());
+            channelGovernancePolicy.requireCanSendMessage(channel, member, now());
             ChannelMessagePlugin plugin = channelMessagePluginRegistry.require(command.draft().type());
             ChannelMessage message = plugin.createMessage(new ChannelMessagePlugin.ChannelMessageBuildContext(
-                    idGenerator.nextLongId(),
+                    nextMessageId(),
                     serverIdentityProperties.id(),
                     channel.conversationId(),
                     channel.id(),
                     command.accountId(),
-                    timeProvider.nowInstant()
+                    now()
             ), command.draft());
             ChannelMessage savedMessage = messageRepository.save(message);
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
@@ -155,14 +160,14 @@ public class MessageApplicationService {
         PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
             Channel channel = requireChannel(command.channelId());
             requireSystemChannel(channel);
-            ChannelMessagePlugin plugin = channelMessagePluginRegistry.require("system");
+            ChannelMessagePlugin plugin = channelMessagePluginRegistry.require(SYSTEM_MESSAGE_TYPE);
             ChannelMessage message = plugin.createMessage(new ChannelMessagePlugin.ChannelMessageBuildContext(
-                    idGenerator.nextLongId(),
+                    nextMessageId(),
                     serverIdentityProperties.id(),
                     channel.conversationId(),
                     channel.id(),
                     command.operatorAccountId(),
-                    timeProvider.nowInstant()
+                    now()
             ), new SystemChannelMessageDraft(command.body(), command.payload(), command.metadata()));
             ChannelMessage savedMessage = messageRepository.save(message);
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
@@ -253,7 +258,7 @@ public class MessageApplicationService {
         validateUploadCommand(command);
         Channel channel = requireChannel(command.channelId());
         ChannelMember member = requireMembership(channel.id(), command.accountId());
-        channelGovernancePolicy.requireCanSendMessage(channel, member, timeProvider.nowInstant());
+        channelGovernancePolicy.requireCanSendMessage(channel, member, now());
         ObjectStorageService objectStorageService = requireObjectStorageService();
         String normalizedMessageType = command.messageType().trim().toLowerCase();
         String normalizedFilename = messageAttachmentObjectKeyPolicy.normalizeFilename(command.filename());
@@ -262,7 +267,7 @@ public class MessageApplicationService {
                 channel.id(),
                 normalizedMessageType,
                 command.accountId(),
-                idGenerator.nextLongId(),
+                nextMessageId(),
                 normalizedFilename
         );
         try (InputStream content = command.content()) {
@@ -284,45 +289,27 @@ public class MessageApplicationService {
     }
 
     private void validateSendCommand(SendChannelTextMessageCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
         if (command.body() == null || command.body().isBlank()) {
             throw ProblemException.validationFailed("body must not be blank");
         }
     }
 
     private void validateRecallCommand(RecallChannelMessageCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
-        if (command.messageId() <= 0) {
-            throw ProblemException.validationFailed("messageId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
+        requirePositive(command.messageId(), "messageId");
     }
 
     private void validateSystemSendCommand(SendSystemChannelMessageCommand command) {
-        if (command.operatorAccountId() <= 0) {
-            throw ProblemException.validationFailed("operatorAccountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(command.operatorAccountId(), "operatorAccountId");
+        requirePositive(command.channelId(), "channelId");
     }
 
     private void validateSendCommand(SendChannelMessageCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
         if (command.draft() == null) {
             throw ProblemException.validationFailed("draft must not be null");
         }
@@ -332,12 +319,8 @@ public class MessageApplicationService {
     }
 
     private void validateHistoryQuery(GetChannelMessageHistoryQuery query) {
-        if (query.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (query.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(query.accountId(), "accountId");
+        requirePositive(query.channelId(), "channelId");
         if (query.cursorMessageId() != null && query.cursorMessageId() <= 0) {
             throw ProblemException.validationFailed("cursorMessageId must be greater than 0");
         }
@@ -347,14 +330,10 @@ public class MessageApplicationService {
     }
 
     private void validateUploadCommand(UploadChannelMessageAttachmentCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
         String normalizedMessageType = command.messageType() == null ? null : command.messageType().trim().toLowerCase();
-        if (!"file".equals(normalizedMessageType) && !"voice".equals(normalizedMessageType)) {
+        if (!FILE_MESSAGE_TYPE.equals(normalizedMessageType) && !VOICE_MESSAGE_TYPE.equals(normalizedMessageType)) {
             throw ProblemException.validationFailed("messageType must be file or voice");
         }
         if (normalizedMessageType != null && !channelMessagePluginRegistry.supports(normalizedMessageType)) {
@@ -372,12 +351,8 @@ public class MessageApplicationService {
     }
 
     private void validateSearchQuery(SearchChannelMessagesQuery query) {
-        if (query.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (query.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(query.accountId(), "accountId");
+        requirePositive(query.channelId(), "channelId");
         if (query.keyword() == null || query.keyword().isBlank()) {
             throw ProblemException.validationFailed("keyword must not be blank");
         }
@@ -397,7 +372,7 @@ public class MessageApplicationService {
     }
 
     private void requireSystemChannel(Channel channel) {
-        if (!"system".equals(channel.type())) {
+        if (!SYSTEM_MESSAGE_TYPE.equals(channel.type())) {
             throw ProblemException.forbidden("system_channel_required", "system message requires system channel");
         }
     }
@@ -437,25 +412,25 @@ public class MessageApplicationService {
                 "",
                 null,
                 null,
-                "recalled",
+                RECALLED_STATUS,
                 message.createdAt()
         );
     }
 
     private void appendRecallAudit(long channelId, long actorAccountId, long messageId, long senderId) {
         channelAuditLogRepository.append(new ChannelAuditLog(
-                idGenerator.nextLongId(),
+                nextMessageId(),
                 channelId,
                 actorAccountId,
-                "MESSAGE_RECALLED",
+                MESSAGE_RECALLED_AUDIT_ACTION,
                 senderId,
                 "{\"messageId\":" + messageId + ",\"senderAccountId\":" + senderId + "}",
-                timeProvider.nowInstant()
+                now()
         ));
     }
 
     private boolean isRecalled(ChannelMessage message) {
-        return "recalled".equals(message.status());
+        return RECALLED_STATUS.equals(message.status());
     }
 
     private ObjectStorageService requireObjectStorageService() {
@@ -470,7 +445,21 @@ public class MessageApplicationService {
         if (contentType != null && !contentType.isBlank()) {
             return contentType.trim();
         }
-        return "voice".equals(messageType) ? "audio/mpeg" : "application/octet-stream";
+        return VOICE_MESSAGE_TYPE.equals(messageType) ? "audio/mpeg" : "application/octet-stream";
+    }
+
+    private long nextMessageId() {
+        return idGenerator.nextLongId();
+    }
+
+    private java.time.Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
     }
 
     private record PersistedMessage(ChannelMessage message, List<Long> recipientAccountIds) {

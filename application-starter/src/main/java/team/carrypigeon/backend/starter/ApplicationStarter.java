@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.starter;
 
 import lombok.extern.slf4j.Slf4j;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -18,7 +17,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
-@MapperScan(basePackages = "team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper")
 @Slf4j
 public class ApplicationStarter {
     /**

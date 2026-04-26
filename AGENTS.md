@@ -13,7 +13,7 @@
   - `chat-domain/`: core business domain module.
   - `infrastructure-basic/`: fixed global infrastructure.
   - `infrastructure-service/`: pluggable external service infrastructure parent module.
-  - `distribution/`: reserved for later packaging, not part of current core work.
+  - `distribution/`: packaging and distribution module for thin-jar + libs assembled delivery artifacts.
 
 ## Module Responsibilities
 - `application-starter`

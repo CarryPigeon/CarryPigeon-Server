@@ -99,6 +99,7 @@ class RealtimeServerConfigurationContextTests {
                 .run(context -> {
                     assertThat(context).hasBean("realtimeServerRuntime");
                     assertThat(context).hasBean("realtimeChannelInitializer");
+                    assertThat(context).doesNotHaveBean("realtimeServerRuntimeStarter");
                     assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isTrue();
                     assertThat(context.getBean(RealtimeServerProperties.class).port()).isEqualTo(28080);
                 });
@@ -125,6 +126,7 @@ class RealtimeServerConfigurationContextTests {
                 .run(context -> {
                     assertThat(context).hasBean("realtimeServerRuntime");
                     assertThat(context).hasBean("realtimeChannelInitializer");
+                    assertThat(context).doesNotHaveBean("realtimeServerRuntimeStarter");
                     assertThat(context.getBean(RealtimeServerProperties.class).enabled()).isFalse();
                 });
     }

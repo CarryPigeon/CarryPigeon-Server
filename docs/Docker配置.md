@@ -6,6 +6,10 @@
 
 当前阶段只编排外部基础服务，不提前容器化应用本身。
 
+若需要查看完整的分发、部署、前后台启动与停止流程，请同时阅读：
+
+- `docs/部署手册.md`
+
 ## 2. 当前容器化范围
 
 当前已配置的外部服务包括：
@@ -44,10 +48,18 @@ cp .env.example .env
 
 如需修改端口、账号或密码，直接编辑 `.env`。
 
+当前 MinIO 默认 bucket 也通过 `.env` 中的 `MINIO_BUCKET` 提供。
+
 ### 4.2 启动外部服务
 
 ```bash
 docker compose up -d
+```
+
+推荐使用项目脚本：
+
+```bash
+bash bin/docker-up.sh
 ```
 
 ### 4.3 停止外部服务
@@ -56,10 +68,34 @@ docker compose up -d
 docker compose down
 ```
 
+推荐使用项目脚本：
+
+```bash
+bash bin/docker-down.sh
+```
+
 ### 4.4 连同数据卷一起清理
 
 ```bash
 docker compose down -v
+```
+
+推荐使用项目脚本：
+
+```bash
+bash bin/docker-reset.sh
+```
+
+### 4.5 查看外部服务日志
+
+```bash
+docker compose logs -f
+```
+
+推荐使用项目脚本：
+
+```bash
+bash bin/docker-logs.sh
 ```
 
 ## 5. 当前服务说明
@@ -114,6 +150,11 @@ docker compose down -v
 
 - 作为后续对象存储服务的默认本地实现
 
+当前约定：
+
+- Compose 会在 MinIO 健康检查通过后自动执行 bucket 初始化
+- 默认 bucket：`carrypigeon`
+
 默认端口：
 
 - API：`9000`
@@ -137,6 +178,7 @@ MINIO_API_PORT=9000
 MINIO_CONSOLE_PORT=9001
 MINIO_ROOT_USER=carrypigeon
 MINIO_ROOT_PASSWORD=carrypigeon123
+MINIO_BUCKET=carrypigeon
 ```
 
 ## 7. 设计边界

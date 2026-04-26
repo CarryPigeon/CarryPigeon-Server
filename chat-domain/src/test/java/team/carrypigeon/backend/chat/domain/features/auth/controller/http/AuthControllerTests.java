@@ -21,6 +21,7 @@ import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExcep
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -178,6 +179,20 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.message").value("username or password is invalid"));
     }
 
+    @Test
+    @DisplayName("login unexpected failure returns code 500")
+    void login_unexpectedFailure_returnsCode500() throws Exception {
+        when(authApplicationService.login(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
+    }
+
     /**
      * 验证刷新成功时返回新的 token 数据。
      */
@@ -216,6 +231,18 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.message").value("refresh token is invalid"));
     }
 
+    @Test
+    @DisplayName("refresh invalid request returns code 200")
+    void refresh_invalidRequest_returnsCode200() throws Exception {
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":""}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
     /**
      * 验证注销成功时返回统一成功响应。
      */
@@ -229,6 +256,50 @@ class AuthControllerTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(100));
+    }
+
+    @Test
+    @DisplayName("logout invalid request returns code 200")
+    void logout_invalidRequest_returnsCode200() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":""}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test
+    @DisplayName("logout invalid token returns code 300")
+    void logout_invalidToken_returnsCode300() throws Exception {
+        doThrow(ProblemException.forbidden("invalid_refresh_session", "refresh token is invalid"))
+                .when(authApplicationService)
+                .logout(any());
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"invalid-refresh-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
+    @Test
+    @DisplayName("logout unexpected failure returns code 500")
+    void logout_unexpectedFailure_returnsCode500() throws Exception {
+        doThrow(new IllegalStateException("boom"))
+                .when(authApplicationService)
+                .logout(any());
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"refresh-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500));
     }
 
     /**

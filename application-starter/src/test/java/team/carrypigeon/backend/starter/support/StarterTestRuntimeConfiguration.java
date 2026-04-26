@@ -174,6 +174,13 @@ public class StarterTestRuntimeConfiguration {
             }
 
             @Override
+            public Optional<Channel> findSystemChannel() {
+                return state.channelsById.values().stream()
+                        .filter(channel -> "system".equals(channel.type()))
+                        .findFirst();
+            }
+
+            @Override
             public Optional<Channel> findById(long channelId) {
                 return Optional.ofNullable(state.channelsById.get(channelId));
             }

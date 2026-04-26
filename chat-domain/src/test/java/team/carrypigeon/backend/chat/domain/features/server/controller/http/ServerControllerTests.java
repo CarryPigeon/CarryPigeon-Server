@@ -82,6 +82,17 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.code").value(200));
     }
 
+    @Test
+    @DisplayName("echo valid content returns code 100")
+    void echo_validContent_returnsCode100() throws Exception {
+        mockMvc.perform(post("/api/server/echo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"pong\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data").value("pong"));
+    }
+
     /**
      * 验证公开源信息接口可匿名访问并返回最小公开字段。
      */
@@ -139,6 +150,33 @@ class ServerControllerTests {
         mockMvc.perform(get("/api/server/presence/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(300));
+    }
+
+    @Test
+    @DisplayName("current presence realtime disabled returns unavailable")
+    void currentPresence_realtimeDisabled_returnsUnavailable() throws Exception {
+        serverApplicationService = new ServerApplicationService(
+                new ServerIdentityProperties("carrypigeon-local"),
+                "CarryPigeonBackend",
+                new ChannelMessagePluginRegistry(java.util.List.of(
+                        registration("builtin-text-message", "text", "text", true)
+                )),
+                realtimeProperties(false),
+                realtimeSessionRegistry
+        );
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ServerController(serverApplicationService, authRequestContext),
+                        new ServerWellKnownController(serverApplicationService)
+                )
+                .setMessageConverters(snakeCaseConverter())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        mockMvc.perform(get("/api/server/presence/me").with(authenticated(1001L, "carry-user")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.status").value("UNAVAILABLE"))
+                .andExpect(jsonPath("$.data.online_session_count").value(0));
     }
 
     private ChannelMessagePluginRegistration registration(

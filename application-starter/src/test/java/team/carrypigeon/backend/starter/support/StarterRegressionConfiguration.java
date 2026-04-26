@@ -6,7 +6,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.List;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -29,9 +28,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginGovernanceProperties;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
@@ -99,6 +98,7 @@ public class StarterRegressionConfiguration {
      * 创建鉴权配置属性。
      */
     @Bean
+    @Primary
     public AuthJwtProperties authJwtProperties() {
         return new AuthJwtProperties(
                 "carrypigeon-local",
@@ -112,6 +112,7 @@ public class StarterRegressionConfiguration {
      * 创建服务端身份属性。
      */
     @Bean
+    @Primary
     public ServerIdentityProperties serverIdentityProperties() {
         return new ServerIdentityProperties("carrypigeon-local");
     }
@@ -204,12 +205,16 @@ public class StarterRegressionConfiguration {
             MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy
     ) {
         MessagePluginConfiguration configuration = new MessagePluginConfiguration();
-        List<ChannelMessagePlugin> plugins = List.of(
+        MessagePluginGovernanceProperties governanceProperties = new MessagePluginGovernanceProperties();
+        return configuration.channelMessagePluginRegistry(
                 configuration.textChannelMessagePlugin(),
-                configuration.fileChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy),
-                configuration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)
+                configuration.pluginChannelMessagePlugin(jsonProvider),
+                configuration.customChannelMessagePlugin(jsonProvider),
+                configuration.systemChannelMessagePlugin(jsonProvider),
+                governanceProperties,
+                objectProvider(configuration.fileChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)),
+                objectProvider(configuration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy))
         );
-        return configuration.channelMessagePluginRegistry(plugins);
     }
 
     /**
@@ -301,5 +306,29 @@ public class StarterRegressionConfiguration {
             AuthRequestContext authRequestContext
     ) {
         return new ChannelMessageController(messageApplicationService, authRequestContext);
+    }
+
+    private static <T> ObjectProvider<T> objectProvider(T object) {
+        return new ObjectProvider<>() {
+            @Override
+            public T getObject(Object... args) {
+                return object;
+            }
+
+            @Override
+            public T getIfAvailable() {
+                return object;
+            }
+
+            @Override
+            public T getIfUnique() {
+                return object;
+            }
+
+            @Override
+            public T getObject() {
+                return object;
+            }
+        };
     }
 }
