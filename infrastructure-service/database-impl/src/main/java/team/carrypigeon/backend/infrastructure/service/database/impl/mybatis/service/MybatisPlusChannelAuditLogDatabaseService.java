@@ -2,7 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelAuditLogEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
@@ -21,17 +21,40 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
     }
 
     @Override
-    public void insert(ChannelAuditLogRecord record) {
+    public void insert(ChannelAuditLogWriteRecord record) {
+        executeVoid(() -> channelAuditLogMapper.insert(toEntity(record)), "failed to insert channel audit log");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            channelAuditLogMapper.insert(toEntity(record));
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert channel audit log", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert channel audit log", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
     }
 
-    private ChannelAuditLogEntity toEntity(ChannelAuditLogRecord record) {
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
+    }
+
+    private ChannelAuditLogEntity toEntity(ChannelAuditLogWriteRecord record) {
         ChannelAuditLogEntity entity = new ChannelAuditLogEntity();
         entity.setAuditId(record.auditId());
         entity.setChannelId(record.channelId());

@@ -24,10 +24,10 @@ public interface ObjectStorageService {
     StorageObject put(PutObjectCommand command);
 
     /**
-     * 读取对象信息和内容入口。
+     * 读取对象元信息。
      *
      * @param command 读取命令
-     * @return 对象不存在时返回空
+     * @return 对象不存在时返回空；存在时仅返回元信息，不强制打开对象内容流
      */
     Optional<StorageObject> get(GetObjectCommand command);
 

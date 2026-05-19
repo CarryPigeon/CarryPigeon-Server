@@ -23,35 +23,49 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
 
     @Override
     public Optional<AuthRefreshSessionRecord> findById(long sessionId) {
-        try {
-            return Optional.ofNullable(authRefreshSessionMapper.selectById(sessionId)).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query auth refresh session by id", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query auth refresh session by id", exception);
-        }
+        return execute(
+                () -> Optional.ofNullable(authRefreshSessionMapper.selectById(sessionId)).map(this::toRecord),
+                "failed to query auth refresh session by id"
+        );
     }
 
     @Override
     public void insert(AuthRefreshSessionRecord record) {
-        try {
-            authRefreshSessionMapper.insert(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert auth refresh session", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert auth refresh session", exception);
-        }
+        executeVoid(() -> authRefreshSessionMapper.insert(toEntity(record)), "failed to insert auth refresh session");
     }
 
     @Override
     public void revoke(long sessionId) {
+        executeVoid(() -> authRefreshSessionMapper.revokeById(sessionId), "failed to revoke auth refresh session");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            authRefreshSessionMapper.revokeById(sessionId);
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to revoke auth refresh session", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to revoke auth refresh session", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 
     private AuthRefreshSessionRecord toRecord(AuthRefreshSessionEntity entity) {

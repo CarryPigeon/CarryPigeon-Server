@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -13,10 +14,13 @@ import jakarta.validation.constraints.Size;
  * @param durationSeconds 封禁持续秒数；为空表示无限期
  */
 public record BanChannelMemberRequest(
+        @Schema(description = "目标账户 ID", example = "1002")
         @Positive(message = "targetAccountId must be greater than 0")
         long targetAccountId,
+        @Schema(description = "封禁原因；可为空", example = "spam messages")
         @Size(max = 256, message = "reason length must be less than or equal to 256")
         String reason,
+        @Schema(description = "封禁持续秒数；为空表示无限期", example = "86400")
         @Positive(message = "durationSeconds must be greater than 0")
         Long durationSeconds
 ) {

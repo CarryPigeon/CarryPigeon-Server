@@ -15,21 +15,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 public interface MessageMapper extends BaseMapper<MessageEntity> {
 
     /**
-     * 按消息 ID 查询单条消息。
-     *
-     * @param messageId 消息 ID
-     * @return 消息实体
-     */
-    @Select("""
-            SELECT message_id, server_id, conversation_id, channel_id, sender_id, message_type,
-                   body, preview_text, searchable_text, payload, metadata, status, created_at
-            FROM chat_message
-            WHERE message_id = #{messageId}
-            LIMIT 1
-            """)
-    MessageEntity findById(@Param("messageId") long messageId);
-
-    /**
      * 按频道查询指定游标之前的历史消息。
      *
      * @param channelId 频道 ID

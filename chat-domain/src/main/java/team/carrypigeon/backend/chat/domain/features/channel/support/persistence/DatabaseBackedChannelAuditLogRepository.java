@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 
 /**
@@ -20,7 +20,7 @@ public class DatabaseBackedChannelAuditLogRepository implements ChannelAuditLogR
 
     @Override
     public void append(ChannelAuditLog channelAuditLog) {
-        channelAuditLogDatabaseService.insert(new ChannelAuditLogRecord(
+        channelAuditLogDatabaseService.insert(new ChannelAuditLogWriteRecord(
                 channelAuditLog.auditId(),
                 channelAuditLog.channelId(),
                 channelAuditLog.actorAccountId(),

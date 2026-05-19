@@ -24,82 +24,59 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
 
     @Override
     public boolean exists(long channelId, long accountId) {
-        try {
-            return channelMemberMapper.countMembership(channelId, accountId) > 0;
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel membership", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel membership", exception);
-        }
+        return execute(() -> channelMemberMapper.countMembership(channelId, accountId) > 0, "failed to query channel membership");
     }
 
     @Override
     public void insert(ChannelMemberRecord record) {
-        try {
-            channelMemberMapper.insertMembership(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert channel membership", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert channel membership", exception);
-        }
+        executeVoid(() -> channelMemberMapper.insertMembership(toEntity(record)), "failed to insert channel membership");
     }
 
     @Override
     public Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId) {
-        try {
-            return Optional.ofNullable(channelMemberMapper.findByChannelIdAndAccountId(channelId, accountId))
-                    .map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel membership", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel membership", exception);
-        }
+        return execute(() ->
+                Optional.ofNullable(channelMemberMapper.findByChannelIdAndAccountId(channelId, accountId))
+                        .map(this::toRecord), "failed to query channel membership");
     }
 
     @Override
     public void update(ChannelMemberRecord record) {
-        try {
-            channelMemberMapper.updateMembership(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to update channel membership", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to update channel membership", exception);
-        }
+        executeVoid(() -> channelMemberMapper.updateMembership(toEntity(record)), "failed to update channel membership");
     }
 
     @Override
     public void delete(long channelId, long accountId) {
-        try {
-            channelMemberMapper.deleteMembership(channelId, accountId);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to delete channel membership", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to delete channel membership", exception);
-        }
+        executeVoid(() -> channelMemberMapper.deleteMembership(channelId, accountId), "failed to delete channel membership");
     }
 
     @Override
     public List<ChannelMemberRecord> findByChannelId(long channelId) {
-        try {
-            return channelMemberMapper.findByChannelId(channelId).stream()
-                    .map(this::toRecord)
-                    .toList();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel members", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel members", exception);
-        }
+        return execute(() ->
+                channelMemberMapper.findByChannelId(channelId).stream()
+                        .map(this::toRecord)
+                        .toList(), "failed to query channel members");
     }
 
     @Override
     public List<Long> findAccountIdsByChannelId(long channelId) {
+        return execute(() -> channelMemberMapper.findAccountIdsByChannelId(channelId), "failed to query channel member account ids");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            return channelMemberMapper.findAccountIdsByChannelId(channelId);
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel member account ids", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel member account ids", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
     }
 
     private ChannelMemberRecord toRecord(ChannelMemberEntity entity) {
@@ -120,6 +97,18 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         entity.setJoinedAt(record.joinedAt());
         entity.setMutedUntil(record.mutedUntil());
         return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 
 }

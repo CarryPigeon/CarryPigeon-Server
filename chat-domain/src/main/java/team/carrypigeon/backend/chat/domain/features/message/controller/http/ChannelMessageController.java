@@ -1,5 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.io.IOException;
 import java.io.InputStream;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,6 +50,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 @Validated
 @RestController
 @RequestMapping("/api/channels")
+@Tag(name = "频道消息", description = "频道消息历史查询、搜索、附件上传与撤回能力。")
 public class ChannelMessageController {
 
     private final MessageApplicationService messageApplicationService;
@@ -66,9 +74,16 @@ public class ChannelMessageController {
      * @return 统一响应包装的历史消息结果
      */
     @GetMapping("/{channelId}/messages")
+    @Operation(summary = "读取历史消息", description = "按游标和条数读取指定频道的历史消息。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；`data` 包含 `messages` 与 `nextCursor`；未认证、无成员资格或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<ChannelMessageHistoryResponse> getChannelMessages(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "历史消息排他游标；为空表示从最新消息开始", example = "5000")
             @RequestParam(required = false) @Positive(message = "cursor must be greater than 0") Long cursor,
+            @Parameter(description = "返回条数，范围 1..100", example = "20")
             @RequestParam(defaultValue = "20") @Min(value = 1, message = "limit must be between 1 and 100")
             @Max(value = 100, message = "limit must be between 1 and 100") int limit,
             HttpServletRequest request
@@ -93,9 +108,16 @@ public class ChannelMessageController {
      * @return 统一响应包装的搜索结果
      */
     @GetMapping("/{channelId}/messages/search")
+    @Operation(summary = "按关键字搜索消息", description = "在指定频道内按关键字搜索消息。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；`data` 为命中消息列表；keyword 为空、未认证、频道不存在或无成员资格时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelMessageSearchResponse> searchChannelMessages(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "搜索关键字", example = "hello")
             @RequestParam String keyword,
+            @Parameter(description = "返回条数，范围 1..100", example = "20")
             @RequestParam(defaultValue = "20") @Min(value = 1, message = "limit must be between 1 and 100")
             @Max(value = 100, message = "limit must be between 1 and 100") int limit,
             HttpServletRequest request
@@ -119,9 +141,18 @@ public class ChannelMessageController {
      * @return 可继续用于 file / voice 消息发送的附件信息
      */
     @PostMapping(path = "/{channelId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传消息附件", description = "上传 file 或 voice 类型消息所需的附件内容。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "multipart/form-data 请求。`messageType` 当前仅允许 `file` 或 `voice`；`file` 为待上传文件本体。", required = true,
+            content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；返回的 `objectKey` 可继续用于 file/voice 消息发送；文件名为空、消息类型非法、读取失败或鉴权失败时可能返回 `200/300/500` 业务码")
+    })
     public CPResponse<ChannelMessageAttachmentUploadResponse> uploadChannelMessageAttachment(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "消息类型；当前仅允许 file 或 voice", example = "file")
             @RequestParam @NotBlank(message = "messageType must not be blank") String messageType,
+            @Parameter(description = "上传文件本体")
             @RequestPart("file") MultipartFile file,
             HttpServletRequest request
     ) {
@@ -154,8 +185,14 @@ public class ChannelMessageController {
      * @return 撤回后的稳定消息结果
      */
     @PostMapping("/{channelId}/messages/{messageId}/recall")
+    @Operation(summary = "撤回消息", description = "撤回指定频道中的目标消息。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；消息不存在、无权限撤回或未认证时可能返回 `300/404` 业务码")
+    })
     public CPResponse<ChannelMessageResponse> recallChannelMessage(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标消息 ID", example = "5001")
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             HttpServletRequest request
     ) {

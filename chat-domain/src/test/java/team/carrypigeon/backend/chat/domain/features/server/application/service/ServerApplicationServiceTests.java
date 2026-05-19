@@ -38,7 +38,6 @@ class ServerApplicationServiceTests {
                         registration("builtin-voice-message", "voice", "voice", true),
                         registration("builtin-file-message", "file", "file", true),
                         registration("builtin-custom-message", "custom", "custom", true),
-                        registration("builtin-plugin-message", "plugin", "plugin", true),
                         registration("builtin-text-message", "text", "text", true)
                 )),
                 realtimeProperties(true),
@@ -52,7 +51,7 @@ class ServerApplicationServiceTests {
         assertTrue(result.registerEnabled());
         assertEquals(java.util.List.of("username_password"), result.loginMethods());
         assertEquals(java.util.List.of("user_registration", "username_password_login"), result.publicCapabilities());
-        assertEquals(java.util.List.of("custom", "file", "plugin", "text", "voice"), result.publicPlugins());
+        assertEquals(java.util.List.of("custom", "file", "text", "voice"), result.publicPlugins());
     }
 
     /**
@@ -66,7 +65,7 @@ class ServerApplicationServiceTests {
                 "CarryPigeonBackend",
                 new ChannelMessagePluginRegistry(java.util.List.of(
                         registration("builtin-text-message", "text", "text", true),
-                        registration("builtin-plugin-message", "plugin", "plugin", false)
+                        registration("builtin-custom-message", "custom", "custom", false)
                 )),
                 realtimeProperties(true),
                 new RealtimeSessionRegistry()

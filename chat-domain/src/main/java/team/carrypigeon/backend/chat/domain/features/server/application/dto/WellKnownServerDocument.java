@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.application.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -15,11 +16,17 @@ import java.util.List;
  * @param publicPlugins 当前服务端已公开的最小插件/消息类型标识列表
  */
 public record WellKnownServerDocument(
+        @Schema(description = "当前服务端稳定标识", example = "carrypigeon-local")
         String serverId,
+        @Schema(description = "当前服务端公开名称", example = "CarryPigeonBackend")
         String serverName,
+        @Schema(description = "是否允许新用户注册", example = "true")
         boolean registerEnabled,
+        @Schema(description = "支持的登录方式列表", example = "[\"username_password\"]")
         List<String> loginMethods,
+        @Schema(description = "对匿名调用方公开的能力标识列表", example = "[\"user_registration\",\"username_password_login\"]")
         List<String> publicCapabilities,
+        @Schema(description = "公开的插件或消息类型标识列表", example = "[\"custom\",\"file\",\"text\",\"voice\"]")
         List<String> publicPlugins
 ) {
 }

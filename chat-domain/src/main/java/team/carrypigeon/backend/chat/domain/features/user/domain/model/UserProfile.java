@@ -22,4 +22,30 @@ public record UserProfile(
         Instant createdAt,
         Instant updatedAt
 ) {
+
+    /**
+     * 创建新注册用户的默认资料。
+     *
+     * @param accountId 账户 ID
+     * @param nickname 默认昵称
+     * @param createdAt 创建时间
+     * @param updatedAt 更新时间
+     * @return 默认资料模型
+     */
+    public static UserProfile initial(long accountId, String nickname, Instant createdAt, Instant updatedAt) {
+        return new UserProfile(accountId, nickname, "", "", createdAt, updatedAt);
+    }
+
+    /**
+     * 生成更新后的资料副本。
+     *
+     * @param nickname 新昵称
+     * @param avatarUrl 新头像地址
+     * @param bio 新简介
+     * @param updatedAt 更新时间
+     * @return 更新后的资料模型
+     */
+    public UserProfile updateProfile(String nickname, String avatarUrl, String bio, Instant updatedAt) {
+        return new UserProfile(accountId, nickname, avatarUrl, bio, createdAt, updatedAt);
+    }
 }

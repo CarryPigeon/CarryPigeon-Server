@@ -16,6 +16,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  */
 public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabaseService {
 
+    private static final String LIMIT_ONE = "LIMIT 1";
+
     private final AuthAccountMapper authAccountMapper;
 
     public MybatisPlusAuthAccountDatabaseService(AuthAccountMapper authAccountMapper) {
@@ -24,27 +26,34 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
 
     @Override
     public Optional<AuthAccountRecord> findByUsername(String username) {
-        try {
+        return execute(() -> {
             AuthAccountEntity entity = authAccountMapper.selectOne(new LambdaQueryWrapper<AuthAccountEntity>()
                     .eq(AuthAccountEntity::getUsername, username)
-                    .last("LIMIT 1"));
+                    .last(LIMIT_ONE));
             return Optional.ofNullable(entity).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query auth account by username", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query auth account by username", exception);
-        }
+        }, "failed to query auth account by username");
     }
 
     @Override
     public void insert(AuthAccountRecord record) {
+        executeVoid(() -> authAccountMapper.insert(toEntity(record)), "failed to insert auth account");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            authAccountMapper.insert(toEntity(record));
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert auth account", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert auth account", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
     }
 
     private AuthAccountRecord toRecord(AuthAccountEntity entity) {
@@ -65,5 +74,17 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 }

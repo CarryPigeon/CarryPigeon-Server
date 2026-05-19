@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.user.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 
@@ -17,6 +18,32 @@ public interface UserProfileRepository {
      * @return 命中时返回资料，未命中时返回空
      */
     Optional<UserProfile> findByAccountId(long accountId);
+
+    /**
+     * 查询全部用户资料。
+     *
+     * @return 用户资料列表
+     */
+    List<UserProfile> findAll();
+
+    /**
+     * 按账户 ID 游标查询用户资料分页。
+     *
+     * @param cursorAccountId 游标账户 ID，可为空
+     * @param limit 查询条数
+     * @return 用户资料列表
+     */
+    List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit);
+
+    /**
+     * 按关键字搜索用户资料。
+     *
+     * @param keyword 搜索关键字
+     * @param cursorAccountId 游标账户 ID，可为空
+     * @param limit 查询条数
+     * @return 命中用户资料列表
+     */
+    List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit);
 
     /**
      * 保存新的用户资料。

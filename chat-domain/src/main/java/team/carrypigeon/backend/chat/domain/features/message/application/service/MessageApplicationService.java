@@ -136,6 +136,16 @@ public class MessageApplicationService {
     }
 
     /**
+     * 判断扩展消息类型是否已在当前运行时注册并允许发送。
+     *
+     * @param messageType 扩展消息类型
+     * @return 允许时返回 true
+     */
+    public boolean supportsExtensionMessageType(String messageType) {
+        return channelMessagePluginRegistry.supportsExtensionMessageType(messageType);
+    }
+
+    /**
      * 发送频道文本消息。
      *
      * @param command 发送命令

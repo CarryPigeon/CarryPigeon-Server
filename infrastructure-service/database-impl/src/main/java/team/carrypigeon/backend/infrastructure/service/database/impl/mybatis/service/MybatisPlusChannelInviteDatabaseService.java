@@ -23,36 +23,50 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
 
     @Override
     public Optional<ChannelInviteRecord> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
-        try {
-            return Optional.ofNullable(channelInviteMapper.findByChannelIdAndInviteeAccountId(channelId, inviteeAccountId))
-                    .map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel invite", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel invite", exception);
-        }
+        return execute(
+                () -> Optional.ofNullable(channelInviteMapper.findByChannelIdAndInviteeAccountId(channelId, inviteeAccountId))
+                        .map(this::toRecord),
+                "failed to query channel invite"
+        );
     }
 
     @Override
     public void insert(ChannelInviteRecord record) {
-        try {
-            channelInviteMapper.insert(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert channel invite", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert channel invite", exception);
-        }
+        executeVoid(() -> channelInviteMapper.insert(toEntity(record)), "failed to insert channel invite");
     }
 
     @Override
     public void update(ChannelInviteRecord record) {
+        executeVoid(() -> channelInviteMapper.update(toEntity(record)), "failed to update channel invite");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            channelInviteMapper.update(toEntity(record));
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to update channel invite", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to update channel invite", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 
     private ChannelInviteRecord toRecord(ChannelInviteEntity entity) {

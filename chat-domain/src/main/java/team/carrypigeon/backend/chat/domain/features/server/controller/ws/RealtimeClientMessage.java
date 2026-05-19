@@ -4,8 +4,8 @@ import java.util.Map;
 
 /**
  * 实时通道客户端消息。
- * 职责：定义 WebSocket 文本命令的最小入站协议结构。
- * 边界：当前阶段只覆盖频道文本消息发送命令。
+ * 职责：定义 WebSocket 统一消息发送命令的入站协议结构。
+ * 边界：当前协议仅承载 `send_channel_message` 发送命令，不提供 HTTP 发送入口。
  *
  * @param type 命令类型
  * @param channelId 频道 ID

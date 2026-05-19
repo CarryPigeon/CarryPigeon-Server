@@ -28,16 +28,16 @@ class PluginChannelMessagePluginTests {
     @Test
     @DisplayName("create message valid plugin draft builds canonical plugin payload")
     void createMessage_validPluginDraft_buildsCanonicalPluginPayload() {
-        PluginChannelMessagePlugin plugin = new PluginChannelMessagePlugin(new JsonProvider(new ObjectMapper()));
+        PluginChannelMessagePlugin plugin = new PluginChannelMessagePlugin("test-extension", new JsonProvider(new ObjectMapper()));
 
         ChannelMessage message = plugin.createMessage(
                 new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
-                new PluginChannelMessageDraft("mc server bridge", "mc-bridge", "{\"event\":\"player_join\"}", null)
+                new PluginChannelMessageDraft("test-extension", "extension bridge", "test-extension", "{\"event\":\"player_join\"}", null)
         );
 
-        assertEquals("plugin", message.messageType());
-        assertEquals("mc server bridge", message.body());
-        assertEquals("[插件消息] mc server bridge", message.previewText());
+        assertEquals("test-extension", message.messageType());
+        assertEquals("extension bridge", message.body());
+        assertEquals("[插件消息] extension bridge", message.previewText());
     }
 
     /**
@@ -46,13 +46,13 @@ class PluginChannelMessagePluginTests {
     @Test
     @DisplayName("create message blank plugin key throws validation problem")
     void createMessage_blankPluginKey_throwsValidationProblem() {
-        PluginChannelMessagePlugin plugin = new PluginChannelMessagePlugin(new JsonProvider(new ObjectMapper()));
+        PluginChannelMessagePlugin plugin = new PluginChannelMessagePlugin("test-extension", new JsonProvider(new ObjectMapper()));
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
                         new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
-                        new PluginChannelMessageDraft("bridge", " ", "{\"event\":\"player_join\"}", null)
+                        new PluginChannelMessageDraft("test-extension", "bridge", " ", "{\"event\":\"player_join\"}", null)
                 )
         );
 

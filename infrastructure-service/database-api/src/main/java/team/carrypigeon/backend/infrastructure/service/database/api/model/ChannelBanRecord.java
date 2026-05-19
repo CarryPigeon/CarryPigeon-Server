@@ -4,8 +4,8 @@ import java.time.Instant;
 
 /**
  * 频道封禁数据库记录契约。
- * 职责：在 chat-domain 与 database-impl 之间传递频道封禁字段。
- * 边界：这里只表达数据库服务契约，不承载封禁业务规则。
+ * 职责：表达频道封禁读写共用的最小持久化投影字段。
+ * 边界：只服务 database-api 最小数据库契约，不承载额外封禁业务语义。
  *
  * @param channelId 频道 ID
  * @param bannedAccountId 被封禁账户 ID

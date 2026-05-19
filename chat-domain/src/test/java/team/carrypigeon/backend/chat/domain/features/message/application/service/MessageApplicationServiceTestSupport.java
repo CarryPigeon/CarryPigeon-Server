@@ -120,18 +120,18 @@ final class MessageApplicationServiceTestSupport {
                 new TextChannelMessagePlugin()
         ));
         registrations.add(registration(
-                "builtin-plugin-message",
+                "builtin-test-extension-message",
                 new ChannelMessagePluginDescriptor(
-                        "builtin-plugin-message",
-                        "plugin",
-                        "plugin",
-                        "Built-in plugin channel message plugin",
+                        "builtin-test-extension-message",
+                        "test-extension",
+                        "test-extension",
+                        "Built-in test extension message plugin",
                         true,
                         List.of("message.sent", "message.recalled"),
-                        List.of("message:plugin:send"),
+                        List.of("message:test-extension:send"),
                         "always_available"
                 ),
-                new PluginChannelMessagePlugin(jsonProvider)
+                new PluginChannelMessagePlugin("test-extension", jsonProvider)
         ));
         registrations.add(registration(
                 "builtin-custom-message",

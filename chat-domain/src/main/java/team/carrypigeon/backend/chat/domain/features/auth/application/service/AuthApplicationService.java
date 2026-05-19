@@ -101,11 +101,9 @@ public class AuthApplicationService {
             );
 
             AuthAccount savedAccount = authAccountRepository.save(account);
-            userProfileRepository.save(new UserProfile(
+            userProfileRepository.save(UserProfile.initial(
                     savedAccount.id(),
                     savedAccount.username(),
-                    "",
-                    "",
                     savedAccount.createdAt(),
                     savedAccount.updatedAt()
             ));

@@ -8,8 +8,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Mess
 
 /**
  * 基于 database-api 的消息仓储适配器。
- * 职责：在 message feature 内完成领域消息与数据库契约模型之间的转换。
- * 边界：不包含 SQL 与数据库驱动细节。
+ * 职责：在 message feature 内完成领域消息与数据库持久化投影之间的转换。
+ * 边界：不包含 SQL 与数据库驱动细节，也不把 database-api 契约直接提升为领域模型。
  */
 public class DatabaseBackedMessageRepository implements MessageRepository {
 
@@ -21,19 +21,19 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
 
     @Override
     public ChannelMessage save(ChannelMessage message) {
-        messageDatabaseService.insert(toRecord(message));
+        messageDatabaseService.insert(toPersistenceRecord(message));
         return message;
     }
 
     @Override
     public java.util.Optional<ChannelMessage> findById(long messageId) {
         return messageDatabaseService.findById(messageId)
-                .map(this::toDomainModel);
+                .map(this::toDomainMessage);
     }
 
     @Override
     public ChannelMessage update(ChannelMessage message) {
-        messageDatabaseService.update(toRecord(message));
+        messageDatabaseService.update(toPersistenceRecord(message));
         return message;
     }
 
@@ -41,7 +41,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return messageDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit)
                 .stream()
-                .map(this::toDomainModel)
+                .map(this::toDomainMessage)
                 .toList();
     }
 
@@ -49,11 +49,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
         return messageDatabaseService.searchByChannelId(channelId, keyword, limit)
                 .stream()
-                .map(this::toDomainModel)
+                .map(this::toDomainMessage)
                 .toList();
     }
 
-    private ChannelMessage toDomainModel(MessageRecord record) {
+    private ChannelMessage toDomainMessage(MessageRecord record) {
         return new ChannelMessage(
                 record.messageId(),
                 record.serverId(),
@@ -71,7 +71,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         );
     }
 
-    private MessageRecord toRecord(ChannelMessage message) {
+    private MessageRecord toPersistenceRecord(ChannelMessage message) {
         return new MessageRecord(
                 message.messageId(),
                 message.serverId(),

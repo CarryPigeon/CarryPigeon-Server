@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.user.support.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
@@ -26,14 +27,35 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     }
 
     @Override
+    public List<UserProfile> findAll() {
+        return userProfileDatabaseService.findAll().stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
+    @Override
+    public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+        return userProfileDatabaseService.findByAccountIdBefore(cursorAccountId, limit).stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
+    @Override
+    public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+        return userProfileDatabaseService.searchByKeyword(keyword, cursorAccountId, limit).stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
+    @Override
     public UserProfile save(UserProfile userProfile) {
-        userProfileDatabaseService.insert(toRecord(userProfile));
+        userProfileDatabaseService.insert(toWriteRecord(userProfile));
         return userProfile;
     }
 
     @Override
     public UserProfile update(UserProfile userProfile) {
-        userProfileDatabaseService.update(toRecord(userProfile));
+        userProfileDatabaseService.update(toWriteRecord(userProfile));
         return userProfile;
     }
 
@@ -48,7 +70,7 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
         );
     }
 
-    private UserProfileRecord toRecord(UserProfile userProfile) {
+    private UserProfileRecord toWriteRecord(UserProfile userProfile) {
         return new UserProfileRecord(
                 userProfile.accountId(),
                 userProfile.nickname(),

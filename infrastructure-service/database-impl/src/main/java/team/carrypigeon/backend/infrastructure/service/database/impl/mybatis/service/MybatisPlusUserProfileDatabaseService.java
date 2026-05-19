@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -23,41 +25,86 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
 
     @Override
     public Optional<UserProfileRecord> findByAccountId(long accountId) {
-        try {
-            return Optional.ofNullable(userProfileMapper.selectById(accountId)).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query user profile by account id", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query user profile by account id", exception);
-        }
+        return execute(
+                () -> Optional.ofNullable(userProfileMapper.selectById(accountId)).map(this::toRecord),
+                "failed to query user profile by account id"
+        );
+    }
+
+    @Override
+    public List<UserProfileRecord> findAll() {
+        return execute(
+                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
+                        .orderByAsc(UserProfileEntity::getAccountId)).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query user profiles"
+        );
+    }
+
+    @Override
+    public List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit) {
+        return execute(
+                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
+                        .lt(cursorAccountId != null, UserProfileEntity::getAccountId, cursorAccountId)
+                        .orderByDesc(UserProfileEntity::getAccountId)
+                        .last("LIMIT " + limit)).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query user profiles by cursor"
+        );
+    }
+
+    @Override
+    public List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        return execute(
+                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
+                        .lt(cursorAccountId != null, UserProfileEntity::getAccountId, cursorAccountId)
+                        .and(wrapper -> wrapper.like(UserProfileEntity::getNickname, normalizedKeyword)
+                                .or()
+                                .like(UserProfileEntity::getBio, normalizedKeyword))
+                        .orderByDesc(UserProfileEntity::getAccountId)
+                        .last("LIMIT " + limit)).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to search user profiles"
+        );
     }
 
     @Override
     public void insert(UserProfileRecord record) {
-        try {
-            userProfileMapper.insert(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert user profile", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert user profile", exception);
-        }
+        executeVoid(() -> userProfileMapper.insert(toEntity(record)), "failed to insert user profile");
     }
 
     @Override
     public void update(UserProfileRecord record) {
-        try {
+        executeVoid(() -> {
             int updatedRows = userProfileMapper.updateById(toEntity(record));
             if (updatedRows == 0) {
                 throw new DatabaseServiceException("user profile update affected no rows");
             }
+        }, "failed to update user profile");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
+        try {
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to update user profile", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
             if (exception instanceof DatabaseServiceException databaseServiceException) {
                 throw databaseServiceException;
             }
-            throw new DatabaseServiceException("failed to update user profile", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
     }
 
     private UserProfileRecord toRecord(UserProfileEntity entity) {
@@ -80,5 +127,17 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 }

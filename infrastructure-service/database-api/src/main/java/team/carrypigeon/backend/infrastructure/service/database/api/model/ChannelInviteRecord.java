@@ -4,8 +4,8 @@ import java.time.Instant;
 
 /**
  * 频道邀请数据库记录契约。
- * 职责：在 chat-domain 与 database-impl 之间传递频道邀请字段。
- * 边界：这里只表达数据库服务契约，不承载邀请业务规则。
+ * 职责：表达频道邀请读写共用的最小持久化投影字段。
+ * 边界：只服务 database-api 最小数据库契约，不承载额外邀请业务语义。
  *
  * @param channelId 频道 ID
  * @param inviteeAccountId 被邀请账户 ID

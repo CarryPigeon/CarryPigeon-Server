@@ -28,13 +28,18 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginGovernanceProperties;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -204,17 +209,24 @@ public class StarterRegressionConfiguration {
             JsonProvider jsonProvider,
             MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy
     ) {
-        MessagePluginConfiguration configuration = new MessagePluginConfiguration();
-        MessagePluginGovernanceProperties governanceProperties = new MessagePluginGovernanceProperties();
-        return configuration.channelMessagePluginRegistry(
-                configuration.textChannelMessagePlugin(),
-                configuration.pluginChannelMessagePlugin(jsonProvider),
-                configuration.customChannelMessagePlugin(jsonProvider),
-                configuration.systemChannelMessagePlugin(jsonProvider),
-                governanceProperties,
-                objectProvider(configuration.fileChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)),
-                objectProvider(configuration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy))
-        );
+        return new MessagePluginConfiguration().channelMessagePluginRegistry(java.util.List.of(
+                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
+                registration(
+                        "builtin-file-message",
+                        "file",
+                        "file",
+                        "requires_object_storage",
+                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)
+                ),
+                registration(
+                        "builtin-voice-message",
+                        "voice",
+                        "voice",
+                        "requires_object_storage",
+                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)
+                )
+        ));
     }
 
     /**
@@ -330,5 +342,27 @@ public class StarterRegressionConfiguration {
                 return object;
             }
         };
+    }
+
+    private static ChannelMessagePluginRegistration registration(
+            String pluginKey,
+            String messageType,
+            String publicPluginKey,
+            String availabilityCondition,
+            team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin plugin
+    ) {
+        return new ChannelMessagePluginRegistration(
+                new ChannelMessagePluginDescriptor(
+                        pluginKey,
+                        messageType,
+                        publicPluginKey,
+                        "test plugin",
+                        true,
+                        java.util.List.of("message.sent", "message.recalled"),
+                        java.util.List.of("message:" + messageType + ":send"),
+                        availabilityCondition
+                ),
+                plugin
+        );
     }
 }

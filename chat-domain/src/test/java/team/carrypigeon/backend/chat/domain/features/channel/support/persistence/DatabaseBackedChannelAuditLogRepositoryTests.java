@@ -5,7 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -45,10 +45,10 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
 
     private static class FakeChannelAuditLogDatabaseService implements ChannelAuditLogDatabaseService {
 
-        private ChannelAuditLogRecord insertedRecord;
+        private ChannelAuditLogWriteRecord insertedRecord;
 
         @Override
-        public void insert(ChannelAuditLogRecord record) {
+        public void insert(ChannelAuditLogWriteRecord record) {
             this.insertedRecord = record;
         }
     }

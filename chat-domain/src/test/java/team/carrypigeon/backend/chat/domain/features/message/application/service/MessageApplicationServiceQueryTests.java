@@ -88,15 +88,15 @@ class MessageApplicationServiceQueryTests {
     }
 
     /**
-     * 验证 plugin 消息在历史查询中保持结构化 payload 与 metadata。
+     * 验证扩展消息在历史查询中保持结构化 payload 与 metadata。
      */
     @Test
-    @DisplayName("get channel message history plugin message keeps payload and metadata")
-    void getChannelMessageHistory_pluginMessage_keepsPayloadAndMetadata() {
+    @DisplayName("get channel message history extension message keeps payload and metadata")
+    void getChannelMessageHistory_extensionMessage_keepsPayloadAndMetadata() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
         fixture.messageRepository.history.add(new ChannelMessage(
-                5009L, "carrypigeon-local", 1L, 1L, 1002L, "plugin", "mc bridge", "[插件消息] mc bridge", "mc bridge mc-bridge",
-                "{\"plugin_key\":\"mc-bridge\",\"payload\":{\"event\":\"player_join\"}}", "{\"trace\":true}", "sent",
+                5009L, "carrypigeon-local", 1L, 1L, 1002L, "test-extension", "mc bridge", "[插件消息] mc bridge", "mc bridge test-extension",
+                "{\"plugin_key\":\"test-extension\",\"message_type\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}", "{\"trace\":true}", "sent",
                 MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2)
         ));
 
@@ -104,8 +104,8 @@ class MessageApplicationServiceQueryTests {
                 new GetChannelMessageHistoryQuery(1001L, 1L, null, 20)
         );
 
-        assertEquals("plugin", result.messages().getFirst().messageType());
-        assertEquals("{\"plugin_key\":\"mc-bridge\",\"payload\":{\"event\":\"player_join\"}}", result.messages().getFirst().payload());
+        assertEquals("test-extension", result.messages().getFirst().messageType());
+        assertEquals("{\"plugin_key\":\"test-extension\",\"message_type\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}", result.messages().getFirst().payload());
         assertEquals("{\"trace\":true}", result.messages().getFirst().metadata());
     }
 

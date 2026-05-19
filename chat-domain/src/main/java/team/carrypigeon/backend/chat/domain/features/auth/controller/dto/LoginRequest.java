@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 /**
@@ -11,8 +12,10 @@ import jakarta.validation.constraints.NotBlank;
  * @param password 登录密码
  */
 public record LoginRequest(
+        @Schema(description = "登录用户名", example = "carry_user")
         @NotBlank(message = "username must not be blank")
         String username,
+        @Schema(description = "登录密码", example = "carryPigeon123")
         @NotBlank(message = "password must not be blank")
         String password
 ) {

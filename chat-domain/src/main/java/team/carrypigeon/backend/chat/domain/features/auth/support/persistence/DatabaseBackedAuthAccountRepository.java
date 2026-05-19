@@ -27,7 +27,7 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
 
     @Override
     public AuthAccount save(AuthAccount account) {
-        authAccountDatabaseService.insert(toRecord(account));
+        authAccountDatabaseService.insert(toWriteRecord(account));
         return account;
     }
 
@@ -41,7 +41,7 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
         );
     }
 
-    private AuthAccountRecord toRecord(AuthAccount account) {
+    private AuthAccountRecord toWriteRecord(AuthAccount account) {
         return new AuthAccountRecord(
                 account.id(),
                 account.username(),

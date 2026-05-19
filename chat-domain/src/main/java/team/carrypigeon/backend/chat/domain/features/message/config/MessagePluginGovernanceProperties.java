@@ -10,11 +10,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cp.chat.message.plugins")
 public class MessagePluginGovernanceProperties {
 
+    private boolean textEnabled = true;
     private boolean pluginEnabled = true;
     private boolean customEnabled = true;
     private boolean systemEnabled = true;
     private boolean fileEnabled = true;
     private boolean voiceEnabled = true;
+
+    public boolean textEnabled() {
+        return textEnabled;
+    }
+
+    public void setTextEnabled(boolean textEnabled) {
+        this.textEnabled = textEnabled;
+    }
 
     public boolean pluginEnabled() {
         return pluginEnabled;

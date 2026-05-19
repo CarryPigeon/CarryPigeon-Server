@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -10,5 +11,10 @@ import java.util.List;
  * @param messages 历史消息列表
  * @param nextCursor 下一页游标，可为空
  */
-public record ChannelMessageHistoryResponse(List<ChannelMessageResponse> messages, Long nextCursor) {
+public record ChannelMessageHistoryResponse(
+        @Schema(description = "当前页历史消息列表")
+        List<ChannelMessageResponse> messages,
+        @Schema(description = "下一页游标；为空表示没有更多历史消息", example = "4990")
+        Long nextCursor
+) {
 }

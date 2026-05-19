@@ -32,7 +32,7 @@ public class AuthWebMvcConfiguration implements WebMvcConfigurer {
                         "/api/auth/login",
                         "/api/auth/refresh",
                         "/api/auth/logout",
-                        "/api/server/**"
+                        "/api/server/echo"
                 );
     }
 }

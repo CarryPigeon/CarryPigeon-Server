@@ -99,6 +99,19 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.data.type").value("system"));
     }
 
+    @Test
+    @DisplayName("get system channel membership required returns code 300")
+    void getSystemChannel_membershipRequired_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.getSystemChannel(any()))
+                .thenThrow(ProblemException.forbidden("system_channel_membership_required", "channel membership is required"));
+
+        mockMvc.perform(get("/api/channels/system"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300))
+                .andExpect(jsonPath("$.message").value("channel membership is required"));
+    }
+
     /**
      * 验证已认证请求可以创建 private channel。
      */
@@ -300,6 +313,23 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.data.newOwnerRole").value("OWNER"));
     }
 
+    @Test
+    @DisplayName("transfer channel ownership forbidden returns code 300")
+    void transferChannelOwnership_forbidden_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.transferChannelOwnership(any()))
+                .thenThrow(ProblemException.forbidden("channel_transfer_forbidden", "channel ownership transfer requires owner role"));
+
+        mockMvc.perform(post("/api/channels/9/ownership-transfer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{" +
+                                "\"targetAccountId\":1002" +
+                                "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300))
+                .andExpect(jsonPath("$.message").value("channel ownership transfer requires owner role"));
+    }
+
     /**
      * 验证禁言成员的接口会返回 100 响应码。
      */
@@ -339,6 +369,20 @@ class ChannelControllerTests {
                 .andExpect(jsonPath("$.code").value(100));
     }
 
+    @Test
+    @DisplayName("kick channel member forbidden returns code 300")
+    void kickChannelMember_forbidden_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        org.mockito.Mockito.doThrow(ProblemException.forbidden("channel_kick_forbidden", "channel member moderation requires owner or admin role"))
+                .when(channelApplicationService)
+                .kickChannelMember(any());
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/channels/9/members/1002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300))
+                .andExpect(jsonPath("$.message").value("channel member moderation requires owner or admin role"));
+    }
+
     /**
      * 验证封禁成员的接口会返回 100 响应码。
      */
@@ -368,6 +412,24 @@ class ChannelControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(100))
                 .andExpect(jsonPath("$.data.bannedAccountId").value(1002L));
+    }
+
+    @Test
+    @DisplayName("ban channel member unexpected failure returns code 500")
+    void banChannelMember_unexpectedFailure_returnsCode500() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.banChannelMember(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(post("/api/channels/9/bans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{" +
+                                "\"targetAccountId\":1002," +
+                                "\"reason\":\"spam\"," +
+                                "\"durationSeconds\":600" +
+                                "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.message").value("internal server error"));
     }
 
     /**

@@ -80,14 +80,15 @@ class MessageApplicationServiceSendTests {
 
         ChannelMessageResult result = fixture.service.sendChannelMessage(
                 new SendChannelMessageCommand(1001L, 1L, new PluginChannelMessageDraft(
+                        "test-extension",
                         "mc bridge",
-                        "mc-bridge",
+                        "test-extension",
                         "{\"event\":\"player_join\"}",
                         null
                 ))
         );
 
-        assertEquals("plugin", result.messageType());
+        assertEquals("test-extension", result.messageType());
         assertEquals("mc bridge", result.body());
         assertEquals("[插件消息] mc bridge", result.previewText());
     }

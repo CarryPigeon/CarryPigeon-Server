@@ -14,13 +14,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cp.infrastructure.service.cache")
 public record CacheServiceProperties(boolean enabled, Duration defaultTtl) {
 
+    private static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
+
     public CacheServiceProperties {
-        if (defaultTtl == null || defaultTtl.isZero() || defaultTtl.isNegative()) {
-            defaultTtl = Duration.ofMinutes(5);
+        if (defaultTtl == null) {
+            defaultTtl = DEFAULT_TTL;
+        }
+        if (defaultTtl.isZero() || defaultTtl.isNegative()) {
+            throw new IllegalArgumentException("cp.infrastructure.service.cache.default-ttl must be positive");
         }
     }
 
     public CacheServiceProperties() {
-        this(true, Duration.ofMinutes(5));
+        this(true, DEFAULT_TTL);
     }
 }

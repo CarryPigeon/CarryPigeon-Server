@@ -23,36 +23,50 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
 
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
-        try {
-            return Optional.ofNullable(channelBanMapper.findByChannelIdAndBannedAccountId(channelId, bannedAccountId))
-                    .map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel ban", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel ban", exception);
-        }
+        return execute(
+                () -> Optional.ofNullable(channelBanMapper.findByChannelIdAndBannedAccountId(channelId, bannedAccountId))
+                        .map(this::toRecord),
+                "failed to query channel ban"
+        );
     }
 
     @Override
     public void insert(ChannelBanRecord record) {
-        try {
-            channelBanMapper.insert(toEntity(record));
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert channel ban", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert channel ban", exception);
-        }
+        executeVoid(() -> channelBanMapper.insert(toEntity(record)), "failed to insert channel ban");
     }
 
     @Override
     public void update(ChannelBanRecord record) {
+        executeVoid(() -> channelBanMapper.update(toEntity(record)), "failed to update channel ban");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            channelBanMapper.update(toEntity(record));
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to update channel ban", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to update channel ban", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 
     private ChannelBanRecord toRecord(ChannelBanEntity entity) {

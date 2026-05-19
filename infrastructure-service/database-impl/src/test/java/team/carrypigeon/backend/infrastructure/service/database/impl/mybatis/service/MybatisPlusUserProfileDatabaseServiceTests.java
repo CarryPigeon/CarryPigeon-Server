@@ -70,6 +70,54 @@ class MybatisPlusUserProfileDatabaseServiceTests {
     }
 
     /**
+     * 验证查询全部资料时会按记录映射返回结果。
+     */
+    @Test
+    @DisplayName("find all maps all rows")
+    void findAll_mapsAllRows() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        when(userProfileMapper.selectList(any())).thenReturn(java.util.List.of(entity()));
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+
+        java.util.List<UserProfileRecord> records = service.findAll();
+
+        assertEquals(1, records.size());
+        assertEquals(1001L, records.get(0).accountId());
+    }
+
+    /**
+     * 验证按游标查询分页资料时会返回记录列表。
+     */
+    @Test
+    @DisplayName("find by account id before maps rows")
+    void findByAccountIdBefore_mapsRows() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        when(userProfileMapper.selectList(any())).thenReturn(java.util.List.of(entity()));
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+
+        java.util.List<UserProfileRecord> records = service.findByAccountIdBefore(1002L, 20);
+
+        assertEquals(1, records.size());
+        assertEquals(1001L, records.get(0).accountId());
+    }
+
+    /**
+     * 验证关键字搜索资料时会返回记录列表。
+     */
+    @Test
+    @DisplayName("search by keyword maps rows")
+    void searchByKeyword_mapsRows() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        when(userProfileMapper.selectList(any())).thenReturn(java.util.List.of(entity()));
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+
+        java.util.List<UserProfileRecord> records = service.searchByKeyword("carry", null, 20);
+
+        assertEquals(1, records.size());
+        assertEquals(1001L, records.get(0).accountId());
+    }
+
+    /**
      * 验证插入资料时会写入完整持久化字段。
      */
     @Test

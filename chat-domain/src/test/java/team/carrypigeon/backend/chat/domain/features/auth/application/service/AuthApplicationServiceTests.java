@@ -387,6 +387,31 @@ class AuthApplicationServiceTests {
         }
 
         @Override
+        public java.util.List<UserProfile> findAll() {
+            return new java.util.ArrayList<>(profiles.values());
+        }
+
+        @Override
+        public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+            return profiles.values().stream()
+                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
+                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+            String normalizedKeyword = keyword == null ? "" : keyword.trim();
+            return profiles.values().stream()
+                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
+                    .filter(profile -> profile.nickname().contains(normalizedKeyword) || profile.bio().contains(normalizedKeyword))
+                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
         public UserProfile save(UserProfile userProfile) {
             if (failOnSave) {
                 throw new IllegalStateException("profile provisioning failed");

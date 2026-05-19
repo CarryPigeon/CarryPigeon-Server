@@ -22,6 +22,48 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class DatabaseBackedMessageRepositoryTests {
 
     /**
+     * 验证保存消息时会把领域消息完整映射为数据库持久化投影。
+     */
+    @Test
+    @DisplayName("save message maps all persistence projection fields")
+    void save_message_mapsAllPersistenceProjectionFields() {
+        RecordingMessageDatabaseService databaseService = new RecordingMessageDatabaseService();
+        DatabaseBackedMessageRepository repository = new DatabaseBackedMessageRepository(databaseService);
+        ChannelMessage message = new ChannelMessage(
+                5002L,
+                "carrypigeon-local",
+                2L,
+                3L,
+                1002L,
+                "test-extension",
+                "hello extension",
+                "[插件消息] hello extension",
+                "hello extension test-extension",
+                "{\"payload\":true}",
+                "{\"trace\":true}",
+                "sent",
+                Instant.parse("2026-04-23T00:00:00Z")
+        );
+
+        ChannelMessage result = repository.save(message);
+
+        assertSame(message, result);
+        assertEquals(5002L, databaseService.insertedRecord.messageId());
+        assertEquals("carrypigeon-local", databaseService.insertedRecord.serverId());
+        assertEquals(2L, databaseService.insertedRecord.conversationId());
+        assertEquals(3L, databaseService.insertedRecord.channelId());
+        assertEquals(1002L, databaseService.insertedRecord.senderId());
+        assertEquals("test-extension", databaseService.insertedRecord.messageType());
+        assertEquals("hello extension", databaseService.insertedRecord.body());
+        assertEquals("[插件消息] hello extension", databaseService.insertedRecord.previewText());
+        assertEquals("hello extension test-extension", databaseService.insertedRecord.searchableText());
+        assertEquals("{\"payload\":true}", databaseService.insertedRecord.payload());
+        assertEquals("{\"trace\":true}", databaseService.insertedRecord.metadata());
+        assertEquals("sent", databaseService.insertedRecord.status());
+        assertEquals(Instant.parse("2026-04-23T00:00:00Z"), databaseService.insertedRecord.createdAt());
+    }
+
+    /**
      * 验证按消息 ID 查询时会把数据库记录稳定映射为领域消息。
      */
     @Test
@@ -108,10 +150,12 @@ class DatabaseBackedMessageRepositoryTests {
 
         private Optional<MessageRecord> findByIdResult = Optional.empty();
         private List<MessageRecord> searchResults = List.of();
+        private MessageRecord insertedRecord;
         private MessageRecord updatedRecord;
 
         @Override
         public void insert(MessageRecord record) {
+            this.insertedRecord = record;
         }
 
         @Override

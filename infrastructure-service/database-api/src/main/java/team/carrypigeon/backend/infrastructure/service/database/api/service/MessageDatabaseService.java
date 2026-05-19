@@ -48,7 +48,7 @@ public interface MessageDatabaseService {
      * @param channelId 频道 ID
      * @param keyword 搜索关键字
      * @param limit 返回条数
-     * @return 搜索命中消息列表
+     * @return 搜索命中消息记录列表
      */
     List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit);
 }

@@ -243,6 +243,21 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.code").value(200));
     }
 
+    @Test
+    @DisplayName("refresh unexpected failure returns code 500")
+    void refresh_unexpectedFailure_returnsCode500() throws Exception {
+        when(authApplicationService.refresh(any())).thenThrow(new IllegalStateException("boom"));
+
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refreshToken":"refresh-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.message").value("internal server error"));
+    }
+
     /**
      * 验证注销成功时返回统一成功响应。
      */

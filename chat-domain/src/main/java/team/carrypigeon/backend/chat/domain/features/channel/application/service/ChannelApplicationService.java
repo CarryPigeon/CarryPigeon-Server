@@ -50,12 +50,17 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 @Service
 public class ChannelApplicationService {
 
+    private static final String PUBLIC_CHANNEL_TYPE = "public";
+    private static final String PRIVATE_CHANNEL_TYPE = "private";
+    private static final String SYSTEM_CHANNEL_TYPE = "system";
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "default channel does not exist";
+    private static final String SYSTEM_CHANNEL_NOT_FOUND_MESSAGE = "system channel does not exist";
     private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
     private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
     private static final String CHANNEL_INVITE_NOT_FOUND_MESSAGE = "channel invite does not exist";
     private static final String CHANNEL_MEMBER_NOT_FOUND_MESSAGE = "channel member does not exist";
     private static final String CHANNEL_BAN_NOT_FOUND_MESSAGE = "channel ban does not exist";
+    private static final String SYSTEM_CHANNEL_MEMBERS_HIDDEN_MESSAGE = "system channel member list is not available";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -99,9 +104,7 @@ public class ChannelApplicationService {
      * @return 默认频道结果
      */
     public ChannelResult getDefaultChannel(GetDefaultChannelCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
         Channel channel = channelRepository.findDefaultChannel()
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_NOT_FOUND_MESSAGE));
         return toResult(channel);
@@ -114,11 +117,9 @@ public class ChannelApplicationService {
      * @return system 频道结果
      */
     public ChannelResult getSystemChannel(GetSystemChannelCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
         Channel channel = channelRepository.findSystemChannel()
-                .orElseThrow(() -> ProblemException.notFound("system channel does not exist"));
+                .orElseThrow(() -> ProblemException.notFound(SYSTEM_CHANNEL_NOT_FOUND_MESSAGE));
         if (!channelMemberRepository.exists(channel.id(), command.accountId())) {
             throw ProblemException.forbidden("system_channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
         }
@@ -134,24 +135,18 @@ public class ChannelApplicationService {
     public ChannelResult createPrivateChannel(CreatePrivateChannelCommand command) {
         validateCreatePrivateChannelCommand(command);
         return transactionRunner.runInTransaction(() -> {
-            long channelId = idGenerator.nextLongId();
+            long channelId = nextId();
             Channel channel = new Channel(
                     channelId,
                     channelId,
                     command.name().trim(),
-                    "private",
+                    PRIVATE_CHANNEL_TYPE,
                     false,
-                    timeProvider.nowInstant(),
-                    timeProvider.nowInstant()
+                    now(),
+                    now()
             );
             channelRepository.save(channel);
-            channelMemberRepository.save(new ChannelMember(
-                    channel.id(),
-                    command.accountId(),
-                    ChannelMemberRole.OWNER,
-                    timeProvider.nowInstant(),
-                    null
-            ));
+            channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.OWNER));
             return toResult(channel);
         });
     }
@@ -171,7 +166,7 @@ public class ChannelApplicationService {
             requireInviteeExists(command.inviteeAccountId());
             channelGovernancePolicy.requireBanInactive(
                     channelBanRepository.findByChannelIdAndBannedAccountId(channel.id(), command.inviteeAccountId()).orElse(null),
-                    timeProvider.nowInstant()
+                    now()
             );
             if (channelMemberRepository.exists(channel.id(), command.inviteeAccountId())) {
                 throw ProblemException.validationFailed("invitee is already a channel member");
@@ -188,7 +183,7 @@ public class ChannelApplicationService {
                     command.inviteeAccountId(),
                     command.operatorAccountId(),
                     ChannelInviteStatus.PENDING,
-                    timeProvider.nowInstant(),
+                    now(),
                     null
             );
             if (existingInvite == null) {
@@ -215,25 +210,19 @@ public class ChannelApplicationService {
             }
             channelGovernancePolicy.requireBanInactive(
                     channelBanRepository.findByChannelIdAndBannedAccountId(channel.id(), command.accountId()).orElse(null),
-                    timeProvider.nowInstant()
+                    now()
             );
             ChannelInvite invite = channelInviteRepository.findByChannelIdAndInviteeAccountId(channel.id(), command.accountId())
                     .orElseThrow(() -> ProblemException.notFound(CHANNEL_INVITE_NOT_FOUND_MESSAGE));
             channelGovernancePolicy.requireCanAcceptInvite(channel, invite, command.accountId());
-            channelMemberRepository.save(new ChannelMember(
-                    channel.id(),
-                    command.accountId(),
-                    ChannelMemberRole.MEMBER,
-                    timeProvider.nowInstant(),
-                    null
-            ));
+            channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.MEMBER));
             ChannelInvite acceptedInvite = new ChannelInvite(
                     invite.channelId(),
                     invite.inviteeAccountId(),
                     invite.inviterAccountId(),
                     ChannelInviteStatus.ACCEPTED,
                     invite.createdAt(),
-                    timeProvider.nowInstant()
+                    now()
             );
             channelInviteRepository.update(acceptedInvite);
             return toInviteResult(acceptedInvite);
@@ -249,8 +238,8 @@ public class ChannelApplicationService {
     public List<ChannelMemberResult> listChannelMembers(ListChannelMembersQuery query) {
         validateListChannelMembersQuery(query);
         Channel channel = requireChannel(query.channelId());
-        if ("system".equals(channel.type())) {
-            throw ProblemException.forbidden("system_channel_members_hidden", "system channel member list is not available");
+        if (SYSTEM_CHANNEL_TYPE.equals(channel.type())) {
+            throw ProblemException.forbidden("system_channel_members_hidden", SYSTEM_CHANNEL_MEMBERS_HIDDEN_MESSAGE);
         }
         ChannelMember operator = requireMember(channel.id(), query.accountId());
         channelGovernancePolicy.requireCanListMembers(operator);
@@ -373,7 +362,7 @@ public class ChannelApplicationService {
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
             channelGovernancePolicy.requireCanModerateMember(channel, operator, target, "channel_mute_forbidden");
-            Instant mutedUntil = timeProvider.nowInstant().plusSeconds(command.durationSeconds());
+            Instant mutedUntil = now().plusSeconds(command.durationSeconds());
             ChannelMember mutedMember = new ChannelMember(
                     target.channelId(),
                     target.accountId(),
@@ -459,7 +448,7 @@ public class ChannelApplicationService {
             if (channelGovernancePolicy.isBanActive(existingBan, timeProvider.nowInstant())) {
                 throw ProblemException.validationFailed("channel ban is already active");
             }
-            Instant now = timeProvider.nowInstant();
+            Instant now = now();
             ChannelBan ban = new ChannelBan(
                     channel.id(),
                     target.accountId(),
@@ -510,7 +499,7 @@ public class ChannelApplicationService {
                     existingBan.reason(),
                     existingBan.expiresAt(),
                     existingBan.createdAt(),
-                    timeProvider.nowInstant()
+                    now()
             );
             channelBanRepository.update(revokedBan);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNBANNED", existingBan.bannedAccountId(), null);
@@ -566,9 +555,7 @@ public class ChannelApplicationService {
     }
 
     private void validateCreatePrivateChannelCommand(CreatePrivateChannelCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
         if (command.name() == null || command.name().isBlank()) {
             throw ProblemException.validationFailed("name must not be blank");
         }
@@ -578,48 +565,28 @@ public class ChannelApplicationService {
     }
 
     private void validateInviteChannelMemberCommand(InviteChannelMemberCommand command) {
-        if (command.operatorAccountId() <= 0) {
-            throw ProblemException.validationFailed("operatorAccountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
-        if (command.inviteeAccountId() <= 0) {
-            throw ProblemException.validationFailed("inviteeAccountId must be greater than 0");
-        }
+        requirePositive(command.operatorAccountId(), "operatorAccountId");
+        requirePositive(command.channelId(), "channelId");
+        requirePositive(command.inviteeAccountId(), "inviteeAccountId");
         if (command.operatorAccountId() == command.inviteeAccountId()) {
             throw ProblemException.validationFailed("operatorAccountId must not equal inviteeAccountId");
         }
     }
 
     private void validateAcceptChannelInviteCommand(AcceptChannelInviteCommand command) {
-        if (command.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (command.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
     }
 
     private void validateListChannelMembersQuery(ListChannelMembersQuery query) {
-        if (query.accountId() <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
-        }
-        if (query.channelId() <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
+        requirePositive(query.accountId(), "accountId");
+        requirePositive(query.channelId(), "channelId");
     }
 
     private void validateTargetedCommand(long operatorAccountId, long channelId, long targetAccountId, String targetFieldName) {
-        if (operatorAccountId <= 0) {
-            throw ProblemException.validationFailed("operatorAccountId must be greater than 0");
-        }
-        if (channelId <= 0) {
-            throw ProblemException.validationFailed("channelId must be greater than 0");
-        }
-        if (targetAccountId <= 0) {
-            throw ProblemException.validationFailed(targetFieldName + " must be greater than 0");
-        }
+        requirePositive(operatorAccountId, "operatorAccountId");
+        requirePositive(channelId, "channelId");
+        requirePositive(targetAccountId, targetFieldName);
         if (operatorAccountId == targetAccountId) {
             throw ProblemException.validationFailed("operatorAccountId must not equal " + targetFieldName);
         }
@@ -648,14 +615,32 @@ public class ChannelApplicationService {
 
     private void appendAuditLog(long channelId, long actorAccountId, String actionType, Long targetAccountId, String metadata) {
         channelAuditLogRepository.append(new ChannelAuditLog(
-                idGenerator.nextLongId(),
+                nextId(),
                 channelId,
                 actorAccountId,
                 actionType,
                 targetAccountId,
                 metadata == null ? "{}" : metadata,
-                timeProvider.nowInstant()
+                now()
         ));
+    }
+
+    private ChannelMember newMember(long channelId, long accountId, ChannelMemberRole role) {
+        return new ChannelMember(channelId, accountId, role, now(), null);
+    }
+
+    private long nextId() {
+        return idGenerator.nextLongId();
+    }
+
+    private Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
     }
 
     private String normalizeReason(String reason) {

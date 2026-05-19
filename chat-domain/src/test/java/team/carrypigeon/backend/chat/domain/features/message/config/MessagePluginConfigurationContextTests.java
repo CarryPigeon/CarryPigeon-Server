@@ -4,11 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
@@ -30,7 +39,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 class MessagePluginConfigurationContextTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(TestSupportConfiguration.class, MessagePluginConfiguration.class);
+            .withUserConfiguration(
+                    TestSupportConfiguration.class,
+                    MessagePluginConfiguration.class,
+                    TextMessageTypePluginConfiguration.class,
+                    CustomMessageTypePluginConfiguration.class,
+                    SystemMessageTypePluginConfiguration.class,
+                    FileMessageTypePluginConfiguration.class,
+                    VoiceMessageTypePluginConfiguration.class
+            );
 
     /**
      * 验证未提供对象存储时只公开 text 插件。
@@ -41,19 +58,18 @@ class MessagePluginConfigurationContextTests {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(ChannelMessagePluginRegistry.class);
             assertThat(context.getBean(ChannelMessagePluginRegistry.class).getPublicPluginKeys())
-                    .containsExactly("custom", "plugin", "text");
+                    .containsExactly("custom", "text");
         });
     }
 
     /**
-     * 验证通过配置关闭 plugin/custom 后，公开插件列表会收敛到 text。
+     * 验证通过配置关闭 custom 后，公开插件列表会收敛到 text。
      */
     @Test
-    @DisplayName("configuration disables plugin and custom hides them from public plugins")
-    void configuration_disablesPluginAndCustom_hidesThemFromPublicPlugins() {
+    @DisplayName("configuration disables custom hides it from public plugins")
+    void configuration_disablesCustom_hidesItFromPublicPlugins() {
         contextRunner
                 .withPropertyValues(
-                        "cp.chat.message.plugins.plugin-enabled=false",
                         "cp.chat.message.plugins.custom-enabled=false"
                 )
                 .run(context -> {
@@ -70,19 +86,31 @@ class MessagePluginConfigurationContextTests {
     @DisplayName("configuration with storage exposes text file and voice plugins")
     void configuration_withStorage_exposesTextFileAndVoicePlugins() {
         MessagePluginConfiguration configuration = new MessagePluginConfiguration();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = configuration.messageAttachmentObjectKeyPolicy();
         JsonProvider jsonProvider = new JsonProvider(new ObjectMapper());
         ObjectStorageService objectStorageService = new StorageSupportConfiguration().objectStorageService();
-        ChannelMessagePluginRegistry registry = configuration.channelMessagePluginRegistry(
-                configuration.textChannelMessagePlugin(),
-                configuration.pluginChannelMessagePlugin(jsonProvider),
-                configuration.customChannelMessagePlugin(jsonProvider),
-                configuration.systemChannelMessagePlugin(jsonProvider),
-                new MessagePluginGovernanceProperties(),
-                objectProvider(configuration.fileChannelMessagePlugin(objectStorageService, jsonProvider, configuration.messageAttachmentObjectKeyPolicy())),
-                objectProvider(configuration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, configuration.messageAttachmentObjectKeyPolicy()))
-        );
+        MessagePluginGovernanceProperties governanceProperties = new MessagePluginGovernanceProperties();
 
-        assertThat(registry.getPublicPluginKeys()).containsExactly("custom", "file", "plugin", "text", "voice");
+        TextMessageTypePluginConfiguration textConfiguration = new TextMessageTypePluginConfiguration();
+        CustomMessageTypePluginConfiguration customConfiguration = new CustomMessageTypePluginConfiguration();
+        FileMessageTypePluginConfiguration fileConfiguration = new FileMessageTypePluginConfiguration();
+        VoiceMessageTypePluginConfiguration voiceConfiguration = new VoiceMessageTypePluginConfiguration();
+
+        TextChannelMessagePlugin textChannelMessagePlugin = textConfiguration.textChannelMessagePlugin();
+        FileChannelMessagePlugin fileChannelMessagePlugin = fileConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy);
+        VoiceChannelMessagePlugin voiceChannelMessagePlugin = voiceConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy);
+
+        ChannelMessagePluginRegistry registry = configuration.channelMessagePluginRegistry(java.util.List.of(
+                textConfiguration.textChannelMessagePluginRegistration(governanceProperties, textChannelMessagePlugin),
+                customConfiguration.customChannelMessagePluginRegistration(
+                        governanceProperties,
+                        customConfiguration.customChannelMessagePlugin(jsonProvider)
+                ),
+                fileConfiguration.fileChannelMessagePluginRegistration(governanceProperties, objectProvider(fileChannelMessagePlugin)),
+                voiceConfiguration.voiceChannelMessagePluginRegistration(governanceProperties, objectProvider(voiceChannelMessagePlugin))
+        ).stream().filter(java.util.Objects::nonNull).toList());
+
+        assertThat(registry.getPublicPluginKeys()).containsExactly("custom", "file", "text", "voice");
     }
 
     /**
@@ -100,7 +128,7 @@ class MessagePluginConfigurationContextTests {
                 .run(context -> {
                     assertThat(context).hasSingleBean(ChannelMessagePluginRegistry.class);
                     assertThat(context.getBean(ChannelMessagePluginRegistry.class).getPublicPluginKeys())
-                            .containsExactly("custom", "plugin", "text");
+                            .containsExactly("custom", "text");
                 });
     }
 
@@ -142,8 +170,8 @@ class MessagePluginConfigurationContextTests {
         }
     }
 
-    private static <T> ObjectProvider<T> objectProvider(T object) {
-        return new ObjectProvider<>() {
+    private static <T> org.springframework.beans.factory.ObjectProvider<T> objectProvider(T object) {
+        return new org.springframework.beans.factory.ObjectProvider<>() {
             @Override
             public T getObject(Object... args) {
                 return object;

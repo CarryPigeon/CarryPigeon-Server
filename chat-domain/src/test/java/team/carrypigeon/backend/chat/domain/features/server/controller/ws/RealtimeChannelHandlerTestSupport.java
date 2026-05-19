@@ -20,7 +20,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
@@ -31,7 +30,10 @@ import team.carrypigeon.backend.chat.domain.features.message.support.attachment.
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeMessageHandlingConfiguration;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
@@ -56,29 +58,49 @@ final class RealtimeChannelHandlerTestSupport {
     private RealtimeChannelHandlerTestSupport() {
     }
 
-    static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
-        Supplier<MessageApplicationService> supplier = () -> service;
-        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
-        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+    static JsonProvider jsonProvider() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new JsonProvider(objectMapper);
+    }
+
+    static RealtimeInboundMessageDispatcher dispatcher() {
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
-        ChannelMessagePluginRegistry pluginRegistry = messagePluginConfiguration.channelMessagePluginRegistry(
-                messagePluginConfiguration.textChannelMessagePlugin(),
-                messagePluginConfiguration.pluginChannelMessagePlugin(jsonProvider),
-                messagePluginConfiguration.customChannelMessagePlugin(jsonProvider),
-                messagePluginConfiguration.systemChannelMessagePlugin(jsonProvider),
-                new team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginGovernanceProperties(),
-                typedObjectProvider(messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)),
-                typedObjectProvider(messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy))
-        );
+        ChannelMessagePluginRegistry pluginRegistry = new team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration().channelMessagePluginRegistry(List.of(
+                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
+                registration(
+                        "builtin-file-message",
+                        "file",
+                        "file",
+                        "requires_object_storage",
+                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                ),
+                registration(
+                        "builtin-voice-message",
+                        "voice",
+                        "voice",
+                        "requires_object_storage",
+                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )
+        ));
+        if (!pluginRegistry.supports("text")) {
+            throw new IllegalStateException("text plugin registry must be available in realtime test support");
+        }
         RealtimeMessageHandlingConfiguration realtimeMessageHandlingConfiguration = new RealtimeMessageHandlingConfiguration();
-        RealtimeInboundMessageDispatcher dispatcher = realtimeMessageHandlingConfiguration.realtimeInboundMessageDispatcher(
+        return realtimeMessageHandlingConfiguration.realtimeInboundMessageDispatcher(
                 List.of(
-                        realtimeMessageHandlingConfiguration.sendChannelMessageRealtimeHandler(jsonProvider),
-                        realtimeMessageHandlingConfiguration.sendFileMessageRealtimeHandler(jsonProvider),
-                        realtimeMessageHandlingConfiguration.sendVoiceMessageRealtimeHandler(jsonProvider)
+                        realtimeMessageHandlingConfiguration.sendChannelMessageRealtimeHandler(jsonProvider)
                 )
         );
+    }
+
+    static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
+        Supplier<MessageApplicationService> supplier = () -> service;
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeInboundMessageDispatcher dispatcher = dispatcher();
         return new EmbeddedChannel(new RealtimeChannelHandler(
                 jsonProvider,
                 () -> 9001L,
@@ -90,28 +112,26 @@ final class RealtimeChannelHandlerTestSupport {
     }
 
     static MessageApplicationService service(RealtimeSessionRegistry registry) {
-        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
-        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
         ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
         ChannelMessagePluginRegistry pluginRegistry = new ChannelMessagePluginRegistry(List.of(
-                registration("builtin-text-message", "text", "text", "always_available", messagePluginConfiguration.textChannelMessagePlugin()),
-                registration("builtin-plugin-message", "plugin", "plugin", "always_available", messagePluginConfiguration.pluginChannelMessagePlugin(jsonProvider)),
-                registration("builtin-custom-message", "custom", "custom", "always_available", messagePluginConfiguration.customChannelMessagePlugin(jsonProvider)),
+                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
                 registration(
                         "builtin-file-message",
                         "file",
                         "file",
                         "requires_object_storage",
-                        messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                 ),
                 registration(
                         "builtin-voice-message",
                         "voice",
                         "voice",
                         "requires_object_storage",
-                        messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                 )
         ));
         return new MessageApplicationService(
@@ -233,8 +253,7 @@ final class RealtimeChannelHandlerTestSupport {
     }
 
     static MessageApplicationService failingService() {
-        MessagePluginConfiguration messagePluginConfiguration = new MessagePluginConfiguration();
-        MessageAttachmentObjectKeyPolicy objectKeyPolicy = messagePluginConfiguration.messageAttachmentObjectKeyPolicy();
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
         ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
@@ -319,22 +338,22 @@ final class RealtimeChannelHandlerTestSupport {
                 (message, recipientAccountIds) -> {
                 },
                 new ChannelMessagePluginRegistry(List.of(
-                        registration("builtin-text-message", "text", "text", "always_available", messagePluginConfiguration.textChannelMessagePlugin()),
-                        registration("builtin-plugin-message", "plugin", "plugin", "always_available", messagePluginConfiguration.pluginChannelMessagePlugin(jsonProvider)),
-                        registration("builtin-custom-message", "custom", "custom", "always_available", messagePluginConfiguration.customChannelMessagePlugin(jsonProvider)),
+                        registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                        registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
+                        registration("builtin-custom-message", "custom", "custom", "always_available", new CustomChannelMessagePlugin(jsonProvider)),
                         registration(
                                 "builtin-file-message",
                                 "file",
                                 "file",
                                 "requires_object_storage",
-                                messagePluginConfiguration.fileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                                new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                         ),
                         registration(
                                 "builtin-voice-message",
                                 "voice",
                                 "voice",
                                 "requires_object_storage",
-                                messagePluginConfiguration.voiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                                new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                         )
                 )),
                 objectKeyPolicy,
@@ -357,10 +376,144 @@ final class RealtimeChannelHandlerTestSupport {
         );
     }
 
-    static JsonProvider jsonProvider() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-        return new JsonProvider(objectMapper);
+    static MessageApplicationService serviceWithoutExtensionRegistration(RealtimeSessionRegistry registry) {
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
+        ObjectStorageService objectStorageService = storageService();
+        JsonProvider jsonProvider = jsonProvider();
+        ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
+        ChannelMessagePluginRegistry pluginRegistry = new ChannelMessagePluginRegistry(List.of(
+                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                registration(
+                        "builtin-file-message",
+                        "file",
+                        "file",
+                        "requires_object_storage",
+                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                ),
+                registration(
+                        "builtin-voice-message",
+                        "voice",
+                        "voice",
+                        "requires_object_storage",
+                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )
+        ));
+        return new MessageApplicationService(
+                new ChannelRepository() {
+                    @Override
+                    public Optional<Channel> findDefaultChannel() {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public Optional<Channel> findSystemChannel() {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public Optional<Channel> findById(long channelId) {
+                        return Optional.of(new Channel(
+                                1L, 1L, "public", "public", true,
+                                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
+                        ));
+                    }
+                },
+                new ChannelMemberRepository() {
+                    @Override
+                    public boolean exists(long channelId, long accountId) {
+                        return true;
+                    }
+
+                    @Override
+                    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
+                        return Optional.of(new ChannelMember(
+                                channelId,
+                                accountId,
+                                ChannelMemberRole.MEMBER,
+                                Instant.parse("2026-04-22T00:00:00Z"),
+                                null
+                        ));
+                    }
+
+                    @Override
+                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
+                    }
+
+                    @Override
+                    public List<Long> findAccountIdsByChannelId(long channelId) {
+                        return List.of(1001L, 1002L);
+                    }
+                },
+                new ChannelAuditLogRepository() {
+                    @Override
+                    public void append(ChannelAuditLog channelAuditLog) {
+                    }
+                },
+                new ChannelGovernancePolicy(),
+                new MessageRepository() {
+                    @Override
+                    public ChannelMessage save(ChannelMessage message) {
+                        return message;
+                    }
+
+                    @Override
+                    public Optional<ChannelMessage> findById(long messageId) {
+                        return Optional.empty();
+                    }
+
+                    @Override
+                    public ChannelMessage update(ChannelMessage message) {
+                        return message;
+                    }
+
+                    @Override
+                    public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
+                        return List.of();
+                    }
+
+                    @Override
+                    public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+                        return List.of();
+                    }
+                },
+                new MessageRealtimePublisher() {
+                    @Override
+                    public void publish(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+                        String payload = jsonProvider().toJson(new RealtimeServerMessage(
+                                "channel_message",
+                                null,
+                                Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
+                                message
+                        ));
+                        for (Long recipientAccountId : recipientAccountIds) {
+                            registry.getChannels(recipientAccountId).forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(payload)));
+                        }
+                    }
+
+                    @Override
+                    public void publishUpdate(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+                        publish(message, recipientAccountIds);
+                    }
+                },
+                pluginRegistry,
+                objectKeyPolicy,
+                new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
+                new ServerIdentityProperties("carrypigeon-local"),
+                () -> 7001L,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
+                new TransactionRunner() {
+                    @Override
+                    public <T> T runInTransaction(java.util.function.Supplier<T> action) {
+                        return action.get();
+                    }
+
+                    @Override
+                    public void runInTransaction(Runnable action) {
+                        action.run();
+                    }
+                },
+                objectStorageServiceProvider
+        );
     }
 
     private static ChannelMessagePluginRegistration registration(
@@ -433,27 +586,4 @@ final class RealtimeChannelHandlerTestSupport {
         };
     }
 
-    private static <T> ObjectProvider<T> typedObjectProvider(T object) {
-        return new ObjectProvider<>() {
-            @Override
-            public T getObject(Object... args) {
-                return object;
-            }
-
-            @Override
-            public T getIfAvailable() {
-                return object;
-            }
-
-            @Override
-            public T getIfUnique() {
-                return object;
-            }
-
-            @Override
-            public T getObject() {
-                return object;
-            }
-        };
-    }
 }

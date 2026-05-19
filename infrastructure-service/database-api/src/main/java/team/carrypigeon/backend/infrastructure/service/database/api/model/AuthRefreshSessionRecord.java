@@ -4,8 +4,8 @@ import java.time.Instant;
 
 /**
  * 刷新会话数据库记录契约。
- * 职责：为 auth refresh session 在 domain 与 database-impl 之间传递最小持久化字段。
- * 边界：不表达设备管理、审计或权限语义。
+ * 职责：表达刷新会话持久化所需的最小统一投影字段。
+ * 边界：同时服务查询、写入与撤销后的读取契约，不表达设备治理语义。
  *
  * @param id 刷新会话 ID
  * @param accountId 账户 ID

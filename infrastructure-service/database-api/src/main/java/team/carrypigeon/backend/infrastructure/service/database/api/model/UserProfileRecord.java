@@ -4,8 +4,8 @@ import java.time.Instant;
 
 /**
  * 用户资料数据库记录契约。
- * 职责：为 chat-domain 与 database-impl 之间传递用户资料持久化字段。
- * 边界：这里只表达数据库服务契约，不承载用户资料业务规则与协议语义。
+ * 职责：表达用户资料持久化所需的最小统一投影字段。
+ * 边界：同时服务查询与更新契约，不承载用户资料业务决策语义。
  *
  * @param accountId 关联账户 ID
  * @param nickname 用户昵称

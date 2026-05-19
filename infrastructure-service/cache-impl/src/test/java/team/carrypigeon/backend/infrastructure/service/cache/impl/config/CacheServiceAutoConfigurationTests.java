@@ -6,6 +6,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealth;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 
@@ -58,5 +59,55 @@ class CacheServiceAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(CacheHealthService.class);
                     assertThat(context).doesNotHaveBean(InitializationCheck.class);
                 });
+    }
+
+    /**
+     * 测试调用方自定义缓存服务时，自动配置不会覆盖现有 Bean。
+     * 输入：启用缓存服务并显式提供用户侧 CacheService Bean。
+     * 期望：上下文优先保留用户提供的缓存服务。
+     */
+    @Test
+    void autoConfiguration_customCacheService_keepsUserBean() {
+        CacheService customService = new CacheService() {
+            @Override
+            public java.util.Optional<String> get(String key) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public void set(String key, String value, java.time.Duration ttl) {
+            }
+
+            @Override
+            public void delete(String key) {
+            }
+
+            @Override
+            public boolean exists(String key) {
+                return false;
+            }
+        };
+
+        contextRunner
+                .withPropertyValues("cp.infrastructure.service.cache.enabled=true")
+                .withBean(StringRedisTemplate.class, () -> mock(StringRedisTemplate.class))
+                .withBean(CacheService.class, () -> customService)
+                .run(context -> assertThat(context).getBean(CacheService.class).isSameAs(customService));
+    }
+
+    /**
+     * 测试调用方自定义缓存健康检查时，自动配置不会覆盖现有 Bean。
+     * 输入：启用缓存服务并显式提供用户侧 CacheHealthService Bean。
+     * 期望：上下文优先保留用户提供的缓存健康检查服务。
+     */
+    @Test
+    void autoConfiguration_customHealthService_keepsUserBean() {
+        CacheHealthService customHealthService = () -> new CacheHealth(true, "custom");
+
+        contextRunner
+                .withPropertyValues("cp.infrastructure.service.cache.enabled=true")
+                .withBean(StringRedisTemplate.class, () -> mock(StringRedisTemplate.class))
+                .withBean(CacheHealthService.class, () -> customHealthService)
+                .run(context -> assertThat(context).getBean(CacheHealthService.class).isSameAs(customHealthService));
     }
 }

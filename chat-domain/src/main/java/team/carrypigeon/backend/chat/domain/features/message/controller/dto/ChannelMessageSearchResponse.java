@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 /**
@@ -9,5 +10,8 @@ import java.util.List;
  *
  * @param messages 搜索命中消息列表
  */
-public record ChannelMessageSearchResponse(List<ChannelMessageResponse> messages) {
+public record ChannelMessageSearchResponse(
+        @Schema(description = "关键字搜索命中的消息列表")
+        List<ChannelMessageResponse> messages
+) {
 }

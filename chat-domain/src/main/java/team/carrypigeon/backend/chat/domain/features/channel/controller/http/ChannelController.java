@@ -1,5 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -54,6 +61,7 @@ import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
 @Validated
 @RestController
 @RequestMapping("/api/channels")
+@Tag(name = "频道与成员", description = "频道查询、私有频道创建、邀请、成员治理与封禁能力。")
 public class ChannelController {
 
     private final ChannelApplicationService channelApplicationService;
@@ -74,6 +82,10 @@ public class ChannelController {
      * @return 统一响应包装的默认频道结果
      */
     @GetMapping("/default")
+    @Operation(summary = "读取默认频道", description = "读取当前服务端的默认频道。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；当前账户未加入默认频道时可能返回 `300`；默认频道不存在时可能返回 `404`")
+    })
     public CPResponse<ChannelResponse> getDefaultChannel(HttpServletRequest request) {
         AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
         ChannelResult result = channelApplicationService.getDefaultChannel(new GetDefaultChannelCommand(principal.accountId()));
@@ -87,6 +99,10 @@ public class ChannelController {
      * @return 统一响应包装的 system 频道结果
      */
     @GetMapping("/system")
+    @Operation(summary = "读取系统频道", description = "读取当前服务端的 canonical system 频道。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；当前账户不满足 system 频道访问条件时可能返回 `300`；系统频道不存在时可能返回 `404`")
+    })
     public CPResponse<ChannelResponse> getSystemChannel(HttpServletRequest request) {
         AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
         ChannelResult result = channelApplicationService.getSystemChannel(new GetSystemChannelCommand(principal.accountId()));
@@ -101,6 +117,12 @@ public class ChannelController {
      * @return 已创建频道结果
      */
     @PostMapping("/private")
+    @Operation(summary = "创建私有频道", description = "创建一个新的私有频道。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "私有频道创建请求体。当前只需提供频道名称。", required = true,
+            content = @Content(schema = @Schema(implementation = CreatePrivateChannelRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；名称为空或过长时通常返回 `200` 业务码")
+    })
     public CPResponse<ChannelResponse> createPrivateChannel(
             @Valid @RequestBody CreatePrivateChannelRequest body,
             HttpServletRequest request
@@ -121,7 +143,14 @@ public class ChannelController {
      * @return 邀请结果
      */
     @PostMapping("/{channelId}/invites")
+    @Operation(summary = "邀请成员加入频道", description = "邀请指定账户加入当前私有频道。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "频道邀请请求体。指定被邀请账户 ID。", required = true,
+            content = @Content(schema = @Schema(implementation = InviteChannelMemberRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无邀请权限、目标已在频道中、频道不存在或请求体不合法时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelInviteResponse> inviteChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody InviteChannelMemberRequest body,
             HttpServletRequest request
@@ -141,7 +170,12 @@ public class ChannelController {
      * @return 接受后的邀请结果
      */
     @PostMapping("/{channelId}/invites/accept")
+    @Operation(summary = "接受频道邀请", description = "当前登录账户接受指定频道邀请。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；邀请不存在、邀请状态不正确或当前账户无权接受时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelInviteResponse> acceptChannelInvite(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             HttpServletRequest request
     ) {
@@ -160,7 +194,12 @@ public class ChannelController {
      * @return 成员列表结果
      */
     @GetMapping("/{channelId}/members")
+    @Operation(summary = "查询频道成员", description = "查询指定频道的成员列表。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；当前账户无成员资格或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<List<ChannelMemberResponse>> listChannelMembers(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             HttpServletRequest request
     ) {
@@ -175,8 +214,14 @@ public class ChannelController {
      * 提升频道成员为 ADMIN。
      */
     @PostMapping("/{channelId}/members/{targetAccountId}/admin")
+    @Operation(summary = "提升管理员", description = "将指定频道成员提升为 ADMIN。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无治理权限、目标账户非法或频道不存在时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelMemberResponse> promoteChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             HttpServletRequest request
     ) {
@@ -191,8 +236,14 @@ public class ChannelController {
      * 降级频道 ADMIN 为 MEMBER。
      */
     @DeleteMapping("/{channelId}/members/{targetAccountId}/admin")
+    @Operation(summary = "取消管理员", description = "将指定频道 ADMIN 降级为 MEMBER。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无治理权限、目标不存在或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<ChannelMemberResponse> demoteChannelAdmin(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标管理员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             HttpServletRequest request
     ) {
@@ -207,7 +258,14 @@ public class ChannelController {
      * 转移频道所有权。
      */
     @PostMapping("/{channelId}/ownership-transfer")
+    @Operation(summary = "转移频道所有权", description = "将指定频道的所有权转移给目标账户。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "频道所有权转移请求体。指定新的 OWNER 账户 ID。", required = true,
+            content = @Content(schema = @Schema(implementation = TransferChannelOwnershipRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无 OWNER 权限、目标账户不合法或频道不存在时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelOwnershipTransferResponse> transferChannelOwnership(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody TransferChannelOwnershipRequest body,
             HttpServletRequest request
@@ -223,8 +281,16 @@ public class ChannelController {
      * 禁言频道成员。
      */
     @PostMapping("/{channelId}/members/{targetAccountId}/mute")
+    @Operation(summary = "禁言频道成员", description = "在指定频道内禁言目标成员一段时间。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "频道禁言请求体。通过 `durationSeconds` 指定禁言持续时间（秒）。", required = true,
+            content = @Content(schema = @Schema(implementation = MuteChannelMemberRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无治理权限、duration 非法、目标不存在或频道不存在时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelMemberResponse> muteChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @Valid @RequestBody MuteChannelMemberRequest body,
             HttpServletRequest request
@@ -240,8 +306,14 @@ public class ChannelController {
      * 解除频道成员禁言。
      */
     @DeleteMapping("/{channelId}/members/{targetAccountId}/mute")
+    @Operation(summary = "解除成员禁言", description = "解除指定频道成员当前的禁言状态。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无治理权限、目标不存在或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<ChannelMemberResponse> unmuteChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             HttpServletRequest request
     ) {
@@ -256,8 +328,14 @@ public class ChannelController {
      * 踢出频道成员。
      */
     @DeleteMapping("/{channelId}/members/{targetAccountId}")
+    @Operation(summary = "踢出频道成员", description = "将指定成员从频道中移除。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100` 且 `data=null`；无治理权限、目标不存在或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<Void> kickChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             HttpServletRequest request
     ) {
@@ -272,7 +350,14 @@ public class ChannelController {
      * 封禁频道成员。
      */
     @PostMapping("/{channelId}/bans")
+    @Operation(summary = "封禁频道成员", description = "封禁指定频道成员，并可附带原因与时长。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "频道封禁请求体。可提供封禁原因；`durationSeconds` 为空表示无限期封禁。", required = true,
+            content = @Content(schema = @Schema(implementation = BanChannelMemberRequest.class)))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；无治理权限、目标不存在、封禁参数非法或频道不存在时可能返回 `200/300/404` 业务码")
+    })
     public CPResponse<ChannelBanResponse> banChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody BanChannelMemberRequest body,
             HttpServletRequest request
@@ -288,8 +373,14 @@ public class ChannelController {
      * 解除频道封禁。
      */
     @DeleteMapping("/{channelId}/bans/{targetAccountId}")
+    @Operation(summary = "解除频道封禁", description = "解除指定频道成员的封禁状态。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；目标封禁不存在、无治理权限或频道不存在时可能返回 `300/404` 业务码")
+    })
     public CPResponse<ChannelBanResponse> unbanChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "被解封账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             HttpServletRequest request
     ) {

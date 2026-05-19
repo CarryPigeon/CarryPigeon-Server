@@ -20,8 +20,8 @@
 
 ## 启动命令
 
-```bash
-mvn -pl application-starter -am spring-boot:run
-```
+请参考 `docs/启动脚本索引.md`。
+
+如需了解启动前置条件，请参考 `docs/部署手册.md`。
 
 更多规则请参考根目录 `AGENTS.md` 与 `docs/架构文档.md`。

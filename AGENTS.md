@@ -69,7 +69,8 @@
 - Run all tests:
   - `mvn test -DskipTests=false`
 - Run the application locally:
-  - `mvn -pl application-starter -am spring-boot:run`
+  - Linux / macOS: `bash bin/linux/app-start.sh`
+  - Windows: `bin\windows\app-start.bat`
 - Note:
   - Repository-local Maven config is enabled through `.mvn/maven.config`.
   - Local repo currently points to `/tmp/carrypigeon-m2/repository` to avoid readonly mount issues in this environment.

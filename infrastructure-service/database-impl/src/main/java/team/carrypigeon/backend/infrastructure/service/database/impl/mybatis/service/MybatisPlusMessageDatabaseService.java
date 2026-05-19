@@ -10,8 +10,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 消息数据库服务。
- * 职责：在 database-impl 中完成消息最小读写能力。
- * 边界：只负责数据库记录映射，不承载消息业务规则。
+ * 职责：在 database-impl 中完成消息持久化投影的最小读写能力。
+ * 边界：只负责持久化投影与实体之间的映射，不承载消息业务规则。
  */
 public class MybatisPlusMessageDatabaseService implements MessageDatabaseService {
 
@@ -31,7 +31,7 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     @Override
     public java.util.Optional<MessageRecord> findById(long messageId) {
         return execute(
-                () -> java.util.Optional.ofNullable(messageMapper.findById(messageId))
+                () -> java.util.Optional.ofNullable(messageMapper.selectById(messageId))
                         .map(this::toRecord),
                 "failed to query message"
         );

@@ -56,7 +56,7 @@ Background startup writes:
 - PID file: `run/application.pid`
 - stdout log: `service-logs/application-stdout.log` (unless `CP_LOG_HOME` overrides it)
 
-When using the repository-level wrapper `bash bin/dist-start-background.sh`, these files are located under:
+When using the repository-level wrapper `bash bin/linux/dist-start-background.sh`, these files are located under:
 
 - `distribution/target/full-distribution/full-distribution/run/application.pid`
 - `distribution/target/full-distribution/full-distribution/service-logs/application-stdout.log`

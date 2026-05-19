@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 /**
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.NotBlank;
  * @param content 回显内容
  */
 public record ServerEchoRequest(
+        @Schema(description = "回显内容", example = "pong")
         @NotBlank(message = "content must not be blank")
         String content
 ) {

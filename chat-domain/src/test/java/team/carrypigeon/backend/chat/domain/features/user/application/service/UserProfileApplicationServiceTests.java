@@ -10,8 +10,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetCurrentUserProfileCommand;
+import team.carrypigeon.backend.chat.domain.features.user.application.command.GetUserProfileByAccountIdCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.UpdateCurrentUserProfileCommand;
+import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfilePageResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.application.query.GetUserProfilesQuery;
+import team.carrypigeon.backend.chat.domain.features.user.application.query.SearchUserProfilesQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -68,6 +72,125 @@ class UserProfileApplicationServiceTests {
     }
 
     /**
+     * 验证按账户 ID 查询资料时会返回目标用户结果。
+     */
+    @Test
+    @DisplayName("get user profile by account id existing profile returns result")
+    void getUserProfileByAccountId_existingProfile_returnsResult() {
+        Fixture fixture = new Fixture();
+        fixture.repository.save(profile(1002L, "carry-friend", "https://img.example/friend.png", "friend bio", BASE_TIME));
+
+        UserProfileResult result = fixture.service.getUserProfileByAccountId(new GetUserProfileByAccountIdCommand(1002L));
+
+        assertEquals(1002L, result.accountId());
+        assertEquals("carry-friend", result.nickname());
+        assertEquals("https://img.example/friend.png", result.avatarUrl());
+        assertEquals("friend bio", result.bio());
+        assertEquals(BASE_TIME, result.createdAt());
+        assertEquals(BASE_TIME, result.updatedAt());
+    }
+
+    /**
+     * 验证按账户 ID 查询不存在资料时会返回 404 问题语义。
+     */
+    @Test
+    @DisplayName("get user profile by account id missing profile throws not found problem")
+    void getUserProfileByAccountId_missingProfile_throwsNotFoundProblem() {
+        Fixture fixture = new Fixture();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.getUserProfileByAccountId(new GetUserProfileByAccountIdCommand(1002L))
+        );
+
+        assertEquals("user profile does not exist", exception.getMessage());
+    }
+
+    /**
+     * 验证列表查询会返回全部用户资料结果。
+     */
+    @Test
+    @DisplayName("list user profiles returns all results")
+    void listUserProfiles_returnsAllResults() {
+        Fixture fixture = new Fixture();
+        fixture.repository.save(profile(1001L, "carry-user", "", "", BASE_TIME));
+        fixture.repository.save(profile(1002L, "carry-friend", "https://img.example/friend.png", "friend bio", BASE_TIME));
+
+        java.util.List<UserProfileResult> results = fixture.service.listUserProfiles(1001L);
+
+        assertEquals(1, results.size());
+        assertEquals(1001L, results.get(0).accountId());
+    }
+
+    /**
+     * 验证分页查询会按游标返回结果并计算 nextCursor。
+     */
+    @Test
+    @DisplayName("get user profiles with cursor returns page result")
+    void getUserProfiles_withCursor_returnsPageResult() {
+        Fixture fixture = new Fixture();
+        fixture.repository.save(profile(1001L, "carry-user", "", "", BASE_TIME));
+        fixture.repository.save(profile(1002L, "carry-friend", "", "friend bio", BASE_TIME));
+        fixture.repository.save(profile(1003L, "carry-third", "", "third bio", BASE_TIME));
+
+        UserProfilePageResult result = fixture.service.getUserProfiles(new GetUserProfilesQuery(1001L, 1002L, 2));
+
+        assertEquals(1, result.users().size());
+        assertEquals(1001L, result.users().get(0).accountId());
+        assertEquals(1001L, result.nextCursor());
+    }
+
+    /**
+     * 验证分页查询参数不合法时会返回稳定问题语义。
+     */
+    @Test
+    @DisplayName("get user profiles invalid limit throws validation problem")
+    void getUserProfiles_invalidLimit_throwsValidationProblem() {
+        Fixture fixture = new Fixture();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.getUserProfiles(new GetUserProfilesQuery(1001L, null, 0))
+        );
+
+        assertEquals("limit must be between 1 and 100", exception.getMessage());
+    }
+
+    /**
+     * 验证搜索会按关键字过滤并返回分页结果。
+     */
+    @Test
+    @DisplayName("search user profiles keyword returns page result")
+    void searchUserProfiles_keyword_returnsPageResult() {
+        Fixture fixture = new Fixture();
+        fixture.repository.save(profile(1001L, "carry-user", "", "hello world", BASE_TIME));
+        fixture.repository.save(profile(1002L, "other-user", "", "unrelated", BASE_TIME));
+        fixture.repository.save(profile(1003L, "carry-friend", "", "friend bio", BASE_TIME));
+
+        UserProfilePageResult result = fixture.service.searchUserProfiles(new SearchUserProfilesQuery(1001L, "carry", null, 10));
+
+        assertEquals(1, result.users().size());
+        assertEquals(1001L, result.users().get(0).accountId());
+        assertEquals(1001L, result.nextCursor());
+    }
+
+    /**
+     * 验证搜索关键字为空时会返回稳定的参数校验问题语义。
+     */
+    @Test
+    @DisplayName("search user profiles blank keyword throws validation problem")
+    void searchUserProfiles_blankKeyword_throwsValidationProblem() {
+        Fixture fixture = new Fixture();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.searchUserProfiles(new SearchUserProfilesQuery(1001L, " ", null, 10))
+        );
+
+        assertEquals("keyword must not be blank", exception.getMessage());
+    }
+
+    /**
      * 验证更新成功时会保留 createdAt 并使用 TimeProvider 更新时间。
      */
     @Test
@@ -113,6 +236,40 @@ class UserProfileApplicationServiceTests {
         assertEquals("user profile does not exist", exception.getMessage());
     }
 
+    /**
+     * 验证领域模型提供的默认资料工厂会生成空白可编辑字段。
+     */
+    @Test
+    @DisplayName("user profile initial factory creates blank editable fields")
+    void userProfile_initialFactory_createsBlankEditableFields() {
+        UserProfile userProfile = UserProfile.initial(1001L, "carry-user", BASE_TIME, UPDATED_TIME);
+
+        assertEquals(1001L, userProfile.accountId());
+        assertEquals("carry-user", userProfile.nickname());
+        assertEquals("", userProfile.avatarUrl());
+        assertEquals("", userProfile.bio());
+        assertEquals(BASE_TIME, userProfile.createdAt());
+        assertEquals(UPDATED_TIME, userProfile.updatedAt());
+    }
+
+    /**
+     * 验证领域模型更新方法会保留创建时间并刷新可编辑字段与更新时间。
+     */
+    @Test
+    @DisplayName("user profile update method preserves createdAt and refreshes editable fields")
+    void userProfile_updateMethod_preservesCreatedAtAndRefreshesEditableFields() {
+        UserProfile userProfile = profile(1001L, "old-name", "https://img.example/old.png", "old bio", BASE_TIME);
+
+        UserProfile updated = userProfile.updateProfile("new-name", "https://img.example/new.png", "new bio", UPDATED_TIME);
+
+        assertEquals(1001L, updated.accountId());
+        assertEquals("new-name", updated.nickname());
+        assertEquals("https://img.example/new.png", updated.avatarUrl());
+        assertEquals("new bio", updated.bio());
+        assertEquals(BASE_TIME, updated.createdAt());
+        assertEquals(UPDATED_TIME, updated.updatedAt());
+    }
+
     private static UserProfile profile(long accountId, String nickname, String avatarUrl, String bio, Instant time) {
         return new UserProfile(accountId, nickname, avatarUrl, bio, time, time);
     }
@@ -134,6 +291,31 @@ class UserProfileApplicationServiceTests {
         @Override
         public Optional<UserProfile> findByAccountId(long accountId) {
             return Optional.ofNullable(profiles.get(accountId));
+        }
+
+        @Override
+        public java.util.List<UserProfile> findAll() {
+            return new java.util.ArrayList<>(profiles.values());
+        }
+
+        @Override
+        public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+            return profiles.values().stream()
+                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
+                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+            String normalizedKeyword = keyword == null ? "" : keyword.trim();
+            return profiles.values().stream()
+                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
+                    .filter(profile -> profile.nickname().contains(normalizedKeyword) || profile.bio().contains(normalizedKeyword))
+                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
+                    .limit(limit)
+                    .toList();
         }
 
         @Override

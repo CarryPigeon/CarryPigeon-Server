@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -12,9 +13,11 @@ import jakarta.validation.constraints.Size;
  * @param password 待注册密码
  */
 public record RegisterRequest(
+        @Schema(description = "待注册用户名", example = "carry_user")
         @NotBlank(message = "username must not be blank")
         @Size(min = 3, max = 32, message = "username length must be between 3 and 32")
         String username,
+        @Schema(description = "待注册密码，长度 8 到 128 位", example = "carryPigeon123")
         @NotBlank(message = "password must not be blank")
         @Size(min = 8, max = 128, message = "password length must be between 8 and 128")
         String password

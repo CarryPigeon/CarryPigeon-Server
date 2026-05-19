@@ -13,6 +13,11 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -37,7 +42,15 @@ class RealtimeServerConfigurationContextTests {
                     TimeAutoConfiguration.class,
                     RealtimeServerConfiguration.class
             ))
-            .withUserConfiguration(TestSupportConfiguration.class, MessagePluginConfiguration.class);
+            .withUserConfiguration(
+                    TestSupportConfiguration.class,
+                    MessagePluginConfiguration.class,
+                    TextMessageTypePluginConfiguration.class,
+                    CustomMessageTypePluginConfiguration.class,
+                    SystemMessageTypePluginConfiguration.class,
+                    FileMessageTypePluginConfiguration.class,
+                    VoiceMessageTypePluginConfiguration.class
+            );
 
     @Configuration
     static class TestSupportConfiguration {

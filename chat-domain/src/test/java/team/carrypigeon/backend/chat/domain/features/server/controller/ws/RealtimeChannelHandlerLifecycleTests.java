@@ -52,6 +52,25 @@ class RealtimeChannelHandlerLifecycleTests {
     }
 
     /**
+     * 验证握手完成但缺少认证主体时会关闭通道且不发送欢迎消息。
+     */
+    @Test
+    @DisplayName("user event handshake complete without principal closes channel")
+    void userEvent_handshakeCompleteWithoutPrincipal_closesChannel() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/ws", null, null));
+
+        assertFalse(sender.isOpen());
+        assertNull(sender.readOutbound());
+        assertNull(MDC.get(LogKeys.REQUEST_ID));
+        assertNull(MDC.get(LogKeys.TRACE_ID));
+        assertNull(MDC.get(LogKeys.ROUTE));
+        assertNull(MDC.get(LogKeys.UID));
+    }
+
+    /**
      * 验证未完成握手前不会发送心跳消息。
      */
     @Test

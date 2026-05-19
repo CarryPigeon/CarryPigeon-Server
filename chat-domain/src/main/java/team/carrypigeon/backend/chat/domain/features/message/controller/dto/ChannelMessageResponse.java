@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 /**
@@ -21,17 +22,29 @@ import java.time.Instant;
  * @param createdAt 创建时间
  */
 public record ChannelMessageResponse(
+        @Schema(description = "消息 ID", example = "5001")
         long messageId,
+        @Schema(description = "产生该消息的服务端 ID", example = "carrypigeon-local")
         String serverId,
+        @Schema(description = "会话 ID", example = "3001")
         long conversationId,
+        @Schema(description = "频道 ID", example = "2001")
         long channelId,
+        @Schema(description = "发送者账户 ID", example = "1001")
         long senderId,
+        @Schema(description = "消息类型", example = "text")
         String messageType,
+        @Schema(description = "消息正文；非文本消息时可为空", example = "Hello CarryPigeon")
         String body,
+        @Schema(description = "预览文本", example = "Hello CarryPigeon")
         String previewText,
+        @Schema(description = "结构化载荷 JSON 字符串", example = "{\"object_key\":\"attachments/5001\"}")
         String payload,
+        @Schema(description = "元数据 JSON 字符串", example = "{\"lang\":\"zh-CN\"}")
         String metadata,
+        @Schema(description = "消息状态", example = "NORMAL")
         String status,
+        @Schema(description = "创建时间", example = "2026-05-13T08:00:00Z")
         Instant createdAt
 ) {
 }

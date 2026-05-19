@@ -16,6 +16,10 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  */
 public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService {
 
+    private static final String LIMIT_ONE = "LIMIT 1";
+    private static final String PUBLIC_CHANNEL_TYPE = "public";
+    private static final String SYSTEM_CHANNEL_TYPE = "system";
+
     private final ChannelMapper channelMapper;
 
     public MybatisPlusChannelDatabaseService(ChannelMapper channelMapper) {
@@ -24,53 +28,50 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
 
     @Override
     public Optional<ChannelRecord> findDefaultChannel() {
-        try {
+        return execute(() -> {
             ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
                     .eq(ChannelEntity::getDefaultChannel, true)
-                    .eq(ChannelEntity::getType, "public")
-                    .last("LIMIT 1"));
+                    .eq(ChannelEntity::getType, PUBLIC_CHANNEL_TYPE)
+                    .last(LIMIT_ONE));
             return Optional.ofNullable(entity).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query default channel", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query default channel", exception);
-        }
+        }, "failed to query default channel");
     }
 
     @Override
     public Optional<ChannelRecord> findSystemChannel() {
-        try {
+        return execute(() -> {
             ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
-                    .eq(ChannelEntity::getType, "system")
-                    .last("LIMIT 1"));
+                    .eq(ChannelEntity::getType, SYSTEM_CHANNEL_TYPE)
+                    .last(LIMIT_ONE));
             return Optional.ofNullable(entity).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query system channel", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query system channel", exception);
-        }
+        }, "failed to query system channel");
     }
 
     @Override
     public Optional<ChannelRecord> findById(long channelId) {
-        try {
-            return Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord);
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to query channel by id", exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to query channel by id", exception);
-        }
+        return execute(() -> Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord), "failed to query channel by id");
     }
 
     @Override
     public void insert(ChannelRecord record) {
+        executeVoid(() -> channelMapper.insert(toEntity(record)), "failed to insert channel");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
-            channelMapper.insert(toEntity(record));
+            return operation.run();
         } catch (DataAccessException exception) {
-            throw new DatabaseServiceException("failed to insert channel", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
-            throw new DatabaseServiceException("failed to insert channel", exception);
+            throw new DatabaseServiceException(errorMessage, exception);
         }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
     }
 
     private ChannelRecord toRecord(ChannelEntity entity) {
@@ -95,5 +96,17 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+
+        void run();
     }
 }

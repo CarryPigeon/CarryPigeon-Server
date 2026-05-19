@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
-import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 
 /**
  * 频道审计日志数据库服务抽象。
@@ -14,5 +14,5 @@ public interface ChannelAuditLogDatabaseService {
      *
      * @param record 待持久化审计记录
      */
-    void insert(ChannelAuditLogRecord record);
+    void insert(ChannelAuditLogWriteRecord record);
 }

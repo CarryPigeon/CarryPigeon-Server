@@ -148,6 +148,31 @@ public class StarterTestRuntimeConfiguration {
             }
 
             @Override
+            public List<UserProfile> findAll() {
+                return new ArrayList<>(state.userProfilesByAccountId.values());
+            }
+
+            @Override
+            public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+                return state.userProfilesByAccountId.values().stream()
+                        .filter(userProfile -> cursorAccountId == null || userProfile.accountId() < cursorAccountId)
+                        .sorted(Comparator.comparingLong(UserProfile::accountId).reversed())
+                        .limit(limit)
+                        .toList();
+            }
+
+            @Override
+            public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+                String normalizedKeyword = keyword == null ? "" : keyword.trim();
+                return state.userProfilesByAccountId.values().stream()
+                        .filter(userProfile -> cursorAccountId == null || userProfile.accountId() < cursorAccountId)
+                        .filter(userProfile -> userProfile.nickname().contains(normalizedKeyword) || userProfile.bio().contains(normalizedKeyword))
+                        .sorted(Comparator.comparingLong(UserProfile::accountId).reversed())
+                        .limit(limit)
+                        .toList();
+            }
+
+            @Override
             public UserProfile save(UserProfile userProfile) {
                 state.userProfilesByAccountId.put(userProfile.accountId(), userProfile);
                 return userProfile;

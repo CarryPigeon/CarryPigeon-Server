@@ -65,7 +65,7 @@ class MybatisPlusMessageDatabaseServiceTests {
     @DisplayName("find by id existing row maps record")
     void findById_existingRow_mapsRecord() {
         MessageMapper messageMapper = mock(MessageMapper.class);
-        when(messageMapper.findById(5001L)).thenReturn(entity());
+        when(messageMapper.selectById(5001L)).thenReturn(entity());
         MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
 
         MessageRecord record = service.findById(5001L).orElseThrow();
@@ -73,6 +73,25 @@ class MybatisPlusMessageDatabaseServiceTests {
         assertEquals(5001L, record.messageId());
         assertEquals("carrypigeon-local", record.serverId());
         assertEquals("hello world", record.body());
+    }
+
+    /**
+     * 验证带 payload / metadata 的消息记录会在读写路径中保持稳定映射。
+     */
+    @Test
+    @DisplayName("find by id extension row keeps payload metadata and status")
+    void findById_extensionRow_keepsPayloadMetadataAndStatus() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        when(messageMapper.selectById(5002L)).thenReturn(extensionEntity());
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        MessageRecord record = service.findById(5002L).orElseThrow();
+
+        assertEquals(5002L, record.messageId());
+        assertEquals("test-extension", record.messageType());
+        assertEquals("{\"plugin_key\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}", record.payload());
+        assertEquals("{\"trace\":true}", record.metadata());
+        assertEquals("sent", record.status());
     }
 
     /**
@@ -177,7 +196,7 @@ class MybatisPlusMessageDatabaseServiceTests {
     void findById_dataAccessFailure_wrapsDatabaseServiceException() {
         MessageMapper messageMapper = mock(MessageMapper.class);
         DataRetrievalFailureException cause = new DataRetrievalFailureException("database down");
-        when(messageMapper.findById(5001L)).thenThrow(cause);
+        when(messageMapper.selectById(5001L)).thenThrow(cause);
         MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
 
         DatabaseServiceException exception = assertThrows(
@@ -242,6 +261,24 @@ class MybatisPlusMessageDatabaseServiceTests {
         entity.setMetadata(null);
         entity.setStatus("sent");
         entity.setCreatedAt(Instant.parse("2026-04-22T00:00:00Z"));
+        return entity;
+    }
+
+    private static MessageEntity extensionEntity() {
+        MessageEntity entity = new MessageEntity();
+        entity.setMessageId(5002L);
+        entity.setServerId("carrypigeon-local");
+        entity.setConversationId(2L);
+        entity.setChannelId(3L);
+        entity.setSenderId(1002L);
+        entity.setMessageType("test-extension");
+        entity.setBody("hello extension");
+        entity.setPreviewText("[插件消息] hello extension");
+        entity.setSearchableText("hello extension test-extension");
+        entity.setPayload("{\"plugin_key\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}");
+        entity.setMetadata("{\"trace\":true}");
+        entity.setStatus("sent");
+        entity.setCreatedAt(Instant.parse("2026-04-23T00:00:00Z"));
         return entity;
     }
 }

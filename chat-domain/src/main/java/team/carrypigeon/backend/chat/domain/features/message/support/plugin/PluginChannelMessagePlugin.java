@@ -11,21 +11,23 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
- * 插件频道消息插件。
- * 职责：校验 plugin 消息草稿并生成稳定的结构化插件消息。
- * 边界：只负责当前 plugin 消息的校验与构造，不扩展动态插件运行或异步事件执行。
+ * 扩展频道消息插件。
+ * 职责：校验扩展消息草稿并生成稳定的结构化扩展消息。
+ * 边界：只负责当前扩展消息的校验与构造，不扩展动态插件运行或异步事件执行。
  */
 public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
 
+    private final String supportedType;
     private final JsonProvider jsonProvider;
 
-    public PluginChannelMessagePlugin(JsonProvider jsonProvider) {
+    public PluginChannelMessagePlugin(String supportedType, JsonProvider jsonProvider) {
+        this.supportedType = supportedType;
         this.jsonProvider = jsonProvider;
     }
 
     @Override
     public String supportedType() {
-        return "plugin";
+        return supportedType;
     }
 
     @Override
@@ -33,6 +35,7 @@ public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
         if (!(draft instanceof PluginChannelMessageDraft pluginDraft)) {
             throw new IllegalArgumentException("plugin plugin only supports PluginChannelMessageDraft");
         }
+        String extensionMessageType = requireNonBlank(pluginDraft.type(), "messageType must not be blank");
         String pluginKey = requireNonBlank(pluginDraft.pluginKey(), "pluginKey must not be blank");
         JsonNode payloadNode = requireJsonObject(pluginDraft.payload(), "payload must not be blank");
         String normalizedBody = normalizeBody(pluginDraft.body(), pluginKey);
@@ -40,6 +43,7 @@ public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
         String searchableText = normalizedBody + " " + pluginKey;
         Map<String, Object> canonicalPayload = new LinkedHashMap<>();
         canonicalPayload.put("plugin_key", pluginKey);
+        canonicalPayload.put("message_type", extensionMessageType);
         canonicalPayload.put("payload", payloadNode);
 
         return new ChannelMessage(
@@ -48,7 +52,7 @@ public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
                 context.conversationId(),
                 context.channelId(),
                 context.senderId(),
-                supportedType(),
+                extensionMessageType,
                 normalizedBody,
                 previewText,
                 searchableText.trim(),

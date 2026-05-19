@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelAuditLogEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
 
@@ -35,7 +35,7 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
         ChannelAuditLogMapper channelAuditLogMapper = mock(ChannelAuditLogMapper.class);
         MybatisPlusChannelAuditLogDatabaseService service = new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
 
-        service.insert(new ChannelAuditLogRecord(
+        service.insert(new ChannelAuditLogWriteRecord(
                 7001L,
                 1L,
                 1001L,
@@ -61,7 +61,7 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
 
         DatabaseServiceException exception = assertThrows(
                 DatabaseServiceException.class,
-                () -> service.insert(new ChannelAuditLogRecord(7001L, 1L, 1001L, "MEMBER_BANNED", 1002L, "{}", Instant.parse("2026-04-24T12:30:00Z")))
+                () -> service.insert(new ChannelAuditLogWriteRecord(7001L, 1L, 1001L, "MEMBER_BANNED", 1002L, "{}", Instant.parse("2026-04-24T12:30:00Z")))
         );
 
         assertEquals("failed to insert channel audit log", exception.getMessage());

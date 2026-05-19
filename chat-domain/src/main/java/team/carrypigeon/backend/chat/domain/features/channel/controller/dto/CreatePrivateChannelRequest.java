@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.Size;
  * @param name 频道名称
  */
 public record CreatePrivateChannelRequest(
+        @Schema(description = "私有频道名称", example = "Project Phoenix")
         @NotBlank(message = "name must not be blank")
         @Size(max = 128, message = "name length must be less than or equal to 128")
         String name

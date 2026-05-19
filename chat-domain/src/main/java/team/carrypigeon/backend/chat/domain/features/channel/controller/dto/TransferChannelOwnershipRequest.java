@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Positive;
 
 /**
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.Positive;
  * @param targetAccountId 新 OWNER 账户 ID
  */
 public record TransferChannelOwnershipRequest(
+        @Schema(description = "新的 OWNER 账户 ID", example = "1002")
         @Positive(message = "targetAccountId must be greater than 0")
         long targetAccountId
 ) {

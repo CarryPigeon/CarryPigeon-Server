@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Positive;
 
 /**
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.Positive;
  * @param durationSeconds 禁言持续秒数
  */
 public record MuteChannelMemberRequest(
+        @Schema(description = "禁言持续秒数", example = "3600")
         @Positive(message = "durationSeconds must be greater than 0")
         long durationSeconds
 ) {

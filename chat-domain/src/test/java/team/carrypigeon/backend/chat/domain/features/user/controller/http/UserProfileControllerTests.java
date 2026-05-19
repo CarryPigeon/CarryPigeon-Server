@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfilePageResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -109,6 +110,86 @@ class UserProfileControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(500))
                 .andExpect(jsonPath("$.message").value("internal server error"));
+    }
+
+    /**
+     * 验证按账户 ID 查询资料的已认证请求会返回目标用户资料。
+     */
+    @Test
+    @DisplayName("get by account id authenticated request returns target user profile")
+    void getByAccountId_authenticatedRequest_returnsTargetUserProfile() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(userProfileResult());
+
+        mockMvc.perform(get("/api/users/1001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.accountId").value(1001L));
+    }
+
+    /**
+     * 验证跨账户查询用户资料会被拒绝。
+     */
+    @Test
+    @DisplayName("get by account id cross account returns code 300")
+    void getByAccountId_crossAccount_returnsCode300() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(get("/api/users/1002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(300));
+    }
+
+    /**
+     * 验证用户资料列表查询会返回统一成功响应。
+     */
+    @Test
+    @DisplayName("list users authenticated request returns code 100")
+    void listUsers_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(userProfileApplicationService.listUserProfiles(1001L)).thenReturn(java.util.List.of(userProfileResult()));
+
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data[0].accountId").value(1001L));
+    }
+
+    /**
+     * 验证分页查询用户资料会返回统一成功响应和 nextCursor。
+     */
+    @Test
+    @DisplayName("page users authenticated request returns code 100")
+    void pageUsers_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(userProfileApplicationService.getUserProfiles(any())).thenReturn(new UserProfilePageResult(
+                java.util.List.of(userProfileResult()),
+                1001L
+        ));
+
+        mockMvc.perform(get("/api/users/page"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.users[0].accountId").value(1001L))
+                .andExpect(jsonPath("$.data.nextCursor").value(1001L));
+    }
+
+    /**
+     * 验证搜索用户资料会返回统一成功响应。
+     */
+    @Test
+    @DisplayName("search users authenticated request returns code 100")
+    void searchUsers_authenticatedRequest_returnsCode100() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(userProfileApplicationService.searchUserProfiles(any())).thenReturn(new UserProfilePageResult(
+                java.util.List.of(userProfileResult()),
+                1001L
+        ));
+
+        mockMvc.perform(get("/api/users/search").param("keyword", "carry"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.data.users[0].accountId").value(1001L));
     }
 
     /**

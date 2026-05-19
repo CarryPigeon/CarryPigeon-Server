@@ -29,7 +29,7 @@ public class DatabaseBackedAuthRefreshSessionRepository implements AuthRefreshSe
 
     @Override
     public AuthRefreshSession save(AuthRefreshSession session) {
-        authRefreshSessionDatabaseService.insert(toRecord(session));
+        authRefreshSessionDatabaseService.insert(toWriteRecord(session));
         return session;
     }
 
@@ -50,7 +50,7 @@ public class DatabaseBackedAuthRefreshSessionRepository implements AuthRefreshSe
         );
     }
 
-    private AuthRefreshSessionRecord toRecord(AuthRefreshSession session) {
+    private AuthRefreshSessionRecord toWriteRecord(AuthRefreshSession session) {
         return new AuthRefreshSessionRecord(
                 session.id(),
                 session.accountId(),

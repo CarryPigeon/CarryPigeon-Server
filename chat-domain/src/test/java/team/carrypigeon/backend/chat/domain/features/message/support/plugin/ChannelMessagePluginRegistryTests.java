@@ -11,6 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -69,6 +71,22 @@ class ChannelMessagePluginRegistryTests {
         );
 
         assertEquals("duplicate public plugin key: shared", exception.getMessage());
+    }
+
+    /**
+     * 验证扩展消息白名单只接受已注册的非内建 public key。
+     */
+    @Test
+    @DisplayName("registry supports extension message type only for registered non builtin public key")
+    void supportsExtensionMessageType_onlyForRegisteredNonBuiltinPublicKey() {
+        ChannelMessagePluginRegistry registry = new ChannelMessagePluginRegistry(List.of(
+                registration("builtin-text", "text", "text", true),
+                registration("example-extension", "test-extension", "test-extension", true)
+        ));
+
+        assertFalse(registry.supportsExtensionMessageType("text"));
+        assertTrue(registry.supportsExtensionMessageType("test-extension"));
+        assertFalse(registry.supportsExtensionMessageType("missing-extension"));
     }
 
     private ChannelMessagePluginRegistration registration(

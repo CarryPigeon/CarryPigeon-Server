@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.user.support.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,38 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals("new bio", databaseService.updatedRecord.bio());
     }
 
+    /**
+     * 验证游标分页查询会转换并返回领域模型列表。
+     */
+    @Test
+    @DisplayName("find by account id before maps domain models")
+    void findByAccountIdBefore_mapsDomainModels() {
+        FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
+
+        java.util.List<UserProfile> result = repository.findByAccountIdBefore(1002L, 20);
+
+        assertEquals(1, result.size());
+        assertEquals(1001L, result.get(0).accountId());
+    }
+
+    /**
+     * 验证关键字搜索会转换并返回领域模型列表。
+     */
+    @Test
+    @DisplayName("search by keyword maps domain models")
+    void searchByKeyword_mapsDomainModels() {
+        FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "hello carry", BASE_TIME, BASE_TIME);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
+
+        java.util.List<UserProfile> result = repository.searchByKeyword("carry", null, 20);
+
+        assertEquals(1, result.size());
+        assertEquals(1001L, result.get(0).accountId());
+    }
+
     private static class FakeUserProfileDatabaseService implements UserProfileDatabaseService {
 
         private UserProfileRecord record;
@@ -87,6 +120,21 @@ class DatabaseBackedUserProfileRepositoryTests {
         @Override
         public Optional<UserProfileRecord> findByAccountId(long accountId) {
             return Optional.ofNullable(record);
+        }
+
+        @Override
+        public List<UserProfileRecord> findAll() {
+            return record == null ? List.of() : List.of(record);
+        }
+
+        @Override
+        public List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit) {
+            return record == null || (cursorAccountId != null && record.accountId() >= cursorAccountId) ? List.of() : List.of(record);
+        }
+
+        @Override
+        public List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+            return findByAccountIdBefore(cursorAccountId, limit);
         }
 
         @Override

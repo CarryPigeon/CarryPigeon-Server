@@ -21,8 +21,8 @@
 原因：
 
 - 这三类能力已被明确为当前项目的外部基础服务
-- 具体接入代码后续应进入 `infrastructure-service` 的对应 `*-api` 与 `*-impl`
-- 当前先提供稳定的本地运行环境，避免在服务实现尚未落地前提前绑定应用容器结构
+- 具体接入代码现已进入 `infrastructure-service` 的对应 `*-api` 与 `*-impl`
+- 当前仍保持“外部服务容器化、应用本身不容器化”的运行边界
 
 ## 3. 文件落点
 
@@ -59,7 +59,7 @@ docker compose up -d
 推荐使用项目脚本：
 
 ```bash
-bash bin/docker-up.sh
+bash bin/linux/docker-up.sh
 ```
 
 ### 4.3 停止外部服务
@@ -71,7 +71,7 @@ docker compose down
 推荐使用项目脚本：
 
 ```bash
-bash bin/docker-down.sh
+bash bin/linux/docker-down.sh
 ```
 
 ### 4.4 连同数据卷一起清理
@@ -83,7 +83,7 @@ docker compose down -v
 推荐使用项目脚本：
 
 ```bash
-bash bin/docker-reset.sh
+bash bin/linux/docker-reset.sh
 ```
 
 ### 4.5 查看外部服务日志
@@ -95,7 +95,7 @@ docker compose logs -f
 推荐使用项目脚本：
 
 ```bash
-bash bin/docker-logs.sh
+bash bin/linux/docker-logs.sh
 ```
 
 ## 5. 当前服务说明
@@ -108,7 +108,7 @@ bash bin/docker-logs.sh
 
 职责：
 
-- 作为后续数据库 `database-impl` 的默认本地数据库
+- 作为当前 `database-impl` 的默认本地数据库
 
 当前约定：
 
@@ -129,7 +129,7 @@ bash bin/docker-logs.sh
 
 职责：
 
-- 作为后续缓存 `cache-impl` 的默认本地缓存服务
+- 作为当前 `cache-impl` 的默认本地缓存服务
 
 当前约定：
 
@@ -148,7 +148,7 @@ bash bin/docker-logs.sh
 
 职责：
 
-- 作为后续对象存储服务的默认本地实现
+- 作为当前对象存储服务 `storage-impl` 的默认本地实现
 
 当前约定：
 
@@ -185,16 +185,15 @@ MINIO_BUCKET=carrypigeon
 
 - 当前 Docker 配置只负责本地外部服务运行
 - 不在当前阶段引入应用镜像构建与应用容器编排
-- 不提前在 `application.yaml` 中堆积尚未接入实现的数据库、缓存、对象存储配置
-- 后续接入实现时，应由对应的 `infrastructure-service/*-impl` 持有具体客户端依赖与配置类
+- 当前 `application.yaml` 中保留的数据库、缓存、对象存储配置均已对应到现有实现，不再属于“提前堆积未来配置”
+- 具体客户端依赖与配置类当前已由 `infrastructure-service/*-impl` 持有，仍应继续保持这一边界
 
 ## 8. 后续接入方向
 
-后续如开始实现外部服务模块，建议按以下顺序推进：
+当前外部服务接入主链路已经完成，后续应重点推进：
 
-1. 新增数据库、缓存、对象存储的 `*-api`
-2. 新增对应 `*-impl`
-3. 在 `application-starter` 中完成装配
-4. 再补充应用侧配置项与接入文档
+1. 补充更真实的外部依赖协作验证（MySQL / Redis / MinIO）
+2. 继续完善启动检查、健康检查与部署验证记录
+3. 在正式文档中持续同步运行边界与配置现状
 
-这样可以保持当前 Docker 配置与既定架构边界一致，不提前把运行结构写死。
+这样可以保持当前 Docker 配置与既定架构边界一致，同时避免文档落后于实现状态。

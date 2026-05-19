@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 /**
@@ -15,11 +16,17 @@ import java.time.Instant;
  * @param mutedUntil 禁言截止时间
  */
 public record ChannelMemberResponse(
+        @Schema(description = "成员账户 ID", example = "1002")
         long accountId,
+        @Schema(description = "成员昵称", example = "Carry Pigeon")
         String nickname,
+        @Schema(description = "成员头像地址", example = "https://cdn.example.com/avatar.png")
         String avatarUrl,
+        @Schema(description = "频道角色", example = "ADMIN")
         String role,
+        @Schema(description = "加入频道时间", example = "2026-05-01T08:00:00Z")
         Instant joinedAt,
+        @Schema(description = "禁言截止时间；未禁言时为空", example = "2026-05-13T10:00:00Z")
         Instant mutedUntil
 ) {
 }

@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
-import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -62,16 +61,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
                             .object(command.objectKey())
                             .build()
             );
-            return Optional.of(StorageObject.withContent(
+            return Optional.of(StorageObject.metadata(
                     command.objectKey(),
                     stat.contentType(),
-                    stat.size(),
-                    minioClient.getObject(
-                            GetObjectArgs.builder()
-                                    .bucket(properties.bucket())
-                                    .object(command.objectKey())
-                                    .build()
-                    )
+                    stat.size()
             ));
         } catch (ErrorResponseException ex) {
             if ("NoSuchKey".equalsIgnoreCase(ex.errorResponse().code()) || "NoSuchObject".equalsIgnoreCase(ex.errorResponse().code())) {

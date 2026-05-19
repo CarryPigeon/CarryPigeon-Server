@@ -54,7 +54,6 @@ class ServerControllerTests {
                         registration("builtin-voice-message", "voice", "voice", true),
                         registration("builtin-file-message", "file", "file", true),
                         registration("builtin-custom-message", "custom", "custom", true),
-                        registration("builtin-plugin-message", "plugin", "plugin", true),
                         registration("builtin-text-message", "text", "text", true)
                 )),
                 realtimeProperties(true),
@@ -110,9 +109,8 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.data.public_capabilities[1]").value("username_password_login"))
                 .andExpect(jsonPath("$.data.public_plugins[0]").value("custom"))
                 .andExpect(jsonPath("$.data.public_plugins[1]").value("file"))
-                .andExpect(jsonPath("$.data.public_plugins[2]").value("plugin"))
-                .andExpect(jsonPath("$.data.public_plugins[3]").value("text"))
-                .andExpect(jsonPath("$.data.public_plugins[4]").value("voice"));
+                .andExpect(jsonPath("$.data.public_plugins[2]").value("text"))
+                .andExpect(jsonPath("$.data.public_plugins[3]").value("voice"));
     }
 
     /**

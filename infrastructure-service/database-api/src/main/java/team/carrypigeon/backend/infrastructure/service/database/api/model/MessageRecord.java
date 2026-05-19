@@ -4,8 +4,8 @@ import java.time.Instant;
 
 /**
  * 消息数据库记录契约。
- * 职责：为 chat-domain 与 database-impl 之间传递通用消息字段。
- * 边界：这里只表达数据库服务契约，不承载消息业务规则。
+ * 职责：表达消息查询、搜索、写入与更新共用的持久化投影字段。
+ * 边界：只服务消息数据库契约，不承担领域业务决策语义。
  *
  * @param messageId 消息 ID
  * @param serverId 服务端 ID

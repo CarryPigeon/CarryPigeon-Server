@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 /**
@@ -16,12 +17,19 @@ import java.time.Instant;
  * @param updatedAt 更新时间
  */
 public record ChannelResponse(
+        @Schema(description = "频道 ID", example = "2001")
         long channelId,
+        @Schema(description = "会话 ID", example = "3001")
         long conversationId,
+        @Schema(description = "频道名称", example = "Project Phoenix")
         String name,
+        @Schema(description = "频道类型", example = "private")
         String type,
+        @Schema(description = "是否为默认频道", example = "false")
         boolean defaultChannel,
+        @Schema(description = "创建时间", example = "2026-05-01T08:00:00Z")
         Instant createdAt,
+        @Schema(description = "更新时间", example = "2026-05-13T08:00:00Z")
         Instant updatedAt
 ) {
 }
