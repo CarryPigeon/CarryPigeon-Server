@@ -20,9 +20,15 @@ public class ChannelEntity {
     private Long id;
     private Long conversationId;
     private String name;
+    private String brief;
+    private String avatar;
     private String type;
     @TableField("is_default")
     private Boolean defaultChannel;
+    @TableField(exist = false)
+    private Long memberCount;
+    @TableField(exist = false)
+    private Boolean requiresApplication;
     private Instant createdAt;
     private Instant updatedAt;
 }

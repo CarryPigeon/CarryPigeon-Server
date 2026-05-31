@@ -45,6 +45,11 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     @Override
+    public void delete(long messageId) {
+        executeVoid(() -> messageMapper.deleteById(messageId), "failed to delete message");
+    }
+
+    @Override
     public List<MessageRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return execute(
                 () -> messageMapper.findByChannelIdBefore(channelId, cursorMessageId, limit)
@@ -52,6 +57,17 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                         .map(this::toRecord)
                         .toList(),
                 "failed to query channel messages"
+        );
+    }
+
+    @Override
+    public List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+        return execute(
+                () -> messageMapper.findByChannelIdAfter(channelId, afterMessageId, limit)
+                        .stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query channel messages after anchor"
         );
     }
 
@@ -66,11 +82,37 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
+    @Override
+    public List<MessageRecord> searchByChannelId(
+            long channelId,
+            String keyword,
+            Long cursorMessageId,
+            Long senderAccountId,
+            String domain,
+            Long beforeMessageId,
+            Long afterMessageId,
+            int limit
+    ) {
+        return execute(
+                () -> messageMapper.searchByChannelIdWithFilters(
+                                channelId,
+                                keyword,
+                                cursorMessageId,
+                                senderAccountId,
+                                domain,
+                                beforeMessageId,
+                                afterMessageId,
+                                limit
+                        ).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to search channel messages"
+        );
+    }
+
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
             throw new DatabaseServiceException(errorMessage, exception);
         }
@@ -96,8 +138,12 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 entity.getSearchableText(),
                 entity.getPayload(),
                 entity.getMetadata(),
+                entity.getMentions(),
+                entity.getForwardedFrom(),
                 entity.getStatus(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getEditedAt(),
+                entity.getEditVersion() == null ? 1L : entity.getEditVersion()
         );
     }
 
@@ -114,8 +160,12 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         entity.setSearchableText(record.searchableText());
         entity.setPayload(record.payload());
         entity.setMetadata(record.metadata());
+        entity.setMentions(record.mentions());
+        entity.setForwardedFrom(record.forwardedFrom());
         entity.setStatus(record.status());
         entity.setCreatedAt(record.createdAt());
+        entity.setEditedAt(record.editedAt());
+        entity.setEditVersion(record.editVersion());
         return entity;
     }
 

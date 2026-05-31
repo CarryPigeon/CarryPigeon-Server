@@ -38,8 +38,21 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
+    public void delete(long messageId) {
+        messageDatabaseService.delete(messageId);
+    }
+
+    @Override
     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return messageDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit)
+                .stream()
+                .map(this::toDomainMessage)
+                .toList();
+    }
+
+    @Override
+    public List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+        return messageDatabaseService.findByChannelIdAfter(channelId, afterMessageId, limit)
                 .stream()
                 .map(this::toDomainMessage)
                 .toList();
@@ -49,6 +62,31 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
         return messageDatabaseService.searchByChannelId(channelId, keyword, limit)
                 .stream()
+                .map(this::toDomainMessage)
+                .toList();
+    }
+
+    @Override
+    public List<ChannelMessage> searchByChannelId(
+            long channelId,
+            String keyword,
+            Long cursorMessageId,
+            Long senderAccountId,
+            String domain,
+            Long beforeMessageId,
+            Long afterMessageId,
+            int limit
+    ) {
+        return messageDatabaseService.searchByChannelId(
+                        channelId,
+                        keyword,
+                        cursorMessageId,
+                        senderAccountId,
+                        domain,
+                        beforeMessageId,
+                        afterMessageId,
+                        limit
+                ).stream()
                 .map(this::toDomainMessage)
                 .toList();
     }
@@ -66,8 +104,12 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 record.searchableText(),
                 record.payload(),
                 record.metadata(),
+                record.mentions(),
+                record.forwardedFrom(),
                 record.status(),
-                record.createdAt()
+                record.createdAt(),
+                record.editedAt(),
+                record.editVersion()
         );
     }
 
@@ -84,8 +126,12 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 message.searchableText(),
                 message.payload(),
                 message.metadata(),
+                message.mentions(),
+                message.forwardedFrom(),
                 message.status(),
-                message.createdAt()
+                message.createdAt(),
+                message.editedAt(),
+                message.editVersion()
         );
     }
 }

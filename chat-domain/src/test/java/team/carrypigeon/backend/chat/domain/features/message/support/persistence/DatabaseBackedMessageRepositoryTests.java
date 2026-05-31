@@ -31,7 +31,7 @@ class DatabaseBackedMessageRepositoryTests {
         DatabaseBackedMessageRepository repository = new DatabaseBackedMessageRepository(databaseService);
         ChannelMessage message = new ChannelMessage(
                 5002L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 2L,
                 3L,
                 1002L,
@@ -49,7 +49,7 @@ class DatabaseBackedMessageRepositoryTests {
 
         assertSame(message, result);
         assertEquals(5002L, databaseService.insertedRecord.messageId());
-        assertEquals("carrypigeon-local", databaseService.insertedRecord.serverId());
+        assertEquals("550e8400-e29b-41d4-a716-446655440000", databaseService.insertedRecord.serverId());
         assertEquals(2L, databaseService.insertedRecord.conversationId());
         assertEquals(3L, databaseService.insertedRecord.channelId());
         assertEquals(1002L, databaseService.insertedRecord.senderId());
@@ -90,7 +90,7 @@ class DatabaseBackedMessageRepositoryTests {
         DatabaseBackedMessageRepository repository = new DatabaseBackedMessageRepository(databaseService);
         ChannelMessage recalledMessage = new ChannelMessage(
                 5001L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1001L,
@@ -114,6 +114,20 @@ class DatabaseBackedMessageRepositoryTests {
     }
 
     /**
+     * 验证删除消息时会委托 database-api 执行删除。
+     */
+    @Test
+    @DisplayName("delete message delegates to database service")
+    void delete_message_delegatesToDatabaseService() {
+        RecordingMessageDatabaseService databaseService = new RecordingMessageDatabaseService();
+        DatabaseBackedMessageRepository repository = new DatabaseBackedMessageRepository(databaseService);
+
+        repository.delete(5001L);
+
+        assertEquals(5001L, databaseService.deletedMessageId);
+    }
+
+    /**
      * 验证搜索结果仍通过既有通道内搜索契约映射。
      */
     @Test
@@ -131,7 +145,7 @@ class DatabaseBackedMessageRepositoryTests {
     private static MessageRecord record() {
         return new MessageRecord(
                 5001L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1001L,
@@ -152,6 +166,7 @@ class DatabaseBackedMessageRepositoryTests {
         private List<MessageRecord> searchResults = List.of();
         private MessageRecord insertedRecord;
         private MessageRecord updatedRecord;
+        private long deletedMessageId;
 
         @Override
         public void insert(MessageRecord record) {
@@ -166,6 +181,11 @@ class DatabaseBackedMessageRepositoryTests {
         @Override
         public void update(MessageRecord record) {
             this.updatedRecord = record;
+        }
+
+        @Override
+        public void delete(long messageId) {
+            this.deletedMessageId = messageId;
         }
 
         @Override

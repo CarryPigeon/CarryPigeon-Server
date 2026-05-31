@@ -8,6 +8,7 @@ import java.time.Instant;
  * 边界：只服务 database-api 最小数据库契约，不承载额外邀请业务语义。
  *
  * @param channelId 频道 ID
+ * @param applicationId 申请/邀请 ID
  * @param inviteeAccountId 被邀请账户 ID
  * @param inviterAccountId 发起邀请账户 ID
  * @param status 邀请状态
@@ -16,6 +17,7 @@ import java.time.Instant;
  */
 public record ChannelInviteRecord(
         long channelId,
+        long applicationId,
         long inviteeAccountId,
         long inviterAccountId,
         String status,

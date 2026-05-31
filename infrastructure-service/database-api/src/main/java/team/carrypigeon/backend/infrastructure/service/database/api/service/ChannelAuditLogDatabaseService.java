@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
+import java.time.Instant;
+import java.util.List;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 
 /**
@@ -15,4 +18,16 @@ public interface ChannelAuditLogDatabaseService {
      * @param record 待持久化审计记录
      */
     void insert(ChannelAuditLogWriteRecord record);
+
+    default List<ChannelAuditLogReadRecord> list(
+            Long cursorAuditId,
+            int limit,
+            Long channelId,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        throw new UnsupportedOperationException("channel audit log list is not supported");
+    }
 }

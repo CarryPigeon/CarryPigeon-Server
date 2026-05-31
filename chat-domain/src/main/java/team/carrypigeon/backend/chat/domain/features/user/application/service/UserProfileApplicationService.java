@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.user.application.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetUserProfileByAccountIdCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.UpdateCurrentUserProfileCommand;
@@ -25,15 +27,18 @@ public class UserProfileApplicationService {
 
     private static final String USER_PROFILE_NOT_FOUND_MESSAGE = "user profile does not exist";
 
+    private final AuthAccountRepository authAccountRepository;
     private final UserProfileRepository userProfileRepository;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileApplicationService(
+            AuthAccountRepository authAccountRepository,
             UserProfileRepository userProfileRepository,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
+        this.authAccountRepository = authAccountRepository;
         this.userProfileRepository = userProfileRepository;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -49,6 +54,18 @@ public class UserProfileApplicationService {
         UserProfile userProfile = userProfileRepository.findByAccountId(command.accountId())
                 .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
         return toResult(userProfile);
+    }
+
+    /**
+     * 查询当前登录用户邮箱。
+     *
+     * @param accountId 当前账户 ID
+     * @return 当前账户邮箱
+     */
+    public String getCurrentUserEmail(long accountId) {
+        return authAccountRepository.findById(accountId)
+                .orElseThrow(() -> ProblemException.notFound("auth account does not exist"))
+                .username();
     }
 
     /**
@@ -71,6 +88,22 @@ public class UserProfileApplicationService {
     public List<UserProfileResult> listUserProfiles(long accountId) {
         validatePageQuery(accountId, null, 1);
         return userProfileRepository.findByAccountId(accountId).stream()
+                .map(this::toResult)
+                .toList();
+    }
+
+    /**
+     * 按账户 ID 列表查询公开资料。
+     *
+     * @param accountIds 目标账户 ID 列表
+     * @return 公开资料结果列表
+     */
+    public List<UserProfileResult> getPublicUserProfiles(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
+        return userProfileRepository.findAll().stream()
+                .filter(userProfile -> accountIds.contains(userProfile.accountId()))
                 .map(this::toResult)
                 .toList();
     }
@@ -131,6 +164,32 @@ public class UserProfileApplicationService {
             );
 
             return toResult(userProfileRepository.update(updatedProfile));
+        });
+    }
+
+    /**
+     * 更新当前用户邮箱。
+     *
+     * @param accountId 当前账户 ID
+     * @param email 新邮箱
+     */
+    public void updateCurrentUserEmail(long accountId, String email) {
+        transactionRunner.runInTransaction(() -> {
+            AuthAccount existingAccount = authAccountRepository.findById(accountId)
+                    .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
+            authAccountRepository.findByUsername(email)
+                    .filter(account -> account.id() != accountId)
+                    .ifPresent(account -> {
+                        throw ProblemException.validationFailed("email already exists");
+                    });
+            authAccountRepository.update(new AuthAccount(
+                    existingAccount.id(),
+                    email,
+                    existingAccount.passwordHash(),
+                    existingAccount.createdAt(),
+                    timeProvider.nowInstant()
+            ));
+            return null;
         });
     }
 

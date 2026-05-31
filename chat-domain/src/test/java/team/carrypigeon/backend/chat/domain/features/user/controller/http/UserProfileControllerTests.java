@@ -1,337 +1,173 @@
 package team.carrypigeon.backend.chat.domain.features.user.controller.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import java.time.Instant;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
-import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfilePageResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * UserProfileController 协议测试。
- * 职责：验证当前用户资料查询与更新入口的统一响应码与异常映射契约。
- * 边界：不验证真实数据库访问，只验证协议层请求到响应的稳定行为。
+ * 职责：验证 v1 用户 HTTP 资源的公开视图与更新行为。
+ * 边界：不验证真实数据库访问与验证码服务实现，只验证协议层输出。
  */
 @Tag("contract")
 class UserProfileControllerTests {
 
     private UserProfileApplicationService userProfileApplicationService;
-
+    private EmailVerificationCodeService emailVerificationCodeService;
+    private FileApplicationService fileApplicationService;
     private AuthRequestContext authRequestContext;
-
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         userProfileApplicationService = mock(UserProfileApplicationService.class);
+        emailVerificationCodeService = mock(EmailVerificationCodeService.class);
+        fileApplicationService = mock(FileApplicationService.class);
         authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileApplicationService, emailVerificationCodeService, authRequestContext, fileApplicationService))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
-    /**
-     * 验证已认证请求可以读取当前用户资料。
-     */
     @Test
-    @DisplayName("me authenticated request returns current user profile")
-    void me_authenticatedRequest_returnsCurrentUserProfile() throws Exception {
+    @DisplayName("me authenticated request returns current user resource")
+    void me_authenticatedRequest_returnsCurrentUserResource() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(userProfileApplicationService.getCurrentUserProfile(any())).thenReturn(userProfileResult());
+        when(userProfileApplicationService.getCurrentUserEmail(1001L)).thenReturn("carry-user@example.com");
 
         mockMvc.perform(get("/api/users/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L))
-                .andExpect(jsonPath("$.data.nickname").value("carry-user"))
-                .andExpect(jsonPath("$.data.avatarUrl").value("https://img.example/avatar.png"))
-                .andExpect(jsonPath("$.data.bio").value("hello world"));
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.email").value("carry-user@example.com"))
+                .andExpect(jsonPath("$.nickname").value("carry-user"))
+                .andExpect(jsonPath("$.avatar").value("avatars/u/1001.png"));
     }
 
-    /**
-     * 验证未认证请求访问资料查询接口时会返回 300 响应码。
-     */
     @Test
-    @DisplayName("me anonymous request returns code 300")
-    void me_anonymousRequest_returnsCode300() throws Exception {
-        mockMvc.perform(get("/api/users/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("authentication is required"));
-    }
-
-    /**
-     * 验证资料不存在时查询接口会返回 404 响应码。
-     */
-    @Test
-    @DisplayName("me missing profile returns code 404")
-    void me_missingProfile_returnsCode404() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.getCurrentUserProfile(any()))
-                .thenThrow(ProblemException.notFound("user profile does not exist"));
-
-        mockMvc.perform(get("/api/users/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404))
-                .andExpect(jsonPath("$.message").value("user profile does not exist"));
-    }
-
-    /**
-     * 验证未预期异常会被查询接口映射为 500 响应码。
-     */
-    @Test
-    @DisplayName("me unexpected failure returns code 500")
-    void me_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.getCurrentUserProfile(any()))
-                .thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(get("/api/users/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("internal server error"));
-    }
-
-    /**
-     * 验证按账户 ID 查询资料的已认证请求会返回目标用户资料。
-     */
-    @Test
-    @DisplayName("get by account id authenticated request returns target user profile")
-    void getByAccountId_authenticatedRequest_returnsTargetUserProfile() throws Exception {
+    @DisplayName("get by uid authenticated request returns public profile")
+    void getByAccountId_authenticatedRequest_returnsPublicProfile() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(userProfileResult());
 
         mockMvc.perform(get("/api/users/1001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L));
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.nickname").value("carry-user"))
+                .andExpect(jsonPath("$.avatar").value("avatars/u/1001.png"));
     }
 
-    /**
-     * 验证跨账户查询用户资料会被拒绝。
-     */
     @Test
-    @DisplayName("get by account id cross account returns code 300")
-    void getByAccountId_crossAccount_returnsCode300() throws Exception {
+    @DisplayName("list users by ids returns items envelope")
+    void listUsers_byIds_returnsItemsEnvelope() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(userProfileApplicationService.getPublicUserProfiles(any())).thenReturn(java.util.List.of(userProfileResult()));
+
+        mockMvc.perform(get("/api/users").param("ids", "1001,1002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].uid").value("1001"))
+                .andExpect(jsonPath("$.items[0].nickname").value("carry-user"));
+    }
+
+    @Test
+    @DisplayName("list users invalid ids returns 422")
+    void listUsers_invalidIds_returns422() throws Exception {
         mockMvc = authenticatedMockMvc();
 
-        mockMvc.perform(get("/api/users/1002"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
+        mockMvc.perform(get("/api/users").param("ids", "abc"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
-    /**
-     * 验证用户资料列表查询会返回统一成功响应。
-     */
     @Test
-    @DisplayName("list users authenticated request returns code 100")
-    void listUsers_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("put current user email success returns 204")
+    void updateCurrentUserEmail_success_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.listUserProfiles(1001L)).thenReturn(java.util.List.of(userProfileResult()));
+        doNothing().when(emailVerificationCodeService).verifyCode(any(), any());
 
-        mockMvc.perform(get("/api/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data[0].accountId").value(1001L));
+        mockMvc.perform(put("/api/users/me/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"new@example.com","code":"123456"}
+                                """))
+                .andExpect(status().isNoContent());
     }
 
-    /**
-     * 验证分页查询用户资料会返回统一成功响应和 nextCursor。
-     */
     @Test
-    @DisplayName("page users authenticated request returns code 100")
-    void pageUsers_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.getUserProfiles(any())).thenReturn(new UserProfilePageResult(
-                java.util.List.of(userProfileResult()),
-                1001L
-        ));
-
-        mockMvc.perform(get("/api/users/page"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.users[0].accountId").value(1001L))
-                .andExpect(jsonPath("$.data.nextCursor").value(1001L));
-    }
-
-    /**
-     * 验证搜索用户资料会返回统一成功响应。
-     */
-    @Test
-    @DisplayName("search users authenticated request returns code 100")
-    void searchUsers_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.searchUserProfiles(any())).thenReturn(new UserProfilePageResult(
-                java.util.List.of(userProfileResult()),
-                1001L
-        ));
-
-        mockMvc.perform(get("/api/users/search").param("keyword", "carry"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.users[0].accountId").value(1001L));
-    }
-
-    /**
-     * 验证已认证请求可以更新当前用户资料。
-     */
-    @Test
-    @DisplayName("update me authenticated request returns updated profile")
-    void updateMe_authenticatedRequest_returnsUpdatedProfile() throws Exception {
+    @DisplayName("patch current user profile success returns 204")
+    void patchCurrentUserProfile_success_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(userProfileApplicationService.updateCurrentUserProfile(any())).thenReturn(userProfileResult());
 
-        mockMvc.perform(put("/api/users/me")
+        mockMvc.perform(patch("/api/users/me")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"nickname":"carry-user","avatarUrl":"https://img.example/avatar.png","bio":"hello world"}
+                                {"username":"carry-user","avatar":"avatars/u/1001.png","brief":"hello world","sex":0,"birthday":0}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L))
-                .andExpect(jsonPath("$.data.nickname").value("carry-user"));
+                .andExpect(status().isNoContent());
     }
 
-    /**
-     * 验证更新请求允许头像地址和简介为空字符串。
-     */
     @Test
-    @DisplayName("update me blank avatar url and bio returns code 100")
-    void updateMe_blankAvatarUrlAndBio_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.updateCurrentUserProfile(any())).thenReturn(new UserProfileResult(
-                1001L,
-                "carry-user",
-                "",
-                "",
-                Instant.parse("2026-04-20T12:00:00Z"),
-                Instant.parse("2026-04-21T12:00:00Z")
-        ));
-
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"carry-user","avatarUrl":"","bio":""}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.avatarUrl").value(""))
-                .andExpect(jsonPath("$.data.bio").value(""));
-    }
-
-    /**
-     * 验证更新请求参数不合法时会返回 200 响应码。
-     */
-    @Test
-    @DisplayName("update me invalid request returns code 200")
-    void updateMe_invalidRequest_returnsCode200() throws Exception {
+    @DisplayName("list users missing ids returns 422")
+    void listUsers_missingIds_returns422() throws Exception {
         mockMvc = authenticatedMockMvc();
 
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"","avatarUrl":"https://img.example/avatar.png","bio":"hello world"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
-    /**
-     * 验证更新请求缺少可清空字段时仍会返回 200 响应码，避免 null 下沉到数据库层。
-     */
     @Test
-    @DisplayName("update me missing nullable storage fields returns code 200")
-    void updateMe_missingNullableStorageFields_returnsCode200() throws Exception {
+    @DisplayName("upload current user background returns background url")
+    void uploadCurrentUserBackground_returnsBackgroundUrl() throws Exception {
         mockMvc = authenticatedMockMvc();
+        doNothing().when(fileApplicationService).uploadFile(any(), any(), any(Long.class), any());
 
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"carry-user"}
-                                """))
+        mockMvc.perform(multipart("/api/users/me/background")
+                        .file(new MockMultipartFile("background", "bg.png", "image/png", "img".getBytes()))
+                        .with(request -> {
+                            request.setMethod("POST");
+                            return request;
+                        }))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    /**
-     * 验证未认证请求访问资料更新接口时会返回 300 响应码。
-     */
-    @Test
-    @DisplayName("update me anonymous request returns code 300")
-    void updateMe_anonymousRequest_returnsCode300() throws Exception {
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"carry-user","avatarUrl":"https://img.example/avatar.png","bio":"hello world"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("authentication is required"));
-    }
-
-    /**
-     * 验证资料不存在时更新接口会返回 404 响应码。
-     */
-    @Test
-    @DisplayName("update me missing profile returns code 404")
-    void updateMe_missingProfile_returnsCode404() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.updateCurrentUserProfile(any()))
-                .thenThrow(ProblemException.notFound("user profile does not exist"));
-
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"carry-user","avatarUrl":"https://img.example/avatar.png","bio":"hello world"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404))
-                .andExpect(jsonPath("$.message").value("user profile does not exist"));
-    }
-
-    /**
-     * 验证未预期异常会被更新接口映射为 500 响应码。
-     */
-    @Test
-    @DisplayName("update me unexpected failure returns code 500")
-    void updateMe_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(userProfileApplicationService.updateCurrentUserProfile(any()))
-                .thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(put("/api/users/me")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"nickname":"carry-user","avatarUrl":"https://img.example/avatar.png","bio":"hello world"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("internal server error"));
+                .andExpect(jsonPath("$.background_url").value("api/files/download/profile_bg_1001"));
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileApplicationService, emailVerificationCodeService, authRequestContext, fileApplicationService))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -340,11 +176,17 @@ class UserProfileControllerTests {
         return new UserProfileResult(
                 1001L,
                 "carry-user",
-                "https://img.example/avatar.png",
+                "avatars/u/1001.png",
                 "hello world",
                 Instant.parse("2026-04-20T12:00:00Z"),
                 Instant.parse("2026-04-21T12:00:00Z")
         );
+    }
+
+    private MappingJackson2HttpMessageConverter snakeCaseConverter() {
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
@@ -357,7 +199,7 @@ class UserProfileControllerTests {
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user@example.com"));
             return true;
         }
     }

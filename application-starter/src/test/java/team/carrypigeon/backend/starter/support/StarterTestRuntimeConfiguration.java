@@ -21,11 +21,18 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInvite;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelUnread;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
@@ -90,9 +97,22 @@ public class StarterTestRuntimeConfiguration {
             }
 
             @Override
+            public Optional<AuthAccount> findById(long accountId) {
+                return Optional.ofNullable(state.accountsById.get(accountId));
+            }
+
+            @Override
             public AuthAccount save(AuthAccount account) {
                 state.accountsByUsername.put(account.username(), account);
                 state.accountsById.put(account.id(), account);
+                return account;
+            }
+
+            @Override
+            public AuthAccount update(AuthAccount account) {
+                state.accountsById.put(account.id(), account);
+                state.accountsByUsername.values().removeIf(existing -> existing.id() == account.id());
+                state.accountsByUsername.put(account.username(), account);
                 return account;
             }
         };
@@ -260,6 +280,48 @@ public class StarterTestRuntimeConfiguration {
     }
 
     /**
+     * 创建内存频道已读状态仓储。
+     */
+    @Bean
+    @Primary
+    public ChannelReadStateRepository channelReadStateRepository(StarterTestState state) {
+        return new ChannelReadStateRepository() {
+            @Override
+            public Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) {
+                return Optional.ofNullable(state.channelReadStatesByKey.get(key(channelId, accountId)));
+            }
+
+            @Override
+            public ChannelReadState upsert(ChannelReadState readState) {
+                state.channelReadStatesByKey.put(key(readState.channelId(), readState.accountId()), readState);
+                return readState;
+            }
+
+            @Override
+            public List<ChannelUnread> listUnreadsByAccountId(long accountId) {
+                return state.channelMembersByChannelId.entrySet().stream()
+                        .filter(entry -> entry.getValue().stream().anyMatch(member -> member.accountId() == accountId))
+                        .map(entry -> {
+                            ChannelReadState readState = state.channelReadStatesByKey.get(key(entry.getKey(), accountId));
+                            long lastReadMessageId = readState == null ? 0L : readState.lastReadMessageId();
+                            Instant lastReadTime = readState == null ? Instant.parse("1970-01-01T00:00:00Z") : readState.lastReadTime();
+                            long unreadCount = state.messagesByChannelId.getOrDefault(entry.getKey(), List.of()).stream()
+                                    .filter(message -> message.messageId() > lastReadMessageId)
+                                    .filter(message -> message.senderId() != accountId)
+                                    .count();
+                            return new ChannelUnread(entry.getKey(), unreadCount, lastReadTime);
+                        })
+                        .filter(unread -> unread.unreadCount() > 0)
+                        .toList();
+            }
+
+            private String key(long channelId, long accountId) {
+                return channelId + ":" + accountId;
+            }
+        };
+    }
+
+    /**
      * 创建内存频道邀请仓储。
      */
     @Bean
@@ -354,6 +416,125 @@ public class StarterTestRuntimeConfiguration {
     }
 
     /**
+     * 创建内存频道置顶仓储。
+     */
+    @Bean
+    @Primary
+    public ChannelPinRepository channelPinRepository(StarterTestState state) {
+        return new ChannelPinRepository() {
+            @Override
+            public Optional<ChannelPin> findByChannelIdAndMessageId(long channelId, long messageId) {
+                return state.channelPins.stream()
+                        .filter(channelPin -> channelPin.channelId() == channelId && channelPin.messageId() == messageId)
+                        .findFirst();
+            }
+
+            @Override
+            public void save(ChannelPin channelPin) {
+                state.channelPins.removeIf(existing -> existing.channelId() == channelPin.channelId() && existing.messageId() == channelPin.messageId());
+                state.channelPins.add(channelPin);
+            }
+
+            @Override
+            public void delete(long channelId, long messageId) {
+                state.channelPins.removeIf(channelPin -> channelPin.channelId() == channelId && channelPin.messageId() == messageId);
+            }
+
+            @Override
+            public List<ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
+                return state.channelPins.stream()
+                        .filter(channelPin -> channelPin.channelId() == channelId)
+                        .filter(channelPin -> cursorMessageId == null || channelPin.messageId() < cursorMessageId)
+                        .sorted(Comparator.comparingLong(ChannelPin::messageId).reversed())
+                        .limit(limit)
+                        .toList();
+            }
+
+            @Override
+            public long countByChannelId(long channelId) {
+                return state.channelPins.stream()
+                        .filter(channelPin -> channelPin.channelId() == channelId)
+                        .count();
+            }
+        };
+    }
+
+    /**
+     * 创建内存提及仓储。
+     */
+    @Bean
+    @Primary
+    public MentionRepository mentionRepository(StarterTestState state) {
+        return new MentionRepository() {
+            @Override
+            public void save(Mention mention) {
+                state.mentions.removeIf(existing -> existing.mentionId() == mention.mentionId());
+                state.mentions.add(mention);
+            }
+
+            @Override
+            public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
+                return state.mentions.stream()
+                        .filter(mention -> mention.targetAccountId() == accountId)
+                        .filter(mention -> cursorMentionId == null || mention.mentionId() < cursorMentionId)
+                        .filter(mention -> !unreadOnly || !mention.read())
+                        .filter(mention -> channelId == null || mention.channelId() == channelId)
+                        .sorted(Comparator.comparingLong(Mention::mentionId).reversed())
+                        .limit(limit)
+                        .toList();
+            }
+
+            @Override
+            public boolean markAsRead(long accountId, long mentionId) {
+                for (int index = 0; index < state.mentions.size(); index++) {
+                    Mention mention = state.mentions.get(index);
+                    if (mention.targetAccountId() == accountId && mention.mentionId() == mentionId) {
+                        state.mentions.set(index, new Mention(
+                                mention.mentionId(),
+                                mention.channelId(),
+                                mention.messageId(),
+                                mention.fromAccountId(),
+                                mention.targetType(),
+                                mention.targetAccountId(),
+                                mention.createdAt(),
+                                true
+                        ));
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            @Override
+            public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
+                int updatedCount = 0;
+                for (int index = 0; index < state.mentions.size(); index++) {
+                    Mention mention = state.mentions.get(index);
+                    boolean matches = mention.targetAccountId() == accountId
+                            && !mention.read()
+                            && (beforeMentionId == null || mention.mentionId() <= beforeMentionId)
+                            && (channelId == null || mention.channelId() == channelId);
+                    if (!matches) {
+                        continue;
+                    }
+                    state.mentions.set(index, new Mention(
+                            mention.mentionId(),
+                            mention.channelId(),
+                            mention.messageId(),
+                            mention.fromAccountId(),
+                            mention.targetType(),
+                            mention.targetAccountId(),
+                            mention.createdAt(),
+                            true
+                    ));
+                    updatedCount += 1;
+                }
+                return updatedCount;
+            }
+        };
+    }
+
+    /**
      * 创建内存对象存储实现。
      */
     @Bean
@@ -399,8 +580,11 @@ public class StarterTestRuntimeConfiguration {
         private final Map<Long, UserProfile> userProfilesByAccountId = new ConcurrentHashMap<>();
         private final Map<Long, Channel> channelsById = new ConcurrentHashMap<>();
         private final Map<Long, List<ChannelMember>> channelMembersByChannelId = new ConcurrentHashMap<>();
+        private final Map<String, ChannelReadState> channelReadStatesByKey = new ConcurrentHashMap<>();
         private final Map<Long, List<ChannelMessage>> messagesByChannelId = new ConcurrentHashMap<>();
         private final Map<String, StorageObject> storageObjectsByKey = new ConcurrentHashMap<>();
+        private final List<ChannelPin> channelPins = new ArrayList<>();
+        private final List<Mention> mentions = new ArrayList<>();
         private Channel defaultChannel;
 
         public StarterTestState() {
@@ -417,12 +601,18 @@ public class StarterTestRuntimeConfiguration {
             userProfilesByAccountId.clear();
             channelsById.clear();
             channelMembersByChannelId.clear();
+            channelReadStatesByKey.clear();
             messagesByChannelId.clear();
             storageObjectsByKey.clear();
+            channelPins.clear();
+            mentions.clear();
             defaultChannel = new Channel(
                     1L,
                     1L,
                     "public",
+                    "",
+                    "",
+                    "",
                     "public",
                     true,
                     Instant.parse("2026-04-23T00:00:00Z"),

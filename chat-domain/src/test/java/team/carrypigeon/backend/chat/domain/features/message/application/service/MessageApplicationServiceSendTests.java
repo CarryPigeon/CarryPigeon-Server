@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageHttpCommand;
+import team.carrypigeon.backend.chat.domain.features.message.application.command.EditChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelTextMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendSystemChannelMessageCommand;
@@ -19,6 +21,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -44,10 +47,35 @@ class MessageApplicationServiceSendTests {
         assertEquals(5001L, result.messageId());
         assertEquals(5001L, fixture.messageRepository.savedMessages.getFirst().messageId());
         assertEquals(5001L, fixture.publisher.publishedMessages.getFirst().messageId());
-        assertEquals("carrypigeon-local", result.serverId());
+        assertEquals("550e8400-e29b-41d4-a716-446655440000", result.serverId());
         assertEquals("hello world", result.body());
         assertEquals("hello world", result.previewText());
         assertIterableEquals(List.of(1001L, 1002L), fixture.publisher.recipientAccountIds.getFirst());
+    }
+
+    @Test
+    @DisplayName("send channel message user mention persists mention and publishes realtime mention")
+    void sendChannelMessage_userMention_persistsMentionAndPublishesRealtimeMention() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+
+        ChannelMessageResult result = fixture.service.sendChannelMessageHttp(
+                new SendChannelMessageHttpCommand(
+                        1001L,
+                        1L,
+                        "Core:Text",
+                        "1.0.0",
+                        java.util.Map.of("text", "hello @carry-user"),
+                        null,
+                        List.of(new EditChannelMessageCommand.MentionTargetCommand("user", 1002L)),
+                        null
+                )
+        );
+
+        assertEquals(5001L, result.messageId());
+        assertEquals(1, fixture.mentionRepository.mentions.size());
+        assertEquals(1, fixture.publisher.createdMentions.size());
+        assertEquals(1002L, fixture.publisher.createdMentions.getFirst().targetAccountId());
+        assertEquals(5001L, fixture.publisher.createdMentions.getFirst().messageId());
     }
 
     /**
@@ -121,15 +149,18 @@ class MessageApplicationServiceSendTests {
     @DisplayName("send system channel message valid command persists and publishes system message")
     void sendSystemChannelMessage_validCommand_persistsAndPublishesSystemMessage() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
-        fixture.channelRepository.channel = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
+        fixture.channelRepository.channels.put(2L, new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
                 2L,
                 2L,
                 "system-announcement",
+                "",
+                "",
+                "",
                 "system",
                 false,
                 MessageApplicationServiceTestSupport.BASE_TIME,
                 MessageApplicationServiceTestSupport.BASE_TIME
-        );
+        ));
 
         ChannelMessageResult result = fixture.service.sendSystemChannelMessage(
                 new SendSystemChannelMessageCommand(1001L, 2L, "maintenance notice", "{\"severity\":\"info\"}", null)
@@ -182,15 +213,18 @@ class MessageApplicationServiceSendTests {
     @DisplayName("send channel text message muted private member throws forbidden problem")
     void sendChannelTextMessage_mutedPrivateMember_throwsForbiddenProblem() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
-        fixture.channelRepository.channel = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
+        fixture.channelRepository.channels.put(1L, new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
                 1L,
                 1L,
                 "project-alpha",
+                "",
+                "",
+                "",
                 "private",
                 false,
                 MessageApplicationServiceTestSupport.BASE_TIME,
                 MessageApplicationServiceTestSupport.BASE_TIME
-        );
+        ));
         fixture.channelMemberRepository.memberships.put(1L, List.of(
                 new ChannelMember(
                         1L,
@@ -218,7 +252,7 @@ class MessageApplicationServiceSendTests {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
         fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
                 5001L,
-                "carrypigeon-local",
+                MessageApplicationServiceTestSupport.SERVER_ID,
                 1L,
                 1L,
                 1001L,
@@ -245,6 +279,123 @@ class MessageApplicationServiceSendTests {
         assertEquals("MESSAGE_RECALLED", fixture.channelAuditLogRepository.logs.getFirst().actionType());
     }
 
+    @Test
+    @DisplayName("edit channel message sender owned message updates content and version")
+    void editChannelMessage_senderOwnedMessage_updatesContentAndVersion() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageApplicationServiceTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "text",
+                "hello world",
+                "hello world",
+                "hello world",
+                null,
+                null,
+                null,
+                null,
+                "sent",
+                MessageApplicationServiceTestSupport.BASE_TIME,
+                null,
+                1L
+        ));
+
+        ChannelMessageResult result = fixture.service.editChannelMessage(new EditChannelMessageCommand(
+                1001L,
+                5001L,
+                "Core:Text",
+                "1.0.0",
+                "edited content",
+                java.util.List.of(new EditChannelMessageCommand.MentionTargetCommand("user", 1002L)),
+                1L
+        ));
+
+        assertEquals("edited content", result.body());
+        assertEquals(2L, result.editVersion());
+        assertEquals(true, result.mentions().contains("1002"));
+        assertEquals("edited content", fixture.messageRepository.updatedMessages.getFirst().body());
+        assertEquals(1, fixture.mentionRepository.mentions.size());
+        assertEquals(1, fixture.publisher.createdMentions.size());
+        assertEquals(1002L, fixture.publisher.createdMentions.getFirst().targetAccountId());
+    }
+
+    @Test
+    @DisplayName("edit channel message version mismatch throws conflict")
+    void editChannelMessage_versionMismatch_throwsConflict() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageApplicationServiceTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "text",
+                "hello world",
+                "hello world",
+                "hello world",
+                null,
+                null,
+                null,
+                null,
+                "sent",
+                MessageApplicationServiceTestSupport.BASE_TIME,
+                null,
+                2L
+        ));
+
+        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.service.editChannelMessage(new EditChannelMessageCommand(
+                1001L,
+                5001L,
+                "Core:Text",
+                "1.0.0",
+                "edited content",
+                java.util.List.of(),
+                1L
+        )));
+
+        assertEquals("conflict", exception.reason());
+    }
+
+    @Test
+    @DisplayName("edit channel message expired window throws forbidden")
+    void editChannelMessage_expiredWindow_throwsForbidden() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageApplicationServiceTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "text",
+                "hello world",
+                "hello world",
+                "hello world",
+                null,
+                null,
+                null,
+                null,
+                "sent",
+                MessageApplicationServiceTestSupport.BASE_TIME.minusSeconds(600),
+                null,
+                1L
+        ));
+
+        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.service.editChannelMessage(new EditChannelMessageCommand(
+                1001L,
+                5001L,
+                "Core:Text",
+                "1.0.0",
+                "edited content",
+                java.util.List.of(),
+                1L
+        )));
+
+        assertEquals("message_edit_window_expired", exception.reason());
+    }
+
     /**
      * 验证 private channel 的 ADMIN 可以撤回 MEMBER 消息，但不能撤回 OWNER 消息。
      */
@@ -252,25 +403,28 @@ class MessageApplicationServiceSendTests {
     @DisplayName("recall channel message private admin target rules follow governance policy")
     void recallChannelMessage_privateAdminTargetRules_followGovernancePolicy() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
-        fixture.channelRepository.channel = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
+        fixture.channelRepository.channels.put(1L, new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
                 1L,
                 1L,
                 "project-alpha",
+                "",
+                "",
+                "",
                 "private",
                 false,
                 MessageApplicationServiceTestSupport.BASE_TIME,
                 MessageApplicationServiceTestSupport.BASE_TIME
-        );
+        ));
         fixture.channelMemberRepository.memberships.put(1L, new java.util.ArrayList<>(List.of(
                 new ChannelMember(1L, 1001L, ChannelMemberRole.ADMIN, MessageApplicationServiceTestSupport.BASE_TIME, null),
                 new ChannelMember(1L, 1002L, ChannelMemberRole.MEMBER, MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(1), null),
                 new ChannelMember(1L, 1003L, ChannelMemberRole.OWNER, MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2), null)
         )));
         fixture.messageRepository.messagesById.put(5002L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
-                5002L, "carrypigeon-local", 1L, 1L, 1002L, "text", "member", "member", "member", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
+                5002L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1002L, "text", "member", "member", "member", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
         fixture.messageRepository.messagesById.put(5003L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
-                5003L, "carrypigeon-local", 1L, 1L, 1003L, "text", "owner", "owner", "owner", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
+                5003L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1003L, "text", "owner", "owner", "owner", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
         ChannelMessageResult recalled = fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5002L));
@@ -292,20 +446,23 @@ class MessageApplicationServiceSendTests {
     @DisplayName("recall channel message private admin former sender succeeds")
     void recallChannelMessage_privateAdminFormerSender_succeeds() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
-        fixture.channelRepository.channel = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
+        fixture.channelRepository.channels.put(1L, new team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel(
                 1L,
                 1L,
                 "project-alpha",
+                "",
+                "",
+                "",
                 "private",
                 false,
                 MessageApplicationServiceTestSupport.BASE_TIME,
                 MessageApplicationServiceTestSupport.BASE_TIME
-        );
+        ));
         fixture.channelMemberRepository.memberships.put(1L, new java.util.ArrayList<>(List.of(
                 new ChannelMember(1L, 1001L, ChannelMemberRole.ADMIN, MessageApplicationServiceTestSupport.BASE_TIME, null)
         )));
         fixture.messageRepository.messagesById.put(5004L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
-                5004L, "carrypigeon-local", 1L, 1L, 1999L, "text", "former member", "former member", "former member", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
+                5004L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1999L, "text", "former member", "former member", "former member", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
         ChannelMessageResult recalled = fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5004L));

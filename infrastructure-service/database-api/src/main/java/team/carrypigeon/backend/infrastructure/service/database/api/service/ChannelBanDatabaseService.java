@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 
@@ -18,6 +19,13 @@ public interface ChannelBanDatabaseService {
      * @return 命中时返回封禁记录
      */
     Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId);
+
+    /**
+     * 查询频道下的全部封禁记录。
+     */
+    default List<ChannelBanRecord> findByChannelId(long channelId) {
+        return List.of();
+    }
 
     /**
      * 写入新的封禁记录。

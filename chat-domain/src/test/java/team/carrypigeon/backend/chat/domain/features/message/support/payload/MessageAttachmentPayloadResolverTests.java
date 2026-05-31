@@ -31,18 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MessageAttachmentPayloadResolverTests {
 
     /**
-     * 验证 file payload 会附加临时访问 URL。
+     * 验证 file payload 会收口为 share_key 与相对下载路径。
      */
     @Test
-    @DisplayName("resolve file payload adds access url fields")
-    void resolve_filePayload_addsAccessUrlFields() {
-        TestObjectStorageService storageService = new TestObjectStorageService();
-        storageService.presignedUrl = new PresignedUrl(
-                URI.create("http://127.0.0.1:9000/file/demo.pdf?token=abc"),
-                Instant.parse("2026-04-22T00:30:00Z")
-        );
+    @DisplayName("resolve file payload rewrites object key to share key fields")
+    void resolve_filePayload_rewritesObjectKeyToShareKeyFields() {
         JsonProvider jsonProvider = jsonProvider();
-        MessageAttachmentPayloadResolver resolver = new MessageAttachmentPayloadResolver(objectProvider(storageService), jsonProvider);
+        MessageAttachmentPayloadResolver resolver = new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider);
         String payload = jsonProvider.toJson(Map.of(
                 "object_key", "channels/1/messages/file/accounts/1001/5001-demo.pdf",
                 "filename", "demo.pdf",
@@ -52,12 +47,9 @@ class MessageAttachmentPayloadResolverTests {
 
         String resolved = resolver.resolve("file", payload);
 
-        assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", jsonProvider.readTree(resolved).path("object_key").asText());
-        assertEquals("http://127.0.0.1:9000/file/demo.pdf?token=abc", jsonProvider.readTree(resolved).path("access_url").asText());
-        assertEquals(
-                Instant.parse("2026-04-22T00:30:00Z").getEpochSecond(),
-                jsonProvider.readTree(resolved).path("access_url_expires_at").asLong()
-        );
+        assertTrue(jsonProvider.readTree(resolved).path("object_key").isMissingNode());
+        assertEquals("shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", jsonProvider.readTree(resolved).path("share_key").asText());
+        assertEquals("api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", jsonProvider.readTree(resolved).path("download_path").asText());
     }
 
     /**
@@ -87,29 +79,21 @@ class MessageAttachmentPayloadResolverTests {
         assertEquals("not-json", resolved);
     }
 
-    /**
-     * 验证派生 URL 失败时会回退原始 payload。
-     */
     @Test
-    @DisplayName("resolve presign failure returns original payload")
-    void resolve_presignFailure_returnsOriginalPayload() {
-        TestObjectStorageService storageService = new TestObjectStorageService();
-        storageService.failOnPresign = true;
+    @DisplayName("resolve share key payload keeps stable external fields")
+    void resolve_shareKeyPayload_keepsStableExternalFields() {
         JsonProvider jsonProvider = jsonProvider();
-        RecordingMessageAttachmentPayloadResolver resolver = new RecordingMessageAttachmentPayloadResolver(
-                objectProvider(storageService),
-                jsonProvider
-        );
+        MessageAttachmentPayloadResolver resolver = new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider);
         String payload = jsonProvider.toJson(Map.of(
-                "object_key", "channels/1/messages/file/accounts/1001/5001-demo.pdf",
-                "filename", "demo.pdf"
+                "share_key", "shr_7001",
+                "filename", "demo.pdf",
+                "mime_type", "application/pdf"
         ));
 
         String resolved = resolver.resolve("file", payload);
 
-        assertEquals(payload, resolved);
-        assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", resolver.loggedObjectKey);
-        assertEquals("boom", resolver.loggedException.getMessage());
+        assertEquals("shr_7001", jsonProvider.readTree(resolved).path("share_key").asText());
+        assertEquals("api/files/download/shr_7001", jsonProvider.readTree(resolved).path("download_path").asText());
     }
 
     private static JsonProvider jsonProvider() {
@@ -144,12 +128,6 @@ class MessageAttachmentPayloadResolverTests {
 
     private static class TestObjectStorageService implements ObjectStorageService {
 
-        private PresignedUrl presignedUrl = new PresignedUrl(
-                URI.create("http://127.0.0.1:9000/default"),
-                Instant.parse("2026-04-22T00:30:00Z")
-        );
-        private boolean failOnPresign;
-
         @Override
         public StorageObject put(PutObjectCommand command) {
             throw new UnsupportedOperationException();
@@ -167,29 +145,7 @@ class MessageAttachmentPayloadResolverTests {
 
         @Override
         public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
-            if (failOnPresign) {
-                throw new IllegalStateException("boom");
-            }
-            return presignedUrl;
-        }
-    }
-
-    private static class RecordingMessageAttachmentPayloadResolver extends MessageAttachmentPayloadResolver {
-
-        private String loggedObjectKey;
-        private RuntimeException loggedException;
-
-        private RecordingMessageAttachmentPayloadResolver(
-                ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-                JsonProvider jsonProvider
-        ) {
-            super(objectStorageServiceProvider, jsonProvider);
-        }
-
-        @Override
-        void logPresignFallback(String objectKey, RuntimeException exception) {
-            this.loggedObjectKey = objectKey;
-            this.loggedException = exception;
+            throw new UnsupportedOperationException();
         }
     }
 }

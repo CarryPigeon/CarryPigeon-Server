@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -35,9 +36,25 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
+    public List<Channel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, type, limit).stream().map(this::toDomainModel).toList();
+    }
+
+    @Override
     public Channel save(Channel channel) {
         channelDatabaseService.insert(toRecord(channel));
         return channel;
+    }
+
+    @Override
+    public Channel update(Channel channel) {
+        channelDatabaseService.update(toRecord(channel));
+        return channel;
+    }
+
+    @Override
+    public void delete(long channelId) {
+        channelDatabaseService.delete(channelId);
     }
 
     private Channel toDomainModel(ChannelRecord record) {
@@ -45,8 +62,13 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 record.id(),
                 record.conversationId(),
                 record.name(),
+                record.brief(),
+                record.avatar(),
+                "",
                 record.type(),
                 record.defaultChannel(),
+                record.memberCount(),
+                record.requiresApplication(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -57,8 +79,12 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 channel.id(),
                 channel.conversationId(),
                 channel.name(),
+                channel.brief(),
+                channel.avatar(),
                 channel.type(),
                 channel.defaultChannel(),
+                channel.memberCount(),
+                channel.requiresApplication(),
                 channel.createdAt(),
                 channel.updatedAt()
         );

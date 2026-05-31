@@ -29,7 +29,7 @@ class TextChannelMessagePluginTests {
         TextChannelMessagePlugin plugin = new TextChannelMessagePlugin();
 
         ChannelMessage message = plugin.createMessage(
-                new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                 new TextChannelMessageDraft("  hello world  ")
         );
 
@@ -49,7 +49,7 @@ class TextChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new TextChannelMessageDraft("   ")
                 )
         );

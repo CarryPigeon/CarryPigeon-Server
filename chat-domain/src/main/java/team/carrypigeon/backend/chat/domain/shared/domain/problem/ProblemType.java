@@ -7,6 +7,7 @@ package team.carrypigeon.backend.chat.domain.shared.domain.problem;
  */
 public enum ProblemType {
     VALIDATION,
+    CONFLICT,
     FORBIDDEN,
     NOT_FOUND,
     INTERNAL

@@ -16,11 +16,15 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
@@ -56,6 +60,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 final class MessageApplicationServiceTestSupport {
 
     static final Instant BASE_TIME = Instant.parse("2026-04-22T00:00:00Z");
+    static final String SERVER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
     private MessageApplicationServiceTestSupport() {
     }
@@ -65,13 +70,15 @@ final class MessageApplicationServiceTestSupport {
         final InMemoryChannelRepository channelRepository = new InMemoryChannelRepository();
         final InMemoryChannelMemberRepository channelMemberRepository = new InMemoryChannelMemberRepository();
         final InMemoryChannelAuditLogRepository channelAuditLogRepository = new InMemoryChannelAuditLogRepository();
+        final InMemoryChannelPinRepository channelPinRepository = new InMemoryChannelPinRepository();
         final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
+        final InMemoryMentionRepository mentionRepository = new InMemoryMentionRepository();
         final RecordingMessageRealtimePublisher publisher = new RecordingMessageRealtimePublisher();
         final JsonProvider jsonProvider = jsonProvider();
         final MessageApplicationService service;
 
         Fixture(ObjectStorageService storageService) {
-            channelRepository.channel = new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME);
+            channelRepository.channels.put(1L, new Channel(1L, 1L, "public", "", "", "", "public", true, BASE_TIME, BASE_TIME));
             channelMemberRepository.save(new ChannelMember(1L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
             channelMemberRepository.save(new ChannelMember(1L, 1002L, ChannelMemberRole.MEMBER, BASE_TIME.plusSeconds(1), null));
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(storageService);
@@ -84,14 +91,17 @@ final class MessageApplicationServiceTestSupport {
                     channelRepository,
                     channelMemberRepository,
                     channelAuditLogRepository,
+                    channelPinRepository,
                     new ChannelGovernancePolicy(),
                     messageRepository,
+                    mentionRepository,
                     publisher,
                     channelMessagePluginRegistry(storageService, jsonProvider, objectKeyPolicy),
                     objectKeyPolicy,
                     payloadResolver,
-                    new ServerIdentityProperties("carrypigeon-local"),
+                    new ServerIdentityProperties(SERVER_ID),
                     new FixedIdGenerator(),
+                    jsonProvider,
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     new NoopTransactionRunner(),
                     objectStorageServiceProvider
@@ -234,21 +244,21 @@ final class MessageApplicationServiceTestSupport {
 
     static final class InMemoryChannelRepository implements ChannelRepository {
 
-        Channel channel;
+        final Map<Long, Channel> channels = new HashMap<>();
 
         @Override
         public Optional<Channel> findDefaultChannel() {
-            return Optional.ofNullable(channel);
+            return Optional.ofNullable(channels.get(1L));
         }
 
         @Override
         public Optional<Channel> findSystemChannel() {
-            return Optional.ofNullable(channel != null && "system".equals(channel.type()) ? channel : null);
+            return channels.values().stream().filter(channel -> "system".equals(channel.type())).findFirst();
         }
 
         @Override
         public Optional<Channel> findById(long channelId) {
-            return Optional.ofNullable(channel != null && channel.id() == channelId ? channel : null);
+            return Optional.ofNullable(channels.get(channelId));
         }
     }
 
@@ -296,12 +306,84 @@ final class MessageApplicationServiceTestSupport {
         }
     }
 
+    static final class InMemoryChannelPinRepository implements ChannelPinRepository {
+
+        final List<ChannelPin> pins = new ArrayList<>();
+
+        @Override
+        public Optional<ChannelPin> findByChannelIdAndMessageId(long channelId, long messageId) {
+            return pins.stream().filter(pin -> pin.channelId() == channelId && pin.messageId() == messageId).findFirst();
+        }
+
+        @Override
+        public void save(ChannelPin channelPin) {
+            pins.removeIf(pin -> pin.channelId() == channelPin.channelId() && pin.messageId() == channelPin.messageId());
+            pins.add(channelPin);
+        }
+
+        @Override
+        public void delete(long channelId, long messageId) {
+            pins.removeIf(pin -> pin.channelId() == channelId && pin.messageId() == messageId);
+        }
+
+        @Override
+        public List<ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
+            return pins.stream()
+                    .filter(pin -> pin.channelId() == channelId)
+                    .filter(pin -> cursorMessageId == null || pin.messageId() < cursorMessageId)
+                    .sorted(java.util.Comparator.comparingLong(ChannelPin::messageId).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public long countByChannelId(long channelId) {
+            return pins.stream().filter(pin -> pin.channelId() == channelId).count();
+        }
+    }
+
+    static final class InMemoryMentionRepository implements MentionRepository {
+
+        final List<Mention> mentions = new ArrayList<>();
+
+        @Override
+        public void save(Mention mention) {
+            mentions.add(mention);
+        }
+
+        @Override
+        public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
+            return mentions.stream()
+                    .filter(mention -> mention.targetAccountId() == accountId)
+                    .filter(mention -> cursorMentionId == null || mention.mentionId() < cursorMentionId)
+                    .filter(mention -> !unreadOnly || !mention.read())
+                    .filter(mention -> channelId == null || mention.channelId() == channelId)
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public boolean markAsRead(long accountId, long mentionId) {
+            return false;
+        }
+
+        @Override
+        public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
+            return 0;
+        }
+    }
+
     static final class InMemoryMessageRepository implements MessageRepository {
 
         final List<ChannelMessage> savedMessages = new ArrayList<>();
         final List<ChannelMessage> updatedMessages = new ArrayList<>();
         final List<ChannelMessage> history = new ArrayList<>();
         final List<ChannelMessage> searchResults = new ArrayList<>();
+        Long lastSearchCursorMessageId;
+        Long lastSearchSenderAccountId;
+        String lastSearchDomain;
+        Long lastSearchBeforeMessageId;
+        Long lastSearchAfterMessageId;
         final Map<Long, ChannelMessage> messagesById = new HashMap<>();
 
         @Override
@@ -327,12 +409,56 @@ final class MessageApplicationServiceTestSupport {
 
         @Override
         public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-            return history;
+            return history.stream()
+                    .filter(message -> message.channelId() == channelId)
+                    .filter(message -> cursorMessageId == null || message.messageId() < cursorMessageId)
+                    .sorted(java.util.Comparator.comparingLong(ChannelMessage::messageId).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+            return history.stream()
+                    .filter(message -> message.channelId() == channelId)
+                    .filter(message -> message.messageId() > afterMessageId)
+                    .sorted(java.util.Comparator.comparingLong(ChannelMessage::messageId))
+                    .limit(limit)
+                    .toList();
         }
 
         @Override
         public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
-            return searchResults;
+            return searchByChannelId(channelId, keyword, null, null, null, null, null, limit);
+        }
+
+        @Override
+        public List<ChannelMessage> searchByChannelId(
+                long channelId,
+                String keyword,
+                Long cursorMessageId,
+                Long senderAccountId,
+                String domain,
+                Long beforeMessageId,
+                Long afterMessageId,
+                int limit
+        ) {
+            lastSearchCursorMessageId = cursorMessageId;
+            lastSearchSenderAccountId = senderAccountId;
+            lastSearchDomain = domain;
+            lastSearchBeforeMessageId = beforeMessageId;
+            lastSearchAfterMessageId = afterMessageId;
+            return searchResults.stream()
+                    .filter(message -> message.channelId() == channelId)
+                    .filter(message -> cursorMessageId == null || message.messageId() < cursorMessageId)
+                    .filter(message -> senderAccountId == null || message.senderId() == senderAccountId)
+                    .filter(message -> domain == null || domain.equals(message.messageType()))
+                    .filter(message -> beforeMessageId == null || message.messageId() < beforeMessageId)
+                    .filter(message -> afterMessageId == null || message.messageId() > afterMessageId)
+                    .filter(message -> message.searchableText() != null && message.searchableText().contains(keyword.trim()))
+                    .sorted(java.util.Comparator.comparingLong(ChannelMessage::messageId).reversed())
+                    .limit(limit)
+                    .toList();
         }
 
         private void replaceMessage(List<ChannelMessage> messages, ChannelMessage updatedMessage) {
@@ -359,11 +485,29 @@ final class MessageApplicationServiceTestSupport {
 
         final List<ChannelMessage> publishedMessages = new ArrayList<>();
         final List<List<Long>> recipientAccountIds = new ArrayList<>();
+        final List<ChannelPin> pinnedMessages = new ArrayList<>();
+        final List<ChannelPin> unpinnedMessages = new ArrayList<>();
+        final List<Mention> createdMentions = new ArrayList<>();
 
         @Override
         public void publish(ChannelMessage message, java.util.Collection<Long> recipients) {
             publishedMessages.add(message);
             recipientAccountIds.add(List.copyOf(recipients));
+        }
+
+        @Override
+        public void publishPin(ChannelPin pin, java.util.Collection<Long> recipients) {
+            pinnedMessages.add(pin);
+        }
+
+        @Override
+        public void publishUnpin(ChannelPin pin, long unpinnedByAccountId, long unpinnedAt, java.util.Collection<Long> recipients) {
+            unpinnedMessages.add(pin);
+        }
+
+        @Override
+        public void publishMentionCreated(Mention mention, java.util.Collection<Long> recipientAccountIds) {
+            createdMentions.add(mention);
         }
     }
 

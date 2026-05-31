@@ -25,7 +25,8 @@ public class JacksonAutoConfiguration {
     public Jackson2ObjectMapperBuilderCustomizer snakeCaseJacksonCustomizer() {
         return builder -> builder
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
-                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                .featuresToEnable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .featuresToDisable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS);
     }
 
     /**

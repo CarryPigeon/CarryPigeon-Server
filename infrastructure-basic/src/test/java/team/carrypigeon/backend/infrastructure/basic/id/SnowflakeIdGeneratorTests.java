@@ -1,9 +1,10 @@
 package team.carrypigeon.backend.infrastructure.basic.id;
 
 import cn.hutool.core.lang.Snowflake;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,5 +31,20 @@ class SnowflakeIdGeneratorTests {
         assertTrue(first > 0);
         assertTrue(second > 0);
         assertNotEquals(first, second);
+    }
+
+    /**
+     * 测试字符串形式 ID 输出遵循十进制字符串契约。
+     * 输入：同一个 SnowflakeIdGenerator 实例。
+     * 期望：`nextStringId()` 输出仅包含数字字符，且可被项目统一 ID 工具无损解析与回写。
+     */
+    @Test
+    void nextStringId_called_returnsDecimalString() {
+        IdGenerator idGenerator = new SnowflakeIdGenerator(new Snowflake(1, 1));
+
+        String stringId = idGenerator.nextStringId();
+
+        assertEquals(Ids.toString(Ids.parse(stringId)), stringId);
+        assertTrue(stringId.chars().allMatch(Character::isDigit));
     }
 }

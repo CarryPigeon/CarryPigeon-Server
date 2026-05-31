@@ -8,7 +8,18 @@ package team.carrypigeon.backend.chat.domain.features.message.application.query;
  * @param accountId 当前账户 ID
  * @param channelId 频道 ID
  * @param cursorMessageId 游标消息 ID，可为空
+ * @param aroundMessageId 目标消息 ID，可为空
+ * @param before 目标消息之前的上下文数量
+ * @param after 目标消息之后的上下文数量
  * @param limit 查询条数
  */
-public record GetChannelMessageHistoryQuery(long accountId, long channelId, Long cursorMessageId, int limit) {
+public record GetChannelMessageHistoryQuery(
+        long accountId,
+        long channelId,
+        Long cursorMessageId,
+        Long aroundMessageId,
+        Integer before,
+        Integer after,
+        int limit
+) {
 }

@@ -10,8 +10,12 @@ import java.time.Instant;
  * @param id 频道 ID
  * @param conversationId 会话 ID
  * @param name 频道名称
+ * @param brief 频道简介
+ * @param avatar 频道头像相对路径
  * @param type 频道类型
  * @param defaultChannel 是否为默认频道
+ * @param memberCount 成员数
+ * @param requiresApplication 是否需要申请加入
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -19,9 +23,27 @@ public record ChannelRecord(
         long id,
         long conversationId,
         String name,
+        String brief,
+        String avatar,
         String type,
         boolean defaultChannel,
+        long memberCount,
+        boolean requiresApplication,
         Instant createdAt,
         Instant updatedAt
 ) {
+
+    public ChannelRecord(
+            long id,
+            long conversationId,
+            String name,
+            String brief,
+            String avatar,
+            String type,
+            boolean defaultChannel,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(id, conversationId, name, brief, avatar, type, defaultChannel, 0L, false, createdAt, updatedAt);
+    }
 }

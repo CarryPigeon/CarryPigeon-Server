@@ -35,6 +35,15 @@ public interface MessageRepository {
     ChannelMessage update(ChannelMessage message);
 
     /**
+     * 按消息 ID 删除消息。
+     *
+     * @param messageId 消息 ID
+     */
+    default void delete(long messageId) {
+        throw new UnsupportedOperationException("message delete is not supported");
+    }
+
+    /**
      * 查询频道历史消息。
      *
      * @param channelId 频道 ID
@@ -45,6 +54,18 @@ public interface MessageRepository {
     List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
 
     /**
+     * 查询频道内指定消息之后的消息。
+     *
+     * @param channelId 频道 ID
+     * @param afterMessageId 目标消息 ID
+     * @param limit 查询条数
+     * @return 消息列表，按 messageId 升序排列
+     */
+    default List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+        throw new UnsupportedOperationException("message after query is not supported");
+    }
+
+    /**
      * 在频道内按关键字搜索消息。
      *
      * @param channelId 频道 ID
@@ -53,4 +74,20 @@ public interface MessageRepository {
      * @return 搜索命中消息列表
      */
     List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit);
+
+    /**
+     * 在频道内按关键字和高级过滤条件搜索消息。
+     */
+    default List<ChannelMessage> searchByChannelId(
+            long channelId,
+            String keyword,
+            Long cursorMessageId,
+            Long senderAccountId,
+            String domain,
+            Long beforeMessageId,
+            Long afterMessageId,
+            int limit
+    ) {
+        return searchByChannelId(channelId, keyword, limit);
+    }
 }

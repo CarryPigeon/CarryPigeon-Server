@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
 import io.netty.channel.Channel;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,7 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RealtimeSessionRegistry {
 
+    private static final int MAX_EVENTS = 200;
+
     private final ConcurrentHashMap<Long, Set<Channel>> channelsByAccountId = new ConcurrentHashMap<>();
+    private final List<StoredRealtimeEvent> eventLog = Collections.synchronizedList(new ArrayList<>());
 
     /**
      * 注册账户实时通道。
@@ -49,5 +54,34 @@ public class RealtimeSessionRegistry {
      */
     public Set<Channel> getChannels(long accountId) {
         return Collections.unmodifiableSet(channelsByAccountId.getOrDefault(accountId, Set.of()));
+    }
+
+    public void appendEvent(StoredRealtimeEvent event) {
+        eventLog.add(event);
+        if (eventLog.size() > MAX_EVENTS) {
+            eventLog.removeFirst();
+        }
+    }
+
+    public List<StoredRealtimeEvent> eventsAfter(String lastEventId) {
+        synchronized (eventLog) {
+            if (lastEventId == null || lastEventId.isBlank()) {
+                return List.of();
+            }
+            int index = -1;
+            for (int cursor = 0; cursor < eventLog.size(); cursor++) {
+                if (eventLog.get(cursor).eventId().equals(lastEventId)) {
+                    index = cursor;
+                    break;
+                }
+            }
+            if (index < 0) {
+                return null;
+            }
+            return List.copyOf(eventLog.subList(index + 1, eventLog.size()));
+        }
+    }
+
+    public record StoredRealtimeEvent(String eventId, String eventType, long serverTime, Object payload) {
     }
 }

@@ -1,15 +1,16 @@
 package team.carrypigeon.backend.chat.domain.features.server.application.service;
 
 import java.util.List;
+import java.time.Clock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.CurrentPresenceResult;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.CurrentPresenceStatus;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.WellKnownServerDocument;
+import team.carrypigeon.backend.chat.domain.features.server.application.dto.RequiredGateCheckResult;
+import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerCapabilities;
+import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerDiscoveryDocument;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 服务基础应用服务。
@@ -19,61 +20,81 @@ import team.carrypigeon.backend.chat.domain.features.server.support.realtime.Rea
 @Service
 public class ServerApplicationService {
 
-    private static final List<String> LOGIN_METHODS = List.of("username_password");
-    private static final List<String> PUBLIC_CAPABILITIES = List.of("user_registration", "username_password_login");
+    private static final String DEFAULT_BRIEF = "A self-hosted chat server";
+    private static final String DEFAULT_AVATAR = "api/files/download/server_avatar";
+    private static final String API_VERSION = "1.0";
 
     private final ServerIdentityProperties serverIdentityProperties;
     private final String applicationName;
     private final ChannelMessagePluginRegistry channelMessagePluginRegistry;
     private final RealtimeServerProperties realtimeServerProperties;
-    private final RealtimeSessionRegistry realtimeSessionRegistry;
+    private final TimeProvider timeProvider;
+    private final List<String> requiredPlugins;
 
     public ServerApplicationService(
             ServerIdentityProperties serverIdentityProperties,
             @Value("${spring.application.name:CarryPigeonBackend}") String applicationName,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
             RealtimeServerProperties realtimeServerProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry
+            TimeProvider timeProvider,
+            @Value("${cp.chat.server.required-plugins:}") List<String> requiredPlugins
     ) {
         this.serverIdentityProperties = serverIdentityProperties;
         this.applicationName = applicationName;
         this.channelMessagePluginRegistry = channelMessagePluginRegistry;
         this.realtimeServerProperties = realtimeServerProperties;
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.timeProvider = timeProvider;
+        this.requiredPlugins = requiredPlugins == null ? List.of() : List.copyOf(requiredPlugins);
     }
 
-    /**
-     * 返回服务端公开源信息文档。
-     *
-     * @return 收敛后的最小公开源信息文档
-     */
-    public WellKnownServerDocument getWellKnownServerDocument() {
-        return new WellKnownServerDocument(
-                serverIdentityProperties.id(),
+    public ServerApplicationService(
+            ServerIdentityProperties serverIdentityProperties,
+            String applicationName,
+            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            RealtimeServerProperties realtimeServerProperties
+    ) {
+        this(
+                serverIdentityProperties,
                 applicationName,
-                true,
-                LOGIN_METHODS,
-                PUBLIC_CAPABILITIES,
-                resolvePublicPlugins()
+                channelMessagePluginRegistry,
+                realtimeServerProperties,
+                new TimeProvider(Clock.systemUTC()),
+                List.of()
         );
     }
 
-    private List<String> resolvePublicPlugins() {
-        return channelMessagePluginRegistry.getPublicPluginKeys();
+    /**
+     * 返回 v1 服务发现文档。
+     *
+     * @return 客户端握手阶段可直接消费的发现信息
+     */
+    public ServerDiscoveryDocument getServerDiscoveryDocument() {
+        return new ServerDiscoveryDocument(
+                serverIdentityProperties.id(),
+                applicationName,
+                DEFAULT_BRIEF,
+                DEFAULT_AVATAR,
+                API_VERSION,
+                API_VERSION,
+                resolveWsUrl(),
+                requiredPlugins,
+                new ServerCapabilities(true, true, true),
+                timeProvider.nowMillis()
+        );
     }
 
     /**
-     * 返回当前账户在本节点上的 presence 状态。
+     * 返回当前设备缺失的 required 插件列表。
      *
-     * @param accountId 账户 ID
-     * @return presence 查询结果
+     * @param installedPluginIds 客户端已安装插件 ID
+     * @return 当前缺失的必需插件列表
      */
-    public CurrentPresenceResult getCurrentPresence(long accountId) {
-        if (!realtimeServerProperties.enabled()) {
-            return new CurrentPresenceResult(accountId, CurrentPresenceStatus.UNAVAILABLE, 0);
-        }
-        int onlineSessionCount = realtimeSessionRegistry.getChannels(accountId).size();
-        CurrentPresenceStatus status = onlineSessionCount > 0 ? CurrentPresenceStatus.ONLINE : CurrentPresenceStatus.OFFLINE;
-        return new CurrentPresenceResult(accountId, status, onlineSessionCount);
+    public List<String> findMissingRequiredPlugins(List<String> installedPluginIds) {
+        List<String> installed = installedPluginIds == null ? List.of() : installedPluginIds;
+        return requiredPlugins.stream().filter(requiredPlugin -> !installed.contains(requiredPlugin)).toList();
+    }
+
+    private String resolveWsUrl() {
+        return "wss://" + realtimeServerProperties.host() + ":" + realtimeServerProperties.port() + realtimeServerProperties.path();
     }
 }

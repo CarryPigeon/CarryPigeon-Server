@@ -42,7 +42,7 @@ cp:
     server:
       # 职责：定义当前服务实例在消息模型中实际使用的稳定 serverId。
       # 约束：多服务端部署时必须按实例明确区分，避免跨实例消息来源混淆。
-      id: carrypigeon-local
+      id: 550e8400-e29b-41d4-a716-446655440000
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
         # 约束：默认关闭，避免在未完成握手鉴权与部署隔离前暴露独立监听端口。
@@ -53,7 +53,7 @@ cp:
         # 职责：定义 Netty WebSocket 服务监听端口。
         port: 18080
         # 职责：定义 Netty WebSocket 握手路径。
-        path: /ws
+        path: /api/ws
         # 职责：定义 Netty boss 线程数。
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。

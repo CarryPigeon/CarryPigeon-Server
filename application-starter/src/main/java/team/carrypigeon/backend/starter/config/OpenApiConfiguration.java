@@ -39,9 +39,9 @@ public class OpenApiConfiguration {
                         .description("面向前端、测试与集成方的 CarryPigeon Backend HTTP API 门户。\n\n"
                                 + "使用说明：\n"
                                 + "1. 大多数受保护接口需要在 Swagger Authorize 中填写 `Bearer <access-token>`。\n"
-                                + "2. 当前接口通常返回 HTTP 200，请结合 `CPResponse.code` 判断真实业务结果。\n"
-                                + "3. `code=100` 表示成功；`200/300/404/500` 分别表示参数错误、认证或权限失败、资源不存在、内部错误。\n"
-                                + "4. 文档中的 success / validation_failed / forbidden / not_found / internal_error 示例，展示的是同一 HTTP 200 包装下的不同业务结果。"))
+                                + "2. 当前对外协议以 `docs/t` 下的 v1 HTTP/WS 规范为基准，HTTP 成功响应直接返回资源对象，不使用 `CPResponse` 统一成功包装。\n"
+                                + "3. JSON 字段统一为 `snake_case`，雪花 ID 统一编码为十进制字符串。\n"
+                                + "4. 失败响应统一为 `{ \"error\": { status, reason, message, details? } }`，请以 `error.reason` 作为分支条件。"))
                 .components(new Components().addSecuritySchemes(
                         AUTH_SCHEME_NAME,
                         new SecurityScheme()
@@ -75,7 +75,6 @@ public class OpenApiConfiguration {
                     }
 
                     ensureCommonErrorResponses(operation, path);
-                    ensureKeySuccessExamples(operation, path);
                 });
             });
         };
@@ -86,152 +85,54 @@ public class OpenApiConfiguration {
             operation.setResponses(new ApiResponses());
         }
 
-        operation.getResponses().addApiResponse("200", commonBusinessResponse(path));
+        addErrorResponse(operation.getResponses(), "422", "请求参数或请求体校验失败", "{\n  \"error\": {\n    \"status\": 422,\n    \"reason\": \"validation_failed\",\n    \"message\": \"validation failed\",\n    \"request_id\": \"req_01HXYZ\",\n    \"details\": {\n      \"field_errors\": [\n        {\n          \"field\": \"limit\",\n          \"reason\": \"invalid\",\n          \"message\": \"limit must be between 1 and 50\"\n        }\n      ]\n    }\n  }\n}");
+        addErrorResponse(operation.getResponses(), "500", "服务端内部错误", "{\n  \"error\": {\n    \"status\": 500,\n    \"reason\": \"internal_error\",\n    \"message\": \"internal server error\",\n    \"request_id\": \"req_01HXYZ\"\n  }\n}");
+
+        if (requiresAuthentication(path)) {
+            addErrorResponse(operation.getResponses(), "401", "缺少或无效的 access token", "{\n  \"error\": {\n    \"status\": 401,\n    \"reason\": \"unauthorized\",\n    \"message\": \"authentication is required\",\n    \"request_id\": \"req_01HXYZ\"\n  }\n}");
+            addErrorResponse(operation.getResponses(), "403", "已认证但无权执行该操作", "{\n  \"error\": {\n    \"status\": 403,\n    \"reason\": \"forbidden\",\n    \"message\": \"forbidden\",\n    \"request_id\": \"req_01HXYZ\"\n  }\n}");
+        }
+
+        if (supportsNotFound(path)) {
+            addErrorResponse(operation.getResponses(), "404", "目标资源不存在", "{\n  \"error\": {\n    \"status\": 404,\n    \"reason\": \"not_found\",\n    \"message\": \"resource does not exist\",\n    \"request_id\": \"req_01HXYZ\"\n  }\n}");
+        }
+
+        if ("/api/auth/tokens".equals(path)) {
+            addErrorResponse(operation.getResponses(), "412", "required gate 未满足", "{\n  \"error\": {\n    \"status\": 412,\n    \"reason\": \"required_plugin_missing\",\n    \"message\": \"required plugins are missing\",\n    \"request_id\": \"req_01HXYZ\",\n    \"details\": {\n      \"missing_plugins\": [\"mc-bind\"]\n    }\n  }\n}");
+        }
+
+        if (supportsConflict(path)) {
+            addErrorResponse(operation.getResponses(), "409", "资源状态冲突", "{\n  \"error\": {\n    \"status\": 409,\n    \"reason\": \"conflict\",\n    \"message\": \"resource state conflict\",\n    \"request_id\": \"req_01HXYZ\"\n  }\n}");
+        }
+    }
+
+    private static void addErrorResponse(ApiResponses responses, String status, String description, String jsonValue) {
+        if (responses.get(status) != null) {
+            return;
+        }
+        responses.addApiResponse(status, new ApiResponse()
+                .description(description)
+                .content(new Content().addMediaType(JSON_MEDIA_TYPE, new MediaType()
+                        .addExamples("error", example(status, description, jsonValue)))));
     }
 
     private static boolean supportsNotFound(String path) {
         if (path == null) {
             return false;
         }
-
         return path.startsWith("/api/users/")
                 || path.startsWith("/api/channels/")
-                || "/api/channels/default".equals(path)
-                || "/api/channels/system".equals(path)
-                || "/api/server/presence/me".equals(path);
+                || path.startsWith("/api/messages/")
+                || path.startsWith("/api/server/");
     }
 
-    private static ApiResponse commonBusinessResponse(String path) {
-        MediaType mediaType = new MediaType()
-                .addExamples("success", example(
-                        "success",
-                        "成功响应",
-                        "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {}\n}"
-                ))
-                .addExamples("validation_failed", example(
-                        "validation_failed",
-                        "参数错误",
-                        "{\n  \"code\": 200,\n  \"message\": \"limit must be between 1 and 100\",\n  \"data\": null\n}"
-                ))
-                .addExamples("internal_error", example(
-                        "internal_error",
-                        "服务内部错误",
-                        "{\n  \"code\": 500,\n  \"message\": \"internal server error\",\n  \"data\": null\n}"
-                ));
-
-        if (requiresAuthentication(path)) {
-            mediaType.addExamples("forbidden", example(
-                    "forbidden",
-                    "认证或权限失败",
-                    "{\n  \"code\": 300,\n  \"message\": \"authentication is required\",\n  \"data\": null\n}"
-            ));
-        }
-
-        if (supportsNotFound(path)) {
-            mediaType.addExamples("not_found", example(
-                    "not_found",
-                    "资源不存在",
-                    "{\n  \"code\": 404,\n  \"message\": \"channel does not exist\",\n  \"data\": null\n}"
-            ));
-        }
-
-        return new ApiResponse()
-                .description("当前接口通常返回 HTTP 200；请读取 `CPResponse.code` 判断业务成功或失败。常见业务码包括 100=成功、200=参数错误、300=认证或权限失败、404=资源不存在、500=内部错误。")
-                .content(new Content().addMediaType(JSON_MEDIA_TYPE, mediaType));
-    }
-
-    private static void ensureKeySuccessExamples(io.swagger.v3.oas.models.Operation operation, String path) {
-        if (operation.getResponses() == null) {
-            operation.setResponses(new ApiResponses());
-        }
-
-        ApiResponse success = operation.getResponses().get("200");
-        if (success == null) {
-            success = new ApiResponse().description("HTTP 状态通常为 200；请读取 `CPResponse.code` 判断业务成功或失败。常见业务码包括 100=成功、200=参数错误、300=认证或权限失败、404=资源不存在、500=内部错误");
-            operation.getResponses().addApiResponse("200", success);
-        }
-
-        Content content = success.getContent();
-        if (content == null) {
-            content = new Content();
-            success.setContent(content);
-        }
-
-        MediaType mediaType = content.get(JSON_MEDIA_TYPE);
-        if (mediaType == null) {
-            mediaType = new MediaType();
-            content.addMediaType(JSON_MEDIA_TYPE, mediaType);
-        }
-
-        addSuccessExamples(mediaType, path);
-    }
-
-    private static void addSuccessExamples(MediaType mediaType, String path) {
+    private static boolean supportsConflict(String path) {
         if (path == null) {
-            return;
+            return false;
         }
-
-        if ("/api/auth/register".equals(path)) {
-            mediaType.addExamples("register_success", example(
-                    "register_success",
-                    "注册成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"accountId\": 1001,\n    \"username\": \"carry_user\"\n  }\n}"
-            ));
-        } else if ("/api/auth/login".equals(path) || "/api/auth/refresh".equals(path)) {
-            mediaType.addExamples("token_success", example(
-                    "token_success",
-                    "令牌获取成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"accountId\": 1001,\n    \"username\": \"carry_user\",\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiJ9.access.token\",\n    \"accessTokenExpiresAt\": \"2026-05-14T12:00:00Z\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiJ9.refresh.token\",\n    \"refreshTokenExpiresAt\": \"2026-05-28T12:00:00Z\"\n  }\n}"
-            ));
-        } else if ("/api/auth/logout".equals(path)) {
-            mediaType.addExamples("logout_success", example(
-                    "logout_success",
-                    "注销成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": null\n}"
-            ));
-        } else if ("/api/auth/me".equals(path)) {
-            mediaType.addExamples("current_user_success", example(
-                    "current_user_success",
-                    "当前用户查询成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"accountId\": 1001,\n    \"username\": \"carry_user\"\n  }\n}"
-            ));
-        } else if ("/api/server/echo".equals(path)) {
-            mediaType.addExamples("echo_success", example(
-                    "echo_success",
-                    "回显成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": \"pong\"\n}"
-            ));
-        } else if ("/api/server/presence/me".equals(path)) {
-            mediaType.addExamples("presence_success", example(
-                    "presence_success",
-                    "Presence 查询成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"account_id\": 1001,\n    \"status\": \"ONLINE\",\n    \"online_session_count\": 1\n  }\n}"
-            ));
-        } else if ("/api/users/me".equals(path) || "/api/users/{accountId}".equals(path)) {
-            mediaType.addExamples("user_profile_success", example(
-                    "user_profile_success",
-                    "用户资料查询成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"accountId\": 1001,\n    \"nickname\": \"Carry Pigeon\",\n    \"avatarUrl\": \"https://cdn.example.com/avatar.png\",\n    \"bio\": \"Backend developer and pigeon lover\",\n    \"createdAt\": \"2026-05-01T08:00:00Z\",\n    \"updatedAt\": \"2026-05-13T08:00:00Z\"\n  }\n}"
-            ));
-        } else if ("/api/users".equals(path)) {
-            mediaType.addExamples("user_profile_list_success", example(
-                    "user_profile_list_success",
-                    "用户资料列表成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": [\n    {\n      \"account_id\": 1001,\n      \"nickname\": \"Carry Pigeon\",\n      \"avatar_url\": \"https://cdn.example.com/avatar.png\",\n      \"bio\": \"Backend developer and pigeon lover\",\n      \"created_at\": \"2026-05-01T08:00:00Z\",\n      \"updated_at\": \"2026-05-13T08:00:00Z\"\n    }\n  ]\n}"
-            ));
-        } else if ("/api/users/page".equals(path) || "/api/users/search".equals(path)) {
-            mediaType.addExamples("user_profile_page_success", example(
-                    "user_profile_page_success",
-                    "用户资料分页成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"users\": [\n      {\n        \"account_id\": 1001,\n        \"nickname\": \"Carry Pigeon\",\n        \"avatar_url\": \"https://cdn.example.com/avatar.png\",\n        \"bio\": \"Backend developer and pigeon lover\",\n        \"created_at\": \"2026-05-01T08:00:00Z\",\n        \"updated_at\": \"2026-05-13T08:00:00Z\"\n      }\n    ],\n    \"next_cursor\": 1000\n  }\n}"
-            ));
-        } else if ("/api/channels/default".equals(path) || "/api/channels/system".equals(path) || "/api/channels/private".equals(path)) {
-            mediaType.addExamples("channel_success", example(
-                    "channel_success",
-                    "频道查询/创建成功",
-                    "{\n  \"code\": 100,\n  \"message\": \"success\",\n  \"data\": {\n    \"channel_id\": 2001,\n    \"conversation_id\": 3001,\n    \"name\": \"Project Phoenix\",\n    \"type\": \"private\",\n    \"default_channel\": false,\n    \"created_at\": \"2026-05-01T08:00:00Z\",\n    \"updated_at\": \"2026-05-13T08:00:00Z\"\n  }\n}"
-            ));
-        }
+        return path.startsWith("/api/messages/")
+                || path.contains("/pins")
+                || path.contains("/forward");
     }
 
     private static Example example(String name, String summary, String jsonValue) {
@@ -246,10 +147,16 @@ public class OpenApiConfiguration {
             return false;
         }
 
+        if ("/api/server".equals(path) || "/api/gates/required/check".equals(path) || "/api/plugins/catalog".equals(path) || "/api/domains/catalog".equals(path)) {
+            return false;
+        }
+
         return !"/api/auth/register".equals(path)
-                && !"/api/auth/login".equals(path)
+                && !"/api/auth/email_codes".equals(path)
+                && !"/api/auth/tokens".equals(path)
                 && !"/api/auth/refresh".equals(path)
-                && !"/api/auth/logout".equals(path)
-                && !"/api/server/echo".equals(path);
+                && !"/api/auth/revoke".equals(path)
+                && !"/api/server".equals(path)
+                && !"/api/gates/required/check".equals(path);
     }
 }

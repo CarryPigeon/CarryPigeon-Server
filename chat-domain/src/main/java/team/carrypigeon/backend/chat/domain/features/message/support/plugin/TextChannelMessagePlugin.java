@@ -39,8 +39,12 @@ public class TextChannelMessagePlugin implements ChannelMessagePlugin {
                 normalizedBody,
                 textDraft.payload(),
                 textDraft.metadata(),
+                null,
+                null,
                 "sent",
-                context.createdAt()
+                context.createdAt(),
+                null,
+                1L
         );
     }
 }

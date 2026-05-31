@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
@@ -23,12 +24,23 @@ import team.carrypigeon.backend.chat.domain.features.auth.support.security.Argon
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.HmacJwtAuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.Sha256TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
+import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
@@ -40,7 +52,11 @@ import team.carrypigeon.backend.chat.domain.features.message.support.plugin.Text
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -106,7 +122,7 @@ public class StarterRegressionConfiguration {
     @Primary
     public AuthJwtProperties authJwtProperties() {
         return new AuthJwtProperties(
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 "0123456789abcdef0123456789abcdef",
                 Duration.ofMinutes(30),
                 Duration.ofDays(14)
@@ -119,7 +135,7 @@ public class StarterRegressionConfiguration {
     @Bean
     @Primary
     public ServerIdentityProperties serverIdentityProperties() {
-        return new ServerIdentityProperties("carrypigeon-local");
+        return new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000");
     }
 
     /**
@@ -191,12 +207,50 @@ public class StarterRegressionConfiguration {
     }
 
     /**
+     * 创建频道实时发布器替身。
+     */
+    @Bean
+    @Primary
+    public ChannelRealtimePublisher channelRealtimePublisher() {
+        return new ChannelRealtimePublisher() {
+        };
+    }
+
+    /**
      * 创建消息实时发布器替身。
      */
     @Bean
     @Primary
     public MessageRealtimePublisher messageRealtimePublisher() {
         return (message, recipientAccountIds) -> {
+        };
+    }
+
+    /**
+     * 创建提及仓储替身。
+     */
+    @Bean
+    @ConditionalOnMissingBean(MentionRepository.class)
+    public MentionRepository mentionRepository() {
+        return new MentionRepository() {
+            @Override
+            public void save(Mention mention) {
+            }
+
+            @Override
+            public java.util.List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public boolean markAsRead(long accountId, long mentionId) {
+                return false;
+            }
+
+            @Override
+            public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
+                return 0;
+            }
         };
     }
 
@@ -264,6 +318,19 @@ public class StarterRegressionConfiguration {
     }
 
     /**
+     * 创建用户资料应用服务。
+     */
+    @Bean
+    public UserProfileApplicationService userProfileApplicationService(
+            AuthAccountRepository authAccountRepository,
+            UserProfileRepository userProfileRepository,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner
+    ) {
+        return new UserProfileApplicationService(authAccountRepository, userProfileRepository, timeProvider, transactionRunner);
+    }
+
+    /**
      * 创建消息应用服务。
      */
     @Bean
@@ -271,14 +338,17 @@ public class StarterRegressionConfiguration {
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelPinRepository channelPinRepository,
             ChannelGovernancePolicy channelGovernancePolicy,
             MessageRepository messageRepository,
+            MentionRepository mentionRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
             MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
             MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
             ServerIdentityProperties serverIdentityProperties,
             IdGenerator idGenerator,
+            JsonProvider jsonProvider,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
@@ -287,17 +357,53 @@ public class StarterRegressionConfiguration {
                 channelRepository,
                 channelMemberRepository,
                 channelAuditLogRepository,
+                channelPinRepository,
                 channelGovernancePolicy,
                 messageRepository,
+                mentionRepository,
                 messageRealtimePublisher,
                 channelMessagePluginRegistry,
                 messageAttachmentObjectKeyPolicy,
                 messageAttachmentPayloadResolver,
                 serverIdentityProperties,
                 idGenerator,
+                jsonProvider,
                 timeProvider,
                 transactionRunner,
                 objectStorageServiceProvider
+        );
+    }
+
+    @Bean
+    public ChannelApplicationService channelApplicationService(
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            ChannelInviteRepository channelInviteRepository,
+            ChannelBanRepository channelBanRepository,
+            ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelReadStateRepository channelReadStateRepository,
+            MessageRepository messageRepository,
+            UserProfileRepository userProfileRepository,
+            ChannelGovernancePolicy channelGovernancePolicy,
+            ChannelRealtimePublisher channelRealtimePublisher,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner
+    ) {
+        return new ChannelApplicationService(
+                channelRepository,
+                channelMemberRepository,
+                channelInviteRepository,
+                channelBanRepository,
+                channelAuditLogRepository,
+                channelReadStateRepository,
+                messageRepository,
+                userProfileRepository,
+                channelGovernancePolicy,
+                channelRealtimePublisher,
+                idGenerator,
+                timeProvider,
+                transactionRunner
         );
     }
 
@@ -305,8 +411,30 @@ public class StarterRegressionConfiguration {
      * 创建鉴权控制器。
      */
     @Bean
-    public AuthController authController(AuthApplicationService authApplicationService, AuthRequestContext authRequestContext) {
-        return new AuthController(authApplicationService, authRequestContext);
+    public AuthController authController(
+            AuthApplicationService authApplicationService,
+            ServerApplicationService serverApplicationService
+    ) {
+        return new AuthController(authApplicationService, serverApplicationService);
+    }
+
+    /**
+     * 创建服务发现应用服务。
+     */
+    @Bean
+    public ServerApplicationService serverApplicationService(
+            ServerIdentityProperties serverIdentityProperties,
+            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            TimeProvider timeProvider
+    ) {
+        return new ServerApplicationService(
+                serverIdentityProperties,
+                "CarryPigeonBackend",
+                channelMessagePluginRegistry,
+                new RealtimeServerProperties(true, "127.0.0.1", 28080, "/api/ws", 1, 0),
+                timeProvider,
+                java.util.List.of()
+        );
     }
 
     /**
@@ -315,9 +443,33 @@ public class StarterRegressionConfiguration {
     @Bean
     public ChannelMessageController channelMessageController(
             MessageApplicationService messageApplicationService,
+            UserProfileApplicationService userProfileApplicationService,
+            AuthRequestContext authRequestContext,
+            JsonProvider jsonProvider
+    ) {
+        return new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext, jsonProvider);
+    }
+
+    @Bean
+    public FileApplicationService fileApplicationService(
+            ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider
+    ) {
+        return new FileApplicationService(objectStorageServiceProvider, idGenerator, timeProvider);
+    }
+
+    @Bean
+    public FileController fileController(FileApplicationService fileApplicationService, AuthRequestContext authRequestContext) {
+        return new FileController(fileApplicationService, authRequestContext);
+    }
+
+    @Bean
+    public ChannelReadStateController channelReadStateController(
+            ChannelApplicationService channelApplicationService,
             AuthRequestContext authRequestContext
     ) {
-        return new ChannelMessageController(messageApplicationService, authRequestContext);
+        return new ChannelReadStateController(channelApplicationService, authRequestContext);
     }
 
     private static <T> ObjectProvider<T> objectProvider(T object) {

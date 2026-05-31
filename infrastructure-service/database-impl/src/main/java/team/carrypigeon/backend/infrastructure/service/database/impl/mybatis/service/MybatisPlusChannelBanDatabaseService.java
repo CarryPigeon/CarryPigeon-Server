@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -27,6 +28,16 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
                 () -> Optional.ofNullable(channelBanMapper.findByChannelIdAndBannedAccountId(channelId, bannedAccountId))
                         .map(this::toRecord),
                 "failed to query channel ban"
+        );
+    }
+
+    @Override
+    public List<ChannelBanRecord> findByChannelId(long channelId) {
+        return execute(
+                () -> channelBanMapper.findByChannelId(channelId).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query channel bans"
         );
     }
 

@@ -19,10 +19,26 @@ public interface AuthAccountRepository {
     Optional<AuthAccount> findByUsername(String username);
 
     /**
+     * 按账户 ID 查询账户。
+     *
+     * @param accountId 账户 ID
+     * @return 命中时返回账户，未命中时返回空
+     */
+    Optional<AuthAccount> findById(long accountId);
+
+    /**
      * 保存新账户。
      *
      * @param account 待保存账户
      * @return 已保存账户
      */
     AuthAccount save(AuthAccount account);
+
+    /**
+     * 更新已有账户。
+     *
+     * @param account 待更新账户
+     * @return 已更新账户
+     */
+    AuthAccount update(AuthAccount account);
 }

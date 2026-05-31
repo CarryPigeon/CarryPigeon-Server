@@ -9,6 +9,8 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetUserProfileByAccountIdCommand;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.UpdateCurrentUserProfileCommand;
@@ -276,12 +278,41 @@ class UserProfileApplicationServiceTests {
 
     private static class Fixture {
 
+        private final InMemoryAuthAccountRepository authAccountRepository = new InMemoryAuthAccountRepository();
         private final InMemoryUserProfileRepository repository = new InMemoryUserProfileRepository();
         private final UserProfileApplicationService service = new UserProfileApplicationService(
+                authAccountRepository,
                 repository,
                 new TimeProvider(Clock.fixed(UPDATED_TIME, ZoneOffset.UTC)),
                 new NoopTransactionRunner()
         );
+    }
+
+    private static class InMemoryAuthAccountRepository implements AuthAccountRepository {
+
+        private final Map<Long, AuthAccount> accountsById = new HashMap<>();
+
+        @Override
+        public Optional<AuthAccount> findByUsername(String username) {
+            return accountsById.values().stream().filter(account -> account.username().equals(username)).findFirst();
+        }
+
+        @Override
+        public Optional<AuthAccount> findById(long accountId) {
+            return Optional.ofNullable(accountsById.get(accountId));
+        }
+
+        @Override
+        public AuthAccount save(AuthAccount account) {
+            accountsById.put(account.id(), account);
+            return account;
+        }
+
+        @Override
+        public AuthAccount update(AuthAccount account) {
+            accountsById.put(account.id(), account);
+            return account;
+        }
     }
 
     private static class InMemoryUserProfileRepository implements UserProfileRepository {

@@ -7,17 +7,23 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelReadStateRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.support.persistence.DatabaseBackedChannelRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelPinDatabaseService;
 
 /**
  * 频道持久化装配配置。
@@ -81,5 +87,15 @@ public class ChannelPersistenceConfiguration {
     @Bean
     public ChannelAuditLogRepository channelAuditLogRepository(ChannelAuditLogDatabaseService channelAuditLogDatabaseService) {
         return new DatabaseBackedChannelAuditLogRepository(channelAuditLogDatabaseService);
+    }
+
+    @Bean
+    public ChannelReadStateRepository channelReadStateRepository(ChannelReadStateDatabaseService channelReadStateDatabaseService) {
+        return new DatabaseBackedChannelReadStateRepository(channelReadStateDatabaseService);
+    }
+
+    @Bean
+    public ChannelPinRepository channelPinRepository(ChannelPinDatabaseService channelPinDatabaseService) {
+        return new DatabaseBackedChannelPinRepository(channelPinDatabaseService);
     }
 }

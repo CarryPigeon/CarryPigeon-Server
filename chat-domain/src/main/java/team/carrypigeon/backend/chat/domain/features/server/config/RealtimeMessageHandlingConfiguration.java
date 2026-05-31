@@ -5,8 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageHandler;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.SendChannelMessageRealtimeHandler;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
  * realtime 入站消息处理装配配置。
@@ -15,17 +13,6 @@ import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
  */
 @Configuration
 public class RealtimeMessageHandlingConfiguration {
-
-    /**
-     * 创建频道消息实时入站处理器。
-     *
-     * @param jsonProvider 项目统一 JSON 门面
-     * @return 频道消息实时入站处理器
-     */
-    @Bean
-    public RealtimeInboundMessageHandler sendChannelMessageRealtimeHandler(JsonProvider jsonProvider) {
-        return new SendChannelMessageRealtimeHandler(jsonProvider);
-    }
 
     /**
      * 创建 realtime 入站消息分发器。

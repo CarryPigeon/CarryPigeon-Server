@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import java.util.Collection;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 
 /**
  * 消息实时分发抽象。
@@ -26,5 +28,14 @@ public interface MessageRealtimePublisher {
      */
     default void publishUpdate(ChannelMessage message, Collection<Long> recipientAccountIds) {
         publish(message, recipientAccountIds);
+    }
+
+    default void publishPin(ChannelPin pin, Collection<Long> recipientAccountIds) {
+    }
+
+    default void publishUnpin(ChannelPin pin, long unpinnedByAccountId, long unpinnedAt, Collection<Long> recipientAccountIds) {
+    }
+
+    default void publishMentionCreated(Mention mention, Collection<Long> recipientAccountIds) {
     }
 }

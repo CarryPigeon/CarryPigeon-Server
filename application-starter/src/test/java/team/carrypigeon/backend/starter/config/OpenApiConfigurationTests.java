@@ -61,15 +61,21 @@ class OpenApiConfigurationTests {
             OpenApiCustomizer customizer = context.getBean(OpenApiCustomizer.class);
 
             Operation protectedOperation = new Operation();
-            Operation publicAuthOperation = new Operation();
+            Operation publicTokenOperation = new Operation();
             Operation publicServerOperation = new Operation();
-            Operation protectedServerOperation = new Operation();
+            Operation publicPluginCatalogOperation = new Operation();
+            Operation publicDomainCatalogOperation = new Operation();
+            Operation publicGateOperation = new Operation();
+            Operation protectedChannelOperation = new Operation();
 
             OpenAPI openAPI = new OpenAPI().paths(new Paths()
                     .addPathItem("/api/users/me", new PathItem().get(protectedOperation))
-                    .addPathItem("/api/auth/login", new PathItem().post(publicAuthOperation))
-                    .addPathItem("/api/server/echo", new PathItem().post(publicServerOperation))
-                    .addPathItem("/api/server/presence/me", new PathItem().get(protectedServerOperation))
+                    .addPathItem("/api/auth/tokens", new PathItem().post(publicTokenOperation))
+                    .addPathItem("/api/server", new PathItem().get(publicServerOperation))
+                    .addPathItem("/api/plugins/catalog", new PathItem().get(publicPluginCatalogOperation))
+                    .addPathItem("/api/domains/catalog", new PathItem().get(publicDomainCatalogOperation))
+                    .addPathItem("/api/gates/required/check", new PathItem().post(publicGateOperation))
+                    .addPathItem("/api/channels/1/messages", new PathItem().get(protectedChannelOperation))
             );
 
             customizer.customise(openAPI);
@@ -78,9 +84,12 @@ class OpenApiConfigurationTests {
                     .isNotNull()
                     .singleElement()
                     .satisfies(requirement -> assertThat(requirement).containsKey("bearerAuth"));
-            assertThat(publicAuthOperation.getSecurity()).isNull();
+            assertThat(publicTokenOperation.getSecurity()).isNull();
             assertThat(publicServerOperation.getSecurity()).isNull();
-            assertThat(protectedServerOperation.getSecurity())
+            assertThat(publicPluginCatalogOperation.getSecurity()).isNull();
+            assertThat(publicDomainCatalogOperation.getSecurity()).isNull();
+            assertThat(publicGateOperation.getSecurity()).isNull();
+            assertThat(protectedChannelOperation.getSecurity())
                     .isNotNull()
                     .singleElement()
                     .satisfies(requirement -> assertThat(requirement).containsKey("bearerAuth"));

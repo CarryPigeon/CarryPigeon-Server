@@ -28,11 +28,15 @@ public class AuthWebMvcConfiguration implements WebMvcConfigurer {
         registry.addInterceptor(new AuthAccessTokenInterceptor(authTokenService, authRequestContext))
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/auth/register",
-                        "/api/auth/login",
+                        "/api/server",
+                        "/api/gates/required/check",
+                        "/api/plugins/catalog",
+                        "/api/domains/catalog",
+                        "/api/files/download/server_avatar",
+                        "/api/auth/email_codes",
+                        "/api/auth/tokens",
                         "/api/auth/refresh",
-                        "/api/auth/logout",
-                        "/api/server/echo"
+                        "/api/auth/revoke"
                 );
     }
 }

@@ -27,6 +27,10 @@ public class MessageEntity {
     private String searchableText;
     private String payload;
     private String metadata;
+    private String mentions;
+    private String forwardedFrom;
     private String status;
     private Instant createdAt;
+    private Instant editedAt;
+    private Long editVersion;
 }

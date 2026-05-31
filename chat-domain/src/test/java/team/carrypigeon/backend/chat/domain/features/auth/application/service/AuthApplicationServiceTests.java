@@ -331,7 +331,19 @@ class AuthApplicationServiceTests {
         }
 
         @Override
+        public Optional<AuthAccount> findById(long accountId) {
+            return accounts.values().stream().filter(account -> account.id() == accountId).findFirst();
+        }
+
+        @Override
         public AuthAccount save(AuthAccount account) {
+            accounts.put(account.username(), account);
+            return account;
+        }
+
+        @Override
+        public AuthAccount update(AuthAccount account) {
+            accounts.values().removeIf(existing -> existing.id() == account.id());
             accounts.put(account.username(), account);
             return account;
         }
@@ -441,7 +453,7 @@ class AuthApplicationServiceTests {
         private final Map<Long, Channel> channels = new HashMap<>();
 
         private InMemoryChannelRepository() {
-            channels.put(1L, new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME));
+            channels.put(1L, new Channel(1L, 1L, "public", "", "", "", "public", true, BASE_TIME, BASE_TIME));
         }
 
         @Override

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 
@@ -32,6 +33,10 @@ public interface ChannelDatabaseService {
      */
     Optional<ChannelRecord> findById(long channelId);
 
+    default List<ChannelRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+        throw new UnsupportedOperationException("channel discover is not supported");
+    }
+
     /**
      * 写入新的频道记录。
      *
@@ -39,5 +44,23 @@ public interface ChannelDatabaseService {
      */
     default void insert(ChannelRecord record) {
         throw new UnsupportedOperationException("channel insert is not supported");
+    }
+
+    /**
+     * 更新频道记录。
+     *
+     * @param record 待更新频道记录
+     */
+    default void update(ChannelRecord record) {
+        throw new UnsupportedOperationException("channel update is not supported");
+    }
+
+    /**
+     * 按频道 ID 删除频道记录。
+     *
+     * @param channelId 频道 ID
+     */
+    default void delete(long channelId) {
+        throw new UnsupportedOperationException("channel delete is not supported");
     }
 }

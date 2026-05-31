@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.AcceptChannelInviteCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreatePrivateChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreateChannelApplicationCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.DecideChannelApplicationCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.DeleteChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetSystemChannelCommand;
@@ -22,14 +25,19 @@ import team.carrypigeon.backend.chat.domain.features.channel.application.command
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.MuteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.PromoteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.TransferChannelOwnershipCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.UnmuteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelApplicationResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelInviteResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelMembersQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelApplicationsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelBansQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
@@ -41,8 +49,14 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelUnread;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -53,6 +67,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * ChannelApplicationService 契约测试。
@@ -78,6 +93,7 @@ class ChannelApplicationServiceTests {
         assertEquals(1L, result.channelId());
         assertEquals(1L, result.conversationId());
         assertEquals("public", result.name());
+        assertEquals("1001", result.ownerUid());
         assertEquals("public", result.type());
     }
 
@@ -131,10 +147,92 @@ class ChannelApplicationServiceTests {
         assertEquals(2001L, result.channelId());
         assertEquals(2001L, result.conversationId());
         assertEquals("private", result.type());
+        assertEquals("", result.brief());
         assertEquals(false, result.defaultChannel());
         assertNotNull(context.channelRepository.savedChannel);
         ChannelMember ownerMember = context.channelMemberRepository.findByChannelIdAndAccountId(result.channelId(), 1001L).orElseThrow();
         assertEquals(ChannelMemberRole.OWNER, ownerMember.role());
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1001L));
+    }
+
+    @Test
+    @DisplayName("update channel profile owner updates channel name and brief")
+    void updateChannelProfile_owner_updatesChannelNameAndBrief() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        ChannelApplicationService service = context.createService();
+
+        ChannelResult result = service.updateChannelProfile(new UpdateChannelProfileCommand(1001L, 9L, "project-beta", "新的简介"));
+
+        assertEquals("project-beta", result.name());
+        assertEquals("新的简介", result.brief());
+        assertEquals("project-beta", context.channelRepository.channels.get(9L).name());
+        assertEquals("新的简介", context.channelRepository.channels.get(9L).brief());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("profile"));
+    }
+
+    @Test
+    @DisplayName("update channel read state advances anchor and returns result")
+    void updateChannelReadState_advancesAnchorAndReturnsResult() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
+        context.messageRepository.save(new ChannelMessage(5001L, "550e8400-e29b-41d4-a716-446655440000", 9L, 9L, 1002L, "text", "hello", "hello", "hello", null, null, "sent", BASE_TIME));
+        ChannelApplicationService service = context.createService();
+
+        var result = service.updateChannelReadState(new team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelReadStateCommand(1001L, 9L, 5001L, BASE_TIME.plusSeconds(5).toEpochMilli()));
+
+        assertEquals("9", result.cid());
+        assertEquals("5001", result.lastReadMid());
+        assertEquals(1, context.channelRealtimePublisher.readStateUpdates.size());
+        assertEquals(5001L, context.channelRealtimePublisher.readStateUpdates.getFirst().lastReadMessageId());
+    }
+
+    @Test
+    @DisplayName("list unreads returns unread projections")
+    void listUnreads_returnsUnreadProjections() {
+        TestContext context = new TestContext();
+        context.channelReadStateRepository.unreadResults = List.of(new ChannelUnread(9L, 3L, BASE_TIME));
+        ChannelApplicationService service = context.createService();
+
+        List<team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelUnreadResult> result = service.listUnreads(1001L);
+
+        assertEquals(1, result.size());
+        assertEquals("9", result.getFirst().cid());
+        assertEquals(3L, result.getFirst().unreadCount());
+    }
+
+    @Test
+    @DisplayName("list channel bans owner returns ban items")
+    void listChannelBans_owner_returnsBanItems() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelBanRepository.channelBan = new ChannelBan(9L, 1002L, 1001L, "spam", BASE_TIME.plusSeconds(300), BASE_TIME, null);
+        ChannelApplicationService service = context.createService();
+
+        List<ChannelBanListItemResult> result = service.listChannelBans(new ListChannelBansQuery(1001L, 9L));
+
+        assertEquals(1, result.size());
+        assertEquals(1002L, result.getFirst().bannedAccountId());
+        assertEquals("spam", result.getFirst().reason());
+    }
+
+    /**
+     * 验证 OWNER 可以删除频道。
+     */
+    @Test
+    @DisplayName("delete channel owner removes channel")
+    void deleteChannel_owner_removesChannel() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        ChannelApplicationService service = context.createService();
+
+        service.deleteChannel(new DeleteChannelCommand(1001L, 9L));
+
+        assertEquals(false, context.channelRepository.channels.containsKey(9L));
     }
 
     /**
@@ -155,6 +253,69 @@ class ChannelApplicationServiceTests {
         assertEquals(1002L, result.inviteeAccountId());
         assertEquals("PENDING", result.status());
         assertEquals("PENDING", context.channelInviteRepository.savedInvite.status().name());
+    }
+
+    @Test
+    @DisplayName("create channel application non member creates pending application")
+    void createChannelApplication_nonMember_createsPendingApplication() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        ChannelApplicationService service = context.createService();
+
+        ChannelApplicationResult result = service.createChannelApplication(new CreateChannelApplicationCommand(1002L, 9L, "hi"));
+
+        assertEquals(9L, result.channelId());
+        assertEquals(1002L, result.accountId());
+        assertEquals("PENDING", result.status());
+        assertEquals(1002L, context.channelInviteRepository.savedInvite.inviteeAccountId());
+    }
+
+    @Test
+    @DisplayName("list channel applications owner returns pending items")
+    void listChannelApplications_owner_returnsPendingItems() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                0L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME,
+                null
+        );
+        ChannelApplicationService service = context.createService();
+
+        List<ChannelApplicationResult> result = service.listChannelApplications(new ListChannelApplicationsQuery(1001L, 9L));
+
+        assertEquals(1, result.size());
+        assertEquals(3001L, result.getFirst().applicationId());
+        assertEquals("PENDING", result.getFirst().status());
+    }
+
+    @Test
+    @DisplayName("decide channel application approve creates membership and updates status")
+    void decideChannelApplication_approve_createsMembershipAndUpdatesStatus() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                0L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME,
+                null
+        );
+        ChannelApplicationService service = context.createService();
+
+        ChannelApplicationResult result = service.decideChannelApplication(new DecideChannelApplicationCommand(1001L, 9L, 3001L, "approve"));
+
+        assertEquals("ACCEPTED", result.status());
+        assertEquals(true, context.channelMemberRepository.exists(9L, 1002L));
+        assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
     }
 
     /**
@@ -187,6 +348,7 @@ class ChannelApplicationServiceTests {
         context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
         context.channelInviteRepository.savedInvite = new ChannelInvite(
                 9L,
+                3001L,
                 1002L,
                 1001L,
                 ChannelInviteStatus.PENDING,
@@ -358,6 +520,8 @@ class ChannelApplicationServiceTests {
 
         assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals("MEMBER_KICKED", context.channelAuditLogRepository.logs.getFirst().actionType());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -378,6 +542,8 @@ class ChannelApplicationServiceTests {
         assertEquals(BASE_TIME.plusSeconds(600), result.expiresAt());
         assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals(1002L, context.channelBanRepository.channelBan.bannedAccountId());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("bans"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -419,15 +585,15 @@ class ChannelApplicationServiceTests {
     }
 
     private static Channel privateChannel(long id, String name) {
-        return new Channel(id, id, name, "private", false, BASE_TIME, BASE_TIME);
+        return new Channel(id, id, name, "", "", "", "private", false, BASE_TIME, BASE_TIME);
     }
 
     private static Channel publicChannel() {
-        return new Channel(1L, 1L, "public", "public", true, BASE_TIME, BASE_TIME);
+        return new Channel(1L, 1L, "public", "", "", "", "public", true, BASE_TIME, BASE_TIME);
     }
 
     private static Channel systemChannel() {
-        return new Channel(2L, 2L, "system", "system", false, BASE_TIME, BASE_TIME);
+        return new Channel(2L, 2L, "system", "", "", "", "system", false, BASE_TIME, BASE_TIME);
     }
 
     private static UserProfile profile(long accountId, String nickname) {
@@ -441,11 +607,15 @@ class ChannelApplicationServiceTests {
         private final InMemoryChannelInviteRepository channelInviteRepository = new InMemoryChannelInviteRepository();
         private final InMemoryChannelBanRepository channelBanRepository = new InMemoryChannelBanRepository();
         private final InMemoryChannelAuditLogRepository channelAuditLogRepository = new InMemoryChannelAuditLogRepository();
+        private final InMemoryChannelReadStateRepository channelReadStateRepository = new InMemoryChannelReadStateRepository();
+        private final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
         private final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
+        private final RecordingChannelRealtimePublisher channelRealtimePublisher = new RecordingChannelRealtimePublisher();
 
         private TestContext() {
             channelRepository.defaultChannel = publicChannel();
             channelRepository.channels.put(1L, channelRepository.defaultChannel);
+            channelMemberRepository.save(new ChannelMember(1L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
         }
 
         private ChannelApplicationService createService() {
@@ -455,12 +625,94 @@ class ChannelApplicationServiceTests {
                     channelInviteRepository,
                     channelBanRepository,
                     channelAuditLogRepository,
+                    channelReadStateRepository,
+                    messageRepository,
                     userProfileRepository,
                     new ChannelGovernancePolicy(),
+                    channelRealtimePublisher,
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     new NoopTransactionRunner()
             );
+        }
+    }
+
+    private static final class InMemoryChannelReadStateRepository implements ChannelReadStateRepository {
+
+        private final Map<String, ChannelReadState> states = new HashMap<>();
+        private List<ChannelUnread> unreadResults = List.of();
+
+        @Override
+        public Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) {
+            return Optional.ofNullable(states.get(key(channelId, accountId)));
+        }
+
+        @Override
+        public ChannelReadState upsert(ChannelReadState readState) {
+            states.put(key(readState.channelId(), readState.accountId()), readState);
+            return readState;
+        }
+
+        @Override
+        public List<ChannelUnread> listUnreadsByAccountId(long accountId) {
+            return unreadResults;
+        }
+
+        private String key(long channelId, long accountId) {
+            return channelId + ":" + accountId;
+        }
+    }
+
+    private static final class InMemoryMessageRepository implements MessageRepository {
+
+        private final Map<Long, ChannelMessage> messagesById = new HashMap<>();
+
+        @Override
+        public ChannelMessage save(ChannelMessage message) {
+            messagesById.put(message.messageId(), message);
+            return message;
+        }
+
+        @Override
+        public Optional<ChannelMessage> findById(long messageId) {
+            return Optional.ofNullable(messagesById.get(messageId));
+        }
+
+        @Override
+        public ChannelMessage update(ChannelMessage message) {
+            messagesById.put(message.messageId(), message);
+            return message;
+        }
+
+        @Override
+        public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
+            return List.of();
+        }
+
+        @Override
+        public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+            return List.of();
+        }
+    }
+
+    private static final class RecordingChannelRealtimePublisher implements ChannelRealtimePublisher {
+        private final List<ChannelReadState> readStateUpdates = new ArrayList<>();
+        private final List<String> channelChangedScopes = new ArrayList<>();
+        private final List<Long> channelsChangedAccountIds = new ArrayList<>();
+
+        @Override
+        public void publishReadStateUpdated(ChannelReadState readState) {
+            readStateUpdates.add(readState);
+        }
+
+        @Override
+        public void publishChannelChanged(Channel channel, String scope, java.util.Collection<Long> recipientAccountIds) {
+            channelChangedScopes.add(scope);
+        }
+
+        @Override
+        public void publishChannelsChanged(long accountId) {
+            channelsChangedAccountIds.add(accountId);
         }
     }
 
@@ -490,6 +742,17 @@ class ChannelApplicationServiceTests {
             this.savedChannel = channel;
             this.channels.put(channel.id(), channel);
             return channel;
+        }
+
+        @Override
+        public Channel update(Channel channel) {
+            this.channels.put(channel.id(), channel);
+            return channel;
+        }
+
+        @Override
+        public void delete(long channelId) {
+            this.channels.remove(channelId);
         }
     }
 
@@ -558,6 +821,24 @@ class ChannelApplicationServiceTests {
         }
 
         @Override
+        public Optional<ChannelInvite> findByChannelIdAndApplicationId(long channelId, long applicationId) {
+            ChannelInvite invite = updatedInvite != null ? updatedInvite : savedInvite;
+            if (invite == null || invite.channelId() != channelId || invite.applicationId() != applicationId) {
+                return Optional.empty();
+            }
+            return Optional.of(invite);
+        }
+
+        @Override
+        public List<ChannelInvite> findByChannelId(long channelId) {
+            ChannelInvite invite = updatedInvite != null ? updatedInvite : savedInvite;
+            if (invite == null || invite.channelId() != channelId) {
+                return List.of();
+            }
+            return List.of(invite);
+        }
+
+        @Override
         public void save(ChannelInvite channelInvite) {
             this.savedInvite = channelInvite;
         }
@@ -579,6 +860,14 @@ class ChannelApplicationServiceTests {
                 return Optional.empty();
             }
             return Optional.of(channelBan);
+        }
+
+        @Override
+        public List<ChannelBan> findByChannelId(long channelId) {
+            if (channelBan == null || channelBan.channelId() != channelId) {
+                return List.of();
+            }
+            return List.of(channelBan);
         }
 
         @Override

@@ -31,7 +31,7 @@ class CustomChannelMessagePluginTests {
         CustomChannelMessagePlugin plugin = new CustomChannelMessagePlugin(new JsonProvider(new ObjectMapper()));
 
         ChannelMessage message = plugin.createMessage(
-                new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                 new CustomChannelMessageDraft("rich card", "{\"card\":\"status\"}", null)
         );
 
@@ -51,7 +51,7 @@ class CustomChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new CustomChannelMessageDraft("rich card", " ", null)
                 )
         );

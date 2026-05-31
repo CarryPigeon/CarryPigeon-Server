@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import java.time.Instant;
 import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -17,251 +21,258 @@ import team.carrypigeon.backend.chat.domain.features.message.application.dto.Cha
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * ChannelMessageController 查询协议测试。
- * 职责：验证频道消息历史与搜索入口的统一响应码与异常映射契约。
- * 边界：不验证真实数据库访问与上传链路，只验证查询协议层行为。
+ * 职责：验证 v1 消息历史、搜索、发送与删除入口的协议契约。
+ * 边界：不验证真实数据库访问与上传链路，只验证 HTTP 协议层行为。
  */
 @Tag("contract")
 class ChannelMessageQueryControllerTests {
 
+    private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
+    private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
+
     private MessageApplicationService messageApplicationService;
+    private UserProfileApplicationService userProfileApplicationService;
     private AuthRequestContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         messageApplicationService = mock(MessageApplicationService.class);
+        userProfileApplicationService = mock(UserProfileApplicationService.class);
         authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelMessageController(messageApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext),
+                        new MessageController(messageApplicationService, authRequestContext)
+                )
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
-    /**
-     * 验证已认证成员可以查询频道历史消息。
-     */
     @Test
-    @DisplayName("get channel messages authenticated request returns code 100")
-    void getChannelMessages_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("get channel messages returns v1 cursor page")
+    void getChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(messageApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
-                List.of(new ChannelMessageResult(
-                        5001L, "carrypigeon-local", 1L, 1L, 1001L, "text", "hello world", "[文本消息] hello world", null, null, "sent",
-                        Instant.parse("2026-04-22T00:00:00Z")
-                )),
+                List.of(messageResult(5001L, 1001L, "text", "hello world", "hello world", null, "sent")),
                 5001L
         ));
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(get("/api/channels/1/messages?limit=20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.messages[0].messageId").value(5001L))
-                .andExpect(jsonPath("$.data.messages[0].serverId").value("carrypigeon-local"))
-                .andExpect(jsonPath("$.data.messages[0].body").value("hello world"))
-                .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] hello world"))
-                .andExpect(jsonPath("$.data.nextCursor").value(5001L));
+                .andExpect(jsonPath("$.items[0].mid").value("5001"))
+                .andExpect(jsonPath("$.items[0].cid").value("1"))
+                .andExpect(jsonPath("$.items[0].uid").value("1001"))
+                .andExpect(jsonPath("$.items[0].sender.uid").value("1001"))
+                .andExpect(jsonPath("$.items[0].domain").value("Core:Text"))
+                .andExpect(jsonPath("$.items[0].data.text").value("hello world"))
+                .andExpect(jsonPath("$.next_cursor").value(OpaqueCursorCodec.encode(HISTORY_CURSOR_SCOPE, 5001L)))
+                .andExpect(jsonPath("$.has_more").value(true));
     }
 
-    /**
-     * 验证已认证成员可以在频道内搜索消息。
-     */
     @Test
-    @DisplayName("search channel messages authenticated request returns code 100")
-    void searchChannelMessages_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("search channel messages returns v1 cursor page")
+    void searchChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(messageApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
-                List.of(new ChannelMessageResult(
-                        5002L, "carrypigeon-local", 1L, 1L, 1001L, "text", "search body", "[文本消息] search body", null, null, "sent",
-                        Instant.parse("2026-04-22T00:00:00Z")
-                ))
+                List.of(messageResult(5002L, 1001L, "text", "search body", "search body", null, "sent"))
         ));
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
-        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
+        mockMvc.perform(get("/api/channels/1/messages/search?q=search&limit=20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.messages[0].messageId").value(5002L))
-                .andExpect(jsonPath("$.data.messages[0].previewText").value("[文本消息] search body"));
+                .andExpect(jsonPath("$.items[0].mid").value("5002"))
+                .andExpect(jsonPath("$.items[0].preview").value("search body"))
+                .andExpect(jsonPath("$.has_more").value(false));
     }
 
     @Test
-    @DisplayName("search channel messages forbidden returns code 300")
-    void searchChannelMessages_forbidden_returnsCode300() throws Exception {
+    @DisplayName("search channel messages advanced filters are accepted")
+    void searchChannelMessages_advancedFilters_areAccepted() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.searchChannelMessages(any()))
-                .thenThrow(ProblemException.forbidden("channel_member_required", "channel membership is required"));
+        when(messageApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+                List.of(messageResult(5004L, 1002L, "text", "search body", "search body", null, "sent"))
+        ));
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1002L));
 
-        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
+        mockMvc.perform(get("/api/channels/1/messages/search?q=search&sender_uid=1002&domain=Core:Text&before_mid=6000&after_mid=4000")
+                        .param("cursor", OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE, 7000L)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
+                .andExpect(jsonPath("$.items[0].mid").value("5004"));
+
+        verify(messageApplicationService).searchChannelMessages(any());
     }
 
     @Test
-    @DisplayName("search channel messages missing channel returns code 404")
-    void searchChannelMessages_missingChannel_returnsCode404() throws Exception {
+    @DisplayName("get channel messages around_mid request returns contextual page")
+    void getChannelMessages_aroundMid_returnsContextualPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.searchChannelMessages(any()))
-                .thenThrow(ProblemException.notFound("channel does not exist"));
+        when(messageApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
+                List.of(
+                        messageResult(5003L, 1002L, "text", "third", "third", null, "sent"),
+                        messageResult(5002L, 1001L, "text", "second", "second", null, "sent"),
+                        messageResult(5001L, 1001L, "text", "first", "first", null, "sent")
+                ),
+                null
+        ));
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
-        mockMvc.perform(get("/api/channels/9/messages/search?keyword=search&limit=20"))
+        mockMvc.perform(get("/api/channels/1/messages?around_mid=5001&before=10&after=10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404));
+                .andExpect(jsonPath("$.items[0].mid").value("5003"))
+                .andExpect(jsonPath("$.has_more").value(false));
     }
 
     @Test
-    @DisplayName("search channel messages unexpected failure returns code 500")
-    void searchChannelMessages_unexpectedFailure_returnsCode500() throws Exception {
+    @DisplayName("send channel message returns 201 and v1 payload")
+    void sendChannelMessage_returns201AndV1Payload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.searchChannelMessages(any())).thenThrow(new IllegalStateException("boom"));
+        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+                messageResult(5003L, 1001L, "text", "hello", "hello", null, "sent")
+        );
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
-        mockMvc.perform(get("/api/channels/1/messages/search?keyword=search&limit=20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
+        mockMvc.perform(post("/api/channels/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"domain":"Core:Text","domain_version":"1.0.0","data":{"text":"hello"},"reply_to_mid":"0"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mid").value("5003"))
+                .andExpect(jsonPath("$.domain").value("Core:Text"))
+                .andExpect(jsonPath("$.data.text").value("hello"));
     }
 
-    /**
-     * 验证已认证成员可以通过 HTTP 撤回消息，并收到稳定消息 ID 的撤回结果。
-     */
     @Test
-    @DisplayName("recall channel message authenticated request returns code 100")
-    void recallChannelMessage_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("send file channel message returns structured attachment payload")
+    void sendFileChannelMessage_returnsStructuredAttachmentPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.recallChannelMessage(any())).thenReturn(new ChannelMessageResult(
+        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+                messageResult(
+                        5004L,
+                        1001L,
+                        "file",
+                        "项目文档",
+                        "[文件消息] demo.pdf",
+                        "{\"share_key\":\"shr_7001\",\"download_path\":\"api/files/download/shr_7001\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
+                        "sent"
+                )
+        );
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+
+        mockMvc.perform(post("/api/channels/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"domain":"Core:File","domain_version":"1.0.0","data":{"share_key":"shr_7001","filename":"demo.pdf","mime_type":"application/pdf","size":123}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.mid").value("5004"))
+                .andExpect(jsonPath("$.domain").value("Core:File"))
+                .andExpect(jsonPath("$.data.share_key").value("shr_7001"))
+                .andExpect(jsonPath("$.data.download_path").value("api/files/download/shr_7001"));
+    }
+
+    @Test
+    @DisplayName("delete message returns 204")
+    void deleteMessage_returns204() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        doNothing().when(messageApplicationService).deleteChannelMessage(any());
+
+        mockMvc.perform(delete("/api/messages/5009"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("edit message returns v1 payload with edited fields")
+    void editMessage_returnsV1PayloadWithEditedFields() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.editChannelMessage(any())).thenReturn(new ChannelMessageResult(
                 5009L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1001L,
                 "text",
-                "[消息已撤回]",
-                "[消息已撤回]",
+                "edited content",
+                "edited content",
                 null,
                 null,
-                "recalled",
-                Instant.parse("2026-04-22T00:00:00Z")
+                "[{\"type\":\"user\",\"uid\":\"1002\"}]",
+                null,
+                "sent",
+                Instant.parse("2026-04-22T00:00:00Z"),
+                Instant.parse("2026-04-22T00:05:00Z"),
+                2L
         ));
 
-        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
+        mockMvc.perform(patch("/api/messages/5009")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"domain":"Core:Text","domain_version":"1.0.0","data":{"text":"edited content"},"mentions":[{"type":"user","uid":"1002"}],"expected_edit_version":1}
+                                """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.messageId").value(5009L))
-                .andExpect(jsonPath("$.data.status").value("recalled"))
-                .andExpect(jsonPath("$.data.previewText").value("[消息已撤回]"));
-    }
-
-    /**
-     * 验证撤回权限不足时会返回 300 响应码。
-     */
-    @Test
-    @DisplayName("recall channel message forbidden returns code 300")
-    void recallChannelMessage_forbidden_returnsCode300() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.recallChannelMessage(any()))
-                .thenThrow(ProblemException.forbidden("channel_message_recall_forbidden", "channel message recall is not allowed"));
-
-        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
-    }
-
-    @Test
-    @DisplayName("recall channel message missing message returns code 404")
-    void recallChannelMessage_missingMessage_returnsCode404() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.recallChannelMessage(any()))
-                .thenThrow(ProblemException.notFound("message does not exist"));
-
-        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404));
-    }
-
-    @Test
-    @DisplayName("recall channel message unexpected failure returns code 500")
-    void recallChannelMessage_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.recallChannelMessage(any())).thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(post("/api/channels/1/messages/5009/recall"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
-    }
-
-    /**
-     * 验证非法 limit 参数会返回 200 响应码。
-     */
-    @Test
-    @DisplayName("get channel messages invalid limit returns code 200")
-    void getChannelMessages_invalidLimit_returnsCode200() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any()))
-                .thenThrow(ProblemException.validationFailed("limit must be between 1 and 100"));
-
-        mockMvc.perform(get("/api/channels/1/messages?limit=0"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    /**
-     * 验证非成员查询消息时会返回 300 响应码。
-     */
-    @Test
-    @DisplayName("get channel messages non member returns code 300")
-    void getChannelMessages_nonMember_returnsCode300() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any()))
-                .thenThrow(ProblemException.forbidden("channel_member_required", "channel membership is required"));
-
-        mockMvc.perform(get("/api/channels/1/messages?limit=20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
-    }
-
-    /**
-     * 验证频道不存在时会返回 404 响应码。
-     */
-    @Test
-    @DisplayName("get channel messages missing channel returns code 404")
-    void getChannelMessages_missingChannel_returnsCode404() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any()))
-                .thenThrow(ProblemException.notFound("channel does not exist"));
-
-        mockMvc.perform(get("/api/channels/9/messages?limit=20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404));
-    }
-
-    /**
-     * 验证未预期异常会被映射为 500 响应码。
-     */
-    @Test
-    @DisplayName("get channel messages unexpected failure returns code 500")
-    void getChannelMessages_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any())).thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(get("/api/channels/1/messages?limit=20"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
+                .andExpect(jsonPath("$.mid").value("5009"))
+                .andExpect(jsonPath("$.data.text").value("edited content"))
+                .andExpect(jsonPath("$.edit_version").value(2))
+                .andExpect(jsonPath("$.mentions[0].uid").value("1002"));
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelMessageController(messageApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(
+                        new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext),
+                        new MessageController(messageApplicationService, authRequestContext)
+                )
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private ChannelMessageResult messageResult(long messageId, long senderId, String messageType, String body, String preview, String payload, String status) {
+        return new ChannelMessageResult(
+                messageId,
+                "550e8400-e29b-41d4-a716-446655440000",
+                1L,
+                1L,
+                senderId,
+                messageType,
+                body,
+                preview,
+                payload,
+                null,
+                status,
+                Instant.parse("2026-04-22T00:00:00Z")
+        );
+    }
+
+    private UserProfileResult senderProfile(long accountId) {
+        return new UserProfileResult(accountId, "carry-user", "avatars/u/1001.png", "hello", Instant.parse("2026-04-20T12:00:00Z"), Instant.parse("2026-04-21T12:00:00Z"));
+    }
+
+    private MappingJackson2HttpMessageConverter snakeCaseConverter() {
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
@@ -274,7 +285,7 @@ class ChannelMessageQueryControllerTests {
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user@example.com"));
             return true;
         }
     }

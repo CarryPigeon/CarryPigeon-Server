@@ -116,6 +116,21 @@ class MybatisPlusMessageDatabaseServiceTests {
     }
 
     /**
+     * 验证删除消息时会调用 mapper 删除入口。
+     */
+    @Test
+    @DisplayName("delete valid id delegates to mapper")
+    void delete_validId_delegatesToMapper() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        when(messageMapper.deleteById(5001L)).thenReturn(1);
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+
+        service.delete(5001L);
+
+        verify(messageMapper).deleteById(5001L);
+    }
+
+    /**
      * 验证按频道查询历史消息时会保留游标查询结果顺序。
      */
     @Test

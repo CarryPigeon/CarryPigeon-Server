@@ -1,375 +1,230 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
-import java.time.Instant;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.LoginResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * AuthController 协议测试。
- * 职责：验证注册、登录、刷新与注销入口的统一响应码与异常映射契约。
- * 边界：不验证真实数据库与密码哈希实现，只验证协议层请求到响应的稳定行为。
+ * 职责：验证 v1 邮箱验证码、token 创建、刷新与撤销入口的协议契约。
+ * 边界：不验证真实数据库、验证码发送或 JWT 解析实现，只验证协议层行为。
  */
 @Tag("contract")
 class AuthControllerTests {
 
     private AuthApplicationService authApplicationService;
-
-    private AuthRequestContext authRequestContext;
-
+    private ServerApplicationService serverApplicationService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         authApplicationService = mock(AuthApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authApplicationService, authRequestContext))
+        serverApplicationService = mock(ServerApplicationService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authApplicationService, serverApplicationService))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
-    /**
-     * 验证注册成功时返回统一成功响应与账户标识。
-     */
     @Test
-    @DisplayName("register success returns code 100")
-    void register_success_returnsCode100() throws Exception {
-        when(authApplicationService.register(any())).thenReturn(new RegisterResult(1001L, "carry-user"));
+    @DisplayName("send email code success returns 204")
+    void sendEmailCode_success_returns204() throws Exception {
+        doNothing().when(authApplicationService).sendEmailCode(any());
 
-        mockMvc.perform(post("/api/auth/register")
+        mockMvc.perform(post("/api/auth/email_codes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"carry-user","password":"password123"}
+                                {"email":"user@example.com"}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L))
-                .andExpect(jsonPath("$.data.username").value("carry-user"));
-    }
-
-    /**
-     * 验证注册请求参数不合法时返回 200 响应码。
-     */
-    @Test
-    @DisplayName("register invalid request returns code 200")
-    void register_invalidRequest_returnsCode200() throws Exception {
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"ab","password":"123"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    /**
-     * 验证用户名重复问题会映射到 200 响应码。
-     */
-    @Test
-    @DisplayName("register duplicate username returns code 200")
-    void register_duplicateUsername_returnsCode200() throws Exception {
-        when(authApplicationService.register(any()))
-                .thenThrow(ProblemException.validationFailed("username already exists"));
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"carry-user","password":"password123"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("username already exists"));
-    }
-
-    /**
-     * 验证未预期异常会映射到 500 响应码。
-     */
-    @Test
-    @DisplayName("register unexpected failure returns code 500")
-    void register_unexpectedFailure_returnsCode500() throws Exception {
-        when(authApplicationService.register(any()))
-                .thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(post("/api/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"carry-user","password":"password123"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("internal server error"));
-    }
-
-    /**
-     * 验证登录成功时返回统一成功响应与账户标识。
-     */
-    @Test
-    @DisplayName("login success returns code 100")
-    void login_success_returnsCode100() throws Exception {
-        when(authApplicationService.login(any())).thenReturn(tokenResult());
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"carry-user","password":"password123"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L))
-                .andExpect(jsonPath("$.data.username").value("carry-user"))
-                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
-    }
-
-    /**
-     * 验证登录请求参数不合法时返回 200 响应码。
-     */
-    @Test
-    @DisplayName("login invalid request returns code 200")
-    void login_invalidRequest_returnsCode200() throws Exception {
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"","password":""}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    /**
-     * 验证登录凭证错误时返回 300 响应码。
-     */
-    @Test
-    @DisplayName("login invalid credentials returns code 300")
-    void login_invalidCredentials_returnsCode300() throws Exception {
-        when(authApplicationService.login(any()))
-                .thenThrow(ProblemException.forbidden("invalid_credentials", "username or password is invalid"));
-
-        mockMvc.perform(post("/api/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"username":"carry-user","password":"wrong-password"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("username or password is invalid"));
+                .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("login unexpected failure returns code 500")
-    void login_unexpectedFailure_returnsCode500() throws Exception {
-        when(authApplicationService.login(any())).thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(post("/api/auth/login")
+    @DisplayName("send email code invalid request returns 422")
+    void sendEmailCode_invalidRequest_returns422() throws Exception {
+        mockMvc.perform(post("/api/auth/email_codes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"username":"carry-user","password":"password123"}
+                                {"email":""}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
-    /**
-     * 验证刷新成功时返回新的 token 数据。
-     */
     @Test
-    @DisplayName("refresh success returns code 100")
-    void refresh_success_returnsCode100() throws Exception {
-        when(authApplicationService.refresh(any())).thenReturn(tokenResult());
+    @DisplayName("create token session success returns token response")
+    void createTokenSession_success_returnsTokenResponse() throws Exception {
+        when(serverApplicationService.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of());
+        when(authApplicationService.createTokenSession(any())).thenReturn(tokenResult(true));
+
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "grant_type":"email_code",
+                                  "email":"user@example.com",
+                                  "code":"123456",
+                                  "client":{"device_id":"device-1","installed_plugins":[{"plugin_id":"mc-bind","version":"1.2.0"}]}
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andExpect(jsonPath("$.access_token").value("access-token"))
+                .andExpect(jsonPath("$.refresh_token").value("refresh-token"))
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.is_new_user").value(true));
+    }
+
+    @Test
+    @DisplayName("create token session required plugin missing returns 412")
+    void createTokenSession_requiredPluginMissing_returns412() throws Exception {
+        when(serverApplicationService.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of("mc-bind"));
+
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "grant_type":"email_code",
+                                  "email":"user@example.com",
+                                  "code":"123456",
+                                  "client":{"device_id":"device-1","installed_plugins":[]}
+                                }
+                                """))
+                .andExpect(status().isPreconditionFailed())
+                .andExpect(jsonPath("$.error.reason").value("required_plugin_missing"))
+                .andExpect(jsonPath("$.error.details.missing_plugins[0]").value("mc-bind"));
+    }
+
+    @Test
+    @DisplayName("create token session invalid request returns 422")
+    void createTokenSession_invalidRequest_returns422() throws Exception {
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"grant_type":"","email":"bad","code":"","client":null}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    @Test
+    @DisplayName("create token session invalid code returns 422")
+    void createTokenSession_invalidCode_returns422() throws Exception {
+        when(serverApplicationService.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of());
+        when(authApplicationService.createTokenSession(any())).thenThrow(ProblemException.validationFailed("email code is invalid"));
+
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "grant_type":"email_code",
+                                  "email":"user@example.com",
+                                  "code":"000000",
+                                  "client":{"device_id":"device-1","installed_plugins":[]}
+                                }
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    @Test
+    @DisplayName("refresh success returns token response")
+    void refresh_success_returnsTokenResponse() throws Exception {
+        when(authApplicationService.refreshTokenSession(any())).thenReturn(tokenResult(false));
 
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"refreshToken":"refresh-token"}
+                                {"refresh_token":"refresh-token","client":{"device_id":"device-1"}}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accessToken").value("access-token"))
-                .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
+                .andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.is_new_user").value(false));
     }
 
-    /**
-     * 验证 refresh token 不合法时返回 300 响应码。
-     */
     @Test
-    @DisplayName("refresh invalid token returns code 300")
-    void refresh_invalidToken_returnsCode300() throws Exception {
-        when(authApplicationService.refresh(any()))
-                .thenThrow(ProblemException.forbidden("invalid_refresh_session", "refresh token is invalid"));
-
+    @DisplayName("refresh invalid request returns 422")
+    void refresh_invalidRequest_returns422() throws Exception {
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"refreshToken":"invalid-refresh-token"}
+                                {"refresh_token":"","client":null}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("refresh token is invalid"));
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
     @Test
-    @DisplayName("refresh invalid request returns code 200")
-    void refresh_invalidRequest_returnsCode200() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":""}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    @Test
-    @DisplayName("refresh unexpected failure returns code 500")
-    void refresh_unexpectedFailure_returnsCode500() throws Exception {
-        when(authApplicationService.refresh(any())).thenThrow(new IllegalStateException("boom"));
+    @DisplayName("refresh invalid token returns 401")
+    void refresh_invalidToken_returns401() throws Exception {
+        when(authApplicationService.refreshTokenSession(any()))
+                .thenThrow(ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
 
         mockMvc.perform(post("/api/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"refresh-token"}
+                .content("""
+                                {"refresh_token":"bad-token","client":{"device_id":"device-1"}}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("internal server error"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.reason").value("unauthorized"));
     }
 
-    /**
-     * 验证注销成功时返回统一成功响应。
-     */
     @Test
-    @DisplayName("logout success returns code 100")
-    void logout_success_returnsCode100() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
+    @DisplayName("revoke success returns 204")
+    void revoke_success_returns204() throws Exception {
+        mockMvc.perform(post("/api/auth/revoke")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"refreshToken":"refresh-token"}
+                                {"refresh_token":"refresh-token","client":{"device_id":"device-1"}}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100));
+                .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("logout invalid request returns code 200")
-    void logout_invalidRequest_returnsCode200() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":""}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    @Test
-    @DisplayName("logout invalid token returns code 300")
-    void logout_invalidToken_returnsCode300() throws Exception {
-        doThrow(ProblemException.forbidden("invalid_refresh_session", "refresh token is invalid"))
+    @DisplayName("revoke invalid token returns 401")
+    void revoke_invalidToken_returns401() throws Exception {
+        doThrow(ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"))
                 .when(authApplicationService)
                 .logout(any());
 
-        mockMvc.perform(post("/api/auth/logout")
+        mockMvc.perform(post("/api/auth/revoke")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"invalid-refresh-token"}
+                .content("""
+                                {"refresh_token":"bad-token","client":{"device_id":"device-1"}}
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.reason").value("unauthorized"));
     }
 
-    @Test
-    @DisplayName("logout unexpected failure returns code 500")
-    void logout_unexpectedFailure_returnsCode500() throws Exception {
-        doThrow(new IllegalStateException("boom"))
-                .when(authApplicationService)
-                .logout(any());
-
-        mockMvc.perform(post("/api/auth/logout")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"refreshToken":"refresh-token"}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
+    private AuthSessionTokenResult tokenResult(boolean newUser) {
+        return new AuthSessionTokenResult(1001L, "access-token", 1800L, "refresh-token", newUser);
     }
 
-    /**
-     * 验证当前用户接口能返回已绑定的请求身份。
-     */
-    @Test
-    @DisplayName("me authenticated request returns current user")
-    void me_authenticatedRequest_returnsCurrentUser() throws Exception {
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authApplicationService, authRequestContext))
-                .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
-                .setControllerAdvice(new GlobalExceptionHandler())
-                .build();
-
-        mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1001L))
-                .andExpect(jsonPath("$.data.username").value("carry-user"));
-    }
-
-    /**
-     * 验证未绑定身份访问当前用户接口会返回 300 响应码。
-     */
-    @Test
-    @DisplayName("me anonymous request returns code 300")
-    void me_anonymousRequest_returnsCode300() throws Exception {
-        mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("authentication is required"));
-    }
-
-    private static class BindPrincipalInterceptor implements HandlerInterceptor {
-
-        private final AuthRequestContext authRequestContext;
-
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
-            this.authRequestContext = authRequestContext;
-        }
-
-        @Override
-        public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
-            return true;
-        }
-    }
-
-    private AuthTokenResult tokenResult() {
-        return new AuthTokenResult(
-                1001L,
-                "carry-user",
-                "access-token",
-                Instant.parse("2026-04-20T12:30:00Z"),
-                "refresh-token",
-                Instant.parse("2026-05-04T12:00:00Z")
-        );
+    private MappingJackson2HttpMessageConverter snakeCaseConverter() {
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 }

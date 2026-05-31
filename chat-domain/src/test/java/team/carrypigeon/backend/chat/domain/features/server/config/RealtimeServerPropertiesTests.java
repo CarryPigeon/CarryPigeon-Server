@@ -21,12 +21,12 @@ class RealtimeServerPropertiesTests {
     @Test
     @DisplayName("default constructor returns minimal runtime config")
     void defaultConstructor_called_returnsMinimalRuntimeConfig() {
-        RealtimeServerProperties properties = new RealtimeServerProperties(false, "127.0.0.1", 18080, "/ws", 1, 0);
+        RealtimeServerProperties properties = new RealtimeServerProperties(false, "127.0.0.1", 18080, "/api/ws", 1, 0);
 
         assertEquals(false, properties.enabled());
         assertEquals("127.0.0.1", properties.host());
         assertEquals(18080, properties.port());
-        assertEquals("/ws", properties.path());
+        assertEquals("/api/ws", properties.path());
     }
 
     /**
@@ -37,7 +37,7 @@ class RealtimeServerPropertiesTests {
     void constructor_invalidPath_throwsException() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new RealtimeServerProperties(true, "0.0.0.0", 18080, "ws", 1, 0)
+                () -> new RealtimeServerProperties(true, "0.0.0.0", 18080, "api/ws", 1, 0)
         );
     }
 }

@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -53,8 +54,23 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     }
 
     @Override
+    public List<ChannelRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+        return execute(() -> channelMapper.discoverChannels(keyword, cursorChannelId, type, limit).stream().map(this::toRecord).toList(), "failed to discover channels");
+    }
+
+    @Override
     public void insert(ChannelRecord record) {
         executeVoid(() -> channelMapper.insert(toEntity(record)), "failed to insert channel");
+    }
+
+    @Override
+    public void update(ChannelRecord record) {
+        executeVoid(() -> channelMapper.updateById(toEntity(record)), "failed to update channel");
+    }
+
+    @Override
+    public void delete(long channelId) {
+        executeVoid(() -> channelMapper.deleteById(channelId), "failed to delete channel");
     }
 
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
@@ -79,8 +95,12 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
                 entity.getId(),
                 entity.getConversationId(),
                 entity.getName(),
+                entity.getBrief(),
+                entity.getAvatar(),
                 entity.getType(),
                 Boolean.TRUE.equals(entity.getDefaultChannel()),
+                entity.getMemberCount() == null ? 0L : entity.getMemberCount(),
+                Boolean.TRUE.equals(entity.getRequiresApplication()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -91,6 +111,8 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         entity.setId(record.id());
         entity.setConversationId(record.conversationId());
         entity.setName(record.name());
+        entity.setBrief(record.brief());
+        entity.setAvatar(record.avatar());
         entity.setType(record.type());
         entity.setDefaultChannel(record.defaultChannel());
         entity.setCreatedAt(record.createdAt());

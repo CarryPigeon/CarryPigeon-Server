@@ -62,6 +62,11 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         return execute(() -> channelMemberMapper.findAccountIdsByChannelId(channelId), "failed to query channel member account ids");
     }
 
+    @Override
+    public List<Long> findChannelIdsByAccountId(long accountId) {
+        return execute(() -> channelMemberMapper.findChannelIdsByAccountId(accountId), "failed to query account channel ids");
+    }
+
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();

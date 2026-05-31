@@ -35,15 +35,24 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
     }
 
     @Override
+    public Optional<AuthAccountRecord> findById(long accountId) {
+        return execute(() -> Optional.ofNullable(authAccountMapper.selectById(accountId)).map(this::toRecord),
+                "failed to query auth account by id");
+    }
+
+    @Override
     public void insert(AuthAccountRecord record) {
         executeVoid(() -> authAccountMapper.insert(toEntity(record)), "failed to insert auth account");
+    }
+
+    @Override
+    public void update(AuthAccountRecord record) {
+        executeVoid(() -> authAccountMapper.updateById(toEntity(record)), "failed to update auth account");
     }
 
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
             throw new DatabaseServiceException(errorMessage, exception);
         }

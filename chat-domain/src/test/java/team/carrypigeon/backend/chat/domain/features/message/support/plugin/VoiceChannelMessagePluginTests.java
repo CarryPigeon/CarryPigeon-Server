@@ -43,7 +43,7 @@ class VoiceChannelMessagePluginTests {
         );
 
         ChannelMessage message = plugin.createMessage(
-                new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                 new VoiceChannelMessageDraft(null, "channels/1/messages/voice/accounts/1001/5001-demo.mp3", "demo.mp3", "audio/mpeg", 45678L, 12000L, "会议纪要", null)
         );
 
@@ -68,7 +68,7 @@ class VoiceChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new VoiceChannelMessageDraft(null, "channels/1/messages/voice/accounts/1001/5001-demo.mp3", "demo.mp3", null, null, 0L, null, null)
                 )
         );
@@ -91,7 +91,7 @@ class VoiceChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new VoiceChannelMessageDraft(null, "channels/2/messages/voice/accounts/1001/5001-demo.mp3", "demo.mp3", "audio/mpeg", 45678L, 12000L, "会议纪要", null)
                 )
         );

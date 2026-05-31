@@ -1,153 +1,148 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
+import java.util.List;
+import org.springframework.http.ResponseEntity;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.CreateTokenSessionCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.RefreshTokenCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.CurrentUserResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.SendEmailCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.AuthTokenResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.CurrentUserResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.LoginRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.LogoutRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RefreshTokenRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
-import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.AuthSessionTokenResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.CreateTokenSessionRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RefreshAccessTokenRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.SendEmailCodeRequest;
+import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
 /**
  * 鉴权 HTTP 入口。
- * 职责：承接注册、登录、刷新和注销协议请求并返回统一响应模型。
- * 边界：当前阶段不暴露验证码、OAuth、SSO 或复杂权限逻辑。
+ * 职责：承接邮箱验证码、会话令牌签发、刷新与撤销等 v1 公共鉴权协议请求。
+ * 边界：当前阶段不扩展 OAuth、SSO、复杂权限与主业务资源接口。
  */
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "认证与会话", description = "注册、登录、令牌刷新、会话注销与当前登录用户查询。")
+@Tag(name = "认证与会话", description = "邮箱验证码、会话令牌签发、刷新与撤销。")
 public class AuthController {
 
     private final AuthApplicationService authApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final ServerApplicationService serverApplicationService;
 
-    public AuthController(AuthApplicationService authApplicationService, AuthRequestContext authRequestContext) {
+    public AuthController(
+            AuthApplicationService authApplicationService,
+            ServerApplicationService serverApplicationService
+    ) {
         this.authApplicationService = authApplicationService;
-        this.authRequestContext = authRequestContext;
+        this.serverApplicationService = serverApplicationService;
     }
 
     /**
-     * 注册新账户。
+     * 发送邮箱验证码。
      *
-     * @param request 注册请求
-     * @return 统一响应包装的注册结果
+     * @param request 验证码请求
+     * @return HTTP 204
      */
-    @PostMapping("/register")
-    @Operation(summary = "注册新账户", description = "使用用户名和密码注册新账户，成功后返回最小账户标识信息。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "注册请求体。当前只接受用户名与密码，不包含验证码或邀请信息。", required = true,
-            content = @Content(schema = @Schema(implementation = RegisterRequest.class)))
+    @PostMapping("/email_codes")
+    @Operation(summary = "发送邮箱验证码", description = "为目标邮箱签发一次性验证码。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "验证码请求体。当前只承载邮箱字段。", required = true,
+            content = @Content(schema = @Schema(implementation = SendEmailCodeRequest.class)))
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；用户名或密码不合法时 `CPResponse.code=200`")
+            @ApiResponse(responseCode = "204", description = "验证码请求受理成功")
     })
-    public CPResponse<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterResult result = authApplicationService.register(new RegisterCommand(request.username(), request.password()));
-        return CPResponse.success(new RegisterResponse(result.accountId(), result.username()));
+    public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeRequest request) {
+        authApplicationService.sendEmailCode(new SendEmailCodeCommand(request.email()));
+        return ResponseEntity.noContent().build();
     }
 
     /**
-     * 使用用户名密码登录。
+     * 创建会话并签发 token。
      *
-     * @param request 登录请求
-     * @return 统一响应包装的登录结果
+     * @param request 会话创建请求
+     * @return v1 会话令牌响应
      */
-    @PostMapping("/login")
-    @Operation(summary = "使用密码登录", description = "使用用户名和密码登录，成功后返回 access token 与 refresh token。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "登录请求体。当前使用用户名 + 密码模式，不包含验证码或设备信息。", required = true,
-            content = @Content(schema = @Schema(implementation = LoginRequest.class)))
+    @PostMapping("/tokens")
+    @Operation(summary = "创建会话并签发 token", description = "使用邮箱验证码创建会话；首次邮箱登录时视为注册。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "会话创建请求体。当前仅支持 `email_code` 授权类型，并要求提供客户端设备与插件安装态。", required = true,
+            content = @Content(schema = @Schema(implementation = CreateTokenSessionRequest.class)))
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；凭证错误时 `CPResponse.code=300`；请求体不合法时 `CPResponse.code=200`")
+            @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
     })
-    public CPResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthTokenResult result = authApplicationService.login(new LoginCommand(request.username(), request.password()));
-        return CPResponse.success(toTokenResponse(result));
+    public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
+        List<String> missingPlugins = serverApplicationService.findMissingRequiredPlugins(
+                request.client().installedPlugins() == null
+                        ? List.of()
+                        : request.client().installedPlugins().stream().map(CreateTokenSessionRequest.InstalledPluginRequest::pluginId).toList()
+        );
+        if (!missingPlugins.isEmpty()) {
+            throw ProblemException.validationFailed(
+                    "required_plugin_missing",
+                    "required plugins are missing",
+                    java.util.Map.of("missing_plugins", missingPlugins)
+            );
+        }
+        AuthSessionTokenResult result = authApplicationService.createTokenSession(
+                new CreateTokenSessionCommand(request.grantType(), request.email(), request.code())
+        );
+        return toSessionTokenResponse(result);
     }
 
     /**
-     * 使用 refresh token 刷新令牌对。
+     * 使用 refresh token 刷新 access token。
      *
      * @param request 刷新请求
-     * @return 统一响应包装的新令牌结果
+     * @return v1 会话令牌响应
      */
     @PostMapping("/refresh")
-    @Operation(summary = "刷新访问令牌", description = "使用 refresh token 换取新的 access token 与 refresh token。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "刷新令牌请求体。提交 refresh token 后换取新的 token 对。", required = true,
-            content = @Content(schema = @Schema(implementation = RefreshTokenRequest.class)))
+    @Operation(summary = "刷新访问令牌", description = "使用 refresh token 刷新 access token，可同时轮换 refresh token。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "刷新请求体。包含 refresh token 与最小客户端设备信息。", required = true,
+            content = @Content(schema = @Schema(implementation = RefreshAccessTokenRequest.class)))
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；refresh token 无效或过期时通常返回 `CPResponse.code=300`")
+            @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
     })
-    public CPResponse<AuthTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        AuthTokenResult result = authApplicationService.refresh(new RefreshTokenCommand(request.refreshToken()));
-        return CPResponse.success(toTokenResponse(result));
+    public AuthSessionTokenResponse refresh(@Valid @RequestBody RefreshAccessTokenRequest request) {
+        AuthSessionTokenResult result = authApplicationService.refreshTokenSession(new RefreshTokenCommand(request.refreshToken()));
+        return toSessionTokenResponse(result);
     }
 
     /**
-     * 注销并撤销 refresh session。
+     * 撤销 refresh token。
      *
      * @param request 注销请求
-     * @return 统一成功响应
+     * @return HTTP 204
      */
-    @PostMapping("/logout")
-    @Operation(summary = "注销当前会话", description = "撤销指定 refresh token 对应的 refresh session。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "注销请求体。当前无需 Bearer access token，直接提交待撤销的 refresh token。", required = true,
-            content = @Content(schema = @Schema(implementation = LogoutRequest.class)))
+    @PostMapping("/revoke")
+    @Operation(summary = "撤销 refresh token", description = "撤销指定 refresh token 对应的 refresh session。")
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "撤销请求体。当前仅要求 refresh token 与设备信息。", required = true,
+            content = @Content(schema = @Schema(implementation = RevokeRefreshTokenRequest.class)))
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "该接口在 HTTP 层无需 Bearer；业务成功时 `CPResponse.code=100`，refresh token 非法时通常返回 `CPResponse.code=300`")
+            @ApiResponse(responseCode = "204", description = "撤销成功")
     })
-    public CPResponse<Void> logout(@Valid @RequestBody LogoutRequest request) {
+    public ResponseEntity<Void> revoke(@Valid @RequestBody RevokeRefreshTokenRequest request) {
         authApplicationService.logout(new LogoutCommand(request.refreshToken()));
-        return CPResponse.success(null);
+        return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 查询当前 access token 对应的用户。
-     *
-     * @param request 当前 HTTP 请求
-     * @return 统一响应包装的当前用户信息
-     */
-    @GetMapping("/me")
-    @Operation(summary = "读取当前登录用户", description = "读取当前 access token 绑定的用户身份信息。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "业务成功时 `CPResponse.code=100`；缺少或非法 Bearer access token 时通常返回 `CPResponse.code=300`")
-    })
-    public CPResponse<CurrentUserResponse> me(HttpServletRequest request) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        CurrentUserResult result = new CurrentUserResult(principal.accountId(), principal.username());
-        return CPResponse.success(new CurrentUserResponse(result.accountId(), result.username()));
-    }
-
-    private AuthTokenResponse toTokenResponse(AuthTokenResult result) {
-        return new AuthTokenResponse(
-                result.accountId(),
-                result.username(),
+    private AuthSessionTokenResponse toSessionTokenResponse(AuthSessionTokenResult result) {
+        return new AuthSessionTokenResponse(
+                "Bearer",
                 result.accessToken(),
-                result.accessTokenExpiresAt(),
+                result.expiresIn(),
                 result.refreshToken(),
-                result.refreshTokenExpiresAt()
+                Ids.toString(result.accountId()),
+                result.newUser()
         );
     }
 }

@@ -23,12 +23,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AuthWebMvcConfigurationTests {
 
     /**
-     * 验证当前仅放行匿名鉴权接口和 `POST /api/server/echo`，presence 等其它 `/api/server/*` 仍受保护。
+     * 验证当前仅放行公开发现、gate 与公开鉴权接口，presence 等其它 `/api/**` 仍受保护。
      * 输入：最小鉴权拦截配置。
      * 输出：排除路径不再包含通配的 `/api/server/**`。
      */
     @Test
-    @DisplayName("configuration excludes only public auth routes and server echo")
+    @DisplayName("configuration excludes only public discovery catalog gate and auth routes")
     @SuppressWarnings("unchecked")
     void configuration_excludesOnlyPublicAuthRoutesAndServerEcho() throws Exception {
         AuthWebMvcConfiguration configuration = new AuthWebMvcConfiguration(new FakeAuthTokenService(), new AuthRequestContext());
@@ -47,11 +47,15 @@ class AuthWebMvcConfigurationTests {
 
         assertThat(includePatterns).containsExactly("/api/**");
         assertThat(excludePatterns).containsExactly(
-                "/api/auth/register",
-                "/api/auth/login",
+                "/api/server",
+                "/api/gates/required/check",
+                "/api/plugins/catalog",
+                "/api/domains/catalog",
+                "/api/files/download/server_avatar",
+                "/api/auth/email_codes",
+                "/api/auth/tokens",
                 "/api/auth/refresh",
-                "/api/auth/logout",
-                "/api/server/echo"
+                "/api/auth/revoke"
         );
         assertThat(excludePatterns).doesNotContain("/api/server/**");
     }

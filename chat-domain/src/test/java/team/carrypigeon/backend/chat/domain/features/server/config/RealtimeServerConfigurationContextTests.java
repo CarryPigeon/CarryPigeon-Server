@@ -18,6 +18,9 @@ import team.carrypigeon.backend.chat.domain.features.message.support.plugin.File
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -89,6 +92,46 @@ class RealtimeServerConfigurationContextTests {
                 }
             };
         }
+
+        @Bean
+        ServerIdentityProperties serverIdentityProperties() {
+            return new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000");
+        }
+
+        @Bean
+        UserProfileRepository userProfileRepository() {
+            return new UserProfileRepository() {
+                @Override
+                public java.util.Optional<UserProfile> findByAccountId(long accountId) {
+                    return java.util.Optional.of(new UserProfile(accountId, "carry-user", "avatars/u/1001.png", "", java.time.Instant.parse("2026-04-20T12:00:00Z"), java.time.Instant.parse("2026-04-20T12:00:00Z")));
+                }
+
+                @Override
+                public java.util.List<UserProfile> findAll() {
+                    return java.util.List.of();
+                }
+
+                @Override
+                public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+                    return java.util.List.of();
+                }
+
+                @Override
+                public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+                    return java.util.List.of();
+                }
+
+                @Override
+                public UserProfile save(UserProfile userProfile) {
+                    return userProfile;
+                }
+
+                @Override
+                public UserProfile update(UserProfile userProfile) {
+                    return userProfile;
+                }
+            };
+        }
     }
 
     /**
@@ -103,7 +146,7 @@ class RealtimeServerConfigurationContextTests {
                         "cp.chat.server.realtime.enabled=true",
                         "cp.chat.server.realtime.host=127.0.0.1",
                         "cp.chat.server.realtime.port=28080",
-                        "cp.chat.server.realtime.path=/ws",
+                        "cp.chat.server.realtime.path=/api/ws",
                         "cp.chat.server.realtime.boss-threads=1",
                         "cp.chat.server.realtime.worker-threads=0",
                         "cp.infrastructure.id.worker-id=1",
@@ -130,7 +173,7 @@ class RealtimeServerConfigurationContextTests {
                         "cp.chat.server.realtime.enabled=false",
                         "cp.chat.server.realtime.host=127.0.0.1",
                         "cp.chat.server.realtime.port=28080",
-                        "cp.chat.server.realtime.path=/ws",
+                        "cp.chat.server.realtime.path=/api/ws",
                         "cp.chat.server.realtime.boss-threads=1",
                         "cp.chat.server.realtime.worker-threads=0",
                         "cp.infrastructure.id.worker-id=1",

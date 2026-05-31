@@ -14,6 +14,7 @@ public final class RealtimeChannelSession {
     public static final AttributeKey<String> TRACE_ID_KEY = AttributeKey.valueOf("cp.realtime.trace-id");
     public static final AttributeKey<String> REQUEST_ID_KEY = AttributeKey.valueOf("cp.realtime.request-id");
     public static final AttributeKey<String> ROUTE_KEY = AttributeKey.valueOf("cp.realtime.route");
+    public static final AttributeKey<String> LAST_EVENT_ID_KEY = AttributeKey.valueOf("cp.realtime.last-event-id");
     public static final AttributeKey<AuthenticatedPrincipal> AUTHENTICATED_PRINCIPAL_KEY =
             AttributeKey.valueOf("cp.realtime.authenticated-principal");
 

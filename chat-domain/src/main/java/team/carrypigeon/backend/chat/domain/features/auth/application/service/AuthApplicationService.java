@@ -1,11 +1,15 @@
 package team.carrypigeon.backend.chat.domain.features.auth.application.service;
 
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.CreateTokenSessionCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.RefreshTokenCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.SendEmailCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
@@ -15,6 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthToken
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
@@ -50,6 +55,38 @@ public class AuthApplicationService {
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
+    private final EmailVerificationCodeService emailVerificationCodeService;
+
+    @Autowired
+    public AuthApplicationService(
+            AuthAccountRepository authAccountRepository,
+            AuthRefreshSessionRepository authRefreshSessionRepository,
+            UserProfileRepository userProfileRepository,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            PasswordHasher passwordHasher,
+            TokenHasher tokenHasher,
+            AuthTokenService authTokenService,
+            AuthJwtProperties authJwtProperties,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner,
+            EmailVerificationCodeService emailVerificationCodeService
+    ) {
+        this.authAccountRepository = authAccountRepository;
+        this.authRefreshSessionRepository = authRefreshSessionRepository;
+        this.userProfileRepository = userProfileRepository;
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.passwordHasher = passwordHasher;
+        this.tokenHasher = tokenHasher;
+        this.authTokenService = authTokenService;
+        this.authJwtProperties = authJwtProperties;
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
+        this.emailVerificationCodeService = emailVerificationCodeService;
+    }
 
     public AuthApplicationService(
             AuthAccountRepository authAccountRepository,
@@ -65,18 +102,29 @@ public class AuthApplicationService {
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        this.authAccountRepository = authAccountRepository;
-        this.authRefreshSessionRepository = authRefreshSessionRepository;
-        this.userProfileRepository = userProfileRepository;
-        this.channelRepository = channelRepository;
-        this.channelMemberRepository = channelMemberRepository;
-        this.passwordHasher = passwordHasher;
-        this.tokenHasher = tokenHasher;
-        this.authTokenService = authTokenService;
-        this.authJwtProperties = authJwtProperties;
-        this.idGenerator = idGenerator;
-        this.timeProvider = timeProvider;
-        this.transactionRunner = transactionRunner;
+        this(
+                authAccountRepository,
+                authRefreshSessionRepository,
+                userProfileRepository,
+                channelRepository,
+                channelMemberRepository,
+                passwordHasher,
+                tokenHasher,
+                authTokenService,
+                authJwtProperties,
+                idGenerator,
+                timeProvider,
+                transactionRunner,
+                new EmailVerificationCodeService() {
+                    @Override
+                    public void issueCode(String email) {
+                    }
+
+                    @Override
+                    public void verifyCode(String email, String code) {
+                    }
+                }
+        );
     }
 
     /**
@@ -101,41 +149,55 @@ public class AuthApplicationService {
             );
 
             AuthAccount savedAccount = authAccountRepository.save(account);
-            userProfileRepository.save(UserProfile.initial(
-                    savedAccount.id(),
-                    savedAccount.username(),
-                    savedAccount.createdAt(),
-                    savedAccount.updatedAt()
-            ));
-            Channel defaultChannel = channelRepository.findDefaultChannel()
-                    .orElseThrow(() -> ProblemException.fail("default_channel_missing", "default channel does not exist"));
-            channelMemberRepository.save(new ChannelMember(
-                    defaultChannel.id(),
-                    savedAccount.id(),
-                    ChannelMemberRole.MEMBER,
-                    timeProvider.nowInstant(),
-                    null
-            ));
-            Channel systemChannel = channelRepository.findSystemChannel()
-                    .orElseGet(() -> channelRepository.save(new Channel(
-                            idGenerator.nextLongId(),
-                            idGenerator.nextLongId(),
-                            "system",
-                            "system",
-                            false,
-                            timeProvider.nowInstant(),
-                            timeProvider.nowInstant()
-                    )));
-            if (!channelMemberRepository.exists(systemChannel.id(), savedAccount.id())) {
-                channelMemberRepository.save(new ChannelMember(
-                        systemChannel.id(),
-                        savedAccount.id(),
-                        ChannelMemberRole.MEMBER,
-                        timeProvider.nowInstant(),
-                        null
-                ));
-            }
+            provisionAccount(savedAccount, savedAccount.username());
             return new RegisterResult(savedAccount.id(), savedAccount.username());
+        });
+    }
+
+    /**
+     * 发送邮箱验证码。
+     *
+     * @param command 邮箱验证码命令
+     */
+    public void sendEmailCode(SendEmailCodeCommand command) {
+        emailVerificationCodeService.issueCode(normalizeEmail(command.email()));
+    }
+
+    /**
+     * 基于邮箱验证码创建会话并签发 token。
+     *
+     * @param command 会话创建命令
+     * @return 会话令牌结果
+     */
+    public AuthSessionTokenResult createTokenSession(CreateTokenSessionCommand command) {
+        if (!"email_code".equals(command.grantType())) {
+            throw ProblemException.validationFailed("grant_type must be email_code");
+        }
+        String normalizedEmail = normalizeEmail(command.email());
+        emailVerificationCodeService.verifyCode(normalizedEmail, command.code());
+        return transactionRunner.runInTransaction(() -> {
+            AuthAccount existingAccount = authAccountRepository.findByUsername(normalizedEmail).orElse(null);
+            boolean newUser = existingAccount == null;
+            AuthAccount account = existingAccount;
+            if (account == null) {
+                Instant now = timeProvider.nowInstant();
+                account = authAccountRepository.save(new AuthAccount(
+                        idGenerator.nextLongId(),
+                        normalizedEmail,
+                        passwordHasher.hash("email-code-account::" + normalizedEmail),
+                        now,
+                        now
+                ));
+                provisionAccount(account, deriveNickname(normalizedEmail));
+            }
+            AuthTokenPair tokenPair = issueTokenPair(account);
+            return new AuthSessionTokenResult(
+                    account.id(),
+                    tokenPair.accessToken(),
+                    authJwtProperties.accessTokenTtl().toSeconds(),
+                    tokenPair.refreshToken(),
+                    newUser
+            );
         });
     }
 
@@ -168,13 +230,13 @@ public class AuthApplicationService {
             AuthTokenClaims claims = authTokenService.parseRefreshToken(command.refreshToken());
             long accountId = Long.parseLong(claims.subject());
             AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
-                    .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_session", "refresh token is invalid"));
+                    .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
 
             if (session.revoked()
                     || session.expiresAt().isBefore(timeProvider.nowInstant())
                     || session.accountId() != accountId
                     || !tokenHasher.hash(command.refreshToken()).equals(session.refreshTokenHash())) {
-                throw ProblemException.forbidden("invalid_refresh_session", "refresh token is invalid");
+                throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
             }
 
             authRefreshSessionRepository.revoke(session.id());
@@ -198,6 +260,66 @@ public class AuthApplicationService {
     public void logout(LogoutCommand command) {
         AuthTokenClaims claims = authTokenService.parseRefreshToken(command.refreshToken());
         authRefreshSessionRepository.revoke(claims.sessionId());
+    }
+
+    public AuthSessionTokenResult refreshTokenSession(RefreshTokenCommand command) {
+        AuthTokenResult result = refresh(command);
+        return new AuthSessionTokenResult(
+                result.accountId(),
+                result.accessToken(),
+                authJwtProperties.accessTokenTtl().toSeconds(),
+                result.refreshToken(),
+                false
+        );
+    }
+
+    private void provisionAccount(AuthAccount account, String nickname) {
+        userProfileRepository.save(UserProfile.initial(
+                account.id(),
+                nickname,
+                account.createdAt(),
+                account.updatedAt()
+        ));
+        Channel defaultChannel = channelRepository.findDefaultChannel()
+                .orElseThrow(() -> ProblemException.fail("default_channel_missing", "default channel does not exist"));
+        channelMemberRepository.save(new ChannelMember(
+                defaultChannel.id(),
+                account.id(),
+                ChannelMemberRole.MEMBER,
+                timeProvider.nowInstant(),
+                null
+        ));
+        Channel systemChannel = channelRepository.findSystemChannel()
+                .orElseGet(() -> channelRepository.save(new Channel(
+                        idGenerator.nextLongId(),
+                        idGenerator.nextLongId(),
+                        "system",
+                        "",
+                        "",
+                        "",
+                        "system",
+                        false,
+                        timeProvider.nowInstant(),
+                        timeProvider.nowInstant()
+                )));
+        if (!channelMemberRepository.exists(systemChannel.id(), account.id())) {
+            channelMemberRepository.save(new ChannelMember(
+                    systemChannel.id(),
+                    account.id(),
+                    ChannelMemberRole.MEMBER,
+                    timeProvider.nowInstant(),
+                    null
+            ));
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
+    }
+
+    private String deriveNickname(String email) {
+        int atIndex = email.indexOf('@');
+        return atIndex > 0 ? email.substring(0, atIndex) : email;
     }
 
     private AuthTokenPair issueTokenPair(AuthAccount account) {

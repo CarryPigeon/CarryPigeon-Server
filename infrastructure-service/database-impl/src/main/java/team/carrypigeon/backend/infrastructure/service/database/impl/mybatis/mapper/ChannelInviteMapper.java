@@ -20,8 +20,8 @@ public interface ChannelInviteMapper {
      * @return 受影响行数
      */
     @Insert("""
-            INSERT INTO chat_channel_invite (channel_id, invitee_account_id, inviter_account_id, status, created_at, responded_at)
-            VALUES (#{channelId}, #{inviteeAccountId}, #{inviterAccountId}, #{status}, #{createdAt}, #{respondedAt})
+            INSERT INTO chat_channel_invite (channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at)
+            VALUES (#{channelId}, #{applicationId}, #{inviteeAccountId}, #{inviterAccountId}, #{status}, #{createdAt}, #{respondedAt})
             """)
     int insert(ChannelInviteEntity entity);
 
@@ -33,7 +33,7 @@ public interface ChannelInviteMapper {
      * @return 邀请实体；未命中时返回空
      */
     @Select("""
-            SELECT channel_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
             FROM chat_channel_invite
             WHERE channel_id = #{channelId} AND invitee_account_id = #{inviteeAccountId}
             """)
@@ -41,6 +41,25 @@ public interface ChannelInviteMapper {
             @Param("channelId") long channelId,
             @Param("inviteeAccountId") long inviteeAccountId
     );
+
+    @Select("""
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            FROM chat_channel_invite
+            WHERE channel_id = #{channelId} AND application_id = #{applicationId}
+            LIMIT 1
+            """)
+    ChannelInviteEntity findByChannelIdAndApplicationId(
+            @Param("channelId") long channelId,
+            @Param("applicationId") long applicationId
+    );
+
+    @Select("""
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            FROM chat_channel_invite
+            WHERE channel_id = #{channelId}
+            ORDER BY created_at DESC
+            """)
+    java.util.List<ChannelInviteEntity> findByChannelId(@Param("channelId") long channelId);
 
     /**
      * 更新邀请记录。
@@ -50,7 +69,8 @@ public interface ChannelInviteMapper {
      */
     @Update("""
             UPDATE chat_channel_invite
-            SET inviter_account_id = #{inviterAccountId},
+            SET application_id = #{applicationId},
+                inviter_account_id = #{inviterAccountId},
                 status = #{status},
                 created_at = #{createdAt},
                 responded_at = #{respondedAt}

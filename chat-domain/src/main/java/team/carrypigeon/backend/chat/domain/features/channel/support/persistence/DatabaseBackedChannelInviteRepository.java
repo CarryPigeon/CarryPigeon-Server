@@ -27,6 +27,19 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
     }
 
     @Override
+    public Optional<ChannelInvite> findByChannelIdAndApplicationId(long channelId, long applicationId) {
+        return channelInviteDatabaseService.findByChannelIdAndApplicationId(channelId, applicationId)
+                .map(this::toDomain);
+    }
+
+    @Override
+    public java.util.List<ChannelInvite> findByChannelId(long channelId) {
+        return channelInviteDatabaseService.findByChannelId(channelId).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
     public void save(ChannelInvite channelInvite) {
         channelInviteDatabaseService.insert(toRecord(channelInvite));
     }
@@ -39,6 +52,7 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
     private ChannelInvite toDomain(ChannelInviteRecord record) {
         return new ChannelInvite(
                 record.channelId(),
+                record.applicationId(),
                 record.inviteeAccountId(),
                 record.inviterAccountId(),
                 ChannelInviteStatus.valueOf(record.status()),
@@ -50,6 +64,7 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
     private ChannelInviteRecord toRecord(ChannelInvite channelInvite) {
         return new ChannelInviteRecord(
                 channelInvite.channelId(),
+                channelInvite.applicationId(),
                 channelInvite.inviteeAccountId(),
                 channelInvite.inviterAccountId(),
                 channelInvite.status().name(),

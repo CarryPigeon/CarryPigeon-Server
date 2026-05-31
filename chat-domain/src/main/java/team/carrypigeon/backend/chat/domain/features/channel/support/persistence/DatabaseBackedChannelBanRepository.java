@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
@@ -23,6 +24,13 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     public Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByChannelIdAndBannedAccountId(channelId, bannedAccountId)
                 .map(this::toDomain);
+    }
+
+    @Override
+    public List<ChannelBan> findByChannelId(long channelId) {
+        return channelBanDatabaseService.findByChannelId(channelId).stream()
+                .map(this::toDomain)
+                .toList();
     }
 
     @Override

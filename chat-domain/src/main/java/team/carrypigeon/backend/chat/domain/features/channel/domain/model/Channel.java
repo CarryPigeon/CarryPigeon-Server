@@ -10,8 +10,13 @@ import java.time.Instant;
  * @param id 频道 ID
  * @param conversationId 对应会话 ID，V0 中保持最小建模字段
  * @param name 频道名称
+ * @param brief 频道简介
+ * @param avatar 频道头像相对路径
+ * @param ownerUid 频道 owner 用户 ID（字符串化后）
  * @param type 频道类型
  * @param defaultChannel 是否为默认频道
+ * @param memberCount 频道成员数
+ * @param requiresApplication 是否需要申请加入
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -19,9 +24,29 @@ public record Channel(
         long id,
         long conversationId,
         String name,
+        String brief,
+        String avatar,
+        String ownerUid,
         String type,
         boolean defaultChannel,
+        long memberCount,
+        boolean requiresApplication,
         Instant createdAt,
         Instant updatedAt
 ) {
+
+    public Channel(
+            long id,
+            long conversationId,
+            String name,
+            String brief,
+            String avatar,
+            String ownerUid,
+            String type,
+            boolean defaultChannel,
+            Instant createdAt,
+            Instant updatedAt
+    ) {
+        this(id, conversationId, name, brief, avatar, ownerUid, type, defaultChannel, 0L, false, createdAt, updatedAt);
+    }
 }

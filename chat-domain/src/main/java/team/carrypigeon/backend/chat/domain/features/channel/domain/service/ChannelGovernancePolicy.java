@@ -53,13 +53,24 @@ public class ChannelGovernancePolicy {
     }
 
     /**
+     * 校验是否允许更新频道资料。
+     *
+     * @param channel 目标频道
+     * @param operator 操作者
+     */
+    public void requireCanUpdateChannelProfile(Channel channel, ChannelMember operator) {
+        requirePrivateChannel(channel);
+        requireOwnerOrAdmin(operator, "channel_profile_forbidden", OWNER_OR_ADMIN_ROLE_REQUIRED_MESSAGE);
+    }
+
+    /**
      * 断言成员具备查看成员列表权限。
      *
      * @param operator 当前活跃成员
      */
     public void requireCanListMembers(ChannelMember operator) {
         if (operator == null) {
-            throw ProblemException.forbidden("channel_member_required", "channel membership is required");
+            throw ProblemException.forbidden("not_channel_member", "channel membership is required");
         }
     }
 
@@ -101,7 +112,7 @@ public class ChannelGovernancePolicy {
      */
     public void requireBanInactive(ChannelBan channelBan, Instant now) {
         if (isBanActive(channelBan, now)) {
-            throw ProblemException.forbidden("channel_ban_active", CHANNEL_BAN_ACTIVE_MESSAGE);
+            throw ProblemException.forbidden("forbidden", CHANNEL_BAN_ACTIVE_MESSAGE);
         }
     }
 
@@ -175,6 +186,14 @@ public class ChannelGovernancePolicy {
     }
 
     /**
+     * 断言当前成员可管理置顶。
+     */
+    public void requireCanModeratePin(Channel channel, ChannelMember operator) {
+        requirePrivateChannel(channel);
+        requireOwnerOrAdmin(operator, "channel_pin_forbidden", OWNER_OR_ADMIN_ROLE_REQUIRED_MESSAGE);
+    }
+
+    /**
      * 断言当前成员可发送消息。
      *
      * @param channel 频道
@@ -186,7 +205,7 @@ public class ChannelGovernancePolicy {
             return;
         }
         if (member.mutedUntil() != null && member.mutedUntil().isAfter(now)) {
-            throw ProblemException.forbidden("channel_member_muted", CHANNEL_MEMBER_MUTED_MESSAGE);
+            throw ProblemException.forbidden("user_muted", CHANNEL_MEMBER_MUTED_MESSAGE);
         }
     }
 

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -27,6 +28,25 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
                 () -> Optional.ofNullable(channelInviteMapper.findByChannelIdAndInviteeAccountId(channelId, inviteeAccountId))
                         .map(this::toRecord),
                 "failed to query channel invite"
+        );
+    }
+
+    @Override
+    public Optional<ChannelInviteRecord> findByChannelIdAndApplicationId(long channelId, long applicationId) {
+        return execute(
+                () -> Optional.ofNullable(channelInviteMapper.findByChannelIdAndApplicationId(channelId, applicationId))
+                        .map(this::toRecord),
+                "failed to query channel invite"
+        );
+    }
+
+    @Override
+    public List<ChannelInviteRecord> findByChannelId(long channelId) {
+        return execute(
+                () -> channelInviteMapper.findByChannelId(channelId).stream()
+                        .map(this::toRecord)
+                        .toList(),
+                "failed to query channel invites"
         );
     }
 
@@ -72,6 +92,7 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
     private ChannelInviteRecord toRecord(ChannelInviteEntity entity) {
         return new ChannelInviteRecord(
                 entity.getChannelId(),
+                entity.getApplicationId(),
                 entity.getInviteeAccountId(),
                 entity.getInviterAccountId(),
                 entity.getStatus(),
@@ -83,6 +104,7 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
     private ChannelInviteEntity toEntity(ChannelInviteRecord record) {
         ChannelInviteEntity entity = new ChannelInviteEntity();
         entity.setChannelId(record.channelId());
+        entity.setApplicationId(record.applicationId());
         entity.setInviteeAccountId(record.inviteeAccountId());
         entity.setInviterAccountId(record.inviterAccountId());
         entity.setStatus(record.status());

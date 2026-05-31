@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInvite;
 
@@ -18,6 +19,20 @@ public interface ChannelInviteRepository {
      * @return 命中时返回邀请记录
      */
     Optional<ChannelInvite> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId);
+
+    /**
+     * 按申请/邀请 ID 查询。
+     */
+    default Optional<ChannelInvite> findByChannelIdAndApplicationId(long channelId, long applicationId) {
+        return Optional.empty();
+    }
+
+    /**
+     * 查询频道下的全部申请/邀请记录。
+     */
+    default List<ChannelInvite> findByChannelId(long channelId) {
+        return List.of();
+    }
 
     /**
      * 保存新的邀请记录。

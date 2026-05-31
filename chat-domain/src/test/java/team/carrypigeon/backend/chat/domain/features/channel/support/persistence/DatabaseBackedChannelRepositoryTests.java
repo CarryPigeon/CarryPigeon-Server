@@ -29,7 +29,7 @@ class DatabaseBackedChannelRepositoryTests {
     @DisplayName("find by id existing record maps to domain model")
     void findById_existingRecord_mapsToDomainModel() {
         FakeChannelDatabaseService databaseService = new FakeChannelDatabaseService();
-        databaseService.record = new ChannelRecord(9L, 9L, "project-alpha", "private", false, BASE_TIME, BASE_TIME);
+        databaseService.record = new ChannelRecord(9L, 9L, "project-alpha", "讨论区", "avatars/ch/9.png", "private", false, BASE_TIME, BASE_TIME);
         DatabaseBackedChannelRepository repository = new DatabaseBackedChannelRepository(databaseService);
 
         Optional<Channel> result = repository.findById(9L);
@@ -47,12 +47,14 @@ class DatabaseBackedChannelRepositoryTests {
     void save_domainChannel_writesDatabaseRecord() {
         FakeChannelDatabaseService databaseService = new FakeChannelDatabaseService();
         DatabaseBackedChannelRepository repository = new DatabaseBackedChannelRepository(databaseService);
-        Channel channel = new Channel(9L, 9L, "project-alpha", "private", false, BASE_TIME, BASE_TIME);
+        Channel channel = new Channel(9L, 9L, "project-alpha", "讨论区", "avatars/ch/9.png", "1001", "private", false, BASE_TIME, BASE_TIME);
 
         repository.save(channel);
 
         assertEquals(9L, databaseService.insertedRecord.id());
         assertEquals(9L, databaseService.insertedRecord.conversationId());
+        assertEquals("讨论区", databaseService.insertedRecord.brief());
+        assertEquals("avatars/ch/9.png", databaseService.insertedRecord.avatar());
         assertEquals("private", databaseService.insertedRecord.type());
     }
 
@@ -63,7 +65,7 @@ class DatabaseBackedChannelRepositoryTests {
     @DisplayName("find system channel existing record maps to domain model")
     void findSystemChannel_existingRecord_mapsToDomainModel() {
         FakeChannelDatabaseService databaseService = new FakeChannelDatabaseService();
-        databaseService.systemRecord = new ChannelRecord(10L, 10L, "system", "system", false, BASE_TIME, BASE_TIME);
+        databaseService.systemRecord = new ChannelRecord(10L, 10L, "system", "", "", "system", false, BASE_TIME, BASE_TIME);
         DatabaseBackedChannelRepository repository = new DatabaseBackedChannelRepository(databaseService);
 
         Optional<Channel> result = repository.findSystemChannel();
@@ -78,6 +80,7 @@ class DatabaseBackedChannelRepositoryTests {
         private ChannelRecord record;
         private ChannelRecord systemRecord;
         private ChannelRecord insertedRecord;
+        private ChannelRecord updatedRecord;
 
         @Override
         public Optional<ChannelRecord> findDefaultChannel() {
@@ -97,6 +100,11 @@ class DatabaseBackedChannelRepositoryTests {
         @Override
         public void insert(ChannelRecord record) {
             this.insertedRecord = record;
+        }
+
+        @Override
+        public void update(ChannelRecord record) {
+            this.updatedRecord = record;
         }
     }
 }

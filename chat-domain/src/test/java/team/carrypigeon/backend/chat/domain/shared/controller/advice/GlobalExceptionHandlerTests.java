@@ -3,16 +3,21 @@ package team.carrypigeon.backend.chat.domain.shared.controller.advice;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
-import team.carrypigeon.backend.chat.domain.shared.controller.CPResponse;
+import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * GlobalExceptionHandler 契约测试。
- * 职责：验证业务问题异常到 CPResponse 响应码的稳定映射。
+ * 职责：验证业务问题异常到标准 HTTP 错误响应的稳定映射。
  * 边界：不通过生产 HTTP demo 端点构造错误，只验证统一异常处理契约。
  */
 @Tag("contract")
@@ -23,62 +28,83 @@ class GlobalExceptionHandlerTests {
     /**
      * 验证权限问题会映射到 300 响应码。
      * 输入：forbidden 类型业务问题异常。
-     * 输出：统一响应码为 300。
+     * 输出：HTTP 401，reason 为 unauthorized。
      */
     @Test
-    @DisplayName("handle problem forbidden returns code 300")
-    void handleProblemException_forbidden_returnsCode300() {
-        CPResponse<Void> response = handler.handleProblemException(
-                ProblemException.forbidden("test_forbidden", "forbidden")
-        );
+    @DisplayName("handle authentication forbidden returns status 401")
+    void handleProblemException_authenticationForbidden_returnsStatus401() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleProblemException(
+                ProblemException.forbidden("authentication_required", "authentication is required"));
 
-        assertEquals(300, response.code());
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("unauthorized", response.getBody().error().reason());
     }
 
     /**
      * 验证资源不存在问题会映射到 404 响应码。
      * 输入：not found 类型业务问题异常。
-     * 输出：统一响应码为 404。
+     * 输出：HTTP 状态码为 404。
      */
     @Test
-    @DisplayName("handle problem not found returns code 404")
-    void handleProblemException_notFound_returnsCode404() {
-        CPResponse<Void> response = handler.handleProblemException(
+    @DisplayName("handle problem not found returns status 404")
+    void handleProblemException_notFound_returnsStatus404() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleProblemException(
                 ProblemException.notFound("resource not found")
         );
 
-        assertEquals(404, response.code());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("not_found", response.getBody().error().reason());
     }
 
     /**
      * 验证内部业务问题会映射到 500 响应码。
      * 输入：internal 类型业务问题异常。
-     * 输出：统一响应码为 500。
+     * 输出：HTTP 500，且不暴露内部 reason。
      */
     @Test
-    @DisplayName("handle problem internal returns code 500")
-    void handleProblemException_internal_returnsCode500() {
-        CPResponse<Void> response = handler.handleProblemException(
+    @DisplayName("handle problem internal returns status 500")
+    void handleProblemException_internal_returnsStatus500() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleProblemException(
                 ProblemException.fail("test_failure", "internal failure")
         );
 
-        assertEquals(500, response.code());
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("internal_error", response.getBody().error().reason());
+        assertEquals("internal server error", response.getBody().error().message());
     }
 
     /**
-     * 验证请求绑定失败会映射到 200 响应码。
+     * 验证请求绑定失败会映射到 422 响应码。
      * 输入：带字段错误的 BindException。
-     * 输出：统一响应码为 200，且消息保持可读。
+     * 输出：HTTP 422，且消息与 field_errors 保持可读。
      */
     @Test
-    @DisplayName("handle validation bind exception returns code 200")
-    void handleValidationException_bindException_returnsCode200() {
+    @DisplayName("handle validation bind exception returns status 422")
+    void handleValidationException_bindException_returnsStatus422() {
         BindException exception = new BindException(new Object(), "request");
         exception.addError(new FieldError("request", "username", "username is invalid"));
 
-        CPResponse<Void> response = handler.handleValidationException(exception);
+        ResponseEntity<ApiErrorResponse> response = handler.handleValidationException(exception);
 
-        assertEquals(200, response.code());
-        assertEquals("username is invalid", response.message());
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.getStatusCode());
+        assertEquals("username is invalid", response.getBody().error().message());
+        assertNotNull(response.getBody().error().details());
+    }
+
+    /**
+     * 验证错误响应会回填请求链路 ID。
+     */
+    @Test
+    @DisplayName("handle validation exception includes request id")
+    void handleValidationException_includesRequestId() {
+        BindException exception = new BindException(new Object(), "request");
+        exception.addError(new FieldError("request", "username", "username is invalid"));
+        MDC.put(LogKeys.REQUEST_ID, "req-123");
+        try {
+            ResponseEntity<ApiErrorResponse> response = handler.handleValidationException(exception);
+            assertEquals("req-123", response.getBody().error().requestId());
+        } finally {
+            MDC.clear();
+        }
     }
 }

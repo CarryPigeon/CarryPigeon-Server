@@ -4,9 +4,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedMentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedMessageRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
 /**
@@ -30,6 +34,17 @@ public class MessagePersistenceConfiguration {
     }
 
     /**
+     * 创建提及仓储适配器。
+     *
+     * @param mentionDatabaseService 提及数据库服务契约
+     * @return 面向领域的提及仓储实现
+     */
+    @Bean
+    public MentionRepository mentionRepository(MentionDatabaseService mentionDatabaseService) {
+        return new DatabaseBackedMentionRepository(mentionDatabaseService);
+    }
+
+    /**
      * 创建默认空实现实时发布器。
      *
      * @return 未启用 realtime 时的空发布器
@@ -38,6 +53,18 @@ public class MessagePersistenceConfiguration {
     @ConditionalOnMissingBean(MessageRealtimePublisher.class)
     public MessageRealtimePublisher noopMessageRealtimePublisher() {
         return (message, recipientAccountIds) -> {
+        };
+    }
+
+    /**
+     * 创建默认空实现频道实时发布器。
+     *
+     * @return 未启用 realtime 时的空发布器
+     */
+    @Bean
+    @ConditionalOnMissingBean(ChannelRealtimePublisher.class)
+    public ChannelRealtimePublisher noopChannelRealtimePublisher() {
+        return new ChannelRealtimePublisher() {
         };
     }
 }

@@ -9,16 +9,22 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelPinDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelPinMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelReadStateDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelPinDatabaseService;
 
 /**
  * 频道数据库服务自动配置。
@@ -57,5 +63,17 @@ public class DatabaseChannelServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public ChannelAuditLogDatabaseService channelAuditLogDatabaseService(ChannelAuditLogMapper channelAuditLogMapper) {
         return new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelReadStateDatabaseService channelReadStateDatabaseService(ChannelReadStateMapper channelReadStateMapper) {
+        return new MybatisPlusChannelReadStateDatabaseService(channelReadStateMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ChannelPinDatabaseService channelPinDatabaseService(ChannelPinMapper channelPinMapper) {
+        return new MybatisPlusChannelPinDatabaseService(channelPinMapper);
     }
 }

@@ -1,12 +1,17 @@
 # CarryPigeon Backend API
 
-本文基于当前仓库实际代码整理，对外接口以控制器、DTO、统一响应模型和实时通道实现为准。
+本文基于当前仓库实际代码整理，对外接口以控制器、DTO、统一错误模型、当前 WebSocket 实现和运行时 OpenAPI 文档为准。
 
 ## 1. 总体约定
 
-### 1.1 统一响应
+### 1.1 成功响应
 
-所有 HTTP 接口统一返回 `CPResponse<T>`：
+当前仓库的成功响应**并不完全统一**，存在两类稳定形态：
+
+1. 仍保留 `CPResponse<T>` 成功包装的过渡接口
+2. 已切到直接返回资源对象 / `204 No Content` 的 v1 风格接口
+
+当前仍使用 `CPResponse<T>` 的成功示例：
 
 ```json
 {
@@ -16,115 +21,239 @@
 }
 ```
 
-字段说明：
-
-- `code`：稳定业务响应码，不直接等同于 HTTP 状态码
-- `message`：面向调用方的稳定消息
-- `data`：业务数据；失败时通常为 `null`
-
-当前稳定业务响应码：
+当前稳定业务成功码：
 
 | code | 含义 |
 | --- | --- |
 | `100` | 成功 |
-| `200` | 参数校验失败 / 请求体不合法 |
-| `300` | 无权限 / 认证失败 |
-| `404` | 资源不存在 |
-| `500` | 服务内部错误 |
 
-### 1.2 认证约定
+### 1.2 错误响应
 
-- 受保护 HTTP 接口使用请求头 `Authorization: Bearer <access-token>`
+HTTP 失败统一返回标准错误对象：
+
+```json
+{
+  "error": {
+    "status": 422,
+    "reason": "validation_failed",
+    "message": "validation failed",
+    "request_id": "req-01HXYZ",
+    "details": {}
+  }
+}
+```
+
+当前稳定错误 reason 以实际代码和 `docs/t/13-error-model-and-reasons-v1.md` 对齐为准，已落地常见值包括：
+
+- `validation_failed`
+- `unauthorized`
+- `token_expired`
+- `not_found`
+- `internal_error`
+- `required_plugin_missing`
+
+### 1.3 认证约定
+
+- 受保护 HTTP 接口使用 `Authorization: Bearer <access-token>`
 - HTTP 鉴权由 `AuthAccessTokenInterceptor` 处理，保护范围为 `/api/**`
-- 运行时 OpenAPI 文档会按当前拦截规则自动为受保护 `/api/**` 操作标记 `bearerAuth`
-- 当前明确放行的匿名 HTTP 接口：
-  - `POST /api/auth/register`
-  - `POST /api/auth/login`
+- 当前明确匿名放行的 HTTP 路径：
+  - `GET /api/server`
+  - `POST /api/gates/required/check`
+  - `POST /api/auth/email_codes`
+  - `POST /api/auth/tokens`
   - `POST /api/auth/refresh`
-  - `POST /api/auth/logout`
-  - `POST /api/server/echo`
+  - `POST /api/auth/revoke`
   - `GET /.well-known/carrypigeon-server`
 
-### 1.3 错误映射
+### 1.4 Swagger / OpenAPI
 
-全局异常由 `GlobalExceptionHandler` 统一转换为 `CPResponse`：
-
-- 参数绑定失败、Bean Validation 失败、JSON 解析失败：返回 `code=200`
-- 业务 `FORBIDDEN`：返回 `code=300`
-- 业务 `NOT_FOUND`：返回 `code=404`
-- 未捕获异常：返回 `code=500`，消息固定为 `internal server error`
-
-### 1.4 Swagger / OpenAPI 文档入口
-
-- 当前项目已接入 Springdoc OpenAPI
-- Swagger UI 默认访问路径：`/swagger-ui/index.html`
+- Swagger UI：`/swagger-ui/index.html`
 - 兼容入口：`/swagger-ui.html`
-- OpenAPI JSON 文档路径：`/v3/api-docs`
-- OpenAPI YAML 文档路径：`/v3/api-docs.yaml`
-- 上述文档端点默认不在 `/api/**` 范围内，因此不受当前 `AuthAccessTokenInterceptor` 鉴权拦截影响
+- OpenAPI JSON：`/v3/api-docs`
+- OpenAPI YAML：`/v3/api-docs.yaml`
 
-首次使用建议：
+## 2. 服务发现与 Gate
 
-- 若接口需要认证，请先在 Swagger UI 的 `Authorize` 中填写 `Bearer <access-token>`
-- 当前项目大多数失败场景仍返回 HTTP `200`，应优先查看 `CPResponse.code` 判断业务结果
-- Swagger 中的 `success / validation_failed / forbidden / not_found / internal_error` 示例用于帮助理解同一响应包装下的不同业务结果
+### 2.1 获取服务发现文档
 
-推荐联调顺序：
+- **方法**：`GET`
+- **路径**：`/api/server`
+- **认证**：否
 
-1. 先访问 `POST /api/server/echo` 或 `GET /.well-known/carrypigeon-server` 验证基础联通性
-2. 再调用 `POST /api/auth/register` / `POST /api/auth/login` 获取令牌
-3. 在 Swagger UI 的 `Authorize` 中填写 `Bearer <access-token>`
-4. 之后再调试 `/api/users/**`、`/api/channels/**`、`/api/server/presence/me` 等受保护接口
+成功响应示例：
 
-## 2. 鉴权接口
+```json
+{
+  "server_id": "carrypigeon-local",
+  "name": "CarryPigeonBackend",
+  "brief": "A self-hosted chat server",
+  "avatar": "api/files/download/server_avatar",
+  "api_version": "1.0",
+  "min_supported_api_version": "1.0",
+  "ws_url": "wss://127.0.0.1/api/ws",
+  "required_plugins": [],
+  "capabilities": {
+    "message_domains": true,
+    "plugin_catalog": true,
+    "event_resume": true
+  },
+  "server_time": 1700000000000
+}
+```
+
+### 2.2 required gate 预检查
+
+- **方法**：`POST`
+- **路径**：`/api/gates/required/check`
+- **认证**：否
+
+请求体示例：
+
+```json
+{
+  "client": {
+    "device_id": "a-stable-device-id",
+    "installed_plugins": [
+      { "plugin_id": "mc-bind", "version": "1.2.0" }
+    ]
+  }
+}
+```
+
+成功响应示例：
+
+```json
+{ "missing_plugins": [] }
+```
+
+### 2.3 Well-known 服务文档
+
+- **方法**：`GET`
+- **路径**：`/.well-known/carrypigeon-server`
+- **认证**：否
+
+该接口当前仍保留，作为历史兼容发现补充入口。
+
+### 2.4 插件目录
+
+- **方法**：`GET`
+- **路径**：`/api/plugins/catalog`
+- **认证**：否
+
+成功响应示例：
+
+```json
+{
+  "required_plugins": ["mc-bind"],
+  "plugins": [
+    {
+      "plugin_id": "text",
+      "name": "Built-in text channel message plugin",
+      "version": "1.0.0",
+      "min_host_version": "0.1.0",
+      "required": false,
+      "permissions": ["message:text:send"],
+      "provides_domains": [
+        { "domain": "text", "domain_version": "1.0.0" }
+      ],
+      "download": null
+    }
+  ]
+}
+```
+
+### 2.4 插件目录
+
+- **方法**：`GET`
+- **路径**：`/api/plugins/catalog`
+- **认证**：否
+
+当前实现会返回公开插件目录与 required_plugins 列表；`provides_domains` 与 `download` 字段当前为最小承接结构。
+
+### 2.5 Domain 目录
+
+- **方法**：`GET`
+- **路径**：`/api/domains/catalog`
+- **认证**：否
+
+成功响应示例：
+
+```json
+{
+  "items": [
+    {
+      "domain": "Core:Text",
+      "supported_versions": ["1.0.0"],
+      "recommended_version": "1.0.0",
+      "constraints": {
+        "max_payload_bytes": 4096,
+        "max_depth": 10
+      },
+      "providers": [
+        { "type": "core", "plugin_id": null, "min_plugin_version": null }
+      ]
+    }
+  ]
+}
+```
+
+## 3. 鉴权接口
 
 基路径：`/api/auth`
 
-### 2.1 注册
+### 3.1 发送邮箱验证码
 
 - **方法**：`POST`
-- **路径**：`/api/auth/register`
+- **路径**：`/api/auth/email_codes`
 - **认证**：否
+- **成功**：`204 No Content`
 
 请求体：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `username` | `string` | 必填，长度 `3..32` |
-| `password` | `string` | 必填，长度 `8..128` |
+```json
+{ "email": "user@example.com" }
+```
 
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `username` | `string` |
-
-### 2.2 登录
+### 3.2 创建会话并签发 Token
 
 - **方法**：`POST`
-- **路径**：`/api/auth/login`
+- **路径**：`/api/auth/tokens`
 - **认证**：否
 
-请求体：
+请求体示例：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `username` | `string` | 必填 |
-| `password` | `string` | 必填 |
+```json
+{
+  "grant_type": "email_code",
+  "email": "user@example.com",
+  "code": "123456",
+  "client": {
+    "device_id": "a-stable-device-id",
+    "installed_plugins": []
+  }
+}
+```
 
-成功响应 `data`：
+成功响应示例：
 
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `username` | `string` |
-| `accessToken` | `string` |
-| `accessTokenExpiresAt` | `instant` |
-| `refreshToken` | `string` |
-| `refreshTokenExpiresAt` | `instant` |
+```json
+{
+  "token_type": "Bearer",
+  "access_token": "xxx",
+  "expires_in": 1800,
+  "refresh_token": "yyy",
+  "uid": "1001",
+  "is_new_user": false
+}
+```
 
-### 2.3 刷新令牌
+required gate 不满足时返回：
+
+- HTTP `412`
+- `error.reason = "required_plugin_missing"`
+- `error.details.missing_plugins = [...]`
+
+### 3.3 刷新 Token
 
 - **方法**：`POST`
 - **路径**：`/api/auth/refresh`
@@ -132,583 +261,428 @@
 
 请求体：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `refreshToken` | `string` | 必填 |
+```json
+{
+  "refresh_token": "yyy",
+  "client": { "device_id": "a-stable-device-id" }
+}
+```
 
-成功响应结构与“登录”一致。
+成功响应结构与 `POST /api/auth/tokens` 一致。
 
-### 2.4 注销
+### 3.4 撤销 Refresh Token
 
 - **方法**：`POST`
-- **路径**：`/api/auth/logout`
+- **路径**：`/api/auth/revoke`
 - **认证**：否
+- **成功**：`204 No Content`
 
 请求体：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `refreshToken` | `string` | 必填 |
+```json
+{
+  "refresh_token": "yyy",
+  "client": { "device_id": "a-stable-device-id" }
+}
+```
 
-成功响应：`data = null`
-
-### 2.5 查询当前登录用户
+### 3.5 查询当前登录用户（过渡接口）
 
 - **方法**：`GET`
 - **路径**：`/api/auth/me`
 - **认证**：是
 
-成功响应 `data`：
+该接口当前仍保留旧成功 envelope，作为过渡期受保护身份查询入口：
 
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `username` | `string` |
+```json
+{
+  "code": 100,
+  "message": "success",
+  "data": {
+    "account_id": "1001",
+    "username": "user@example.com"
+  }
+}
+```
 
-## 3. 用户资料接口
+## 4. 用户接口
 
 基路径：`/api/users`
 
-### 3.1 查询用户资料列表
-
-- **方法**：`GET`
-- **路径**：`/api/users`
-- **认证**：是
-
-当前约束：
-
-- 当前实现仅返回“当前登录账户可见的用户资料集合”
-- 在未引入更细粒度资料可见性策略前，不提供跨账户枚举能力
-
-成功响应 `data` 为数组，每项字段：
-
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `nickname` | `string` |
-| `avatarUrl` | `string` |
-| `bio` | `string` |
-| `createdAt` | `instant` |
-| `updatedAt` | `instant` |
-
-### 3.2 分页查询用户资料
-
-- **方法**：`GET`
-- **路径**：`/api/users/page`
-- **认证**：是
-
-当前约束：
-
-- 当前实现仅对“当前登录账户可见的用户资料集合”分页
-- `cursor` 语义为按 `accountId` 的排他游标
-
-查询参数：
-
-| 参数 | 类型 | 约束 |
-| --- | --- | --- |
-| `cursor` | `long / null` | 可选；如传则必须为正整数 |
-| `limit` | `int` | 默认 `20`，范围 `1..100` |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `users` | `UserProfileResponse[]` |
-| `nextCursor` | `long / null` |
-
-### 3.3 搜索用户资料
-
-- **方法**：`GET`
-- **路径**：`/api/users/search`
-- **认证**：是
-
-当前约束：
-
-- 当前实现仅搜索“当前登录账户可见的用户资料集合”
-- `cursor` 语义为按 `accountId` 的排他游标
-
-查询参数：
-
-| 参数 | 类型 | 约束 |
-| --- | --- | --- |
-| `keyword` | `string` | 必填；空白由服务层判定为校验失败 |
-| `cursor` | `long / null` | 可选；如传则必须为正整数 |
-| `limit` | `int` | 默认 `20`，范围 `1..100` |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `users` | `UserProfileResponse[]` |
-| `nextCursor` | `long / null` |
-
-### 3.4 按账户 ID 查询用户资料
-
-- **方法**：`GET`
-- **路径**：`/api/users/{accountId}`
-- **认证**：是
-
-当前约束：
-
-- 当前实现仅允许访问当前登录账户自己的资料
-
-路径参数：
-
-- `accountId`：正整数
-
-成功响应结构与“查询当前用户资料”一致。
-
-### 3.5 查询当前用户资料
+### 4.1 获取当前用户
 
 - **方法**：`GET`
 - **路径**：`/api/users/me`
 - **认证**：是
 
-成功响应 `data`：
+成功响应：
 
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `nickname` | `string` |
-| `avatarUrl` | `string` |
-| `bio` | `string` |
-| `createdAt` | `instant` |
-| `updatedAt` | `instant` |
+```json
+{
+  "uid": "1001",
+  "email": "user@example.com",
+  "nickname": "carry-user",
+  "avatar": "avatars/u/1001.png"
+}
+```
 
-### 3.6 更新当前用户资料
+### 4.2 获取用户公开资料
+
+- **方法**：`GET`
+- **路径**：`/api/users/{uid}`
+- **认证**：是
+
+成功响应：
+
+```json
+{
+  "uid": "1001",
+  "nickname": "carry-user",
+  "avatar": "avatars/u/1001.png"
+}
+```
+
+### 4.3 批量获取用户公开资料
+
+- **方法**：`GET`
+- **路径**：`/api/users?ids=1001,1002`
+- **认证**：是
+
+成功响应：
+
+```json
+{
+  "items": [
+    { "uid": "1001", "nickname": "carry-user", "avatar": "avatars/u/1001.png" }
+  ]
+}
+```
+
+### 4.4 更新当前用户邮箱
 
 - **方法**：`PUT`
+- **路径**：`/api/users/me/email`
+- **认证**：是
+- **成功**：`204 No Content`
+
+### 4.5 按 v1 语义更新当前用户资料
+
+- **方法**：`PATCH`
 - **路径**：`/api/users/me`
 - **认证**：是
+- **成功**：`204 No Content`
 
-请求体：
+请求体示例：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `nickname` | `string` | 必填，最大长度 `64` |
-| `avatarUrl` | `string` | 必填，可为空串，最大长度 `512` |
-| `bio` | `string` | 必填，可为空串，最大长度 `1024` |
+```json
+{
+  "username": "Alice",
+  "avatar": "avatars/u/1001.png",
+  "brief": "hello",
+  "sex": 0,
+  "birthday": 0
+}
+```
 
-成功响应结构与“查询当前用户资料”一致。
+### 4.6 过渡接口
 
-## 4. 频道接口
+以下旧接口当前仍保留，用于平滑承接现有内部能力：
+
+- `GET /api/users/page`
+- `GET /api/users/search`
+- `PUT /api/users/me`
+
+## 5. 频道接口
 
 基路径：`/api/channels`
 
-### 4.1 查询默认频道
-
-- `GET /api/channels/default`
-- 认证：是
-
-### 4.2 查询系统频道
-
-- `GET /api/channels/system`
-- 认证：是
-
-### 4.3 创建私有频道
-
-- `POST /api/channels/private`
-- 认证：是
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `name` | `string` | 必填，最大长度 `128` |
-
-### 4.4 邀请成员加入频道
-
-- `POST /api/channels/{channelId}/invites`
-- 认证：是
-
-路径参数：
-
-- `channelId`：正整数
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `inviteeAccountId` | `long` | 正整数 |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `channelId` | `long` |
-| `inviteeAccountId` | `long` |
-| `inviterAccountId` | `long` |
-| `status` | `string` |
-| `createdAt` | `instant` |
-| `respondedAt` | `instant / null` |
-
-### 4.5 接受频道邀请
-
-- `POST /api/channels/{channelId}/invites/accept`
-- 认证：是
-
-路径参数：
-
-- `channelId`：正整数
-
-成功响应结构与“邀请成员加入频道”一致。
-
-### 4.6 查询频道成员列表
-
-- `GET /api/channels/{channelId}/members`
-- 认证：是
-
-路径参数：
-
-- `channelId`：正整数
-
-成功响应 `data` 为数组，每项字段：
-
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `nickname` | `string` |
-| `avatarUrl` | `string` |
-| `role` | `string` |
-| `joinedAt` | `instant` |
-| `mutedUntil` | `instant / null` |
-
-### 4.7 提升成员为管理员
-
-- `POST /api/channels/{channelId}/members/{targetAccountId}/admin`
-- 认证：是
-
-### 4.8 取消管理员身份
-
-- `DELETE /api/channels/{channelId}/members/{targetAccountId}/admin`
-- 认证：是
-
-### 4.9 转移频道所有权
-
-- `POST /api/channels/{channelId}/ownership-transfer`
-- 认证：是
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `targetAccountId` | `long` | 正整数 |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `channelId` | `long` |
-| `previousOwnerAccountId` | `long` |
-| `previousOwnerRole` | `string` |
-| `newOwnerAccountId` | `long` |
-| `newOwnerRole` | `string` |
-
-### 4.10 禁言频道成员
-
-- `POST /api/channels/{channelId}/members/{targetAccountId}/mute`
-- 认证：是
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `durationSeconds` | `long` | 正整数 |
-
-### 4.11 解除频道成员禁言
-
-- `DELETE /api/channels/{channelId}/members/{targetAccountId}/mute`
-- 认证：是
-
-### 4.12 踢出频道成员
-
-- `DELETE /api/channels/{channelId}/members/{targetAccountId}`
-- 认证：是
-- 成功响应：`data = null`
-
-### 4.13 封禁频道成员
-
-- `POST /api/channels/{channelId}/bans`
-- 认证：是
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `targetAccountId` | `long` | 正整数 |
-| `reason` | `string` | 可选，最大长度 `256` |
-| `durationSeconds` | `long / null` | 可选；如传则必须为正整数 |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `channelId` | `long` |
-| `bannedAccountId` | `long` |
-| `operatorAccountId` | `long` |
-| `reason` | `string / null` |
-| `expiresAt` | `instant / null` |
-| `createdAt` | `instant` |
-| `revokedAt` | `instant / null` |
-
-### 4.14 解除频道封禁
-
-- `DELETE /api/channels/{channelId}/bans/{targetAccountId}`
-- 认证：是
-
-成功响应结构与“封禁频道成员”一致。
-
-### 4.15 频道基础响应字段
-
-以下接口返回 `ChannelResponse`：
-
-- `GET /api/channels/default`
-- `GET /api/channels/system`
-- `POST /api/channels/private`
-
-字段如下：
-
-| 字段 | 类型 |
-| --- | --- |
-| `channelId` | `long` |
-| `conversationId` | `long` |
-| `name` | `string` |
-| `type` | `string` |
-| `defaultChannel` | `boolean` |
-| `createdAt` | `instant` |
-| `updatedAt` | `instant` |
-
-除返回 `null` 的删除接口外，频道成员治理相关接口成功时通常返回最新 `ChannelMemberResponse` 或治理结果对象。
-
-## 5. 频道消息接口
-
-基路径：`/api/channels`
-
-### 5.1 查询历史消息
+### 5.1 获取频道列表
 
 - **方法**：`GET`
-- **路径**：`/api/channels/{channelId}/messages`
+- **路径**：`/api/channels`
 - **认证**：是
 
-查询参数：
+成功响应：
 
-| 参数 | 类型 | 约束 |
-| --- | --- | --- |
-| `cursor` | `long / null` | 可选；如传则必须为正整数 |
-| `limit` | `int` | 默认 `20`，范围 `1..100` |
+```json
+{
+  "channels": [
+    { "cid": "1", "name": "General", "brief": "", "avatar": "", "owner_uid": "" }
+  ]
+}
+```
 
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `messages` | `ChannelMessageResponse[]` |
-| `nextCursor` | `long / null` |
-
-### 5.2 按关键字搜索消息
+### 5.2 获取频道资料
 
 - **方法**：`GET`
-- **路径**：`/api/channels/{channelId}/messages/search`
+- **路径**：`/api/channels/{cid}`
 - **认证**：是
 
-查询参数：
+成功响应结构与频道列表项一致。
 
-| 参数 | 类型 | 约束 |
-| --- | --- | --- |
-| `keyword` | `string` | 当前实现未加 Bean Validation 注解，但作为业务搜索词使用 |
-| `limit` | `int` | 默认 `20`，范围 `1..100` |
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `messages` | `ChannelMessageResponse[]` |
-
-### 5.3 上传消息附件
+### 5.3 创建频道
 
 - **方法**：`POST`
-- **路径**：`/api/channels/{channelId}/messages/attachments`
+- **路径**：`/api/channels`
+- **认证**：是
+- **成功**：`201 Created`
+
+当前内部仍复用 private channel 创建逻辑。
+
+### 5.4 获取频道成员
+
+- **方法**：`GET`
+- **路径**：`/api/channels/{cid}/members`
+- **认证**：是
+
+成功响应：
+
+```json
+{
+  "items": [
+    {
+      "uid": "1001",
+      "role": "owner",
+      "nickname": "carry-owner",
+      "avatar": "",
+      "join_time": 1700000000000
+    }
+  ]
+}
+```
+
+### 5.5 设为管理员
+
+- **方法**：`PUT`
+- **路径**：`/api/channels/{cid}/admins/{uid}`
+- **认证**：是
+- **成功**：`204 No Content`
+
+### 5.6 撤销管理员
+
+- **方法**：`DELETE`
+- **路径**：`/api/channels/{cid}/admins/{uid}`
+- **认证**：是
+- **成功**：`204 No Content`
+
+### 5.7 过渡接口
+
+以下旧接口当前仍保留：
+
+- `GET /api/channels/default`
+- `GET /api/channels/system`
+- `POST /api/channels/private`
+- `POST /api/channels/{cid}/invites`
+- `POST /api/channels/{cid}/invites/accept`
+- `POST /api/channels/{cid}/ownership-transfer`
+- `POST /api/channels/{cid}/members/{uid}/mute`
+- `DELETE /api/channels/{cid}/members/{uid}/mute`
+- `DELETE /api/channels/{cid}/members/{uid}`
+- `POST /api/channels/{cid}/bans`
+- `DELETE /api/channels/{cid}/bans/{uid}`
+
+## 6. 消息接口
+
+基路径：`/api/channels` 与 `/api/messages`
+
+### 6.1 拉取频道消息
+
+- **方法**：`GET`
+- **路径**：`/api/channels/{cid}/messages`
+- **认证**：是
+
+成功响应：
+
+```json
+{
+  "items": [
+    {
+      "mid": "5001",
+      "cid": "1",
+      "uid": "1001",
+      "sender": { "uid": "1001", "nickname": "carry-user", "avatar": "avatars/u/1001.png" },
+      "send_time": 1700000000000,
+      "domain": "Core:Text",
+      "domain_version": "1.0.0",
+      "data": { "text": "hello world" },
+      "preview": "hello world"
+    }
+  ],
+  "next_cursor": "5001",
+  "has_more": true
+}
+```
+
+### 6.2 搜索频道消息
+
+- **方法**：`GET`
+- **路径**：`/api/channels/{cid}/messages/search`
+- **认证**：是
+
+查询参数：
+
+| 参数 | 类型 | 约束 |
+| --- | --- | --- |
+| `q` | `string` | 推荐使用；搜索关键字 |
+| `keyword` | `string` | 过渡兼容参数；当 `q` 缺失时回退使用 |
+| `cursor` | `string / null` | 当前已接受，但仍为过渡语义 |
+| `sender_uid` | `string / null` | 当前已接受，但尚未生效 |
+| `domain` | `string / null` | 当前已接受，但尚未生效 |
+| `before_mid` | `string / null` | 当前已接受，但尚未生效 |
+| `after_mid` | `string / null` | 当前已接受，但尚未生效 |
+| `limit` | `int` | 默认 `20`，范围 `1..100` |
+
+当前实现返回 `items + next_cursor + has_more`；`next_cursor` 当前按最后一条命中消息的 `mid` 派生，尚不是完全不透明游标。
+
+### 6.3 发送消息
+
+- **方法**：`POST`
+- **路径**：`/api/channels/{cid}/messages`
+- **认证**：是
+- **成功**：`201 Created`
+
+当前最小实现只支持：
+
+- `domain = Core:Text`
+- `domain_version = 1.0.0`
+- `data.text`
+
+### 6.4 删除消息
+
+- **方法**：`DELETE`
+- **路径**：`/api/messages/{mid}`
+- **认证**：是
+- **成功**：`204 No Content`
+
+### 6.5 上传消息附件
+
+- **方法**：`POST`
+- **路径**：`/api/channels/{cid}/messages/attachments`
 - **认证**：是
 - **Content-Type**：`multipart/form-data`
 
-表单字段：
+成功响应当前仍保留过渡成功 envelope：
 
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `messageType` | `string` | 必填；当前设计用于 `file` / `voice` |
-| `file` | `file` | 必填；文件名不能为空 |
+```json
+{
+  "code": 100,
+  "message": "success",
+  "data": {
+    "object_key": "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+    "filename": "demo.pdf",
+    "mime_type": "application/pdf",
+    "size": 123
+  }
+}
+```
 
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `objectKey` | `string` |
-| `filename` | `string` |
-| `mimeType` | `string / null` |
-| `size` | `long` |
-
-### 5.4 撤回消息
+### 6.6 撤回消息（过渡接口）
 
 - **方法**：`POST`
-- **路径**：`/api/channels/{channelId}/messages/{messageId}/recall`
+- **路径**：`/api/channels/{cid}/messages/{mid}/recall`
 - **认证**：是
 
-成功响应 `data` 为 `ChannelMessageResponse`。
+该接口当前仍保留旧成功 envelope，作为过渡能力存在。
 
-### 5.5 消息响应字段
+## 7. 服务基础接口
 
-`ChannelMessageResponse` 字段如下：
-
-| 字段 | 类型 |
-| --- | --- |
-| `messageId` | `long` |
-| `serverId` | `string` |
-| `conversationId` | `long` |
-| `channelId` | `long` |
-| `senderId` | `long` |
-| `messageType` | `string` |
-| `body` | `string / null` |
-| `previewText` | `string / null` |
-| `payload` | `string / null` |
-| `metadata` | `string / null` |
-| `status` | `string` |
-| `createdAt` | `instant` |
-
-## 6. 服务基础接口
-
-基路径：`/api/server`
-
-### 6.1 Echo
-
-- **方法**：`POST`
-- **路径**：`/api/server/echo`
-- **认证**：否
-
-请求体：
-
-| 字段 | 类型 | 约束 |
-| --- | --- | --- |
-| `content` | `string` | 必填 |
-
-成功响应 `data`：原始 `content` 字符串。
-
-### 6.2 查询当前节点 presence
+### 7.1 当前节点 Presence
 
 - **方法**：`GET`
 - **路径**：`/api/server/presence/me`
 - **认证**：是
 
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `accountId` | `long` |
-| `status` | `enum` |
-| `onlineSessionCount` | `int` |
-
-## 7. 服务发现接口
-
-### 7.1 Well-known 服务文档
-
-- **方法**：`GET`
-- **路径**：`/.well-known/carrypigeon-server`
-- **认证**：否
-
-成功响应 `data`：
-
-| 字段 | 类型 |
-| --- | --- |
-| `serverId` | `string` |
-| `serverName` | `string` |
-| `registerEnabled` | `boolean` |
-| `loginMethods` | `string[]` |
-| `publicCapabilities` | `string[]` |
-| `publicPlugins` | `string[]` |
+成功响应当前仍保留过渡成功 envelope。
 
 ## 8. 实时 WebSocket 接口
 
 当前仓库存在独立于 Spring MVC 的 Netty WebSocket 通道。
 
-- **默认路径**：`/ws`
+- **默认路径**：`/api/ws`
 - **配置来源**：`cp.chat.server.realtime.path`
 - **默认监听端口**：`18080`
 - **默认开关**：`cp.chat.server.realtime.enabled=false`
 
-### 8.1 握手认证
+### 8.1 连接与认证
 
-- 握手前要求请求头：`Authorization: Bearer <access-token>`
-- 缺失或非法时直接返回 HTTP `401`，响应体为纯文本错误消息，不升级到 WebSocket
+- 握手阶段当前只准备请求上下文
+- 鉴权改为首帧 `auth`
+- 刷新当前会话令牌使用 `reauth`
 
-### 8.2 客户端入站消息结构
+首帧 `auth` 示例：
 
-`RealtimeClientMessage`：
+```json
+{
+  "type": "auth",
+  "id": "1",
+  "data": {
+    "access_token": "xxx",
+    "device_id": "device-1",
+    "resume": { "last_event_id": "9001" }
+  }
+}
+```
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `type` | `string` | 命令类型 |
-| `channelId` | `long / null` | 频道 ID |
-| `messageType` | `string / null` | 消息类型 |
-| `body` | `string / null` | 文本正文 |
-| `payload` | `object / null` | 结构化载荷 |
-| `metadata` | `object / null` | 元数据 |
+成功响应示例：
 
-当前约束：
+```json
+{
+  "type": "auth.ok",
+  "id": "1",
+  "data": {
+    "uid": "1001",
+    "expires_at": 1700000300000,
+    "server_id": "carrypigeon-local"
+  },
+  "error": null
+}
+```
 
-- 消息发送仅通过 WebSocket 实时通道完成，不提供对应的 HTTP 发消息接口。
-- 当前唯一入站发送命令为 `send_channel_message`。
-- 当前内建消息类型仅为 `text`、`file`、`voice`。
-- `file` / `voice` 发送依赖先完成附件上传，再在 `payload` 中提供 canonical 附件信息。
-- 非内建 `messageType` 统一进入 plugin-style 扩展路径。
+### 8.2 心跳
 
-#### 8.2.1 入站命令字段约定
+- 客户端发送：`{"type":"ping"}`
+- 服务端回写：`{"type":"pong"}`
 
-| 命令 | 必填字段 | 说明 |
-| --- | --- | --- |
-| `send_channel_message` + `text` | `channelId`, `messageType`, `body` | 通用文本发送 |
-| `send_channel_message` + `file` | `channelId`, `messageType`, `payload` | 文件消息发送 |
-| `send_channel_message` + `voice` | `channelId`, `messageType`, `payload` | 语音消息发送 |
-| `send_channel_message` + 其他值 | `channelId`, `messageType`, `body`, `payload`, `metadata` | plugin-style 扩展发送 |
+### 8.3 事件 envelope
 
-### 8.3 服务端出站消息结构
+服务端推送统一使用：
 
-`RealtimeServerMessage`：
+```json
+{
+  "type": "event",
+  "id": null,
+  "data": {
+    "event_id": "9001",
+    "event_type": "message.created",
+    "server_time": 1700000000000,
+    "payload": {}
+  },
+  "error": null
+}
+```
 
-| 字段 | 类型 | 说明 |
-| --- | --- | --- |
-| `type` | `string` | 事件类型 |
-| `sessionId` | `string / null` | 会话标识 |
-| `timestamp` | `long` | 毫秒时间戳 |
-| `data` | `object / null` | 事件载荷 |
+当前已落地最小事件类型：
 
-当前已确认的出站事件类型：
+- `message.created`
+- `message.deleted`
 
-- `welcome`
-- `heartbeat`
-- `problem`
-- `channel_message`
-- `channel_message_updated`
+当前 `resume` 为最小内存事件日志实现：
 
-#### 8.3.1 事件语义
+- 找不到 `last_event_id` 时回写 `resume.failed`
+- 跨实例 / 长窗口 / 持久化回放尚未覆盖
 
-- `welcome`：连接建立成功后的首个事件。
-- `heartbeat`：空闲保活事件。
-- `problem`：协议或业务失败事件，`data` 包含 `code` 与 `message`。
-- `channel_message`：新消息广播事件。
-- `channel_message_updated`：消息撤回或更新广播事件。
+### 8.4 历史兼容说明
 
-其中 `channel_message` / `channel_message_updated` 的 `data` 载荷字段与 HTTP `ChannelMessageResponse` 基本对应，并包含已解析的附件访问载荷。
+当前仍保留对旧 `send_channel_message` 入站命令的最小兼容承接，便于现有业务链路继续运行。
 
-#### 8.3.2 协议约束
+## 9. 当前未实现 / 未完全收口项
 
-- 握手成功后会生成服务端 `sessionId`。
-- 读空闲超时为 60 秒，超时后会发送 `heartbeat`。
-- 处理失败时统一回写 `problem`，其错误语义与 HTTP `CPResponse` 的业务码保持同一套约定。
+基于当前仓库代码，以下能力仍未完全收口或仍为过渡状态：
 
-## 9. 当前未发现的接口形态
+- 用户旧分页/搜索/旧 `PUT /api/users/me` 过渡接口仍保留
+- 频道旧动作式路径仍保留
+- 消息 HTTP 发送当前仅最小支持 `Core:Text@1.0.0`
+- WS `resume` 仍是最小内存实现
+- WS 事件中的 `sender.nickname/avatar` 仍是最小占位值
 
-基于当前仓库代码，当前仍未补充以下对外协议能力：
-
-- 自定义 `springdoc` 路径或分组配置
-- SSE 接口
-- Spring STOMP `@MessageMapping` 实时协议
-
-当前对外接口事实来源仍以源码与运行时 OpenAPI 文档为准。
+当前对外接口事实来源仍以源码、测试和运行时 OpenAPI 文档为准。

@@ -19,9 +19,24 @@ public interface AuthAccountDatabaseService {
     Optional<AuthAccountRecord> findByUsername(String username);
 
     /**
+     * 按账户 ID 查询账户记录。
+     *
+     * @param accountId 账户 ID
+     * @return 命中时返回账户记录，未命中时返回空
+     */
+    Optional<AuthAccountRecord> findById(long accountId);
+
+    /**
      * 写入新的鉴权账户记录。
      *
      * @param record 待持久化的账户记录
      */
     void insert(AuthAccountRecord record);
+
+    /**
+     * 更新账户记录。
+     *
+     * @param record 待更新账户记录
+     */
+    void update(AuthAccountRecord record);
 }

@@ -43,6 +43,17 @@ public interface ChannelBanMapper {
     );
 
     /**
+     * 查询频道全部封禁记录。
+     */
+    @Select("""
+            SELECT channel_id, banned_account_id, operator_account_id, reason, expires_at, created_at, revoked_at
+            FROM chat_channel_ban
+            WHERE channel_id = #{channelId}
+            ORDER BY created_at DESC
+            """)
+    java.util.List<ChannelBanEntity> findByChannelId(@Param("channelId") long channelId);
+
+    /**
      * 更新封禁记录。
      *
      * @param entity 封禁实体

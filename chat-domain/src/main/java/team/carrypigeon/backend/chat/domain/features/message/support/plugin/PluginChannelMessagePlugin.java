@@ -58,8 +58,12 @@ public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
                 searchableText.trim(),
                 jsonProvider.toJson(canonicalPayload),
                 normalizeMetadata(pluginDraft.metadata()),
+                null,
+                null,
                 "sent",
-                context.createdAt()
+                context.createdAt(),
+                null,
+                1L
         );
     }
 

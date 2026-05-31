@@ -68,4 +68,8 @@ public interface ChannelMemberDatabaseService {
      * @return 成员账户 ID 列表
      */
     List<Long> findAccountIdsByChannelId(long channelId);
+
+    default List<Long> findChannelIdsByAccountId(long accountId) {
+        return List.of();
+    }
 }

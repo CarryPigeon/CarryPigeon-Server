@@ -59,6 +59,11 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
         return channelMemberDatabaseService.findAccountIdsByChannelId(channelId);
     }
 
+    @Override
+    public List<Long> findChannelIdsByAccountId(long accountId) {
+        return channelMemberDatabaseService.findChannelIdsByAccountId(accountId);
+    }
+
     private ChannelMember toDomain(ChannelMemberRecord record) {
         return new ChannelMember(
                 record.channelId(),

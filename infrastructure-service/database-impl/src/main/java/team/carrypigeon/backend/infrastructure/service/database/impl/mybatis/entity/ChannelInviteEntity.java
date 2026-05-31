@@ -14,6 +14,7 @@ import lombok.Data;
 public class ChannelInviteEntity {
 
     private Long channelId;
+    private Long applicationId;
     private Long inviteeAccountId;
     private Long inviterAccountId;
     private String status;

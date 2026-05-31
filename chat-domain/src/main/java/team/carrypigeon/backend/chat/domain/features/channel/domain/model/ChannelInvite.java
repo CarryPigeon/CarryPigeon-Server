@@ -8,6 +8,7 @@ import java.time.Instant;
  * 边界：邀请记录不等同于活跃成员，接受前不会进入 ChannelMember 投影。
  *
  * @param channelId 频道 ID
+ * @param applicationId 申请/邀请 ID
  * @param inviteeAccountId 被邀请账户 ID
  * @param inviterAccountId 发起邀请账户 ID
  * @param status 邀请状态
@@ -16,6 +17,7 @@ import java.time.Instant;
  */
 public record ChannelInvite(
         long channelId,
+        long applicationId,
         long inviteeAccountId,
         long inviterAccountId,
         ChannelInviteStatus status,

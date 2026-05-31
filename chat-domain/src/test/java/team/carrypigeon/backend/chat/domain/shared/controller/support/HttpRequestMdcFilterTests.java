@@ -30,7 +30,7 @@ class HttpRequestMdcFilterTests {
     @DisplayName("doFilter writes and clears request mdc context")
     void doFilter_requestContext_writesAndClearsMdc() throws ServletException, IOException {
         HttpRequestMdcFilter filter = new HttpRequestMdcFilter();
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/server/presence/me");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/server");
         request.addHeader(HttpRequestMdcFilter.REQUEST_ID_HEADER, "req-1");
         request.addHeader(HttpRequestMdcFilter.TRACE_ID_HEADER, "trace-1");
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -40,7 +40,7 @@ class HttpRequestMdcFilterTests {
 
         assertEquals("req-1", chain.requestId);
         assertEquals("trace-1", chain.traceId);
-        assertEquals("/api/server/presence/me", chain.route);
+        assertEquals("/api/server", chain.route);
         assertNull(MDC.get(LogKeys.REQUEST_ID));
         assertNull(MDC.get(LogKeys.TRACE_ID));
         assertNull(MDC.get(LogKeys.ROUTE));
@@ -54,7 +54,7 @@ class HttpRequestMdcFilterTests {
     @DisplayName("doFilter missing headers generates request and trace ids")
     void doFilter_missingHeaders_generatesRequestAndTraceIds() throws ServletException, IOException {
         HttpRequestMdcFilter filter = new HttpRequestMdcFilter();
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/.well-known/carrypigeon-server");
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/tokens");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         CapturingFilterChain chain = new CapturingFilterChain();
@@ -63,7 +63,7 @@ class HttpRequestMdcFilterTests {
         assertNotNull(chain.requestId);
         assertNotNull(chain.traceId);
         assertEquals(chain.requestId, chain.traceId);
-        assertEquals("/.well-known/carrypigeon-server", chain.route);
+        assertEquals("/api/auth/tokens", chain.route);
     }
 
     private static final class CapturingFilterChain extends MockFilterChain {

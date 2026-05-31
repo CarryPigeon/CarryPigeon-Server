@@ -13,7 +13,9 @@ import org.springframework.context.annotation.Import;
         DatabaseInfrastructureAutoConfiguration.class,
         DatabaseAuthServiceAutoConfiguration.class,
         DatabaseChannelServiceAutoConfiguration.class,
-        DatabaseMessageServiceAutoConfiguration.class
+        DatabaseMessageServiceAutoConfiguration.class,
+        DatabaseMentionServiceAutoConfiguration.class,
+        DatabaseNotificationPreferenceServiceAutoConfiguration.class
 })
 public class DatabaseServiceAutoConfiguration {
 }

@@ -4,22 +4,34 @@ import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.AcceptChannelInviteCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreateChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreateChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreatePrivateChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.DecideChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.DeleteChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetDefaultChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.GetSystemChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.KickChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.MuteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.PromoteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.TransferChannelOwnershipCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.UnmuteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.command.InviteChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.AuditLogResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelInviteResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelApplicationResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelOwnershipTransferResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelReadStateResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
@@ -32,13 +44,22 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelMembersQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelApplicationsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelBansQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListAuditLogsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.application.query.DiscoverChannelsQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -56,6 +77,7 @@ public class ChannelApplicationService {
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "default channel does not exist";
     private static final String SYSTEM_CHANNEL_NOT_FOUND_MESSAGE = "system channel does not exist";
     private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
+    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
     private static final String CHANNEL_INVITE_NOT_FOUND_MESSAGE = "channel invite does not exist";
     private static final String CHANNEL_MEMBER_NOT_FOUND_MESSAGE = "channel member does not exist";
@@ -67,8 +89,11 @@ public class ChannelApplicationService {
     private final ChannelInviteRepository channelInviteRepository;
     private final ChannelBanRepository channelBanRepository;
     private final ChannelAuditLogRepository channelAuditLogRepository;
+    private final ChannelReadStateRepository channelReadStateRepository;
+    private final MessageRepository messageRepository;
     private final UserProfileRepository userProfileRepository;
     private final ChannelGovernancePolicy channelGovernancePolicy;
+    private final ChannelRealtimePublisher channelRealtimePublisher;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
@@ -79,8 +104,11 @@ public class ChannelApplicationService {
             ChannelInviteRepository channelInviteRepository,
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelReadStateRepository channelReadStateRepository,
+            MessageRepository messageRepository,
             UserProfileRepository userProfileRepository,
             ChannelGovernancePolicy channelGovernancePolicy,
+            ChannelRealtimePublisher channelRealtimePublisher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
@@ -90,8 +118,11 @@ public class ChannelApplicationService {
         this.channelInviteRepository = channelInviteRepository;
         this.channelBanRepository = channelBanRepository;
         this.channelAuditLogRepository = channelAuditLogRepository;
+        this.channelReadStateRepository = channelReadStateRepository;
+        this.messageRepository = messageRepository;
         this.userProfileRepository = userProfileRepository;
         this.channelGovernancePolicy = channelGovernancePolicy;
+        this.channelRealtimePublisher = channelRealtimePublisher;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -134,12 +165,26 @@ public class ChannelApplicationService {
      */
     public ChannelResult createPrivateChannel(CreatePrivateChannelCommand command) {
         validateCreatePrivateChannelCommand(command);
+        return createChannel(new CreateChannelCommand(command.accountId(), command.name(), "", ""));
+    }
+
+    /**
+     * 创建频道。
+     *
+     * @param command 创建命令
+     * @return 已创建频道结果
+     */
+    public ChannelResult createChannel(CreateChannelCommand command) {
+        validateCreateChannelCommand(command);
         return transactionRunner.runInTransaction(() -> {
             long channelId = nextId();
             Channel channel = new Channel(
                     channelId,
                     channelId,
                     command.name().trim(),
+                    normalizeNullableText(command.brief()),
+                    normalizeNullableText(command.avatar()),
+                    "",
                     PRIVATE_CHANNEL_TYPE,
                     false,
                     now(),
@@ -147,7 +192,57 @@ public class ChannelApplicationService {
             );
             channelRepository.save(channel);
             channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.OWNER));
+            channelRealtimePublisher.publishChannelsChanged(command.accountId());
             return toResult(channel);
+        });
+    }
+
+    /**
+     * 删除频道。
+     *
+     * @param command 删除命令
+     */
+    public void deleteChannel(DeleteChannelCommand command) {
+        validateDeleteChannelCommand(command);
+        transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
+            if (operator.role() != ChannelMemberRole.OWNER) {
+                throw ProblemException.forbidden("channel_owner_required", "channel action requires owner role");
+            }
+            channelRepository.delete(channel.id());
+            appendAuditLog(channel.id(), operator.accountId(), "CHANNEL_DELETED", null, null);
+            channelRealtimePublisher.publishChannelsChanged(operator.accountId());
+        });
+    }
+
+    /**
+     * 更新频道资料。
+     *
+     * @param command 更新命令
+     * @return 已更新频道结果
+     */
+    public ChannelResult updateChannelProfile(UpdateChannelProfileCommand command) {
+        validateUpdateChannelProfileCommand(command);
+        return transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
+            channelGovernancePolicy.requireCanUpdateChannelProfile(channel, operator);
+            Channel updated = new Channel(
+                    channel.id(),
+                    channel.conversationId(),
+                    command.name().trim(),
+                    normalizeNullableText(command.brief()),
+                    channel.avatar(),
+                    findOwnerUid(channel.id()),
+                    channel.type(),
+                    channel.defaultChannel(),
+                    channel.createdAt(),
+                    now()
+            );
+            channelRepository.update(updated);
+            channelRealtimePublisher.publishChannelChanged(updated, "profile", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            return toResult(updated);
         });
     }
 
@@ -180,6 +275,7 @@ public class ChannelApplicationService {
             }
             ChannelInvite invite = new ChannelInvite(
                     channel.id(),
+                    nextId(),
                     command.inviteeAccountId(),
                     command.operatorAccountId(),
                     ChannelInviteStatus.PENDING,
@@ -218,6 +314,7 @@ public class ChannelApplicationService {
             channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.MEMBER));
             ChannelInvite acceptedInvite = new ChannelInvite(
                     invite.channelId(),
+                    invite.applicationId(),
                     invite.inviteeAccountId(),
                     invite.inviterAccountId(),
                     ChannelInviteStatus.ACCEPTED,
@@ -226,6 +323,95 @@ public class ChannelApplicationService {
             );
             channelInviteRepository.update(acceptedInvite);
             return toInviteResult(acceptedInvite);
+        });
+    }
+
+    public ChannelApplicationResult createChannelApplication(CreateChannelApplicationCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
+        return transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            channelGovernancePolicy.requirePrivateChannel(channel);
+            if (channelMemberRepository.exists(channel.id(), command.accountId())) {
+                throw ProblemException.validationFailed("current account is already a channel member");
+            }
+            channelGovernancePolicy.requireBanInactive(
+                    channelBanRepository.findByChannelIdAndBannedAccountId(channel.id(), command.accountId()).orElse(null),
+                    now()
+            );
+            ChannelInvite existingInvite = channelInviteRepository.findByChannelIdAndInviteeAccountId(channel.id(), command.accountId()).orElse(null);
+            if (existingInvite != null && existingInvite.status() == ChannelInviteStatus.PENDING) {
+                throw ProblemException.validationFailed("pending channel invite already exists");
+            }
+            ChannelInvite invite = new ChannelInvite(
+                    channel.id(),
+                    nextId(),
+                    command.accountId(),
+                    0L,
+                    ChannelInviteStatus.PENDING,
+                    now(),
+                    null
+            );
+            if (existingInvite == null) {
+                channelInviteRepository.save(invite);
+            } else {
+                channelInviteRepository.update(new ChannelInvite(
+                        existingInvite.channelId(),
+                        existingInvite.applicationId(),
+                        existingInvite.inviteeAccountId(),
+                        existingInvite.inviterAccountId(),
+                        ChannelInviteStatus.PENDING,
+                        now(),
+                        null
+                ));
+            }
+            return toApplicationResult(invite, command.reason());
+        });
+    }
+
+    public List<ChannelApplicationResult> listChannelApplications(ListChannelApplicationsQuery query) {
+        requirePositive(query.accountId(), "accountId");
+        requirePositive(query.channelId(), "channelId");
+        Channel channel = requireChannel(query.channelId());
+        ChannelMember operator = requireMember(channel.id(), query.accountId());
+        channelGovernancePolicy.requireCanInvite(channel, operator);
+        return channelInviteRepository.findByChannelId(channel.id()).stream()
+                .map(invite -> toApplicationResult(invite, ""))
+                .toList();
+    }
+
+    public ChannelApplicationResult decideChannelApplication(DecideChannelApplicationCommand command) {
+        requirePositive(command.operatorAccountId(), "operatorAccountId");
+        requirePositive(command.channelId(), "channelId");
+        requirePositive(command.applicationId(), "applicationId");
+        return transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
+            channelGovernancePolicy.requireCanInvite(channel, operator);
+            ChannelInvite invite = channelInviteRepository.findByChannelIdAndApplicationId(channel.id(), command.applicationId())
+                    .orElseThrow(() -> ProblemException.notFound("channel application does not exist"));
+            if (invite.status() != ChannelInviteStatus.PENDING) {
+                throw ProblemException.conflict("application_already_processed", "channel application is already processed");
+            }
+            ChannelInviteStatus decidedStatus = switch (command.decision().trim().toLowerCase()) {
+                case "approve" -> ChannelInviteStatus.ACCEPTED;
+                case "reject" -> ChannelInviteStatus.DECLINED;
+                default -> throw ProblemException.validationFailed("decision must be approve or reject");
+            };
+            if (decidedStatus == ChannelInviteStatus.ACCEPTED && !channelMemberRepository.exists(channel.id(), invite.inviteeAccountId())) {
+                channelMemberRepository.save(newMember(channel.id(), invite.inviteeAccountId(), ChannelMemberRole.MEMBER));
+            }
+            ChannelInvite updated = new ChannelInvite(
+                    invite.channelId(),
+                    invite.applicationId(),
+                    invite.inviteeAccountId(),
+                    operator.accountId(),
+                    decidedStatus,
+                    invite.createdAt(),
+                    now()
+            );
+            channelInviteRepository.update(updated);
+            return toApplicationResult(updated, "");
         });
     }
 
@@ -245,6 +431,178 @@ public class ChannelApplicationService {
         channelGovernancePolicy.requireCanListMembers(operator);
         return channelMemberRepository.findByChannelId(channel.id()).stream()
                 .map(this::toMemberResult)
+                .toList();
+    }
+
+    public List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query) {
+        requirePositive(query.accountId(), "accountId");
+        requirePositive(query.channelId(), "channelId");
+        Channel channel = requireChannel(query.channelId());
+        ChannelMember operator = requireMember(channel.id(), query.accountId());
+        channelGovernancePolicy.requireCanUnban(channel, operator);
+        return channelBanRepository.findByChannelId(channel.id()).stream()
+                .map(ban -> new ChannelBanListItemResult(
+                        ban.channelId(),
+                        ban.bannedAccountId(),
+                        ban.expiresAt(),
+                        ban.reason(),
+                        ban.createdAt()
+                ))
+                .toList();
+    }
+
+    public List<AuditLogResult> listAuditLogs(ListAuditLogsQuery query) {
+        requirePositive(query.accountId(), "accountId");
+        if (query.cursorAuditId() != null && query.cursorAuditId() <= 0) {
+            throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
+        }
+        if (query.limit() <= 0 || query.limit() > 100) {
+            throw ProblemException.validationFailed("limit must be between 1 and 100");
+        }
+        if (query.channelId() != null) {
+            requirePositive(query.channelId(), "channelId");
+        }
+        if (query.actorAccountId() != null) {
+            requirePositive(query.actorAccountId(), "actorAccountId");
+        }
+        if (query.fromTime() != null && query.fromTime() < 0) {
+            throw ProblemException.validationFailed("from_time must be greater than or equal to 0");
+        }
+        if (query.toTime() != null && query.toTime() < 0) {
+            throw ProblemException.validationFailed("to_time must be greater than or equal to 0");
+        }
+        return channelAuditLogRepository.list(
+                        query.cursorAuditId(),
+                        query.limit() + 1,
+                        query.channelId(),
+                        query.actorAccountId(),
+                        normalizeAuditAction(query.action()),
+                        query.fromTime() == null ? null : Instant.ofEpochMilli(query.fromTime()),
+                        query.toTime() == null ? null : Instant.ofEpochMilli(query.toTime())
+                ).stream()
+                .map(log -> new AuditLogResult(
+                        Ids.toString(log.auditId()),
+                        Ids.toString(log.channelId()),
+                        log.actorAccountId() == null ? null : Ids.toString(log.actorAccountId()),
+                        toAuditAction(log.actionType()),
+                        log.metadata(),
+                        log.createdAt().toEpochMilli()
+                ))
+                .toList();
+    }
+
+    /**
+     * 返回当前账户可见的频道摘要集合。
+     *
+     * @param accountId 当前账户 ID
+     * @return 当前可见频道结果列表
+     */
+    public List<ChannelResult> listChannels(long accountId) {
+        requirePositive(accountId, "accountId");
+        java.util.ArrayList<ChannelResult> channels = new java.util.ArrayList<>();
+        channelRepository.findDefaultChannel().ifPresent(channel -> channels.add(toResult(channel)));
+        channelRepository.findSystemChannel()
+                .filter(channel -> channelMemberRepository.exists(channel.id(), accountId))
+                .ifPresent(channel -> channels.add(toResult(channel)));
+        for (Long channelId : channelMemberRepository.findChannelIdsByAccountId(accountId)) {
+            channelRepository.findById(channelId)
+                    .filter(channel -> channels.stream().noneMatch(existing -> existing.channelId() == channel.id()))
+                    .ifPresent(channel -> channels.add(toResult(channel)));
+        }
+        return channels;
+    }
+
+    /**
+     * 按频道 ID 返回频道摘要。
+     *
+     * @param accountId 当前账户 ID
+     * @param channelId 频道 ID
+     * @return 频道结果
+     */
+    public ChannelResult getChannelById(long accountId, long channelId) {
+        requirePositive(accountId, "accountId");
+        requirePositive(channelId, "channelId");
+        Channel channel = requireChannel(channelId);
+        if (SYSTEM_CHANNEL_TYPE.equals(channel.type()) && !channelMemberRepository.exists(channel.id(), accountId)) {
+            throw ProblemException.forbidden("system_channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
+        }
+        return toResult(channel);
+    }
+
+    public List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query) {
+        requirePositive(query.accountId(), "accountId");
+        if (query.cursorChannelId() != null && query.cursorChannelId() <= 0) {
+            throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
+        }
+        if (query.limit() <= 0 || query.limit() > 50) {
+            throw ProblemException.validationFailed("limit must be between 1 and 50");
+        }
+        if (query.type() != null && !query.type().isBlank() && !List.of("text", "announcement", "management").contains(query.type().trim())) {
+            throw ProblemException.validationFailed("type is invalid");
+        }
+        return channelRepository.discoverChannels(
+                        query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
+                        query.cursorChannelId(),
+                        query.type() == null ? null : query.type().trim(),
+                        query.limit() + 1
+                ).stream()
+                .map(channel -> new DiscoverChannelResult(
+                        Ids.toString(channel.id()),
+                        channel.name(),
+                        channel.brief(),
+                        channel.avatar(),
+                        channel.memberCount(),
+                        channel.requiresApplication()
+                ))
+                .toList();
+    }
+
+    public ChannelReadStateResult updateChannelReadState(UpdateChannelReadStateCommand command) {
+        validateUpdateChannelReadStateCommand(command);
+        return transactionRunner.runInTransaction(() -> {
+            Channel channel = requireChannel(command.channelId());
+            requireMember(channel.id(), command.accountId());
+            ChannelMessage message = requireMessage(command.lastReadMessageId());
+            if (message.channelId() != channel.id()) {
+                throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
+            }
+            var current = channelReadStateRepository.findByChannelIdAndAccountId(channel.id(), command.accountId()).orElse(null);
+            if (current != null && current.lastReadMessageId() >= command.lastReadMessageId()) {
+                return new ChannelReadStateResult(
+                        Ids.toString(current.channelId()),
+                        Ids.toString(current.accountId()),
+                        Ids.toString(current.lastReadMessageId()),
+                        current.lastReadTime().toEpochMilli()
+                );
+            }
+            Instant now = Instant.ofEpochMilli(command.lastReadTime());
+            var updated = new team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState(
+                    channel.id(),
+                    command.accountId(),
+                    command.lastReadMessageId(),
+                    now,
+                    current == null ? now : current.createdAt(),
+                    now
+            );
+            channelReadStateRepository.upsert(updated);
+            channelRealtimePublisher.publishReadStateUpdated(updated);
+            return new ChannelReadStateResult(
+                    Ids.toString(updated.channelId()),
+                    Ids.toString(updated.accountId()),
+                    Ids.toString(updated.lastReadMessageId()),
+                    updated.lastReadTime().toEpochMilli()
+            );
+        });
+    }
+
+    public List<ChannelUnreadResult> listUnreads(long accountId) {
+        requirePositive(accountId, "accountId");
+        return channelReadStateRepository.listUnreadsByAccountId(accountId).stream()
+                .map(item -> new ChannelUnreadResult(
+                        Ids.toString(item.channelId()),
+                        item.unreadCount(),
+                        item.lastReadTime() == null ? 0L : item.lastReadTime().toEpochMilli()
+                ))
                 .toList();
     }
 
@@ -270,6 +628,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(promotedMember);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_PROMOTED_TO_ADMIN", target.accountId(), null);
+            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
             return toMemberResult(promotedMember);
         });
     }
@@ -296,6 +655,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(demotedMember);
             appendAuditLog(channel.id(), operator.accountId(), "ADMIN_DEMOTED_TO_MEMBER", target.accountId(), null);
+            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
             return toMemberResult(demotedMember);
         });
     }
@@ -336,6 +696,7 @@ public class ChannelApplicationService {
                     target.accountId(),
                     "{\"previousOwnerAccountId\":" + operator.accountId() + "}"
             );
+            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
             return new ChannelOwnershipTransferResult(
                     channel.id(),
                     previousOwner.accountId(),
@@ -378,6 +739,7 @@ public class ChannelApplicationService {
                     target.accountId(),
                     "{\"durationSeconds\":" + command.durationSeconds() + "}"
             );
+            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
             return toMemberResult(mutedMember);
         });
     }
@@ -404,6 +766,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(unmutedMember);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNMUTED", target.accountId(), null);
+            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
             return toMemberResult(unmutedMember);
         });
     }
@@ -420,8 +783,11 @@ public class ChannelApplicationService {
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
             channelGovernancePolicy.requireCanModerateMember(channel, operator, target, "channel_kick_forbidden");
+            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
             channelMemberRepository.delete(channel.id(), target.accountId());
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_KICKED", target.accountId(), null);
+            channelRealtimePublisher.publishChannelChanged(channel, "members", recipientAccountIds);
+            channelRealtimePublisher.publishChannelsChanged(target.accountId());
         });
     }
 
@@ -463,6 +829,7 @@ public class ChannelApplicationService {
             } else {
                 channelBanRepository.update(ban);
             }
+            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
             channelMemberRepository.delete(channel.id(), target.accountId());
             appendAuditLog(
                     channel.id(),
@@ -471,6 +838,8 @@ public class ChannelApplicationService {
                     target.accountId(),
                     buildBanAuditMetadata(ban)
             );
+            channelRealtimePublisher.publishChannelChanged(channel, "bans", recipientAccountIds);
+            channelRealtimePublisher.publishChannelsChanged(target.accountId());
             return toBanResult(ban);
         });
     }
@@ -503,6 +872,8 @@ public class ChannelApplicationService {
             );
             channelBanRepository.update(revokedBan);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNBANNED", existingBan.bannedAccountId(), null);
+            channelRealtimePublisher.publishChannelChanged(channel, "bans", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            channelRealtimePublisher.publishChannelsChanged(existingBan.bannedAccountId());
             return toBanResult(revokedBan);
         });
     }
@@ -512,6 +883,9 @@ public class ChannelApplicationService {
                 channel.id(),
                 channel.conversationId(),
                 channel.name(),
+                channel.brief(),
+                channel.avatar(),
+                findOwnerUid(channel.id()),
                 channel.type(),
                 channel.defaultChannel(),
                 channel.createdAt(),
@@ -527,6 +901,17 @@ public class ChannelApplicationService {
                 invite.status().name(),
                 invite.createdAt(),
                 invite.respondedAt()
+        );
+    }
+
+    private ChannelApplicationResult toApplicationResult(ChannelInvite invite, String reason) {
+        return new ChannelApplicationResult(
+                invite.applicationId(),
+                invite.channelId(),
+                invite.inviteeAccountId(),
+                reason == null ? "" : reason,
+                invite.createdAt(),
+                invite.status().name()
         );
     }
 
@@ -564,6 +949,38 @@ public class ChannelApplicationService {
         }
     }
 
+    private void validateCreateChannelCommand(CreateChannelCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        if (command.name() == null || command.name().isBlank()) {
+            throw ProblemException.validationFailed("name must not be blank");
+        }
+        if (command.name().trim().length() > 128) {
+            throw ProblemException.validationFailed("name length must be less than or equal to 128");
+        }
+        if (command.brief() != null && command.brief().trim().length() > 256) {
+            throw ProblemException.validationFailed("brief length must be less than or equal to 256");
+        }
+    }
+
+    private void validateUpdateChannelProfileCommand(UpdateChannelProfileCommand command) {
+        requirePositive(command.operatorAccountId(), "operatorAccountId");
+        requirePositive(command.channelId(), "channelId");
+        if (command.name() == null || command.name().isBlank()) {
+            throw ProblemException.validationFailed("name must not be blank");
+        }
+        if (command.name().trim().length() > 128) {
+            throw ProblemException.validationFailed("name length must be less than or equal to 128");
+        }
+        if (command.brief() != null && command.brief().trim().length() > 256) {
+            throw ProblemException.validationFailed("brief length must be less than or equal to 256");
+        }
+    }
+
+    private void validateDeleteChannelCommand(DeleteChannelCommand command) {
+        requirePositive(command.operatorAccountId(), "operatorAccountId");
+        requirePositive(command.channelId(), "channelId");
+    }
+
     private void validateInviteChannelMemberCommand(InviteChannelMemberCommand command) {
         requirePositive(command.operatorAccountId(), "operatorAccountId");
         requirePositive(command.channelId(), "channelId");
@@ -583,6 +1000,15 @@ public class ChannelApplicationService {
         requirePositive(query.channelId(), "channelId");
     }
 
+    private void validateUpdateChannelReadStateCommand(UpdateChannelReadStateCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
+        requirePositive(command.lastReadMessageId(), "lastReadMessageId");
+        if (command.lastReadTime() <= 0) {
+            throw ProblemException.validationFailed("lastReadTime must be greater than 0");
+        }
+    }
+
     private void validateTargetedCommand(long operatorAccountId, long channelId, long targetAccountId, String targetFieldName) {
         requirePositive(operatorAccountId, "operatorAccountId");
         requirePositive(channelId, "channelId");
@@ -597,9 +1023,22 @@ public class ChannelApplicationService {
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
     }
 
+    private ChannelMessage requireMessage(long messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+    }
+
+    private String findOwnerUid(long channelId) {
+        return channelMemberRepository.findByChannelId(channelId).stream()
+                .filter(member -> member.role() == ChannelMemberRole.OWNER)
+                .map(member -> Ids.toString(member.accountId()))
+                .findFirst()
+                .orElse("");
+    }
+
     private ChannelMember requireMember(long channelId, long accountId) {
         return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
-                .orElseThrow(() -> ProblemException.forbidden("channel_member_required", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
     }
 
     private ChannelMember requireTargetMember(long channelId, long accountId) {
@@ -643,11 +1082,54 @@ public class ChannelApplicationService {
         }
     }
 
+    private String normalizeAuditAction(String action) {
+        if (action == null || action.isBlank()) {
+            return null;
+        }
+        return switch (action.trim()) {
+            case "channel.create" -> "CHANNEL_CREATED";
+            case "channel.delete" -> "CHANNEL_DELETED";
+            case "channel.update" -> "CHANNEL_UPDATED";
+            case "channel.member.kick" -> "MEMBER_KICKED";
+            case "channel.admin.grant" -> "MEMBER_PROMOTED_TO_ADMIN";
+            case "channel.admin.revoke" -> "ADMIN_DEMOTED_TO_MEMBER";
+            case "channel.ban.create" -> "MEMBER_BANNED";
+            case "channel.ban.delete" -> "MEMBER_UNBANNED";
+            case "message.delete" -> "MESSAGE_DELETED";
+            case "message.edit" -> "MESSAGE_EDITED";
+            case "message.pin" -> "MESSAGE_PINNED";
+            case "message.unpin" -> "MESSAGE_UNPINNED";
+            default -> throw ProblemException.validationFailed("action is invalid");
+        };
+    }
+
+    private String toAuditAction(String actionType) {
+        return switch (actionType) {
+            case "CHANNEL_CREATED" -> "channel.create";
+            case "CHANNEL_DELETED" -> "channel.delete";
+            case "CHANNEL_UPDATED" -> "channel.update";
+            case "MEMBER_KICKED" -> "channel.member.kick";
+            case "MEMBER_PROMOTED_TO_ADMIN" -> "channel.admin.grant";
+            case "ADMIN_DEMOTED_TO_MEMBER" -> "channel.admin.revoke";
+            case "MEMBER_BANNED" -> "channel.ban.create";
+            case "MEMBER_UNBANNED" -> "channel.ban.delete";
+            case "MESSAGE_DELETED" -> "message.delete";
+            case "MESSAGE_EDITED" -> "message.edit";
+            case "MESSAGE_PINNED" -> "message.pin";
+            case "MESSAGE_UNPINNED" -> "message.unpin";
+            default -> actionType.toLowerCase();
+        };
+    }
+
     private String normalizeReason(String reason) {
         if (reason == null || reason.isBlank()) {
             return "";
         }
         return reason.trim();
+    }
+
+    private String normalizeNullableText(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private String buildBanAuditMetadata(ChannelBan ban) {

@@ -6,12 +6,15 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -49,13 +52,42 @@ public class RealtimeServerConfiguration {
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
+            IdGenerator idGenerator,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
+            UserProfileRepository userProfileRepository
     ) {
         return new NettyMessageRealtimePublisher(
                 realtimeSessionRegistry,
                 jsonProvider,
                 timeProvider,
-                messageAttachmentPayloadResolver
+                idGenerator,
+                messageAttachmentPayloadResolver,
+                userProfileRepository
+        );
+    }
+
+    /**
+     * 创建基于 Netty 的频道实时发布器。
+     *
+     * @param realtimeSessionRegistry 实时会话注册表
+     * @param jsonProvider 项目统一 JSON 门面
+     * @param timeProvider 项目统一时间提供器
+     * @param idGenerator 项目统一 ID 生成器
+     * @return 基于 Netty 的频道实时发布器
+     */
+    @Bean
+    @Primary
+    public ChannelRealtimePublisher channelRealtimePublisher(
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            IdGenerator idGenerator
+    ) {
+        return new NettyChannelRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                timeProvider,
+                idGenerator
         );
     }
 
@@ -79,6 +111,7 @@ public class RealtimeServerConfiguration {
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             AuthTokenService authTokenService,
+            ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
             ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService> messageApplicationServiceProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
@@ -89,6 +122,7 @@ public class RealtimeServerConfiguration {
                 idGenerator,
                 timeProvider,
                 authTokenService,
+                serverIdentityProperties,
                 realtimeSessionRegistry,
                 messageApplicationServiceProvider,
                 realtimeInboundMessageDispatcherProvider

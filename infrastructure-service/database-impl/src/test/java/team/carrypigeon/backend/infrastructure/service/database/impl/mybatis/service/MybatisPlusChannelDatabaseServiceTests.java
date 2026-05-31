@@ -77,6 +77,8 @@ class MybatisPlusChannelDatabaseServiceTests {
                 9L,
                 9L,
                 "project-alpha",
+                "讨论区",
+                "avatars/ch/9.png",
                 "private",
                 false,
                 Instant.parse("2026-04-24T12:00:00Z"),
@@ -84,6 +86,43 @@ class MybatisPlusChannelDatabaseServiceTests {
         ));
 
         verify(channelMapper).insert(org.mockito.ArgumentMatchers.<ChannelEntity>any());
+    }
+
+    @Test
+    @DisplayName("update valid record delegates to mapper")
+    void update_validRecord_delegatesToMapper() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        when(channelMapper.updateById(any(ChannelEntity.class))).thenReturn(1);
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        service.update(new ChannelRecord(
+                9L,
+                9L,
+                "project-alpha",
+                "讨论区",
+                "avatars/ch/9.png",
+                "private",
+                false,
+                Instant.parse("2026-04-24T12:00:00Z"),
+                Instant.parse("2026-04-24T12:30:00Z")
+        ));
+
+        verify(channelMapper).updateById(any(ChannelEntity.class));
+    }
+
+    /**
+     * 验证删除频道时会调用 mapper 删除入口。
+     */
+    @Test
+    @DisplayName("delete valid id delegates to mapper")
+    void delete_validId_delegatesToMapper() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        when(channelMapper.deleteById(9L)).thenReturn(1);
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        service.delete(9L);
+
+        verify(channelMapper).deleteById(9L);
     }
 
     /**
@@ -114,6 +153,8 @@ class MybatisPlusChannelDatabaseServiceTests {
         entity.setId(1L);
         entity.setConversationId(1L);
         entity.setName("public");
+        entity.setBrief("");
+        entity.setAvatar("");
         entity.setType("public");
         entity.setDefaultChannel(true);
         entity.setCreatedAt(Instant.parse("2026-04-22T00:00:00Z"));

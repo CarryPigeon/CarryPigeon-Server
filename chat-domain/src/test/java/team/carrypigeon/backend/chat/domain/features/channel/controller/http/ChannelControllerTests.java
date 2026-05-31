@@ -1,467 +1,276 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
-import java.time.Instant;
-import java.util.List;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelInviteResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelMemberResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * ChannelController 协议测试。
- * 职责：验证频道默认查询、private channel 创建、邀请接受与成员列表入口的统一响应码与异常映射契约。
- * 边界：不验证真实数据库访问，只验证协议层请求到响应的稳定行为。
+ * 职责：验证 channels family 当前保留的 v1 资源路径契约。
+ * 边界：不验证真实数据库访问，只验证协议层输入输出。
  */
 @Tag("contract")
 class ChannelControllerTests {
 
     private ChannelApplicationService channelApplicationService;
+    private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
     private AuthRequestContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         channelApplicationService = mock(ChannelApplicationService.class);
+        notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
         authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
-    /**
-     * 验证已认证请求可以读取默认频道。
-     */
     @Test
-    @DisplayName("get default channel authenticated request returns code 100")
-    void getDefaultChannel_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("list channels returns channel summaries")
+    void listChannels_returnsChannelSummaries() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.getDefaultChannel(any())).thenReturn(new ChannelResult(
-                1L, 1L, "public", "public", true,
-                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
+        when(channelApplicationService.listChannels(1001L)).thenReturn(List.of(
+                new ChannelResult(1L, 1L, "General", "讨论区", "avatars/ch/1.png", "1001", "public", true, Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")),
+                new ChannelResult(9L, 9L, "project-alpha", "研发讨论", "avatars/ch/9.png", "1001", "private", false, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"))
         ));
 
-        mockMvc.perform(get("/api/channels/default"))
+        mockMvc.perform(get("/api/channels"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.channelId").value(1L))
-                .andExpect(jsonPath("$.data.type").value("public"));
+                .andExpect(jsonPath("$.channels[0].cid").value("1"))
+                .andExpect(jsonPath("$.channels[0].owner_uid").value("1001"))
+                .andExpect(jsonPath("$.channels[1].cid").value("9"));
     }
 
     @Test
-    @DisplayName("get default channel anonymous request returns code 300")
-    void getDefaultChannel_anonymousRequest_returnsCode300() throws Exception {
-        mockMvc.perform(get("/api/channels/default"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("authentication is required"));
-    }
-
-    /**
-     * 验证已认证请求可以读取 system 频道。
-     */
-    @Test
-    @DisplayName("get system channel authenticated request returns code 100")
-    void getSystemChannel_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("get channel by id returns channel summary")
+    void getChannelById_returnsChannelSummary() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.getSystemChannel(any())).thenReturn(new ChannelResult(
-                2L, 2L, "system", "system", false,
-                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
-        ));
-
-        mockMvc.perform(get("/api/channels/system"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.channelId").value(2L))
-                .andExpect(jsonPath("$.data.type").value("system"));
-    }
-
-    @Test
-    @DisplayName("get system channel membership required returns code 300")
-    void getSystemChannel_membershipRequired_returnsCode300() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.getSystemChannel(any()))
-                .thenThrow(ProblemException.forbidden("system_channel_membership_required", "channel membership is required"));
-
-        mockMvc.perform(get("/api/channels/system"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("channel membership is required"));
-    }
-
-    /**
-     * 验证已认证请求可以创建 private channel。
-     */
-    @Test
-    @DisplayName("create private channel authenticated request returns code 100")
-    void createPrivateChannel_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.createPrivateChannel(any())).thenReturn(new ChannelResult(
-                9L, 9L, "project-alpha", "private", false,
+        when(channelApplicationService.getChannelById(1001L, 9L)).thenReturn(new ChannelResult(
+                9L, 9L, "project-alpha", "研发讨论", "avatars/ch/9.png", "1001", "private", false,
                 Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
         ));
 
-        mockMvc.perform(post("/api/channels/private")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"name\":\"project-alpha\"" +
-                                "}"))
+        mockMvc.perform(get("/api/channels/9"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.channelId").value(9L))
-                .andExpect(jsonPath("$.data.type").value("private"));
+                .andExpect(jsonPath("$.cid").value("9"))
+                .andExpect(jsonPath("$.name").value("project-alpha"))
+                .andExpect(jsonPath("$.owner_uid").value("1001"));
     }
 
     @Test
-    @DisplayName("create private channel invalid request returns code 200")
-    void createPrivateChannel_invalidRequest_returnsCode200() throws Exception {
+    @DisplayName("discover channels returns cursor page")
+    void discoverChannels_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-
-        mockMvc.perform(post("/api/channels/private")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"name\":\"\"" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-    }
-
-    /**
-     * 验证 OWNER / ADMIN 邀请接口会返回邀请结果。
-     */
-    @Test
-    @DisplayName("invite channel member authenticated request returns code 100")
-    void inviteChannelMember_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.inviteChannelMember(any())).thenReturn(new ChannelInviteResult(
-                9L,
-                1002L,
-                1001L,
-                "PENDING",
-                Instant.parse("2026-04-24T12:00:00Z"),
-                null
+        when(channelApplicationService.discoverChannels(any())).thenReturn(List.of(
+                new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
-        mockMvc.perform(post("/api/channels/9/invites")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"inviteeAccountId\":1002" +
-                                "}"))
+        mockMvc.perform(get("/api/channels/discover").param("q", "gen").param("type", "text").param("limit", "20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.channelId").value(9L))
-                .andExpect(jsonPath("$.data.status").value("PENDING"));
+                .andExpect(jsonPath("$.items[0].cid").value("9"))
+                .andExpect(jsonPath("$.items[0].member_count").value(42))
+                .andExpect(jsonPath("$.has_more").value(false));
     }
 
     @Test
-    @DisplayName("invite channel member forbidden returns code 300")
-    void inviteChannelMember_forbidden_returnsCode300() throws Exception {
+    @DisplayName("create channel returns 201")
+    void createChannel_returns201() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.inviteChannelMember(any()))
-                .thenThrow(ProblemException.forbidden("channel_invite_forbidden", "channel invite requires owner or admin role"));
-
-        mockMvc.perform(post("/api/channels/9/invites")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"inviteeAccountId\":1002" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300));
-    }
-
-    /**
-     * 验证接受邀请接口会返回 ACCEPTED 结果。
-     */
-    @Test
-    @DisplayName("accept channel invite authenticated request returns code 100")
-    void acceptChannelInvite_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.acceptChannelInvite(any())).thenReturn(new ChannelInviteResult(
-                9L,
-                1001L,
-                1002L,
-                "ACCEPTED",
-                Instant.parse("2026-04-24T12:00:00Z"),
-                Instant.parse("2026-04-24T12:01:00Z")
+        when(channelApplicationService.createChannel(any())).thenReturn(new ChannelResult(
+                9L, 9L, "project-alpha", "讨论区", "avatars/ch/9.png", "1001", "private", false,
+                Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
         ));
 
-        mockMvc.perform(post("/api/channels/9/invites/accept"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+        mockMvc.perform(post("/api/channels")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"project-alpha","brief":"讨论区","avatar":"avatars/ch/9.png"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cid").value("9"))
+                .andExpect(jsonPath("$.brief").value("讨论区"));
     }
 
     @Test
-    @DisplayName("accept channel invite missing invitation returns code 404")
-    void acceptChannelInvite_missingInvitation_returnsCode404() throws Exception {
+    @DisplayName("delete channel returns 204")
+    void deleteChannel_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.acceptChannelInvite(any()))
-                .thenThrow(ProblemException.notFound("channel invite does not exist"));
+        doNothing().when(channelApplicationService).deleteChannel(any());
 
-        mockMvc.perform(post("/api/channels/9/invites/accept"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(404));
+        mockMvc.perform(delete("/api/channels/9"))
+                .andExpect(status().isNoContent());
     }
 
-    /**
-     * 验证活跃成员可以获取频道成员列表。
-     */
     @Test
-    @DisplayName("list channel members authenticated request returns code 100")
-    void listChannelMembers_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("patch channel profile returns 204")
+    void patchChannelProfile_returns204() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.updateChannelProfile(any())).thenReturn(new ChannelResult(
+                9L, 9L, "project-alpha", "new brief", "avatars/ch/9.png", "1001", "private", false,
+                Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
+        ));
+
+        mockMvc.perform(patch("/api/channels/9")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"project-alpha","brief":"new brief"}
+                                """))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("list channel members returns items")
+    void listChannelMembers_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(channelApplicationService.listChannelMembers(any())).thenReturn(List.of(
-                new ChannelMemberResult(
-                        1001L,
-                        "carry-owner",
-                        "",
-                        "OWNER",
-                        Instant.parse("2026-04-24T12:00:00Z"),
-                        null
-                )
+                new ChannelMemberResult(1001L, "carry-owner", "", "OWNER", Instant.parse("2026-04-24T12:00:00Z"), null)
         ));
 
         mockMvc.perform(get("/api/channels/9/members"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data[0].accountId").value(1001L))
-                .andExpect(jsonPath("$.data[0].role").value("OWNER"));
+                .andExpect(jsonPath("$.items[0].uid").value("1001"))
+                .andExpect(jsonPath("$.items[0].role").value("owner"));
     }
 
     @Test
-    @DisplayName("list channel members unexpected failure returns code 500")
-    void listChannelMembers_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listChannelMembers(any())).thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(get("/api/channels/9/members"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500));
-    }
-
-    /**
-     * 验证提升频道成员为 ADMIN 的接口会返回 100 响应码。
-     */
-    @Test
-    @DisplayName("promote channel member authenticated request returns code 100")
-    void promoteChannelMember_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("put admin resource returns 204")
+    void promoteChannelMemberV1_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(channelApplicationService.promoteChannelMember(any())).thenReturn(new ChannelMemberResult(
-                1002L,
-                "carry-admin",
-                "",
-                "ADMIN",
-                Instant.parse("2026-04-24T12:00:00Z"),
-                null
+                1002L, "carry-admin", "", "ADMIN", Instant.parse("2026-04-24T12:00:00Z"), null
         ));
 
-        mockMvc.perform(post("/api/channels/9/members/1002/admin"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1002L))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
-    }
-
-    /**
-     * 验证转移频道所有权的接口会返回 100 响应码。
-     */
-    @Test
-    @DisplayName("transfer channel ownership authenticated request returns code 100")
-    void transferChannelOwnership_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.transferChannelOwnership(any())).thenReturn(
-                new team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelOwnershipTransferResult(
-                        9L,
-                        1001L,
-                        "ADMIN",
-                        1002L,
-                        "OWNER"
-                )
-        );
-
-        mockMvc.perform(post("/api/channels/9/ownership-transfer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"targetAccountId\":1002" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.previousOwnerRole").value("ADMIN"))
-                .andExpect(jsonPath("$.data.newOwnerRole").value("OWNER"));
+        mockMvc.perform(put("/api/channels/9/admins/1002"))
+                .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("transfer channel ownership forbidden returns code 300")
-    void transferChannelOwnership_forbidden_returnsCode300() throws Exception {
+    @DisplayName("delete admin resource returns 204")
+    void demoteChannelAdminV1_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.transferChannelOwnership(any()))
-                .thenThrow(ProblemException.forbidden("channel_transfer_forbidden", "channel ownership transfer requires owner role"));
-
-        mockMvc.perform(post("/api/channels/9/ownership-transfer")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"targetAccountId\":1002" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("channel ownership transfer requires owner role"));
-    }
-
-    /**
-     * 验证禁言成员的接口会返回 100 响应码。
-     */
-    @Test
-    @DisplayName("mute channel member authenticated request returns code 100")
-    void muteChannelMember_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.muteChannelMember(any())).thenReturn(new ChannelMemberResult(
-                1002L,
-                "carry-member",
-                "",
-                "MEMBER",
-                Instant.parse("2026-04-24T12:00:00Z"),
-                Instant.parse("2026-04-24T12:05:00Z")
+        when(channelApplicationService.demoteChannelAdmin(any())).thenReturn(new ChannelMemberResult(
+                1002L, "carry-member", "", "MEMBER", Instant.parse("2026-04-24T12:00:00Z"), null
         ));
 
-        mockMvc.perform(post("/api/channels/9/members/1002/mute")
+        mockMvc.perform(delete("/api/channels/9/admins/1002"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("kick channel member returns 204")
+    void kickChannelMember_returns204() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        doNothing().when(channelApplicationService).kickChannelMember(any());
+
+        mockMvc.perform(delete("/api/channels/9/members/1002"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("put ban resource returns payload")
+    void banChannelMemberV1_returnsPayload() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelApplicationService.banChannelMember(any()))
+                .thenReturn(new ChannelBanResult(9L, 1002L, 1001L, "spam", Instant.parse("2026-04-24T13:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"), null));
+
+        mockMvc.perform(put("/api/channels/9/bans/1002")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"durationSeconds\":300" +
-                                "}"))
+                        .content("""
+                                {"until":1776819600000,"reason":"spam"}
+                                """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.accountId").value(1002L));
-    }
-
-    /**
-     * 验证踢出成员的接口会返回 100 响应码。
-     */
-    @Test
-    @DisplayName("kick channel member authenticated request returns code 100")
-    void kickChannelMember_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/channels/9/members/1002"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100));
+                .andExpect(jsonPath("$.cid").value("9"))
+                .andExpect(jsonPath("$.uid").value("1002"))
+                .andExpect(jsonPath("$.reason").value("spam"));
     }
 
     @Test
-    @DisplayName("kick channel member forbidden returns code 300")
-    void kickChannelMember_forbidden_returnsCode300() throws Exception {
+    @DisplayName("delete ban resource returns 204")
+    void unbanChannelMember_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        org.mockito.Mockito.doThrow(ProblemException.forbidden("channel_kick_forbidden", "channel member moderation requires owner or admin role"))
-                .when(channelApplicationService)
-                .kickChannelMember(any());
+        when(channelApplicationService.unbanChannelMember(any()))
+                .thenReturn(new ChannelBanResult(9L, 1002L, 1001L, "spam", Instant.parse("2026-04-24T13:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:10:00Z")));
 
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/channels/9/members/1002"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(300))
-                .andExpect(jsonPath("$.message").value("channel member moderation requires owner or admin role"));
+        mockMvc.perform(delete("/api/channels/9/bans/1002"))
+                .andExpect(status().isNoContent());
     }
 
-    /**
-     * 验证封禁成员的接口会返回 100 响应码。
-     */
     @Test
-    @DisplayName("ban channel member authenticated request returns code 100")
-    void banChannelMember_authenticatedRequest_returnsCode100() throws Exception {
+    @DisplayName("list channel bans returns items")
+    void listChannelBans_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.banChannelMember(any())).thenReturn(
-                new team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult(
-                        9L,
-                        1002L,
-                        1001L,
-                        "spam",
-                        Instant.parse("2026-04-24T12:10:00Z"),
-                        Instant.parse("2026-04-24T12:00:00Z"),
-                        null
-                )
-        );
+        when(channelApplicationService.listChannelBans(any()))
+                .thenReturn(List.of(new ChannelBanListItemResult(9L, 1002L, Instant.parse("2026-04-24T12:05:00Z"), "spam", Instant.parse("2026-04-24T12:00:00Z"))));
 
-        mockMvc.perform(post("/api/channels/9/bans")
+        mockMvc.perform(get("/api/channels/9/bans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].cid").value("9"))
+                .andExpect(jsonPath("$.items[0].uid").value("1002"));
+    }
+
+    @Test
+    @DisplayName("update channel notification preference returns 204")
+    void updateChannelNotificationPreference_returns204() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        doNothing().when(notificationPreferenceApplicationService).updateChannelPreference(any());
+
+        mockMvc.perform(put("/api/channels/9/notification_preference")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"targetAccountId\":1002," +
-                                "\"reason\":\"spam\"," +
-                                "\"durationSeconds\":600" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.bannedAccountId").value(1002L));
-    }
-
-    @Test
-    @DisplayName("ban channel member unexpected failure returns code 500")
-    void banChannelMember_unexpectedFailure_returnsCode500() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.banChannelMember(any())).thenThrow(new IllegalStateException("boom"));
-
-        mockMvc.perform(post("/api/channels/9/bans")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{" +
-                                "\"targetAccountId\":1002," +
-                                "\"reason\":\"spam\"," +
-                                "\"durationSeconds\":600" +
-                                "}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(500))
-                .andExpect(jsonPath("$.message").value("internal server error"));
-    }
-
-    /**
-     * 验证解除封禁的接口会返回 100 响应码。
-     */
-    @Test
-    @DisplayName("unban channel member authenticated request returns code 100")
-    void unbanChannelMember_authenticatedRequest_returnsCode100() throws Exception {
-        mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.unbanChannelMember(any())).thenReturn(
-                new team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult(
-                        9L,
-                        1002L,
-                        1001L,
-                        "spam",
-                        Instant.parse("2026-04-24T12:10:00Z"),
-                        Instant.parse("2026-04-24T12:00:00Z"),
-                        Instant.parse("2026-04-24T12:05:00Z")
-                )
-        );
-
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/channels/9/bans/1002"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.revokedAt").exists());
+                        .content("""
+                                {"mode":"inherit","muted_until":0}
+                                """))
+                .andExpect(status().isNoContent());
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
+                .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private MappingJackson2HttpMessageConverter snakeCaseConverter() {
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {

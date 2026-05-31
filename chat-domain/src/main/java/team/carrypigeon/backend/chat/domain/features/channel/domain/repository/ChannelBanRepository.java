@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 
@@ -18,6 +19,13 @@ public interface ChannelBanRepository {
      * @return 命中时返回封禁记录
      */
     Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId);
+
+    /**
+     * 查询频道下的全部封禁记录。
+     */
+    default List<ChannelBan> findByChannelId(long channelId) {
+        return List.of();
+    }
 
     /**
      * 保存新的封禁记录。

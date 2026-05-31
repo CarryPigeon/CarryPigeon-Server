@@ -1,0 +1,89 @@
+package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
+
+import java.util.List;
+import java.util.Optional;
+import org.springframework.dao.DataAccessException;
+import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelReadStateEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
+
+/**
+ * MyBatis-Plus 频道已读状态数据库服务。
+ */
+public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadStateDatabaseService {
+
+    private final ChannelReadStateMapper channelReadStateMapper;
+
+    public MybatisPlusChannelReadStateDatabaseService(ChannelReadStateMapper channelReadStateMapper) {
+        this.channelReadStateMapper = channelReadStateMapper;
+    }
+
+    @Override
+    public Optional<ChannelReadStateRecord> findByChannelIdAndAccountId(long channelId, long accountId) {
+        return execute(() -> Optional.ofNullable(channelReadStateMapper.findByChannelIdAndAccountId(channelId, accountId)).map(this::toRecord), "failed to query channel read state");
+    }
+
+    @Override
+    public void upsert(ChannelReadStateRecord record) {
+        executeVoid(() -> channelReadStateMapper.upsertState(toEntity(record)), "failed to upsert channel read state");
+    }
+
+    @Override
+    public List<ChannelUnreadRecord> listUnreadsByAccountId(long accountId) {
+        return execute(() -> channelReadStateMapper.listUnreadsByAccountId(accountId).stream()
+                .map(p -> new ChannelUnreadRecord(p.getChannelId(), p.getUnreadCount(), p.getLastReadTime()))
+                .toList(), "failed to query channel unread counts");
+    }
+
+    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
+        try {
+            return operation.run();
+        } catch (DataAccessException exception) {
+            throw new DatabaseServiceException(errorMessage, exception);
+        } catch (RuntimeException exception) {
+            throw new DatabaseServiceException(errorMessage, exception);
+        }
+    }
+
+    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
+        execute(() -> {
+            operation.run();
+            return null;
+        }, errorMessage);
+    }
+
+    private ChannelReadStateRecord toRecord(ChannelReadStateEntity entity) {
+        return new ChannelReadStateRecord(
+                entity.getChannelId(),
+                entity.getAccountId(),
+                entity.getLastReadMessageId(),
+                entity.getLastReadTime(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
+    }
+
+    private ChannelReadStateEntity toEntity(ChannelReadStateRecord record) {
+        ChannelReadStateEntity entity = new ChannelReadStateEntity();
+        entity.setChannelId(record.channelId());
+        entity.setAccountId(record.accountId());
+        entity.setLastReadMessageId(record.lastReadMessageId());
+        entity.setLastReadTime(record.lastReadTime());
+        entity.setCreatedAt(record.createdAt());
+        entity.setUpdatedAt(record.updatedAt());
+        return entity;
+    }
+
+    @FunctionalInterface
+    private interface DatabaseOperation<T> {
+        T run();
+    }
+
+    @FunctionalInterface
+    private interface VoidDatabaseOperation {
+        void run();
+    }
+}

@@ -15,7 +15,11 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelPinDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.NotificationPreferenceDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
@@ -26,7 +30,11 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelPinMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MentionMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.NotificationPreferenceMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +72,11 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(ChannelInviteMapper.class, () -> mock(ChannelInviteMapper.class))
                 .withBean(ChannelBanMapper.class, () -> mock(ChannelBanMapper.class))
                 .withBean(ChannelAuditLogMapper.class, () -> mock(ChannelAuditLogMapper.class))
+                .withBean(ChannelReadStateMapper.class, () -> mock(ChannelReadStateMapper.class))
+                .withBean(ChannelPinMapper.class, () -> mock(ChannelPinMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
+                .withBean(MentionMapper.class, () -> mock(MentionMapper.class))
+                .withBean(NotificationPreferenceMapper.class, () -> mock(NotificationPreferenceMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
                     assertThat(context).hasSingleBean(AuthAccountDatabaseService.class);
@@ -74,7 +86,11 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).hasSingleBean(ChannelInviteDatabaseService.class);
                     assertThat(context).hasSingleBean(ChannelBanDatabaseService.class);
                     assertThat(context).hasSingleBean(ChannelAuditLogDatabaseService.class);
+                    assertThat(context).hasSingleBean(ChannelReadStateDatabaseService.class);
+                    assertThat(context).hasSingleBean(ChannelPinDatabaseService.class);
                     assertThat(context).hasSingleBean(MessageDatabaseService.class);
+                    assertThat(context).hasSingleBean(MentionDatabaseService.class);
+                    assertThat(context).hasSingleBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).hasSingleBean(UserProfileDatabaseService.class);
                     assertThat(context).hasSingleBean(DatabaseHealthService.class);
                     assertThat(context).hasSingleBean(InitializationCheck.class);
@@ -101,7 +117,11 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(ChannelInviteMapper.class, () -> mock(ChannelInviteMapper.class))
                 .withBean(ChannelBanMapper.class, () -> mock(ChannelBanMapper.class))
                 .withBean(ChannelAuditLogMapper.class, () -> mock(ChannelAuditLogMapper.class))
+                .withBean(ChannelReadStateMapper.class, () -> mock(ChannelReadStateMapper.class))
+                .withBean(ChannelPinMapper.class, () -> mock(ChannelPinMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
+                .withBean(MentionMapper.class, () -> mock(MentionMapper.class))
+                .withBean(NotificationPreferenceMapper.class, () -> mock(NotificationPreferenceMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(AuthAccountDatabaseService.class);
@@ -111,7 +131,11 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(ChannelInviteDatabaseService.class);
                     assertThat(context).doesNotHaveBean(ChannelBanDatabaseService.class);
                     assertThat(context).doesNotHaveBean(ChannelAuditLogDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(ChannelReadStateDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(ChannelPinDatabaseService.class);
                     assertThat(context).doesNotHaveBean(MessageDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(MentionDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).doesNotHaveBean(UserProfileDatabaseService.class);
                     assertThat(context).doesNotHaveBean(DatabaseHealthService.class);
                     assertThat(context).doesNotHaveBean(InitializationCheck.class);

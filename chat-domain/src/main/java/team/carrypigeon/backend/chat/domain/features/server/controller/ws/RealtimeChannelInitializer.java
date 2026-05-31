@@ -11,6 +11,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -29,6 +30,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final AuthTokenService authTokenService;
+    private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
     private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
@@ -39,6 +41,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             AuthTokenService authTokenService,
+            ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
             ObjectProvider<MessageApplicationService> messageApplicationServiceProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
@@ -48,6 +51,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.authTokenService = authTokenService;
+        this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.messageApplicationServiceSupplier = messageApplicationServiceProvider::getIfAvailable;
         this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
@@ -59,6 +63,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             AuthTokenService authTokenService,
+            ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry
     ) {
         this(
@@ -67,6 +72,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 idGenerator,
                 timeProvider,
                 authTokenService,
+                serverIdentityProperties,
                 realtimeSessionRegistry,
                 new ObjectProvider<>() {
                     @Override
@@ -125,6 +131,8 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 jsonProvider,
                 idGenerator,
                 timeProvider,
+                authTokenService,
+                serverIdentityProperties,
                 realtimeSessionRegistry,
                 messageApplicationServiceSupplier,
                 realtimeInboundMessageDispatcherSupplier

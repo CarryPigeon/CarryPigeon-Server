@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
+import java.util.UUID;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -16,9 +17,14 @@ public record ServerIdentityProperties(String id) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("id must not be blank");
         }
+        try {
+            UUID.fromString(id);
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("id must be a stable UUID string", exception);
+        }
     }
 
     public ServerIdentityProperties() {
-        this("carrypigeon-local");
+        this("550e8400-e29b-41d4-a716-446655440000");
     }
 }

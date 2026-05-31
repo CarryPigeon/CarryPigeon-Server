@@ -15,8 +15,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
@@ -41,11 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class NettyMessageRealtimePublisherTests {
 
     /**
-     * 验证 file 消息 realtime 下发会附加临时访问 URL。
+     * 验证 file 消息 realtime 下发会转换为 share_key 与相对下载路径。
      */
     @Test
-    @DisplayName("publish file message adds access url to realtime payload")
-    void publish_fileMessage_addsAccessUrlToRealtimePayload() {
+    @DisplayName("publish file message adds share key fields to realtime payload")
+    void publish_fileMessage_addsShareKeyFieldsToRealtimePayload() {
         JsonProvider jsonProvider = jsonProvider();
         TestObjectStorageService storageService = new TestObjectStorageService();
         storageService.presignedUrl = new PresignedUrl(
@@ -59,12 +63,14 @@ class NettyMessageRealtimePublisherTests {
                 realtimeSessionRegistry,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
-                new MessageAttachmentPayloadResolver(objectProvider(storageService), jsonProvider)
+                () -> 9001L,
+                new MessageAttachmentPayloadResolver(objectProvider(storageService), jsonProvider),
+                userProfileRepository()
         );
 
         publisher.publish(new ChannelMessage(
                 5001L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1002L,
@@ -86,9 +92,10 @@ class NettyMessageRealtimePublisherTests {
         TextWebSocketFrame frame = channel.readOutbound();
 
         assertNotNull(frame);
-        String payload = jsonProvider.readTree(frame.text()).path("data").path("payload").asText();
-        assertEquals("http://127.0.0.1:9000/file/demo.pdf?token=abc", jsonProvider.readTree(payload).path("access_url").asText());
-        assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", jsonProvider.readTree(payload).path("object_key").asText());
+        var messageData = jsonProvider.readTree(frame.text()).path("data").path("payload").path("message").path("data");
+        assertEquals("Core:File", jsonProvider.readTree(frame.text()).path("data").path("payload").path("message").path("domain").asText());
+        assertEquals("shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", messageData.path("share_key").asText());
+        assertEquals("api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", messageData.path("download_path").asText());
     }
 
     /**
@@ -105,12 +112,14 @@ class NettyMessageRealtimePublisherTests {
                 realtimeSessionRegistry,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
+                () -> 9001L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
         );
 
         publisher.publish(new ChannelMessage(
                 5002L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1001L,
@@ -127,8 +136,8 @@ class NettyMessageRealtimePublisherTests {
         TextWebSocketFrame frame = channel.readOutbound();
 
         assertNotNull(frame);
-        String payload = jsonProvider.readTree(frame.text()).path("data").path("payload").asText();
-        assertFalse(jsonProvider.readTree(payload).has("access_url"));
+        assertEquals("event", jsonProvider.readTree(frame.text()).path("type").asText());
+        assertEquals("message.created", jsonProvider.readTree(frame.text()).path("data").path("event_type").asText());
     }
 
     /**
@@ -145,12 +154,14 @@ class NettyMessageRealtimePublisherTests {
                 realtimeSessionRegistry,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
+                () -> 9001L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
         );
 
         publisher.publishUpdate(new ChannelMessage(
                 5010L,
-                "carrypigeon-local",
+                "550e8400-e29b-41d4-a716-446655440000",
                 1L,
                 1L,
                 1001L,
@@ -167,9 +178,137 @@ class NettyMessageRealtimePublisherTests {
         TextWebSocketFrame frame = channel.readOutbound();
 
         assertNotNull(frame);
-        assertTrue(frame.text().contains("\"type\":\"channel_message_updated\""));
-        assertTrue(frame.text().contains("\"status\":\"recalled\""));
-        assertTrue(frame.text().contains("\"message_id\":5010"));
+        assertTrue(frame.text().contains("\"type\":\"event\""));
+        assertTrue(frame.text().contains("\"event_type\":\"message.deleted\""));
+        assertTrue(frame.text().contains("\"mid\":\"5010\""));
+    }
+
+    @Test
+    @DisplayName("publish update edited message uses message updated event type")
+    void publishUpdate_editedMessage_usesMessageUpdatedEventType() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1001L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
+                () -> 9002L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
+        );
+
+        publisher.publishUpdate(new ChannelMessage(
+                5011L,
+                "550e8400-e29b-41d4-a716-446655440000",
+                1L,
+                1L,
+                1001L,
+                "text",
+                "edited content",
+                "edited content",
+                "edited content",
+                null,
+                null,
+                "[{\"type\":\"user\",\"uid\":\"1002\"}]",
+                "{\"mid\":\"5000\",\"cid\":\"1\",\"uid\":\"1002\",\"preview\":\"hello\",\"send_time\":1700000000000}",
+                "sent",
+                Instant.parse("2026-04-22T00:00:00Z"),
+                Instant.parse("2026-04-22T00:09:00Z"),
+                2L
+        ), List.of(1001L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNotNull(frame);
+        var root = jsonProvider.readTree(frame.text());
+        assertEquals("message.updated", root.path("data").path("event_type").asText());
+        assertEquals(2L, root.path("data").path("payload").path("message").path("edit_version").asLong());
+        assertEquals(1776816540000L, root.path("data").path("payload").path("message").path("edited_at").asLong());
+        assertEquals("1002", root.path("data").path("payload").path("message").path("mentions").get(0).path("uid").asText());
+        assertEquals("5000", root.path("data").path("payload").path("message").path("forwarded_from").path("mid").asText());
+    }
+
+    @Test
+    @DisplayName("publish pin emits message pinned event")
+    void publishPin_emitsMessagePinnedEvent() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1001L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
+                () -> 9003L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
+        );
+
+        publisher.publishPin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), List.of(1001L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNotNull(frame);
+        var root = jsonProvider.readTree(frame.text());
+        assertEquals("message.pinned", root.path("data").path("event_type").asText());
+        assertEquals("7001", root.path("data").path("payload").path("pin_id").asText());
+        assertEquals("5001", root.path("data").path("payload").path("mid").asText());
+    }
+
+    @Test
+    @DisplayName("publish unpin emits message unpinned event")
+    void publishUnpin_emitsMessageUnpinnedEvent() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1001L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
+                () -> 9004L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
+        );
+
+        publisher.publishUnpin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), 1001L, 1776816600000L, List.of(1001L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNotNull(frame);
+        var root = jsonProvider.readTree(frame.text());
+        assertEquals("message.unpinned", root.path("data").path("event_type").asText());
+        assertEquals("7001", root.path("data").path("payload").path("pin_id").asText());
+        assertEquals("1001", root.path("data").path("payload").path("unpinned_by_uid").asText());
+    }
+
+    @Test
+    @DisplayName("publish mention created emits mention created event")
+    void publishMentionCreated_emitsMentionCreatedEvent() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1002L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
+                () -> 9005L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                userProfileRepository()
+        );
+
+        publisher.publishMentionCreated(new Mention(8001L, 9L, 5001L, 1001L, "user", 1002L, Instant.parse("2026-04-22T00:09:30Z"), false), List.of(1002L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNotNull(frame);
+        var root = jsonProvider.readTree(frame.text());
+        assertEquals("mention.created", root.path("data").path("event_type").asText());
+        assertEquals("8001", root.path("data").path("payload").path("mention_id").asText());
+        assertEquals("1002", root.path("data").path("payload").path("target").path("uid").asText());
     }
 
     private static JsonProvider jsonProvider() {
@@ -228,5 +367,39 @@ class NettyMessageRealtimePublisherTests {
         public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
             return presignedUrl;
         }
+    }
+
+    private static UserProfileRepository userProfileRepository() {
+        return new UserProfileRepository() {
+            @Override
+            public Optional<UserProfile> findByAccountId(long accountId) {
+                return Optional.of(new UserProfile(accountId, "carry-user", "avatars/u/1001.png", "", Instant.parse("2026-04-20T12:00:00Z"), Instant.parse("2026-04-20T12:00:00Z")));
+            }
+
+            @Override
+            public java.util.List<UserProfile> findAll() {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public UserProfile save(UserProfile userProfile) {
+                return userProfile;
+            }
+
+            @Override
+            public UserProfile update(UserProfile userProfile) {
+                return userProfile;
+            }
+        };
     }
 }

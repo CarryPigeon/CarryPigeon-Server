@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
+import java.time.Instant;
+import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 
 /**
@@ -15,4 +17,16 @@ public interface ChannelAuditLogRepository {
      * @param channelAuditLog 审计记录
      */
     void append(ChannelAuditLog channelAuditLog);
+
+    default List<ChannelAuditLog> list(
+            Long cursorAuditId,
+            int limit,
+            Long channelId,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        throw new UnsupportedOperationException("channel audit log list is not supported");
+    }
 }

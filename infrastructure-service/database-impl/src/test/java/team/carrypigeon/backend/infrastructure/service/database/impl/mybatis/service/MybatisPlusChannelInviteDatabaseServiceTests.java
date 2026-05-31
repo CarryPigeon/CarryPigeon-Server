@@ -36,6 +36,7 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
         ChannelInviteMapper channelInviteMapper = mock(ChannelInviteMapper.class);
         ChannelInviteEntity entity = new ChannelInviteEntity();
         entity.setChannelId(1L);
+        entity.setApplicationId(3001L);
         entity.setInviteeAccountId(1002L);
         entity.setInviterAccountId(1001L);
         entity.setStatus("PENDING");
@@ -58,7 +59,7 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
         ChannelInviteMapper channelInviteMapper = mock(ChannelInviteMapper.class);
         MybatisPlusChannelInviteDatabaseService service = new MybatisPlusChannelInviteDatabaseService(channelInviteMapper);
 
-        service.insert(new ChannelInviteRecord(1L, 1002L, 1001L, "PENDING", Instant.parse("2026-04-24T12:10:00Z"), null));
+        service.insert(new ChannelInviteRecord(1L, 3001L, 1002L, 1001L, "PENDING", Instant.parse("2026-04-24T12:10:00Z"), null));
 
         verify(channelInviteMapper).insert(any());
     }
@@ -76,7 +77,7 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
 
         DatabaseServiceException exception = assertThrows(
                 DatabaseServiceException.class,
-                () -> service.update(new ChannelInviteRecord(1L, 1002L, 1001L, "ACCEPTED", Instant.parse("2026-04-24T12:10:00Z"), Instant.parse("2026-04-24T12:11:00Z")))
+                () -> service.update(new ChannelInviteRecord(1L, 3001L, 1002L, 1001L, "ACCEPTED", Instant.parse("2026-04-24T12:10:00Z"), Instant.parse("2026-04-24T12:11:00Z")))
         );
 
         assertEquals("failed to update channel invite", exception.getMessage());

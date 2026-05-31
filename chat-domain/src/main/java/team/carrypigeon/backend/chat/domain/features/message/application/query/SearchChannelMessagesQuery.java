@@ -8,7 +8,22 @@ package team.carrypigeon.backend.chat.domain.features.message.application.query;
  * @param accountId 当前账户 ID
  * @param channelId 频道 ID
  * @param keyword 搜索关键字
+ * @param cursorMessageId 搜索游标消息 ID
+ * @param senderAccountId 发送者账户 ID
+ * @param domain 消息 domain
+ * @param beforeMessageId 只查该消息之前的结果
+ * @param afterMessageId 只查该消息之后的结果
  * @param limit 返回条数
  */
-public record SearchChannelMessagesQuery(long accountId, long channelId, String keyword, int limit) {
+public record SearchChannelMessagesQuery(
+        long accountId,
+        long channelId,
+        String keyword,
+        Long cursorMessageId,
+        Long senderAccountId,
+        String domain,
+        Long beforeMessageId,
+        Long afterMessageId,
+        int limit
+) {
 }

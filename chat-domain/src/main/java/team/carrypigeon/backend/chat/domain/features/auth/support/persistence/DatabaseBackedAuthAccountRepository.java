@@ -26,8 +26,20 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
     }
 
     @Override
+    public Optional<AuthAccount> findById(long accountId) {
+        return authAccountDatabaseService.findById(accountId)
+                .map(this::toDomainModel);
+    }
+
+    @Override
     public AuthAccount save(AuthAccount account) {
         authAccountDatabaseService.insert(toWriteRecord(account));
+        return account;
+    }
+
+    @Override
+    public AuthAccount update(AuthAccount account) {
+        authAccountDatabaseService.update(toWriteRecord(account));
         return account;
     }
 

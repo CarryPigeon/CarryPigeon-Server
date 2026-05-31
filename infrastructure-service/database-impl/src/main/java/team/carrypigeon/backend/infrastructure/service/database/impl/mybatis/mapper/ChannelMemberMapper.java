@@ -110,4 +110,12 @@ public interface ChannelMemberMapper {
             ORDER BY account_id ASC
             """)
     List<Long> findAccountIdsByChannelId(@Param("channelId") long channelId);
+
+    @Select("""
+            SELECT channel_id
+            FROM chat_channel_member
+            WHERE account_id = #{accountId}
+            ORDER BY channel_id ASC
+            """)
+    List<Long> findChannelIdsByAccountId(@Param("accountId") long accountId);
 }

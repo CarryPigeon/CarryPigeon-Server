@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,26 @@ class MybatisPlusChannelBanDatabaseServiceTests {
 
         assertEquals("spam", record.reason());
         assertEquals(1001L, record.operatorAccountId());
+    }
+
+    @Test
+    @DisplayName("find by channel existing rows return ban records")
+    void findByChannelId_existingRows_returnBanRecords() {
+        ChannelBanMapper channelBanMapper = mock(ChannelBanMapper.class);
+        ChannelBanEntity entity = new ChannelBanEntity();
+        entity.setChannelId(9L);
+        entity.setBannedAccountId(1002L);
+        entity.setOperatorAccountId(1001L);
+        entity.setReason("spam");
+        entity.setCreatedAt(Instant.parse("2026-04-24T12:00:00Z"));
+        when(channelBanMapper.findByChannelId(9L)).thenReturn(List.of(entity));
+        MybatisPlusChannelBanDatabaseService service = new MybatisPlusChannelBanDatabaseService(channelBanMapper);
+
+        ChannelBanRecord record = service.findByChannelId(9L).getFirst();
+
+        assertEquals(9L, record.channelId());
+        assertEquals(1002L, record.bannedAccountId());
+        assertEquals("spam", record.reason());
     }
 
     /**

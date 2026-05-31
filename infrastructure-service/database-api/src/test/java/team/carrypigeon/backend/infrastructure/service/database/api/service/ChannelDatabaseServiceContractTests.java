@@ -23,6 +23,8 @@ class ChannelDatabaseServiceContractTests {
             1L,
             1L,
             "general",
+            "",
+            "",
             "public",
             true,
             Instant.parse("2026-04-22T00:00:00Z"),
@@ -58,6 +60,29 @@ class ChannelDatabaseServiceContractTests {
         assertSame(RECORD, service.insertedRecord);
     }
 
+    @Test
+    @DisplayName("update default implementation throws unsupported operation")
+    void update_defaultImplementation_throwsUnsupportedOperation() {
+        ChannelDatabaseService service = new MinimalChannelDatabaseService();
+
+        UnsupportedOperationException exception = assertThrows(
+                UnsupportedOperationException.class,
+                () -> service.update(RECORD)
+        );
+
+        assertEquals("channel update is not supported", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("update overriding implementation receives record")
+    void update_overridingImplementation_receivesRecord() {
+        RecordingChannelDatabaseService service = new RecordingChannelDatabaseService();
+
+        service.update(RECORD);
+
+        assertSame(RECORD, service.updatedRecord);
+    }
+
     private static class MinimalChannelDatabaseService implements ChannelDatabaseService {
 
         @Override
@@ -79,10 +104,16 @@ class ChannelDatabaseServiceContractTests {
     private static class RecordingChannelDatabaseService extends MinimalChannelDatabaseService {
 
         private ChannelRecord insertedRecord;
+        private ChannelRecord updatedRecord;
 
         @Override
         public void insert(ChannelRecord record) {
             this.insertedRecord = record;
+        }
+
+        @Override
+        public void update(ChannelRecord record) {
+            this.updatedRecord = record;
         }
     }
 }

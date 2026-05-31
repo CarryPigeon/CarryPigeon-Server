@@ -30,7 +30,7 @@ class DatabaseBackedChannelInviteRepositoryTests {
     @DisplayName("find by channel and invitee existing record maps to domain model")
     void findByChannelIdAndInviteeAccountId_existingRecord_mapsToDomainModel() {
         FakeChannelInviteDatabaseService databaseService = new FakeChannelInviteDatabaseService();
-        databaseService.record = new ChannelInviteRecord(1L, 1002L, 1001L, "PENDING", BASE_TIME, null);
+        databaseService.record = new ChannelInviteRecord(1L, 3001L, 1002L, 1001L, "PENDING", BASE_TIME, null);
         DatabaseBackedChannelInviteRepository repository = new DatabaseBackedChannelInviteRepository(databaseService);
 
         Optional<ChannelInvite> result = repository.findByChannelIdAndInviteeAccountId(1L, 1002L);
@@ -50,6 +50,7 @@ class DatabaseBackedChannelInviteRepositoryTests {
         DatabaseBackedChannelInviteRepository repository = new DatabaseBackedChannelInviteRepository(databaseService);
         ChannelInvite channelInvite = new ChannelInvite(
                 1L,
+                3001L,
                 1002L,
                 1001L,
                 ChannelInviteStatus.ACCEPTED,

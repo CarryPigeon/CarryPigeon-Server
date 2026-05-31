@@ -51,6 +51,22 @@ class MybatisPlusAuthAccountDatabaseServiceTests {
     }
 
     /**
+     * 验证按账户 ID 查询时会稳定映射账户记录。
+     */
+    @Test
+    @DisplayName("find by id existing row maps record")
+    void findById_existingRow_mapsRecord() {
+        AuthAccountMapper authAccountMapper = mock(AuthAccountMapper.class);
+        when(authAccountMapper.selectById(1001L)).thenReturn(entity());
+        MybatisPlusAuthAccountDatabaseService service = new MybatisPlusAuthAccountDatabaseService(authAccountMapper);
+
+        AuthAccountRecord record = service.findById(1001L).orElseThrow();
+
+        assertEquals(1001L, record.id());
+        assertEquals("carry-user", record.username());
+    }
+
+    /**
      * 验证查询失败时会包装成稳定数据库服务异常。
      */
     @Test
@@ -104,6 +120,21 @@ class MybatisPlusAuthAccountDatabaseServiceTests {
 
         assertEquals("failed to insert auth account", exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证更新账户时会委托 mapper 持久化完整记录。
+     */
+    @Test
+    @DisplayName("update valid record maps all fields")
+    void update_validRecord_mapsAllFields() {
+        AuthAccountMapper authAccountMapper = mock(AuthAccountMapper.class);
+        when(authAccountMapper.updateById(any(AuthAccountEntity.class))).thenReturn(1);
+        MybatisPlusAuthAccountDatabaseService service = new MybatisPlusAuthAccountDatabaseService(authAccountMapper);
+
+        service.update(record());
+
+        verify(authAccountMapper).updateById(any(AuthAccountEntity.class));
     }
 
     private static AuthAccountRecord record() {

@@ -1,0 +1,117 @@
+package team.carrypigeon.backend.chat.domain.features.server.application.service;
+
+import java.util.List;
+import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.server.application.command.UpdateNotificationChannelPreferenceCommand;
+import team.carrypigeon.backend.chat.domain.features.server.application.command.UpdateNotificationServerPreferenceCommand;
+import team.carrypigeon.backend.chat.domain.features.server.application.dto.NotificationPreferencesResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
+import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+
+/**
+ * 通知偏好应用服务。
+ */
+@Service
+public class NotificationPreferenceApplicationService {
+
+    private static final List<String> SERVER_MODES = List.of("all", "mentions_only", "muted");
+    private static final List<String> CHANNEL_MODES = List.of("all", "mentions_only", "muted", "inherit");
+
+    private final NotificationPreferenceRepository notificationPreferenceRepository;
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
+    private final TimeProvider timeProvider;
+
+    public NotificationPreferenceApplicationService(
+            NotificationPreferenceRepository notificationPreferenceRepository,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            TimeProvider timeProvider
+    ) {
+        this.notificationPreferenceRepository = notificationPreferenceRepository;
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.timeProvider = timeProvider;
+    }
+
+    public NotificationPreferencesResult getNotificationPreferences(long accountId) {
+        requirePositive(accountId, "accountId");
+        NotificationPreferencesResult.ServerPreferenceResult server = notificationPreferenceRepository.findServerPreferenceByAccountId(accountId)
+                .map(preference -> new NotificationPreferencesResult.ServerPreferenceResult(preference.mode(), preference.mutedUntil()))
+                .orElseGet(() -> new NotificationPreferencesResult.ServerPreferenceResult("all", 0L));
+        List<NotificationPreferencesResult.ChannelPreferenceResult> channels = notificationPreferenceRepository.listChannelPreferencesByAccountId(accountId).stream()
+                .map(preference -> new NotificationPreferencesResult.ChannelPreferenceResult(Ids.toString(preference.channelId()), preference.mode(), preference.mutedUntil()))
+                .toList();
+        return new NotificationPreferencesResult(server, channels);
+    }
+
+    public void updateServerPreference(UpdateNotificationServerPreferenceCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        String mode = normalizeMode(command.mode(), SERVER_MODES, "mode");
+        long mutedUntil = normalizeMutedUntil(command.mutedUntil());
+        NotificationServerPreference existing = notificationPreferenceRepository.findServerPreferenceByAccountId(command.accountId()).orElse(null);
+        notificationPreferenceRepository.upsertServerPreference(new NotificationServerPreference(
+                command.accountId(),
+                mode,
+                mutedUntil,
+                existing == null ? timeProvider.nowInstant() : existing.createdAt(),
+                timeProvider.nowInstant()
+        ));
+    }
+
+    public void updateChannelPreference(UpdateNotificationChannelPreferenceCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
+        channelRepository.findById(command.channelId()).orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+        if (!channelMemberRepository.exists(command.channelId(), command.accountId())) {
+            throw ProblemException.forbidden("not_channel_member", "channel membership is required");
+        }
+        String mode = normalizeMode(command.mode(), CHANNEL_MODES, "mode");
+        long mutedUntil = normalizeMutedUntil(command.mutedUntil());
+        NotificationChannelPreference existing = notificationPreferenceRepository.listChannelPreferencesByAccountId(command.accountId()).stream()
+                .filter(preference -> preference.channelId() == command.channelId())
+                .findFirst()
+                .orElse(null);
+        notificationPreferenceRepository.upsertChannelPreference(new NotificationChannelPreference(
+                command.accountId(),
+                command.channelId(),
+                mode,
+                mutedUntil,
+                existing == null ? timeProvider.nowInstant() : existing.createdAt(),
+                timeProvider.nowInstant()
+        ));
+    }
+
+    private String normalizeMode(String rawMode, List<String> allowedModes, String fieldName) {
+        if (rawMode == null || rawMode.isBlank()) {
+            throw ProblemException.validationFailed(fieldName + " must not be blank");
+        }
+        String mode = rawMode.trim();
+        if (!allowedModes.contains(mode)) {
+            throw ProblemException.validationFailed(fieldName + " is invalid");
+        }
+        return mode;
+    }
+
+    private long normalizeMutedUntil(Long mutedUntil) {
+        if (mutedUntil == null) {
+            return 0L;
+        }
+        if (mutedUntil < 0L) {
+            throw ProblemException.validationFailed("muted_until must be greater than or equal to 0");
+        }
+        return mutedUntil;
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
+    }
+}

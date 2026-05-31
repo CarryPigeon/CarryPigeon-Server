@@ -43,7 +43,7 @@ class FileChannelMessagePluginTests {
         );
 
         ChannelMessage message = plugin.createMessage(
-                new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                 new FileChannelMessageDraft("项目文档", "channels/1/messages/file/accounts/1001/5001-demo.pdf", "demo.pdf", "application/pdf", 12345L, null)
         );
 
@@ -68,7 +68,7 @@ class FileChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new FileChannelMessageDraft(null, "channels/1/messages/file/accounts/1001/missing.pdf", "missing.pdf", null, null, null)
                 )
         );
@@ -91,7 +91,7 @@ class FileChannelMessagePluginTests {
         ProblemException exception = assertThrows(
                 ProblemException.class,
                 () -> plugin.createMessage(
-                        new ChannelMessageBuildContext(5001L, "carrypigeon-local", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
+                        new ChannelMessageBuildContext(5001L, "550e8400-e29b-41d4-a716-446655440000", 1L, 1L, 1001L, Instant.parse("2026-04-22T00:00:00Z")),
                         new FileChannelMessageDraft("项目文档", "channels/2/messages/file/accounts/demo.pdf", "demo.pdf", "application/pdf", 12345L, null)
                 )
         );

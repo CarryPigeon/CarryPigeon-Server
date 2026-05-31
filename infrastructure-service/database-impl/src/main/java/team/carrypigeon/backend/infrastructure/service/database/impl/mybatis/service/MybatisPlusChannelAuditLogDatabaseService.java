@@ -1,7 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import java.time.Instant;
+import java.util.List;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelAuditLogEntity;
@@ -23,6 +26,22 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
     @Override
     public void insert(ChannelAuditLogWriteRecord record) {
         executeVoid(() -> channelAuditLogMapper.insert(toEntity(record)), "failed to insert channel audit log");
+    }
+
+    @Override
+    public List<ChannelAuditLogReadRecord> list(
+            Long cursorAuditId,
+            int limit,
+            Long channelId,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        return execute(() -> channelAuditLogMapper.list(cursorAuditId, limit, channelId, actorAccountId, actionType, fromTime, toTime)
+                .stream()
+                .map(this::toReadRecord)
+                .toList(), "failed to query channel audit logs");
     }
 
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
@@ -64,5 +83,16 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
         entity.setMetadata(record.metadata());
         entity.setCreatedAt(record.createdAt());
         return entity;
+    }
+
+    private ChannelAuditLogReadRecord toReadRecord(ChannelAuditLogEntity entity) {
+        return new ChannelAuditLogReadRecord(
+                entity.getAuditId(),
+                entity.getChannelId(),
+                entity.getActorAccountId(),
+                entity.getActionType(),
+                entity.getMetadata(),
+                entity.getCreatedAt()
+        );
     }
 }

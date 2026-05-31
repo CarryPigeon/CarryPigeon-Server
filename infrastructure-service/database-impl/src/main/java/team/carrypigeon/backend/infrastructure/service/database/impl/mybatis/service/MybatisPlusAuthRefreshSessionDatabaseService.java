@@ -42,8 +42,6 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
             throw new DatabaseServiceException(errorMessage, exception);
         }

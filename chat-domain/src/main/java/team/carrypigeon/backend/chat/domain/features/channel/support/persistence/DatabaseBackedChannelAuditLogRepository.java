@@ -1,7 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
+import java.time.Instant;
+import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 
@@ -29,5 +32,25 @@ public class DatabaseBackedChannelAuditLogRepository implements ChannelAuditLogR
                 channelAuditLog.metadata(),
                 channelAuditLog.createdAt()
         ));
+    }
+
+    @Override
+    public List<ChannelAuditLog> list(
+            Long cursorAuditId,
+            int limit,
+            Long channelId,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        return channelAuditLogDatabaseService.list(cursorAuditId, limit, channelId, actorAccountId, actionType, fromTime, toTime)
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    private ChannelAuditLog toDomain(ChannelAuditLogReadRecord record) {
+        return new ChannelAuditLog(record.auditId(), record.channelId(), record.actorAccountId(), record.actionType(), null, record.metadata(), record.createdAt());
     }
 }
