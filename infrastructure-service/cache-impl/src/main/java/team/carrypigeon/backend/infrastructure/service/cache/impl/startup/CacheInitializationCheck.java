@@ -18,11 +18,17 @@ public class CacheInitializationCheck implements InitializationCheck {
         this.cacheHealthService = cacheHealthService;
     }
 
+    /**
+     * 返回启动检查项名称。
+     */
     @Override
     public String name() {
         return "cache";
     }
 
+    /**
+     * 执行缓存健康检查并转换为统一启动检查结果。
+     */
     @Override
     public InitializationCheckResult check() {
         CacheHealth health = cacheHealthService.check();

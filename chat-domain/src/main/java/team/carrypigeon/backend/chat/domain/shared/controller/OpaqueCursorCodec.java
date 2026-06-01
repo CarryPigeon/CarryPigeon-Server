@@ -15,6 +15,13 @@ public final class OpaqueCursorCodec {
     private OpaqueCursorCodec() {
     }
 
+    /**
+     * 将内部雪花 ID 编码为带 scope 的不透明游标。
+     *
+     * @param scope 游标作用域，用于限制端点间不可混用
+     * @param snowflakeId 内部雪花 ID
+     * @return 对外游标字符串；输入为空时返回空
+     */
     public static String encode(String scope, Long snowflakeId) {
         if (snowflakeId == null) {
             return null;
@@ -23,6 +30,15 @@ public final class OpaqueCursorCodec {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 校验并解码外部游标。
+     * 输入：预期作用域与客户端提交的游标字符串。
+     * 输出：成功时返回内部雪花 ID，空白游标视为无游标。
+     *
+     * @param scope 预期游标作用域
+     * @param cursor 客户端提交的游标
+     * @return 内部雪花 ID；空白游标返回空
+     */
     public static Long decode(String scope, String cursor) {
         if (cursor == null || cursor.isBlank()) {
             return null;

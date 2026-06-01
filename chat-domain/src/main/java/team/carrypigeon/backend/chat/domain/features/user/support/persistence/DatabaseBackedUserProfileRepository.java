@@ -20,12 +20,19 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
         this.userProfileDatabaseService = userProfileDatabaseService;
     }
 
+    /**
+     * 按账户 ID 查询资料。
+     */
     @Override
     public Optional<UserProfile> findByAccountId(long accountId) {
         return userProfileDatabaseService.findByAccountId(accountId)
                 .map(this::toDomainModel);
     }
 
+    /**
+     * 查询所有用户资料快照。
+     * 边界：这里只做读取与模型转换，不承担权限裁剪。
+     */
     @Override
     public List<UserProfile> findAll() {
         return userProfileDatabaseService.findAll().stream()
@@ -33,6 +40,10 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 .toList();
     }
 
+    /**
+     * 按账户游标倒序拉取资料列表。
+     * 原因：供用户列表和分页接口使用稳定锚点。
+     */
     @Override
     public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
         return userProfileDatabaseService.findByAccountIdBefore(cursorAccountId, limit).stream()
@@ -40,6 +51,10 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 .toList();
     }
 
+    /**
+     * 按关键字搜索资料。
+     * 输出：返回匹配关键字的领域资料集合。
+     */
     @Override
     public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
         return userProfileDatabaseService.searchByKeyword(keyword, cursorAccountId, limit).stream()
@@ -47,12 +62,18 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 .toList();
     }
 
+    /**
+     * 持久化新的用户资料。
+     */
     @Override
     public UserProfile save(UserProfile userProfile) {
         userProfileDatabaseService.insert(toWriteRecord(userProfile));
         return userProfile;
     }
 
+    /**
+     * 更新既有用户资料。
+     */
     @Override
     public UserProfile update(UserProfile userProfile) {
         userProfileDatabaseService.update(toWriteRecord(userProfile));

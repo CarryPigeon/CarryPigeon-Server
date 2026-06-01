@@ -84,13 +84,13 @@ HTTP 失败统一返回标准错误对象：
 
 ```json
 {
-  "server_id": "carrypigeon-local",
+  "server_id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "CarryPigeonBackend",
   "brief": "A self-hosted chat server",
   "avatar": "api/files/download/server_avatar",
   "api_version": "1.0",
   "min_supported_api_version": "1.0",
-  "ws_url": "wss://127.0.0.1/api/ws",
+  "ws_url": "wss://127.0.0.1:18080/api/ws",
   "required_plugins": [],
   "capabilities": {
     "message_domains": true,
@@ -100,6 +100,12 @@ HTTP 失败统一返回标准错误对象：
   "server_time": 1700000000000
 }
 ```
+
+当前代码口径补充：
+
+- `ws_url` 由 `cp.chat.server.realtime.host`、`port`、`path` 直接拼装，当前固定使用 `wss://` scheme。
+- `capabilities` 当前表示协议面最小公开能力，不表示实时监听端口此刻一定可连接。
+- `cp.chat.server.realtime.enabled=false` 只控制 Netty realtime 运行时是否启动，不会抑制 discovery 中的 `ws_url` 或 capability 字段输出。
 
 ### 2.2 required gate 预检查
 
@@ -429,7 +435,19 @@ required gate 不满足时返回：
 
 当前内部仍复用 private channel 创建逻辑。
 
-### 5.4 获取频道成员
+### 5.4 发现频道
+
+- **方法**：`GET`
+- **路径**：`/api/channels/discover`
+- **认证**：是
+
+当前 `type` 过滤值直接对齐持久化频道类型，只接受：
+
+- `public`
+- `private`
+- `system`
+
+### 5.5 获取频道成员
 
 - **方法**：`GET`
 - **路径**：`/api/channels/{cid}/members`
@@ -451,21 +469,21 @@ required gate 不满足时返回：
 }
 ```
 
-### 5.5 设为管理员
+### 5.6 设为管理员
 
 - **方法**：`PUT`
 - **路径**：`/api/channels/{cid}/admins/{uid}`
 - **认证**：是
 - **成功**：`204 No Content`
 
-### 5.6 撤销管理员
+### 5.7 撤销管理员
 
 - **方法**：`DELETE`
 - **路径**：`/api/channels/{cid}/admins/{uid}`
 - **认证**：是
 - **成功**：`204 No Content`
 
-### 5.7 过渡接口
+### 5.8 过渡接口
 
 以下旧接口当前仍保留：
 
@@ -544,8 +562,12 @@ required gate 不满足时返回：
 当前最小实现只支持：
 
 - `domain = Core:Text`
+- `domain = Core:File`
+- `domain = Core:Voice`
 - `domain_version = 1.0.0`
-- `data.text`
+- `Core:Text` 使用 `data.text`
+- `Core:File` 使用 `data.share_key`、`data.filename`
+- `Core:Voice` 使用 `data.share_key`、`data.filename`、`data.duration_millis`
 
 ### 6.4 删除消息
 
@@ -602,6 +624,8 @@ required gate 不满足时返回：
 - **配置来源**：`cp.chat.server.realtime.path`
 - **默认监听端口**：`18080`
 - **默认开关**：`cp.chat.server.realtime.enabled=false`
+- **公开发现语义**：即使 realtime 开关关闭，`GET /api/server` 当前仍会返回按配置拼装的 `ws_url`
+- **广播退化语义**：当 realtime 未装配时，消息与频道 realtime 发布器退化为空实现，主业务链路继续运行但不会产生实际推送
 
 ### 8.1 连接与认证
 
@@ -632,7 +656,7 @@ required gate 不满足时返回：
   "data": {
     "uid": "1001",
     "expires_at": 1700000300000,
-    "server_id": "carrypigeon-local"
+    "server_id": "550e8400-e29b-41d4-a716-446655440000"
   },
   "error": null
 }
@@ -665,15 +689,34 @@ required gate 不满足时返回：
 
 - `message.created`
 - `message.deleted`
+- `message.updated`
+- `message.pinned`
+- `message.unpinned`
+- `mention.created`
+- `channel.changed`
+- `channels.changed`
+- `read_state.updated`
 
-当前 `resume` 为最小内存事件日志实现：
+当前 `resume` 为单节点、按账户隔离的内存事件窗口实现：
 
-- 找不到 `last_event_id` 时回写 `resume.failed`
+- 找不到 `last_event_id` 或该锚点已被当前账户窗口淘汰时回写 `resume.failed`
+- 事件窗口按认证账户分别维护，不再被其他账户高频事件直接挤占
+- 只会回放当前认证账户可见的事件
 - 跨实例 / 长窗口 / 持久化回放尚未覆盖
 
 ### 8.4 历史兼容说明
 
 当前仍保留对旧 `send_channel_message` 入站命令的最小兼容承接，便于现有业务链路继续运行。
+
+当前兼容命令会直接落到消息应用服务，已支持：
+
+- `message_type = text`
+- `message_type = file`
+- `message_type = voice`
+- `message_type = custom`
+- 已注册扩展消息类型（按 `message_type` 透传为 plugin-style draft）
+
+`message_type = system` 当前不会通过该 WS 命令对外开放。
 
 ## 9. 当前未实现 / 未完全收口项
 
@@ -682,7 +725,8 @@ required gate 不满足时返回：
 - 用户旧分页/搜索/旧 `PUT /api/users/me` 过渡接口仍保留
 - 频道旧动作式路径仍保留
 - 消息 HTTP 发送当前仅最小支持 `Core:Text@1.0.0`
-- WS `resume` 仍是最小内存实现
-- WS 事件中的 `sender.nickname/avatar` 仍是最小占位值
+- WS `resume` 仍是单节点内存实现
+- discovery 当前不会根据 realtime 开关动态隐藏 `ws_url` 或 capability
+- system channel 当前由数据库迁移种子保证存在，但数据库层未建立唯一约束
 
 当前对外接口事实来源仍以源码、测试和运行时 OpenAPI 文档为准。

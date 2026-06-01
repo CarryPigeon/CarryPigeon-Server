@@ -19,24 +19,38 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
         this.authAccountDatabaseService = authAccountDatabaseService;
     }
 
+    /**
+     * 按用户名查询鉴权账户。
+     * 输出：存在时返回领域账户，不存在时返回空。
+     */
     @Override
     public Optional<AuthAccount> findByUsername(String username) {
         return authAccountDatabaseService.findByUsername(username)
                 .map(this::toDomainModel);
     }
 
+    /**
+     * 按账户 ID 查询鉴权账户。
+     */
     @Override
     public Optional<AuthAccount> findById(long accountId) {
         return authAccountDatabaseService.findById(accountId)
                 .map(this::toDomainModel);
     }
 
+    /**
+     * 持久化一个新的鉴权账户。
+     * 副作用：会把用户名和密码散列写入持久层。
+     */
     @Override
     public AuthAccount save(AuthAccount account) {
         authAccountDatabaseService.insert(toWriteRecord(account));
         return account;
     }
 
+    /**
+     * 更新既有鉴权账户。
+     */
     @Override
     public AuthAccount update(AuthAccount account) {
         authAccountDatabaseService.update(toWriteRecord(account));

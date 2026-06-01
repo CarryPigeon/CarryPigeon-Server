@@ -27,6 +27,10 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         this.channelMapper = channelMapper;
     }
 
+    /**
+     * 查询默认公共频道记录。
+     * 输出：命中时返回 database-api 频道记录，否则返回空。
+     */
     @Override
     public Optional<ChannelRecord> findDefaultChannel() {
         return execute(() -> {
@@ -38,6 +42,9 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         }, "failed to query default channel");
     }
 
+    /**
+     * 查询系统频道记录。
+     */
     @Override
     public Optional<ChannelRecord> findSystemChannel() {
         return execute(() -> {
@@ -48,26 +55,42 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         }, "failed to query system channel");
     }
 
+    /**
+     * 按主键查询频道记录。
+     */
     @Override
     public Optional<ChannelRecord> findById(long channelId) {
         return execute(() -> Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord), "failed to query channel by id");
     }
 
+    /**
+     * 按发现页条件查询频道记录列表。
+     * 输入：关键字、游标、类型和条数上限。
+     */
     @Override
     public List<ChannelRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
         return execute(() -> channelMapper.discoverChannels(keyword, cursorChannelId, type, limit).stream().map(this::toRecord).toList(), "failed to discover channels");
     }
 
+    /**
+     * 插入新频道记录。
+     */
     @Override
     public void insert(ChannelRecord record) {
         executeVoid(() -> channelMapper.insert(toEntity(record)), "failed to insert channel");
     }
 
+    /**
+     * 更新既有频道记录。
+     */
     @Override
     public void update(ChannelRecord record) {
         executeVoid(() -> channelMapper.updateById(toEntity(record)), "failed to update channel");
     }
 
+    /**
+     * 删除频道记录。
+     */
     @Override
     public void delete(long channelId) {
         executeVoid(() -> channelMapper.deleteById(channelId), "failed to delete channel");

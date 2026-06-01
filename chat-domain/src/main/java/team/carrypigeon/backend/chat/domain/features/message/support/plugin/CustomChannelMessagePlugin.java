@@ -23,11 +23,25 @@ public class CustomChannelMessagePlugin implements ChannelMessagePlugin {
         this.jsonProvider = jsonProvider;
     }
 
+    /**
+     * 返回当前插件负责的消息类型。
+     *
+     * @return `custom` 消息类型标识
+     */
     @Override
     public String supportedType() {
         return "custom";
     }
 
+    /**
+     * 校验 custom 草稿并构造领域消息。
+     * 输入：消息构建上下文与 custom 草稿。
+     * 输出：可持久化的 custom 领域消息对象。
+     *
+     * @param context 消息构建上下文
+     * @param draft 入站消息草稿
+     * @return custom 领域消息
+     */
     @Override
     public ChannelMessage createMessage(ChannelMessageBuildContext context, ChannelMessageDraft draft) {
         if (!(draft instanceof CustomChannelMessageDraft customDraft)) {

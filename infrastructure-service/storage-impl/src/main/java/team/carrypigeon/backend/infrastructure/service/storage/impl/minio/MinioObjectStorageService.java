@@ -35,6 +35,12 @@ public class MinioObjectStorageService implements ObjectStorageService {
         this.properties = properties;
     }
 
+    /**
+     * 把对象写入 MinIO。
+     * 输入：对象键、内容流、大小和内容类型。
+     * 输出：返回写入后的对象元数据快照。
+     * 失败：任意 MinIO SDK 异常都会被统一包装为 `StorageServiceException`。
+     */
     @Override
     public StorageObject put(PutObjectCommand command) {
         try {
@@ -52,6 +58,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
         }
     }
 
+    /**
+     * 读取对象元数据和内容流。
+     * 输出：对象不存在时返回空，存在时返回带输入流的 `StorageObject`。
+     */
     @Override
     public Optional<StorageObject> get(GetObjectCommand command) {
         try {
@@ -82,6 +92,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
         }
     }
 
+    /**
+     * 删除对象。
+     * 约束：对象是否存在由 MinIO 自身处理，这里只做异常收口。
+     */
     @Override
     public void delete(DeleteObjectCommand command) {
         try {
@@ -96,6 +110,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
         }
     }
 
+    /**
+     * 创建对象的预签名下载地址。
+     * 输出：返回带绝对过期时间的下载 URL。
+     */
     @Override
     public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
         try {

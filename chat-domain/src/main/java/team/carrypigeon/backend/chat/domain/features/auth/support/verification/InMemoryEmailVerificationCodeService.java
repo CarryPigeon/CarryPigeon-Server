@@ -27,11 +27,26 @@ public class InMemoryEmailVerificationCodeService implements EmailVerificationCo
         this.timeProvider = timeProvider;
     }
 
+    /**
+     * 为目标邮箱签发新的验证码。
+     * 输入：邮箱地址。
+     * 副作用：覆盖该邮箱先前签发的验证码并重置过期时间。
+     *
+     * @param email 目标邮箱
+     */
     @Override
     public void issueCode(String email) {
         issuedCodes.put(normalize(email), new EmailCodeEntry(generateCode(), timeProvider.nowInstant().plus(CODE_TTL)));
     }
 
+    /**
+     * 校验邮箱验证码是否有效。
+     * 输入：邮箱地址与用户提交的验证码。
+     * 副作用：校验成功后立即删除该邮箱的验证码，避免重复使用。
+     *
+     * @param email 目标邮箱
+     * @param code 用户提交的验证码
+     */
     @Override
     public void verifyCode(String email, String code) {
         String normalizedEmail = normalize(email);

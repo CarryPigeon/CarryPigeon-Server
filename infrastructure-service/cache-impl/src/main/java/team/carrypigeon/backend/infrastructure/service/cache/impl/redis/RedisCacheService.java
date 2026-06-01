@@ -22,6 +22,16 @@ public class RedisCacheService implements CacheService {
         this.properties = properties;
     }
 
+    /**
+     * 读取指定缓存键的字符串值。
+     * 输入：业务层生成的完整缓存键。
+     * 输出：命中时返回缓存值，未命中时返回空。
+     *
+     * @param key 缓存键
+     * @return 缓存字符串值
+     * @throws IllegalArgumentException 缓存键为空白时抛出
+     * @throws CacheServiceException Redis 访问失败时抛出
+     */
     @Override
     public Optional<String> get(String key) {
         requireKey(key);
@@ -32,6 +42,17 @@ public class RedisCacheService implements CacheService {
         }
     }
 
+    /**
+     * 写入带过期时间的字符串缓存。
+     * 输入：缓存键、缓存值以及期望 TTL；当 TTL 为空时退回默认配置。
+     * 副作用：覆盖同键已有值并重置过期时间。
+     *
+     * @param key 缓存键
+     * @param value 缓存值
+     * @param ttl 过期时间；为空时使用默认 TTL
+     * @throws IllegalArgumentException 缓存键为空白、值为空或 TTL 非正时抛出
+     * @throws CacheServiceException Redis 写入失败时抛出
+     */
     @Override
     public void set(String key, String value, Duration ttl) {
         requireKey(key);
@@ -45,6 +66,15 @@ public class RedisCacheService implements CacheService {
         }
     }
 
+    /**
+     * 删除指定缓存键。
+     * 输入：业务层生成的完整缓存键。
+     * 副作用：删除 Redis 中对应条目；键不存在时保持幂等。
+     *
+     * @param key 缓存键
+     * @throws IllegalArgumentException 缓存键为空白时抛出
+     * @throws CacheServiceException Redis 删除失败时抛出
+     */
     @Override
     public void delete(String key) {
         requireKey(key);
@@ -55,6 +85,16 @@ public class RedisCacheService implements CacheService {
         }
     }
 
+    /**
+     * 检查指定缓存键是否存在。
+     * 输入：业务层生成的完整缓存键。
+     * 输出：仅当 Redis 明确返回存在时返回 true。
+     *
+     * @param key 缓存键
+     * @return 缓存键是否存在
+     * @throws IllegalArgumentException 缓存键为空白时抛出
+     * @throws CacheServiceException Redis 查询失败时抛出
+     */
     @Override
     public boolean exists(String key) {
         requireKey(key);

@@ -20,6 +20,12 @@ public class JdbcDatabaseHealthService implements DatabaseHealthService {
         this.properties = properties;
     }
 
+    /**
+     * 执行数据库健康检查。
+     * 输出：返回健康状态以及基于健康查询结果生成的诊断消息。
+     *
+     * @return 数据库健康检查结果
+     */
     @Override
     public DatabaseHealth check() {
         try {

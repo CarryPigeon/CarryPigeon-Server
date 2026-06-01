@@ -26,12 +26,25 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.transaction
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseInfrastructureAutoConfiguration {
 
+    /**
+     * 装配 JDBC 访问支持对象。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return database-impl 内部共用的 JDBC 支持对象
+     */
     @Bean
     @ConditionalOnMissingBean
     public JdbcClientSupport jdbcClientSupport(JdbcClient jdbcClient) {
         return new JdbcClientSupport(jdbcClient);
     }
 
+    /**
+     * 装配数据库健康检查服务。
+     *
+     * @param jdbcClientSupport JDBC 支持对象
+     * @param properties 数据库实现配置
+     * @return 数据库健康检查服务
+     */
     @Bean
     @ConditionalOnMissingBean
     public DatabaseHealthService databaseHealthService(
@@ -41,12 +54,25 @@ public class DatabaseInfrastructureAutoConfiguration {
         return new JdbcDatabaseHealthService(jdbcClientSupport, properties);
     }
 
+    /**
+     * 装配数据库初始化检查。
+     * 副作用：在启动阶段用于阻断数据库不可用的运行环境。
+     *
+     * @param databaseHealthService 数据库健康检查服务
+     * @return 启动初始化检查实例
+     */
     @Bean
     @ConditionalOnMissingBean(name = "databaseInitializationCheck")
     public InitializationCheck databaseInitializationCheck(DatabaseHealthService databaseHealthService) {
         return new DatabaseInitializationCheck(databaseHealthService);
     }
 
+    /**
+     * 装配事务执行器。
+     *
+     * @param transactionManager Spring 事务管理器
+     * @return 供 domain/application 使用的事务执行适配器
+     */
     @Bean
     @ConditionalOnMissingBean
     public TransactionRunner transactionRunner(PlatformTransactionManager transactionManager) {

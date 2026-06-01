@@ -36,10 +36,10 @@ class ChannelDiscoverApplicationServiceTests {
     @DisplayName("discover channels returns mapped results")
     void discoverChannels_returnsMappedResults() {
         StubChannelRepository channelRepository = new StubChannelRepository();
-        channelRepository.discoverResults = List.of(new Channel(9L, 9L, "General", "讨论区", "avatars/ch/9.png", "1001", "text", false, 42L, false, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")));
+        channelRepository.discoverResults = List.of(new Channel(9L, 9L, "General", "讨论区", "avatars/ch/9.png", "1001", "public", false, 42L, false, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")));
         ChannelApplicationService service = createService(channelRepository);
 
-        var result = service.discoverChannels(new DiscoverChannelsQuery(1001L, "gen", null, "text", 20));
+        var result = service.discoverChannels(new DiscoverChannelsQuery(1001L, "gen", null, "public", 20));
 
         assertEquals("9", result.getFirst().cid());
         assertEquals(42L, result.getFirst().memberCount());

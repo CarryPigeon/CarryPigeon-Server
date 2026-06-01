@@ -21,6 +21,9 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         this.messageMapper = messageMapper;
     }
 
+    /**
+     * 插入新消息记录。
+     */
     @Override
     public void insert(MessageRecord record) {
         executeVoid(() -> {
@@ -28,6 +31,9 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         }, "failed to insert message");
     }
 
+    /**
+     * 按消息 ID 查询记录。
+     */
     @Override
     public java.util.Optional<MessageRecord> findById(long messageId) {
         return execute(
@@ -37,6 +43,9 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
+    /**
+     * 更新既有消息记录。
+     */
     @Override
     public void update(MessageRecord record) {
         executeVoid(() -> {
@@ -44,11 +53,17 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         }, "failed to update message");
     }
 
+    /**
+     * 删除消息记录。
+     */
     @Override
     public void delete(long messageId) {
         executeVoid(() -> messageMapper.deleteById(messageId), "failed to delete message");
     }
 
+    /**
+     * 查询频道内早于游标的消息记录。
+     */
     @Override
     public List<MessageRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return execute(
@@ -60,6 +75,9 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
+    /**
+     * 查询频道内晚于锚点的消息记录。
+     */
     @Override
     public List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
         return execute(
@@ -71,6 +89,9 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
+    /**
+     * 按关键字搜索频道消息。
+     */
     @Override
     public List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit) {
         return execute(
@@ -82,6 +103,10 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
+    /**
+     * 按复合过滤条件搜索频道消息。
+     * 输入：关键字、发送者、领域类型、游标和前后消息锚点。
+     */
     @Override
     public List<MessageRecord> searchByChannelId(
             long channelId,

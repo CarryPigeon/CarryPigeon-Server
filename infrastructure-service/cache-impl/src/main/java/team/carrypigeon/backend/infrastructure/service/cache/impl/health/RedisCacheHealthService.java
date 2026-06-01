@@ -18,6 +18,12 @@ public class RedisCacheHealthService implements CacheHealthService {
         this.redisTemplate = redisTemplate;
     }
 
+    /**
+     * 执行 Redis 健康检查。
+     * 输出：返回 ping 成功与否以及诊断消息。
+     *
+     * @return 缓存健康检查结果
+     */
     @Override
     public CacheHealth check() {
         try {

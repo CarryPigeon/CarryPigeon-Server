@@ -51,6 +51,11 @@ public class FileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回上传授权结果")
     })
+    /**
+     * 申请文件上传授权。
+     * 输入：文件名、MIME 类型和声明大小。
+     * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
+     */
     public FileUploadResponse createUpload(@Valid @RequestBody CreateFileUploadRequest request, HttpServletRequest servletRequest) {
         authRequestContext.requirePrincipal(servletRequest);
         FileUploadGrantResult result = fileApplicationService.createUploadGrant(request.filename(), request.mimeType(), request.sizeBytes());
@@ -66,6 +71,11 @@ public class FileController {
         );
     }
 
+    /**
+     * 通过同源 HTTP PUT 写入文件内容。
+     * 副作用：会把请求体内容写入对象存储。
+     * 失败：当请求体读取失败时返回统一业务失败异常。
+     */
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
     public ResponseEntity<Void> uploadFile(@PathVariable String shareKey, HttpServletRequest request) {
         authRequestContext.requirePrincipal(request);
@@ -83,6 +93,11 @@ public class FileController {
             @ApiResponse(responseCode = "302", description = "重定向到对象下载地址"),
             @ApiResponse(responseCode = "404", description = "文件不存在")
     })
+    /**
+     * 按 `share_key` 下载文件。
+     * 约束：普通文件要求登录；服务端头像允许匿名访问。
+     * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
+     */
     public ResponseEntity<?> download(@PathVariable String shareKey, HttpServletRequest request) {
         if (!fileApplicationService.isServerAvatar(shareKey)) {
             authRequestContext.requirePrincipal(request);

@@ -102,7 +102,7 @@ class ChannelControllerTests {
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
-        mockMvc.perform(get("/api/channels/discover").param("q", "gen").param("type", "text").param("limit", "20"))
+        mockMvc.perform(get("/api/channels/discover").param("q", "gen").param("type", "public").param("limit", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].cid").value("9"))
                 .andExpect(jsonPath("$.items[0].member_count").value(42))

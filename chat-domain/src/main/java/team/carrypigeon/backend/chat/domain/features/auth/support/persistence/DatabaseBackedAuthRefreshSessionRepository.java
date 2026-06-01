@@ -21,18 +21,41 @@ public class DatabaseBackedAuthRefreshSessionRepository implements AuthRefreshSe
         this.authRefreshSessionDatabaseService = authRefreshSessionDatabaseService;
     }
 
+    /**
+     * 按主键查询刷新会话。
+     * 输入：刷新会话标识。
+     * 输出：存在时返回领域会话快照。
+     *
+     * @param sessionId 刷新会话标识
+     * @return 领域刷新会话快照
+     */
     @Override
     public Optional<AuthRefreshSession> findById(long sessionId) {
         return authRefreshSessionDatabaseService.findById(sessionId)
                 .map(this::toDomainModel);
     }
 
+    /**
+     * 保存刷新会话快照。
+     * 输入：领域层已构造完成的刷新会话。
+     * 副作用：向数据库写入一条刷新会话记录。
+     *
+     * @param session 刷新会话领域对象
+     * @return 原样返回保存后的领域对象
+     */
     @Override
     public AuthRefreshSession save(AuthRefreshSession session) {
         authRefreshSessionDatabaseService.insert(toWriteRecord(session));
         return session;
     }
 
+    /**
+     * 撤销指定刷新会话。
+     * 输入：刷新会话标识。
+     * 副作用：委托 database-api 将会话标记为 revoked。
+     *
+     * @param sessionId 刷新会话标识
+     */
     @Override
     public void revoke(long sessionId) {
         authRefreshSessionDatabaseService.revoke(sessionId);

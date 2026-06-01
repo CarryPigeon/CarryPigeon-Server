@@ -10,10 +10,9 @@ import org.springframework.context.annotation.Primary;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeServerMessage;
-import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -34,31 +33,37 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
     private final TimeProvider timeProvider;
     private final IdGenerator idGenerator;
     private final MessageAttachmentPayloadResolver messageAttachmentPayloadResolver;
-    private final UserProfileRepository userProfileRepository;
 
     public NettyMessageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
             IdGenerator idGenerator,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
-            UserProfileRepository userProfileRepository
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
     ) {
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.jsonProvider = jsonProvider;
         this.timeProvider = timeProvider;
         this.idGenerator = idGenerator;
         this.messageAttachmentPayloadResolver = messageAttachmentPayloadResolver;
-        this.userProfileRepository = userProfileRepository;
     }
 
+    /**
+     * 广播一条新创建的消息事件。
+     * 输入：已持久化消息与目标接收账户集合。
+     * 副作用：会写入实时事件缓存并向在线会话推送 `message.created`。
+     */
     @Override
-    public void publish(ChannelMessage message, Collection<Long> recipientAccountIds) {
-        publishEvent("message.created", createdPayload(message), recipientAccountIds);
+    public void publish(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds) {
+        publishEvent("message.created", createdPayload(message, senderSnapshot), recipientAccountIds);
     }
 
+    /**
+     * 广播消息更新事件。
+     * 约束：当消息状态已经变为 `recalled` 时，转换为 `message.deleted` 事件下发。
+     */
     @Override
-    public void publishUpdate(ChannelMessage message, Collection<Long> recipientAccountIds) {
+    public void publishUpdate(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds) {
         if ("recalled".equals(message.status())) {
             publishEvent("message.deleted", Map.of(
                     "cid", Long.toString(message.channelId()),
@@ -67,9 +72,13 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
             ), recipientAccountIds);
             return;
         }
-        publishEvent("message.updated", createdPayload(message), recipientAccountIds);
+        publishEvent("message.updated", createdPayload(message, senderSnapshot), recipientAccountIds);
     }
 
+    /**
+     * 广播置顶事件。
+     * 输出：下发 `message.pinned` 事件，携带稳定 `pin_id` 与操作人信息。
+     */
     @Override
     public void publishPin(ChannelPin pin, Collection<Long> recipientAccountIds) {
         publishEvent("message.pinned", Map.of(
@@ -81,6 +90,11 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         ), recipientAccountIds);
     }
 
+    /**
+     * 广播取消置顶事件。
+     * 输入：被取消的 pin、操作人和取消时间。
+     * 副作用：向所有目标在线会话推送 `message.unpinned`。
+     */
     @Override
     public void publishUnpin(ChannelPin pin, long unpinnedByAccountId, long unpinnedAt, Collection<Long> recipientAccountIds) {
         publishEvent("message.unpinned", Map.of(
@@ -92,6 +106,10 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         ), recipientAccountIds);
     }
 
+    /**
+     * 广播新的提及事件。
+     * 约束：事件体只暴露客户端消费所需的 mention 公开字段，不直接透传领域对象。
+     */
     @Override
     public void publishMentionCreated(Mention mention, Collection<Long> recipientAccountIds) {
         publishEvent("mention.created", Map.of(
@@ -110,7 +128,13 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
     private void publishEvent(String eventType, Object payload, Collection<Long> recipientAccountIds) {
         String eventId = idGenerator.nextStringId();
         long serverTime = timeProvider.nowMillis();
-        realtimeSessionRegistry.appendEvent(new RealtimeSessionRegistry.StoredRealtimeEvent(eventId, eventType, serverTime, payload));
+        realtimeSessionRegistry.appendEvent(RealtimeSessionRegistry.event(
+                eventId,
+                eventType,
+                serverTime,
+                payload,
+                recipientAccountIds
+        ));
         String frameText = jsonProvider.toJson(new RealtimeServerMessage(
                 "event",
                 null,
@@ -128,12 +152,11 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         }
     }
 
-    private Map<String, Object> createdPayload(ChannelMessage message) {
-        UserProfile senderProfile = userProfileRepository.findByAccountId(message.senderId()).orElse(null);
+    private Map<String, Object> createdPayload(ChannelMessage message, MessageSenderSnapshot senderSnapshot) {
         Map<String, Object> sender = new java.util.LinkedHashMap<>();
-        sender.put("uid", Long.toString(message.senderId()));
-        sender.put("nickname", senderProfile == null ? "" : senderProfile.nickname());
-        sender.put("avatar", senderProfile == null ? "" : senderProfile.avatarUrl());
+        sender.put("uid", Long.toString(senderSnapshot.accountId()));
+        sender.put("nickname", senderSnapshot.nickname());
+        sender.put("avatar", senderSnapshot.avatarUrl());
 
         Map<String, Object> messagePayload = new java.util.LinkedHashMap<>();
         messagePayload.put("mid", Long.toString(message.messageId()));

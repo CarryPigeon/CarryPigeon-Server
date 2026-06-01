@@ -16,6 +16,10 @@ public final class Jsons {
     private Jsons() {
     }
 
+    /**
+     * 序列化任意对象为 JSON 字符串。
+     * 失败：底层 Jackson 异常统一收口为基础设施异常。
+     */
     public static String toJson(ObjectMapper objectMapper, Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -28,6 +32,9 @@ public final class Jsons {
         }
     }
 
+    /**
+     * 按具体类型反序列化 JSON 字符串。
+     */
     public static <T> T fromJson(ObjectMapper objectMapper, String json, Class<T> type) {
         try {
             return objectMapper.readValue(json, type);
@@ -40,6 +47,9 @@ public final class Jsons {
         }
     }
 
+    /**
+     * 按泛型类型引用反序列化 JSON 字符串。
+     */
     public static <T> T fromJson(ObjectMapper objectMapper, String json, TypeReference<T> type) {
         try {
             return objectMapper.readValue(json, type);
@@ -52,6 +62,9 @@ public final class Jsons {
         }
     }
 
+    /**
+     * 解析 JSON 树模型。
+     */
     public static JsonNode readTree(ObjectMapper objectMapper, String json) {
         try {
             return objectMapper.readTree(json);

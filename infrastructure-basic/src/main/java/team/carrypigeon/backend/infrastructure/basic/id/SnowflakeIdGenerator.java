@@ -15,6 +15,11 @@ public class SnowflakeIdGenerator implements IdGenerator {
         this.snowflake = snowflake;
     }
 
+    /**
+     * 生成新的雪花长整型 ID。
+     *
+     * @return 新生成的雪花 ID
+     */
     @Override
     public long nextLongId() {
         return snowflake.nextId();

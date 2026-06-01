@@ -42,16 +42,19 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.M
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.file.support.FileShareKeyCodec;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
@@ -84,6 +87,7 @@ public class MessageApplicationService {
     private final ChannelGovernancePolicy channelGovernancePolicy;
     private final MessageRepository messageRepository;
     private final MentionRepository mentionRepository;
+    private final UserProfileRepository userProfileRepository;
     private final MessageRealtimePublisher messageRealtimePublisher;
     private final ChannelMessagePluginRegistry channelMessagePluginRegistry;
     private final MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy;
@@ -103,6 +107,7 @@ public class MessageApplicationService {
             ChannelGovernancePolicy channelGovernancePolicy,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
+            UserProfileRepository userProfileRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
             MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
@@ -121,6 +126,7 @@ public class MessageApplicationService {
         this.channelGovernancePolicy = channelGovernancePolicy;
         this.messageRepository = messageRepository;
         this.mentionRepository = mentionRepository;
+        this.userProfileRepository = userProfileRepository;
         this.messageRealtimePublisher = messageRealtimePublisher;
         this.channelMessagePluginRegistry = channelMessagePluginRegistry;
         this.messageAttachmentObjectKeyPolicy = messageAttachmentObjectKeyPolicy;
@@ -141,6 +147,7 @@ public class MessageApplicationService {
             ChannelGovernancePolicy channelGovernancePolicy,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
+            UserProfileRepository userProfileRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
             MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
@@ -159,6 +166,7 @@ public class MessageApplicationService {
                 channelGovernancePolicy,
                 messageRepository,
                 mentionRepository,
+                userProfileRepository,
                 messageRealtimePublisher,
                 channelMessagePluginRegistry,
                 messageAttachmentObjectKeyPolicy,
@@ -180,7 +188,7 @@ public class MessageApplicationService {
      */
     public ChannelMessageResult sendChannelMessage(SendChannelMessageCommand command) {
         validateSendCommand(command);
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember member = requireMembership(channel.id(), command.accountId());
             channelGovernancePolicy.requireCanSendMessage(channel, member, now());
@@ -195,10 +203,16 @@ public class MessageApplicationService {
             ), command.draft());
             ChannelMessage savedMessage = messageRepository.save(message);
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            persistMentions(savedMessage, recipientAccountIds, null);
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            List<Mention> mentions = persistMentions(savedMessage, recipientAccountIds, null);
+            PersistedMessage createdMessage = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    mentions
+            );
+            publishMessageCreatedAfterCommit(afterCommit, createdMessage);
+            return createdMessage;
         });
-        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
@@ -244,7 +258,7 @@ public class MessageApplicationService {
             forwardedText.append(command.comment().trim()).append("\n\n");
         }
         forwardedText.append("[Forwarded] ").append(sourceMessage.previewText() == null ? "" : sourceMessage.previewText());
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             ChannelMessage savedMessage = messageRepository.save(new ChannelMessage(
                     nextMessageId(),
                     serverIdentityProperties.id(),
@@ -265,13 +279,25 @@ public class MessageApplicationService {
                     1L
             ));
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(targetChannel.id());
-            persistMentions(savedMessage, recipientAccountIds, null);
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            List<Mention> mentions = persistMentions(savedMessage, recipientAccountIds, null);
+            PersistedMessage createdMessage = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    mentions
+            );
+            publishMessageCreatedAfterCommit(afterCommit, createdMessage);
+            return createdMessage;
         });
-        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
+    /**
+     * 编辑既有文本消息。
+     * 输入：编辑人、目标消息、期望版本和新的文本 / mentions。
+     * 输出：更新后的稳定消息结果。
+     * 副作用：会递增编辑版本并广播 `message.updated` 事件。
+     */
     public ChannelMessageResult editChannelMessage(EditChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.messageId(), "messageId");
@@ -284,7 +310,7 @@ public class MessageApplicationService {
         if (command.text() == null || command.text().isBlank()) {
             throw ProblemException.validationFailed("validation_failed", "text must not be blank");
         }
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             ChannelMessage existingMessage = requireMessage(command.messageId());
             Channel channel = requireChannel(existingMessage.channelId());
             requireMembership(channel.id(), command.accountId());
@@ -313,10 +339,16 @@ public class MessageApplicationService {
             );
             ChannelMessage savedMessage = messageRepository.update(updatedMessage);
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            persistMentions(savedMessage, recipientAccountIds, existingMessage.mentions());
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            List<Mention> mentions = persistMentions(savedMessage, recipientAccountIds, existingMessage.mentions());
+            PersistedMessage updatedResult = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    mentions
+            );
+            publishMessageUpdatedAfterCommit(afterCommit, updatedResult);
+            return updatedResult;
         });
-        messageRealtimePublisher.publishUpdate(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
@@ -343,7 +375,7 @@ public class MessageApplicationService {
      */
     public ChannelMessageResult sendSystemChannelMessage(SendSystemChannelMessageCommand command) {
         validateSystemSendCommand(command);
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             requireSystemChannel(channel);
             ChannelMessagePlugin plugin = channelMessagePluginRegistry.require(SYSTEM_MESSAGE_TYPE);
@@ -357,9 +389,15 @@ public class MessageApplicationService {
             ), new SystemChannelMessageDraft(command.body(), command.payload(), command.metadata()));
             ChannelMessage savedMessage = messageRepository.save(message);
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            PersistedMessage createdMessage = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    List.of()
+            );
+            publishMessageCreatedAfterCommit(afterCommit, createdMessage);
+            return createdMessage;
         });
-        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
@@ -371,7 +409,7 @@ public class MessageApplicationService {
      */
     public ChannelMessageResult recallChannelMessage(RecallChannelMessageCommand command) {
         validateRecallCommand(command);
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMembership(channel.id(), command.accountId());
             ChannelMessage existingMessage = requireMessage(command.messageId());
@@ -382,14 +420,27 @@ public class MessageApplicationService {
                     .orElse(null);
             channelGovernancePolicy.requireCanRecallMessage(channel, operator, existingMessage, senderMember);
             if (isRecalled(existingMessage)) {
-                return new PersistedMessage(existingMessage, channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+                PersistedMessage recalledResult = new PersistedMessage(
+                        existingMessage,
+                        snapshotSender(existingMessage.senderId()),
+                        channelMemberRepository.findAccountIdsByChannelId(channel.id()),
+                        List.of()
+                );
+                publishMessageUpdatedAfterCommit(afterCommit, recalledResult);
+                return recalledResult;
             }
             ChannelMessage recalledMessage = messageRepository.update(toRecalledMessage(existingMessage));
             appendRecallAudit(channel.id(), operator.accountId(), recalledMessage.messageId(), recalledMessage.senderId());
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            return new PersistedMessage(recalledMessage, recipientAccountIds);
+            PersistedMessage recalledResult = new PersistedMessage(
+                    recalledMessage,
+                    snapshotSender(recalledMessage.senderId()),
+                    recipientAccountIds,
+                    List.of()
+            );
+            publishMessageUpdatedAfterCommit(afterCommit, recalledResult);
+            return recalledResult;
         });
-        messageRealtimePublisher.publishUpdate(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
@@ -399,7 +450,7 @@ public class MessageApplicationService {
     public void deleteChannelMessage(DeleteChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.messageId(), "messageId");
-        PersistedMessage deletedMessage = transactionRunner.runInTransaction(() -> {
+        transactionRunner.runInTransaction(afterCommit -> {
             ChannelMessage existingMessage = requireMessage(command.messageId());
             Channel channel = requireChannel(existingMessage.channelId());
             ChannelMember operator = requireMembership(channel.id(), command.accountId());
@@ -407,11 +458,22 @@ public class MessageApplicationService {
             channelGovernancePolicy.requireCanRecallMessage(channel, operator, existingMessage, senderMember);
             messageRepository.delete(existingMessage.messageId());
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            return new PersistedMessage(toRecalledMessage(existingMessage), recipientAccountIds);
+            PersistedMessage deletedMessage = new PersistedMessage(
+                    toRecalledMessage(existingMessage),
+                    snapshotSender(existingMessage.senderId()),
+                    recipientAccountIds,
+                    List.of()
+            );
+            publishMessageUpdatedAfterCommit(afterCommit, deletedMessage);
         });
-        messageRealtimePublisher.publishUpdate(deletedMessage.message(), deletedMessage.recipientAccountIds());
     }
 
+    /**
+     * 置顶频道消息。
+     * 输入：操作人、频道、消息和可选 note。
+     * 输出：新生成的置顶结果。
+     * 约束：单频道置顶数量受上限控制。
+     */
     public ChannelPinResult pinChannelMessage(PinChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
@@ -419,7 +481,7 @@ public class MessageApplicationService {
         if (command.note() != null && command.note().trim().length() > 200) {
             throw ProblemException.validationFailed("note length must be less than or equal to 200");
         }
-        PinnedChannelMessage pinnedChannelMessage = transactionRunner.runInTransaction(() -> {
+        PinnedChannelMessage pinnedChannelMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMembership(channel.id(), command.accountId());
             channelGovernancePolicy.requireCanModeratePin(channel, operator);
@@ -433,33 +495,43 @@ public class MessageApplicationService {
             }
             ChannelPin pin = new ChannelPin(idGenerator.nextLongId(), channel.id(), message.messageId(), operator.accountId(), command.note() == null ? "" : command.note().trim(), now());
             channelPinRepository.save(pin);
-            return new PinnedChannelMessage(pin, channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            PinnedChannelMessage pinnedResult = new PinnedChannelMessage(pin, channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishMessagePinnedAfterCommit(afterCommit, pinnedResult);
+            return pinnedResult;
         });
-        messageRealtimePublisher.publishPin(pinnedChannelMessage.pin(), pinnedChannelMessage.recipientAccountIds());
         return toPinResult(pinnedChannelMessage.pin());
     }
 
+    /**
+     * 取消频道消息置顶。
+     * 副作用：会删除置顶记录并广播 `message.unpinned` 事件。
+     */
     public void unpinChannelMessage(UnpinChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
         requirePositive(command.messageId(), "messageId");
-        UnpinnedChannelMessage unpinnedChannelMessage = transactionRunner.runInTransaction(() -> {
+        transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMembership(channel.id(), command.accountId());
             channelGovernancePolicy.requireCanModeratePin(channel, operator);
             ChannelPin pin = channelPinRepository.findByChannelIdAndMessageId(channel.id(), command.messageId())
                     .orElseThrow(() -> ProblemException.notFound("channel pin does not exist"));
             channelPinRepository.delete(channel.id(), command.messageId());
-            return new UnpinnedChannelMessage(pin, operator.accountId(), now().toEpochMilli(), channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            UnpinnedChannelMessage unpinnedChannelMessage = new UnpinnedChannelMessage(
+                    pin,
+                    operator.accountId(),
+                    now().toEpochMilli(),
+                    channelMemberRepository.findAccountIdsByChannelId(channel.id())
+            );
+            publishMessageUnpinnedAfterCommit(afterCommit, unpinnedChannelMessage);
         });
-        messageRealtimePublisher.publishUnpin(
-                unpinnedChannelMessage.pin(),
-                unpinnedChannelMessage.unpinnedByAccountId(),
-                unpinnedChannelMessage.unpinnedAt(),
-                unpinnedChannelMessage.recipientAccountIds()
-        );
     }
 
+    /**
+     * 查询频道置顶列表。
+     * 输入：频道、分页游标与分页大小。
+     * 输出：按倒序返回的置顶结果集合。
+     */
     public List<ChannelPinResult> listChannelPins(ListChannelPinsQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
@@ -636,7 +708,7 @@ public class MessageApplicationService {
 
     private ChannelMessageResult sendHttpTextMessage(SendChannelMessageHttpCommand command) {
         String normalizedText = requiredString(command.data(), "text", "text must not be blank");
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember member = requireMembership(channel.id(), command.accountId());
             channelGovernancePolicy.requireCanSendMessage(channel, member, now());
@@ -660,10 +732,16 @@ public class MessageApplicationService {
                     1L
             ));
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            persistMentions(savedMessage, recipientAccountIds, null);
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            List<Mention> mentions = persistMentions(savedMessage, recipientAccountIds, null);
+            PersistedMessage createdMessage = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    mentions
+            );
+            publishMessageCreatedAfterCommit(afterCommit, createdMessage);
+            return createdMessage;
         });
-        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
     }
 
@@ -707,7 +785,7 @@ public class MessageApplicationService {
             SendChannelMessageHttpCommand command,
             team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft draft
     ) {
-        PersistedMessage persistedMessage = transactionRunner.runInTransaction(() -> {
+        PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember member = requireMembership(channel.id(), command.accountId());
             channelGovernancePolicy.requireCanSendMessage(channel, member, now());
@@ -722,11 +800,55 @@ public class MessageApplicationService {
             ), draft);
             ChannelMessage savedMessage = messageRepository.save(withMentions(message, command.mentions()));
             List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            persistMentions(savedMessage, recipientAccountIds, null);
-            return new PersistedMessage(savedMessage, recipientAccountIds);
+            List<Mention> mentions = persistMentions(savedMessage, recipientAccountIds, null);
+            PersistedMessage createdMessage = new PersistedMessage(
+                    savedMessage,
+                    snapshotSender(savedMessage.senderId()),
+                    recipientAccountIds,
+                    mentions
+            );
+            publishMessageCreatedAfterCommit(afterCommit, createdMessage);
+            return createdMessage;
         });
-        messageRealtimePublisher.publish(persistedMessage.message(), persistedMessage.recipientAccountIds());
         return toResult(persistedMessage.message());
+    }
+
+    private void publishMessageCreatedAfterCommit(AfterCommitExecutor afterCommit, PersistedMessage persistedMessage) {
+            afterCommit.execute(() -> {
+            messageRealtimePublisher.publish(
+                    persistedMessage.message(),
+                    persistedMessage.senderSnapshot(),
+                    persistedMessage.recipientAccountIds()
+            );
+            publishMentions(persistedMessage.mentions());
+        });
+    }
+
+    private void publishMessageUpdatedAfterCommit(AfterCommitExecutor afterCommit, PersistedMessage persistedMessage) {
+        afterCommit.execute(() -> {
+            messageRealtimePublisher.publishUpdate(
+                    persistedMessage.message(),
+                    persistedMessage.senderSnapshot(),
+                    persistedMessage.recipientAccountIds()
+            );
+            publishMentions(persistedMessage.mentions());
+        });
+    }
+
+    private void publishMessagePinnedAfterCommit(AfterCommitExecutor afterCommit, PinnedChannelMessage pinnedChannelMessage) {
+        afterCommit.execute(() -> messageRealtimePublisher.publishPin(
+                pinnedChannelMessage.pin(),
+                pinnedChannelMessage.recipientAccountIds()
+        ));
+    }
+
+    private void publishMessageUnpinnedAfterCommit(AfterCommitExecutor afterCommit, UnpinnedChannelMessage unpinnedChannelMessage) {
+        afterCommit.execute(() -> messageRealtimePublisher.publishUnpin(
+                unpinnedChannelMessage.pin(),
+                unpinnedChannelMessage.unpinnedByAccountId(),
+                unpinnedChannelMessage.unpinnedAt(),
+                unpinnedChannelMessage.recipientAccountIds()
+        ));
     }
 
     private ChannelMessage withMentions(ChannelMessage message, List<EditChannelMessageCommand.MentionTargetCommand> mentions) {
@@ -847,6 +969,12 @@ public class MessageApplicationService {
         return new ChannelPinResult(pin.pinId(), pin.channelId(), pin.messageId(), pin.pinnedByAccountId(), pin.pinnedAt(), pin.note());
     }
 
+    private MessageSenderSnapshot snapshotSender(long accountId) {
+        return userProfileRepository.findByAccountId(accountId)
+                .map(profile -> new MessageSenderSnapshot(profile.accountId(), profile.nickname(), profile.avatarUrl()))
+                .orElseGet(() -> new MessageSenderSnapshot(accountId, "", ""));
+    }
+
     private ChannelMessage toRecalledMessage(ChannelMessage message) {
         return new ChannelMessage(
                 message.messageId(),
@@ -908,10 +1036,16 @@ public class MessageApplicationService {
         return jsonProvider.toJson(normalizedMentions);
     }
 
-    private void persistMentions(ChannelMessage message, List<Long> recipientAccountIds, String previousMentionsJson) {
+    private List<Mention> persistMentions(ChannelMessage message, List<Long> recipientAccountIds, String previousMentionsJson) {
         List<Mention> mentions = buildMentions(message, recipientAccountIds, previousMentionsJson);
         for (Mention mention : mentions) {
             mentionRepository.save(mention);
+        }
+        return mentions;
+    }
+
+    private void publishMentions(List<Mention> mentions) {
+        for (Mention mention : mentions) {
             messageRealtimePublisher.publishMentionCreated(mention, List.of(mention.targetAccountId()));
         }
     }
@@ -1013,7 +1147,12 @@ public class MessageApplicationService {
         }
     }
 
-    private record PersistedMessage(ChannelMessage message, List<Long> recipientAccountIds) {
+    private record PersistedMessage(
+            ChannelMessage message,
+            MessageSenderSnapshot senderSnapshot,
+            List<Long> recipientAccountIds,
+            List<Mention> mentions
+    ) {
     }
 
     private record PinnedChannelMessage(ChannelPin pin, List<Long> recipientAccountIds) {

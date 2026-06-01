@@ -24,6 +24,9 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
         this.authAccountMapper = authAccountMapper;
     }
 
+    /**
+     * 按用户名查询鉴权账户记录。
+     */
     @Override
     public Optional<AuthAccountRecord> findByUsername(String username) {
         return execute(() -> {
@@ -34,17 +37,26 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
         }, "failed to query auth account by username");
     }
 
+    /**
+     * 按账户 ID 查询鉴权账户记录。
+     */
     @Override
     public Optional<AuthAccountRecord> findById(long accountId) {
         return execute(() -> Optional.ofNullable(authAccountMapper.selectById(accountId)).map(this::toRecord),
                 "failed to query auth account by id");
     }
 
+    /**
+     * 插入新的鉴权账户记录。
+     */
     @Override
     public void insert(AuthAccountRecord record) {
         executeVoid(() -> authAccountMapper.insert(toEntity(record)), "failed to insert auth account");
     }
 
+    /**
+     * 更新既有鉴权账户记录。
+     */
     @Override
     public void update(AuthAccountRecord record) {
         executeVoid(() -> authAccountMapper.updateById(toEntity(record)), "failed to update auth account");

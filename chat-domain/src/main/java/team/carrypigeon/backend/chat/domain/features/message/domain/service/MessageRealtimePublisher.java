@@ -16,18 +16,20 @@ public interface MessageRealtimePublisher {
      * 向指定账户实时分发消息。
      *
      * @param message 已持久化的业务消息
+     * @param senderSnapshot 发送者展示快照
      * @param recipientAccountIds 目标账户 ID 列表
      */
-    void publish(ChannelMessage message, Collection<Long> recipientAccountIds);
+    void publish(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds);
 
     /**
      * 向指定账户实时分发消息更新事件。
      *
      * @param message 已持久化的更新后业务消息
+     * @param senderSnapshot 发送者展示快照
      * @param recipientAccountIds 目标账户 ID 列表
      */
-    default void publishUpdate(ChannelMessage message, Collection<Long> recipientAccountIds) {
-        publish(message, recipientAccountIds);
+    default void publishUpdate(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds) {
+        publish(message, senderSnapshot, recipientAccountIds);
     }
 
     default void publishPin(ChannelPin pin, Collection<Long> recipientAccountIds) {

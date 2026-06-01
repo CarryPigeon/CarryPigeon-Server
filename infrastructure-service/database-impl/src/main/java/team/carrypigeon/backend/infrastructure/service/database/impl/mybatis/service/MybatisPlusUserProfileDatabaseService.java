@@ -23,6 +23,9 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         this.userProfileMapper = userProfileMapper;
     }
 
+    /**
+     * 按账户 ID 查询资料记录。
+     */
     @Override
     public Optional<UserProfileRecord> findByAccountId(long accountId) {
         return execute(
@@ -31,6 +34,10 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         );
     }
 
+    /**
+     * 查询全部用户资料记录。
+     * 输出：按账户 ID 升序返回稳定结果。
+     */
     @Override
     public List<UserProfileRecord> findAll() {
         return execute(
@@ -42,6 +49,9 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         );
     }
 
+    /**
+     * 按账户游标倒序拉取资料记录。
+     */
     @Override
     public List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit) {
         return execute(
@@ -55,6 +65,9 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         );
     }
 
+    /**
+     * 按昵称或简介关键字搜索资料记录。
+     */
     @Override
     public List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
         String normalizedKeyword = keyword == null ? "" : keyword.trim();
@@ -72,11 +85,18 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
         );
     }
 
+    /**
+     * 插入新的用户资料记录。
+     */
     @Override
     public void insert(UserProfileRecord record) {
         executeVoid(() -> userProfileMapper.insert(toEntity(record)), "failed to insert user profile");
     }
 
+    /**
+     * 更新既有用户资料记录。
+     * 约束：若没有任何记录被更新，视为异常而不是静默成功。
+     */
     @Override
     public void update(UserProfileRecord record) {
         executeVoid(() -> {

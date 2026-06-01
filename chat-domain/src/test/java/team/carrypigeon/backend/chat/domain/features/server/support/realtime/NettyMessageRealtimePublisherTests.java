@@ -18,9 +18,8 @@ import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
@@ -64,8 +63,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 () -> 9001L,
-                new MessageAttachmentPayloadResolver(objectProvider(storageService), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(storageService), jsonProvider)
         );
 
         publisher.publish(new ChannelMessage(
@@ -87,7 +85,7 @@ class NettyMessageRealtimePublisherTests {
                 null,
                 "sent",
                 Instant.parse("2026-04-22T00:00:00Z")
-        ), List.of(1001L));
+        ), senderSnapshot(1002L), List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -113,8 +111,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 () -> 9001L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publish(new ChannelMessage(
@@ -131,7 +128,7 @@ class NettyMessageRealtimePublisherTests {
                 null,
                 "sent",
                 Instant.parse("2026-04-22T00:00:00Z")
-        ), List.of(1001L));
+        ), senderSnapshot(1001L), List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -155,8 +152,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 () -> 9001L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publishUpdate(new ChannelMessage(
@@ -173,7 +169,7 @@ class NettyMessageRealtimePublisherTests {
                 null,
                 "recalled",
                 Instant.parse("2026-04-22T00:00:00Z")
-        ), List.of(1001L));
+        ), senderSnapshot(1001L), List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -195,8 +191,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
                 () -> 9002L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publishUpdate(new ChannelMessage(
@@ -217,7 +212,7 @@ class NettyMessageRealtimePublisherTests {
                 Instant.parse("2026-04-22T00:00:00Z"),
                 Instant.parse("2026-04-22T00:09:00Z"),
                 2L
-        ), List.of(1001L));
+        ), senderSnapshot(1001L), List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -242,8 +237,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
                 () -> 9003L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publishPin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), List.of(1001L));
@@ -269,8 +263,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
                 () -> 9004L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publishUnpin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), 1001L, 1776816600000L, List.of(1001L));
@@ -296,8 +289,7 @@ class NettyMessageRealtimePublisherTests {
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:10:00Z"), ZoneOffset.UTC)),
                 () -> 9005L,
-                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
-                userProfileRepository()
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
         publisher.publishMentionCreated(new Mention(8001L, 9L, 5001L, 1001L, "user", 1002L, Instant.parse("2026-04-22T00:09:30Z"), false), List.of(1002L));
@@ -369,37 +361,7 @@ class NettyMessageRealtimePublisherTests {
         }
     }
 
-    private static UserProfileRepository userProfileRepository() {
-        return new UserProfileRepository() {
-            @Override
-            public Optional<UserProfile> findByAccountId(long accountId) {
-                return Optional.of(new UserProfile(accountId, "carry-user", "avatars/u/1001.png", "", Instant.parse("2026-04-20T12:00:00Z"), Instant.parse("2026-04-20T12:00:00Z")));
-            }
-
-            @Override
-            public java.util.List<UserProfile> findAll() {
-                return java.util.List.of();
-            }
-
-            @Override
-            public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-                return java.util.List.of();
-            }
-
-            @Override
-            public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-                return java.util.List.of();
-            }
-
-            @Override
-            public UserProfile save(UserProfile userProfile) {
-                return userProfile;
-            }
-
-            @Override
-            public UserProfile update(UserProfile userProfile) {
-                return userProfile;
-            }
-        };
+    private static MessageSenderSnapshot senderSnapshot(long accountId) {
+        return new MessageSenderSnapshot(accountId, "carry-user", "avatars/u/" + accountId + ".png");
     }
 }

@@ -21,6 +21,12 @@ public class MinioStorageHealthService implements StorageHealthService {
         this.properties = properties;
     }
 
+    /**
+     * 执行对象存储健康检查。
+     * 输出：返回 bucket 可访问性以及诊断消息。
+     *
+     * @return 对象存储健康检查结果
+     */
     @Override
     public StorageHealth check() {
         try {

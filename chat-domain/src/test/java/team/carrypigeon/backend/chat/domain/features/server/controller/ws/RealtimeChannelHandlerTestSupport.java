@@ -29,12 +29,14 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.ChannelMessageRealtimeInboundHandler;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
@@ -43,6 +45,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthToken
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -64,19 +68,19 @@ final class RealtimeChannelHandlerTestSupport {
     }
 
     static JsonProvider jsonProvider() {
-        ObjectMapper objectMapper = new ObjectMapper();
+        ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         return new JsonProvider(objectMapper);
     }
 
-    static RealtimeInboundMessageDispatcher dispatcher() {
-        return new RealtimeInboundMessageDispatcher(List.of());
+    static RealtimeInboundMessageDispatcher dispatcher(JsonProvider jsonProvider) {
+        return new RealtimeInboundMessageDispatcher(List.of(new ChannelMessageRealtimeInboundHandler(jsonProvider)));
     }
 
     static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
         Supplier<MessageApplicationService> supplier = () -> service;
         JsonProvider jsonProvider = jsonProvider();
-        RealtimeInboundMessageDispatcher dispatcher = dispatcher();
+        RealtimeInboundMessageDispatcher dispatcher = dispatcher(jsonProvider);
         return new EmbeddedChannel(new RealtimeChannelHandler(
                 jsonProvider,
                 () -> 9001L,
@@ -219,9 +223,14 @@ final class RealtimeChannelHandlerTestSupport {
                     }
                 },
                 mentionRepository(),
+                userProfileRepository(),
                 new MessageRealtimePublisher() {
                     @Override
-                    public void publish(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+                    public void publish(
+                            ChannelMessage message,
+                            MessageSenderSnapshot senderSnapshot,
+                            java.util.Collection<Long> recipientAccountIds
+                    ) {
                         String payload = jsonProvider().toJson(new RealtimeServerMessage(
                                 "channel_message",
                                 null,
@@ -234,8 +243,12 @@ final class RealtimeChannelHandlerTestSupport {
                     }
 
                     @Override
-                    public void publishUpdate(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
-                        publish(message, recipientAccountIds);
+                    public void publishUpdate(
+                            ChannelMessage message,
+                            MessageSenderSnapshot senderSnapshot,
+                            java.util.Collection<Long> recipientAccountIds
+                    ) {
+                        publish(message, senderSnapshot, recipientAccountIds);
                     }
                 },
                 pluginRegistry,
@@ -372,7 +385,8 @@ final class RealtimeChannelHandlerTestSupport {
                     }
                 },
                 mentionRepository(),
-                (message, recipientAccountIds) -> {
+                userProfileRepository(),
+                (message, senderSnapshot, recipientAccountIds) -> {
                 },
                 new ChannelMessagePluginRegistry(List.of(
                         registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
@@ -542,9 +556,14 @@ final class RealtimeChannelHandlerTestSupport {
                     }
                 },
                 mentionRepository(),
+                userProfileRepository(),
                 new MessageRealtimePublisher() {
                     @Override
-                    public void publish(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+                    public void publish(
+                            ChannelMessage message,
+                            MessageSenderSnapshot senderSnapshot,
+                            java.util.Collection<Long> recipientAccountIds
+                    ) {
                         String payload = jsonProvider().toJson(new RealtimeServerMessage(
                                 "channel_message",
                                 null,
@@ -557,8 +576,12 @@ final class RealtimeChannelHandlerTestSupport {
                     }
 
                     @Override
-                    public void publishUpdate(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
-                        publish(message, recipientAccountIds);
+                    public void publishUpdate(
+                            ChannelMessage message,
+                            MessageSenderSnapshot senderSnapshot,
+                            java.util.Collection<Long> recipientAccountIds
+                    ) {
+                        publish(message, senderSnapshot, recipientAccountIds);
                     }
                 },
                 pluginRegistry,
@@ -641,6 +664,9 @@ final class RealtimeChannelHandlerTestSupport {
 
             @Override
             public AuthTokenClaims parseAccessToken(String accessToken) {
+                if ("access-token-2".equals(accessToken)) {
+                    return new AuthTokenClaims("1002", "carry-ops@example.com", "access", 0L, Instant.parse("2026-04-22T00:30:00Z"));
+                }
                 return new AuthTokenClaims("1001", "carry-user@example.com", "access", 0L, Instant.parse("2026-04-22T00:30:00Z"));
             }
 
@@ -695,6 +721,47 @@ final class RealtimeChannelHandlerTestSupport {
             @Override
             public ObjectStorageService getObject() {
                 return objectStorageService;
+            }
+        };
+    }
+
+    private static UserProfileRepository userProfileRepository() {
+        return new UserProfileRepository() {
+            @Override
+            public Optional<UserProfile> findByAccountId(long accountId) {
+                return Optional.of(new UserProfile(
+                        accountId,
+                        "carry-user-" + accountId,
+                        "avatars/u/" + accountId + ".png",
+                        "",
+                        Instant.parse("2026-04-20T12:00:00Z"),
+                        Instant.parse("2026-04-20T12:00:00Z")
+                ));
+            }
+
+            @Override
+            public java.util.List<UserProfile> findAll() {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+                return java.util.List.of();
+            }
+
+            @Override
+            public UserProfile save(UserProfile userProfile) {
+                return userProfile;
+            }
+
+            @Override
+            public UserProfile update(UserProfile userProfile) {
+                return userProfile;
             }
         };
     }

@@ -47,4 +47,26 @@ class RealtimeChannelHandlerLifecycleTests {
         assertTrue(frame.text().contains("\"uid\":\"1001\""));
         assertEquals(1, registry.getChannels(1001L).size());
     }
+
+    @Test
+    @DisplayName("reauth frame moves channel registration to new account")
+    void channelRead_reauthFrame_movesChannelRegistrationToNewAccount() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"auth","id":"1","data":{"access_token":"access-token","device_id":"device-1"}}
+                """));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"reauth","id":"2","data":{"access_token":"access-token-2","device_id":"device-1"}}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertTrue(frame.text().contains("\"type\":\"reauth.ok\""));
+        assertEquals(0, registry.getChannels(1001L).size());
+        assertEquals(1, registry.getChannels(1002L).size());
+    }
 }

@@ -69,6 +69,13 @@ public class MentionController {
         return new MentionListResponse(items, nextCursor, hasMore);
     }
 
+    /**
+     * 将当前用户的一条提及标记为已读。
+     *
+     * @param mentionId 提及 ID
+     * @param request 当前 HTTP 请求
+     * @return HTTP 204
+     */
     @PutMapping("/{mentionId}/read")
     @Operation(summary = "标记单条提及已读", description = "将当前用户的一条提及标记为已读。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已标记为已读")})

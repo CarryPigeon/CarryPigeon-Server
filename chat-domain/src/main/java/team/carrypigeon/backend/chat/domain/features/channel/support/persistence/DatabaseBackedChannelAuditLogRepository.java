@@ -21,6 +21,13 @@ public class DatabaseBackedChannelAuditLogRepository implements ChannelAuditLogR
         this.channelAuditLogDatabaseService = channelAuditLogDatabaseService;
     }
 
+    /**
+     * 追加一条频道审计日志。
+     * 输入：领域层构造完成的审计事件。
+     * 副作用：向数据库追加一条只增不改的审计记录。
+     *
+     * @param channelAuditLog 频道审计事件
+     */
     @Override
     public void append(ChannelAuditLog channelAuditLog) {
         channelAuditLogDatabaseService.insert(new ChannelAuditLogWriteRecord(

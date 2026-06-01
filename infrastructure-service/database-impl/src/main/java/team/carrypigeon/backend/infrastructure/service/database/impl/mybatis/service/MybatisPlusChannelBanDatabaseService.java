@@ -22,6 +22,9 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         this.channelBanMapper = channelBanMapper;
     }
 
+    /**
+     * 查询频道对目标账户的封禁记录。
+     */
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
         return execute(
@@ -31,6 +34,9 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         );
     }
 
+    /**
+     * 查询频道下全部封禁记录。
+     */
     @Override
     public List<ChannelBanRecord> findByChannelId(long channelId) {
         return execute(
@@ -41,11 +47,17 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         );
     }
 
+    /**
+     * 插入新的封禁记录。
+     */
     @Override
     public void insert(ChannelBanRecord record) {
         executeVoid(() -> channelBanMapper.insert(toEntity(record)), "failed to insert channel ban");
     }
 
+    /**
+     * 更新既有封禁记录。
+     */
     @Override
     public void update(ChannelBanRecord record) {
         executeVoid(() -> channelBanMapper.update(toEntity(record)), "failed to update channel ban");

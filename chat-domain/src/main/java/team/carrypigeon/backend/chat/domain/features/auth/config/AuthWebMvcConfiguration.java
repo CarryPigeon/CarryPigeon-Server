@@ -23,6 +23,13 @@ public class AuthWebMvcConfiguration implements WebMvcConfigurer {
         this.authRequestContext = authRequestContext;
     }
 
+    /**
+     * 注册 access token 校验拦截器。
+     * 输入：Spring MVC 拦截器注册表。
+     * 副作用：为 `/api/**` 受保护接口挂载鉴权拦截器，并显式放行匿名入口。
+     *
+     * @param registry Spring MVC 拦截器注册表
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new AuthAccessTokenInterceptor(authTokenService, authRequestContext))

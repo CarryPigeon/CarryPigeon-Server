@@ -441,6 +441,9 @@
 { "reason": "hi" }
 ```
 
+约定：
+- 该接口只创建“入群申请”语义记录，不复用为“频道邀请接受”入口。
+
 ### 6.11 获取入群申请列表（admin/owner）
 
 - 方法：`GET /api/channels/{cid}/applications`
@@ -461,6 +464,9 @@
 }
 ```
 
+约定：
+- 列表仅返回真实入群申请，不包含 owner/admin 主动发起的频道邀请记录。
+
 ### 6.12 审批入群申请（admin/owner）
 
 - 方法：`POST /api/channels/{cid}/applications/{application_id}/decisions`
@@ -472,6 +478,7 @@
 
 约定（建议）：
 - `decision` 枚举：`approve` / `reject`
+- 该接口只接受真实申请记录，不能对频道邀请记录做审批。
 - 重复审批需返回可识别错误（例如 `conflict` + `error.reason="conflict"` 或更细 `application_already_processed`）
 
 ### 6.13 禁言/解除禁言（admin/owner）

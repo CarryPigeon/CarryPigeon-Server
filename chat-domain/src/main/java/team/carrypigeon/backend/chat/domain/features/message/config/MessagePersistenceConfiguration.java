@@ -52,7 +52,7 @@ public class MessagePersistenceConfiguration {
     @Bean
     @ConditionalOnMissingBean(MessageRealtimePublisher.class)
     public MessageRealtimePublisher noopMessageRealtimePublisher() {
-        return (message, recipientAccountIds) -> {
+        return (message, senderSnapshot, recipientAccountIds) -> {
         };
     }
 

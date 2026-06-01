@@ -23,11 +23,25 @@ public class SystemChannelMessagePlugin implements ChannelMessagePlugin {
         this.jsonProvider = jsonProvider;
     }
 
+    /**
+     * 返回当前插件负责的消息类型。
+     *
+     * @return `system` 消息类型标识
+     */
     @Override
     public String supportedType() {
         return "system";
     }
 
+    /**
+     * 校验 system 草稿并构造系统消息。
+     * 输入：消息构建上下文与 system 草稿。
+     * 输出：可持久化的系统消息领域对象。
+     *
+     * @param context 消息构建上下文
+     * @param draft 入站消息草稿
+     * @return 系统消息领域对象
+     */
     @Override
     public ChannelMessage createMessage(ChannelMessageBuildContext context, ChannelMessageDraft draft) {
         if (!(draft instanceof SystemChannelMessageDraft systemDraft)) {

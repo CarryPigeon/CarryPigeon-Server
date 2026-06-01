@@ -18,11 +18,17 @@ public class StorageInitializationCheck implements InitializationCheck {
         this.storageHealthService = storageHealthService;
     }
 
+    /**
+     * 返回启动检查项名称。
+     */
     @Override
     public String name() {
         return "storage";
     }
 
+    /**
+     * 执行对象存储健康检查并转换为统一启动检查结果。
+     */
     @Override
     public InitializationCheckResult check() {
         StorageHealth health = storageHealthService.check();

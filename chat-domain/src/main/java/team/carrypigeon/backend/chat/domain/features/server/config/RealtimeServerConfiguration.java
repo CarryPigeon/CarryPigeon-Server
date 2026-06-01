@@ -14,7 +14,6 @@ import team.carrypigeon.backend.chat.domain.features.server.support.realtime.Net
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -53,16 +52,14 @@ public class RealtimeServerConfiguration {
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
             IdGenerator idGenerator,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
-            UserProfileRepository userProfileRepository
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
     ) {
         return new NettyMessageRealtimePublisher(
                 realtimeSessionRegistry,
                 jsonProvider,
                 timeProvider,
                 idGenerator,
-                messageAttachmentPayloadResolver,
-                userProfileRepository
+                messageAttachmentPayloadResolver
         );
     }
 

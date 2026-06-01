@@ -17,18 +17,30 @@ public class JsonProvider {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * 使用项目统一 ObjectMapper 序列化对象。
+     */
     public String toJson(Object value) {
         return Jsons.toJson(objectMapper, value);
     }
 
+    /**
+     * 按目标类型反序列化 JSON。
+     */
     public <T> T fromJson(String json, Class<T> type) {
         return Jsons.fromJson(objectMapper, json, type);
     }
 
+    /**
+     * 按泛型类型引用反序列化 JSON。
+     */
     public <T> T fromJson(String json, TypeReference<T> type) {
         return Jsons.fromJson(objectMapper, json, type);
     }
 
+    /**
+     * 把 JSON 文本解析为树模型。
+     */
     public JsonNode readTree(String json) {
         return Jsons.readTree(objectMapper, json);
     }

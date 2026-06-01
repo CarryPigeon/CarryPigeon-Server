@@ -58,6 +58,13 @@ public class ChannelApplicationController {
         )));
     }
 
+    /**
+     * 查询指定频道的入群申请列表。
+     *
+     * @param channelId 目标频道 ID
+     * @param servletRequest 当前 HTTP 请求
+     * @return 入群申请列表响应
+     */
     @GetMapping("/{channelId}/applications")
     @Operation(summary = "获取入群申请列表", description = "按频道读取入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回申请列表")})

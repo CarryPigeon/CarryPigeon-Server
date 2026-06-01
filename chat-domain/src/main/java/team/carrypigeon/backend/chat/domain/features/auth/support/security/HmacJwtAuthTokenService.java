@@ -38,16 +38,29 @@ public class HmacJwtAuthTokenService implements AuthTokenService {
         this.jsonProvider = jsonProvider;
     }
 
+    /**
+     * 签发 access token。
+     * 输入：当前账户和绝对过期时间。
+     * 输出：符合当前项目最小 JWT 约束的 access token 字符串。
+     */
     @Override
     public String issueAccessToken(AuthAccount account, Instant expiresAt) {
         return issueToken(account, 0L, ACCESS_TOKEN_TYPE, expiresAt);
     }
 
+    /**
+     * 签发 refresh token。
+     * 输入：当前账户、refresh session ID 和绝对过期时间。
+     */
     @Override
     public String issueRefreshToken(AuthAccount account, long refreshSessionId, Instant expiresAt) {
         return issueToken(account, refreshSessionId, REFRESH_TOKEN_TYPE, expiresAt);
     }
 
+    /**
+     * 解析并校验 access token。
+     * 失败：类型不匹配、签名错误或过期时抛出统一业务异常。
+     */
     @Override
     public AuthTokenClaims parseAccessToken(String accessToken) {
         AuthTokenClaims claims = parseToken(accessToken);
@@ -57,6 +70,9 @@ public class HmacJwtAuthTokenService implements AuthTokenService {
         return claims;
     }
 
+    /**
+     * 解析并校验 refresh token。
+     */
     @Override
     public AuthTokenClaims parseRefreshToken(String refreshToken) {
         AuthTokenClaims claims = parseToken(refreshToken);

@@ -59,6 +59,12 @@ public class ChannelReadStateController {
         return new ChannelReadStateResponse(result.cid(), result.uid(), result.lastReadMid(), result.lastReadTime());
     }
 
+    /**
+     * 查询当前用户的频道未读聚合。
+     *
+     * @param servletRequest 当前 HTTP 请求
+     * @return 未读列表响应
+     */
     @GetMapping("/unreads")
     @Operation(summary = "获取未读频道列表", description = "返回当前用户的频道未读聚合。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回未读列表")})

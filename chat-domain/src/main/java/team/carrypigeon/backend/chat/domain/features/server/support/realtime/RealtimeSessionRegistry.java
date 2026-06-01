@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
 import io.netty.channel.Channel;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -14,10 +15,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RealtimeSessionRegistry {
 
-    private static final int MAX_EVENTS = 200;
+    private static final int MAX_EVENTS_PER_ACCOUNT = 1000;
 
     private final ConcurrentHashMap<Long, Set<Channel>> channelsByAccountId = new ConcurrentHashMap<>();
-    private final List<StoredRealtimeEvent> eventLog = Collections.synchronizedList(new ArrayList<>());
+    private final ConcurrentHashMap<Long, List<StoredRealtimeEvent>> eventLogsByAccountId = new ConcurrentHashMap<>();
 
     /**
      * 注册账户实时通道。
@@ -56,18 +57,46 @@ public class RealtimeSessionRegistry {
         return Collections.unmodifiableSet(channelsByAccountId.getOrDefault(accountId, Set.of()));
     }
 
+    /**
+     * 追加一条可用于断线续传的实时事件。
+     * 输入：已完成序列化边界控制的事件快照。
+     * 副作用：写入内存事件日志；超过窗口上限时丢弃最旧事件。
+     *
+     * @param event 实时事件快照
+     */
     public void appendEvent(StoredRealtimeEvent event) {
-        eventLog.add(event);
-        if (eventLog.size() > MAX_EVENTS) {
-            eventLog.removeFirst();
+        StoredRealtimeEvent storedEvent = event.withRecipients();
+        for (Long recipientAccountId : storedEvent.recipientAccountIds()) {
+            List<StoredRealtimeEvent> eventLog = eventLogsByAccountId.computeIfAbsent(
+                    recipientAccountId,
+                    ignored -> Collections.synchronizedList(new ArrayList<>())
+            );
+            synchronized (eventLog) {
+                eventLog.add(storedEvent);
+                if (eventLog.size() > MAX_EVENTS_PER_ACCOUNT) {
+                    eventLog.removeFirst();
+                }
+            }
         }
     }
 
-    public List<StoredRealtimeEvent> eventsAfter(String lastEventId) {
+    /**
+     * 查询指定事件之后仍保留在窗口内的事件列表。
+     * 输入：客户端最后已确认的事件 ID。
+     * 输出：找到锚点时返回后续事件；若锚点已过期则返回 null 表示无法续传。
+     *
+     * @param lastEventId 客户端最后已确认的事件 ID
+     * @return 后续事件列表；为空表示没有新事件；null 表示事件过旧
+     */
+    public List<StoredRealtimeEvent> eventsAfter(long accountId, String lastEventId) {
+        if (lastEventId == null || lastEventId.isBlank()) {
+            return List.of();
+        }
+        List<StoredRealtimeEvent> eventLog = eventLogsByAccountId.get(accountId);
+        if (eventLog == null) {
+            return null;
+        }
         synchronized (eventLog) {
-            if (lastEventId == null || lastEventId.isBlank()) {
-                return List.of();
-            }
             int index = -1;
             for (int cursor = 0; cursor < eventLog.size(); cursor++) {
                 if (eventLog.get(cursor).eventId().equals(lastEventId)) {
@@ -82,6 +111,36 @@ public class RealtimeSessionRegistry {
         }
     }
 
-    public record StoredRealtimeEvent(String eventId, String eventType, long serverTime, Object payload) {
+    public record StoredRealtimeEvent(
+            String eventId,
+            String eventType,
+            long serverTime,
+            Object payload,
+            Set<Long> recipientAccountIds
+    ) {
+
+        public StoredRealtimeEvent {
+            recipientAccountIds = recipientAccountIds == null ? Set.of() : Set.copyOf(recipientAccountIds);
+        }
+
+        public StoredRealtimeEvent withRecipients() {
+            return new StoredRealtimeEvent(eventId, eventType, serverTime, payload, recipientAccountIds);
+        }
+    }
+
+    public static StoredRealtimeEvent event(
+            String eventId,
+            String eventType,
+            long serverTime,
+            Object payload,
+            Collection<Long> recipientAccountIds
+    ) {
+        return new StoredRealtimeEvent(
+                eventId,
+                eventType,
+                serverTime,
+                payload,
+                recipientAccountIds == null ? Set.of() : Set.copyOf(recipientAccountIds)
+        );
     }
 }

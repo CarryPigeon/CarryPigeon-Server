@@ -155,6 +155,24 @@ class ChannelApplicationServiceTests {
         assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1001L));
     }
 
+    /**
+     * 验证事务失败时，已登记的频道变更广播不会提前发出。
+     */
+    @Test
+    @DisplayName("create private channel rollback skips realtime publish")
+    void createPrivateChannel_rollback_skipsRealtimePublish() {
+        TestContext context = new TestContext();
+        ChannelApplicationService service = context.createService(new RollbackingTransactionRunner());
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.createPrivateChannel(new CreatePrivateChannelCommand(1001L, "engineering"))
+        );
+
+        assertEquals("transaction rolled back", exception.getMessage());
+        assertEquals(0, context.channelRealtimePublisher.channelsChangedAccountIds.size());
+    }
+
     @Test
     @DisplayName("update channel profile owner updates channel name and brief")
     void updateChannelProfile_owner_updatesChannelNameAndBrief() {
@@ -253,6 +271,8 @@ class ChannelApplicationServiceTests {
         assertEquals(1002L, result.inviteeAccountId());
         assertEquals("PENDING", result.status());
         assertEquals("PENDING", context.channelInviteRepository.savedInvite.status().name());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
     }
 
     @Test
@@ -268,6 +288,8 @@ class ChannelApplicationServiceTests {
         assertEquals(1002L, result.accountId());
         assertEquals("PENDING", result.status());
         assertEquals(1002L, context.channelInviteRepository.savedInvite.inviteeAccountId());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
     }
 
     @Test
@@ -295,6 +317,28 @@ class ChannelApplicationServiceTests {
     }
 
     @Test
+    @DisplayName("list channel applications ignores direct invite records")
+    void listChannelApplications_directInvite_returnsEmptyList() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                1001L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME,
+                null
+        );
+        ChannelApplicationService service = context.createService();
+
+        List<ChannelApplicationResult> result = service.listChannelApplications(new ListChannelApplicationsQuery(1001L, 9L));
+
+        assertEquals(0, result.size());
+    }
+
+    @Test
     @DisplayName("decide channel application approve creates membership and updates status")
     void decideChannelApplication_approve_createsMembershipAndUpdatesStatus() {
         TestContext context = new TestContext();
@@ -316,6 +360,34 @@ class ChannelApplicationServiceTests {
         assertEquals("ACCEPTED", result.status());
         assertEquals(true, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+    }
+
+    @Test
+    @DisplayName("decide channel application direct invite throws not found problem")
+    void decideChannelApplication_directInvite_throwsNotFoundProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                1001L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME,
+                null
+        );
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.decideChannelApplication(new DecideChannelApplicationCommand(1001L, 9L, 3001L, "approve"))
+        );
+
+        assertEquals("channel application does not exist", exception.getMessage());
     }
 
     /**
@@ -363,6 +435,73 @@ class ChannelApplicationServiceTests {
         ChannelMember acceptedMember = context.channelMemberRepository.findByChannelIdAndAccountId(9L, 1002L).orElseThrow();
         assertEquals(ChannelMemberRole.MEMBER, acceptedMember.role());
         assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
+        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
+        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+    }
+
+    @Test
+    @DisplayName("accept channel invite application record throws not found problem")
+    void acceptChannelInvite_applicationRecord_throwsNotFoundProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                0L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME,
+                null
+        );
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.acceptChannelInvite(new AcceptChannelInviteCommand(1002L, 9L))
+        );
+
+        assertEquals("channel invite does not exist", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("create channel application rollback skips realtime publish")
+    void createChannelApplication_rollback_skipsRealtimePublish() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        ChannelApplicationService service = context.createService(new RollbackingTransactionRunner());
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> service.createChannelApplication(new CreateChannelApplicationCommand(1002L, 9L, "hi"))
+        );
+
+        assertEquals("transaction rolled back", exception.getMessage());
+        assertEquals(0, context.channelRealtimePublisher.channelChangedScopes.size());
+        assertEquals(0, context.channelRealtimePublisher.channelsChangedAccountIds.size());
+    }
+
+    @Test
+    @DisplayName("create channel application existing invite rewrites record as application")
+    void createChannelApplication_existingInvite_rewritesRecordAsApplication() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                1001L,
+                ChannelInviteStatus.DECLINED,
+                BASE_TIME.minusSeconds(300),
+                BASE_TIME.minusSeconds(60)
+        );
+        ChannelApplicationService service = context.createService();
+
+        ChannelApplicationResult result = service.createChannelApplication(new CreateChannelApplicationCommand(1002L, 9L, "retry"));
+
+        assertEquals(3001L, result.applicationId());
+        assertEquals(0L, context.channelInviteRepository.updatedInvite.inviterAccountId());
+        assertEquals(ChannelInviteStatus.PENDING, context.channelInviteRepository.updatedInvite.status());
     }
 
     /**
@@ -619,6 +758,10 @@ class ChannelApplicationServiceTests {
         }
 
         private ChannelApplicationService createService() {
+            return createService(new NoopTransactionRunner());
+        }
+
+        private ChannelApplicationService createService(TransactionRunner transactionRunner) {
             return new ChannelApplicationService(
                     channelRepository,
                     channelMemberRepository,
@@ -632,7 +775,7 @@ class ChannelApplicationServiceTests {
                     channelRealtimePublisher,
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                    new NoopTransactionRunner()
+                    transactionRunner
             );
         }
     }
@@ -956,6 +1099,21 @@ class ChannelApplicationServiceTests {
         @Override
         public void runInTransaction(Runnable action) {
             action.run();
+        }
+    }
+
+    private static final class RollbackingTransactionRunner implements TransactionRunner {
+
+        @Override
+        public <T> T runInTransaction(java.util.function.Supplier<T> action) {
+            action.get();
+            throw new IllegalStateException("transaction rolled back");
+        }
+
+        @Override
+        public void runInTransaction(Runnable action) {
+            action.run();
+            throw new IllegalStateException("transaction rolled back");
         }
     }
 }

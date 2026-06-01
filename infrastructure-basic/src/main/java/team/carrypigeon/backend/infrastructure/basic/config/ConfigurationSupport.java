@@ -13,6 +13,14 @@ public final class ConfigurationSupport {
     private ConfigurationSupport() {
     }
 
+    /**
+     * 校验配置字符串值非空白。
+     * 输入：配置值与字段名。
+     * 失败语义：为空白时抛出统一的配置绑定基础设施异常。
+     *
+     * @param value 配置值
+     * @param fieldName 配置字段名
+     */
     public static void requireNonBlank(String value, String fieldName) {
         if (!StringUtils.hasText(value)) {
             throw new InfrastructureException(

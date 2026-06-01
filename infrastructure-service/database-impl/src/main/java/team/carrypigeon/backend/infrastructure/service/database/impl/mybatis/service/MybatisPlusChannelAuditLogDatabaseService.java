@@ -23,6 +23,14 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
         this.channelAuditLogMapper = channelAuditLogMapper;
     }
 
+    /**
+     * 追加一条频道审计日志记录。
+     * 输入：已完成业务校验的审计写入快照。
+     * 副作用：向审计日志表插入一条只增记录。
+     *
+     * @param record 审计日志写入快照
+     * @throws DatabaseServiceException 底层写入失败时抛出
+     */
     @Override
     public void insert(ChannelAuditLogWriteRecord record) {
         executeVoid(() -> channelAuditLogMapper.insert(toEntity(record)), "failed to insert channel audit log");

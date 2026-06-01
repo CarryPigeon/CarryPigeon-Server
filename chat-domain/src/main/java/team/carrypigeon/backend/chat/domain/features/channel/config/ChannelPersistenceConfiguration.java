@@ -89,11 +89,23 @@ public class ChannelPersistenceConfiguration {
         return new DatabaseBackedChannelAuditLogRepository(channelAuditLogDatabaseService);
     }
 
+    /**
+     * 创建频道已读状态仓储适配器。
+     *
+     * @param channelReadStateDatabaseService 频道已读状态数据库服务契约
+     * @return 面向领域的频道已读状态仓储实现
+     */
     @Bean
     public ChannelReadStateRepository channelReadStateRepository(ChannelReadStateDatabaseService channelReadStateDatabaseService) {
         return new DatabaseBackedChannelReadStateRepository(channelReadStateDatabaseService);
     }
 
+    /**
+     * 创建频道置顶消息仓储适配器。
+     *
+     * @param channelPinDatabaseService 频道置顶数据库服务契约
+     * @return 面向领域的频道置顶仓储实现
+     */
     @Bean
     public ChannelPinRepository channelPinRepository(ChannelPinDatabaseService channelPinDatabaseService) {
         return new DatabaseBackedChannelPinRepository(channelPinDatabaseService);

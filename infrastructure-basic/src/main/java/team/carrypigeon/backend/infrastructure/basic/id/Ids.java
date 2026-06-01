@@ -9,10 +9,23 @@ public final class Ids {
     private Ids() {
     }
 
+    /**
+     * 将数值 ID 转换为稳定字符串表示。
+     *
+     * @param id 数值 ID
+     * @return 十进制字符串形式的 ID
+     */
     public static String toString(long id) {
         return String.valueOf(id);
     }
 
+    /**
+     * 将十进制字符串解析为数值 ID。
+     *
+     * @param id 十进制字符串形式的 ID
+     * @return 数值 ID
+     * @throws IllegalArgumentException 输入为空白时抛出
+     */
     public static long parse(String id) {
         if (id == null || id.isBlank()) {
             throw new IllegalArgumentException("id must not be blank");

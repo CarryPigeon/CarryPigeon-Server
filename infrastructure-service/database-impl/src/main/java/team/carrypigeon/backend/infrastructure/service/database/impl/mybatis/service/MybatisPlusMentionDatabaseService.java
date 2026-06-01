@@ -10,6 +10,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 提及数据库服务。
+ * 职责：在 database-impl 中提供 mention 记录的最小写入、读取与已读更新能力。
+ * 边界：只负责数据库记录与实体映射，不承载提及解析规则。
  */
 public class MybatisPlusMentionDatabaseService implements MentionDatabaseService {
 
@@ -19,21 +21,35 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
         this.mentionMapper = mentionMapper;
     }
 
+    /**
+     * 插入一条提及记录。
+     */
     @Override
     public void insert(MentionRecord record) {
         executeVoid(() -> mentionMapper.insert(toEntity(record)), "failed to insert mention");
     }
 
+    /**
+     * 查询账户的提及记录流。
+     */
     @Override
     public List<MentionRecord> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
         return execute(() -> mentionMapper.listByAccountId(accountId, cursorMentionId, limit, unreadOnly, channelId).stream().map(this::toRecord).toList(), "failed to query mentions");
     }
 
+    /**
+     * 将单条提及标记为已读。
+     * 输出：返回是否实际更新了记录。
+     */
     @Override
     public boolean markAsRead(long accountId, long mentionId) {
         return execute(() -> mentionMapper.markAsRead(accountId, mentionId) > 0, "failed to mark mention as read");
     }
 
+    /**
+     * 批量标记提及为已读。
+     * 输出：返回实际更新数量。
+     */
     @Override
     public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
         return execute(() -> mentionMapper.markAllAsRead(accountId, beforeMentionId, channelId), "failed to batch mark mentions as read");

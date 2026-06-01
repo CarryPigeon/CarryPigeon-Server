@@ -40,6 +40,14 @@ public class NotificationPreferenceApplicationService {
         this.timeProvider = timeProvider;
     }
 
+    /**
+     * 查询账号级通知偏好聚合。
+     * 输入：账号标识。
+     * 输出：服务端默认偏好与频道级覆盖项。
+     *
+     * @param accountId 账号标识
+     * @return 通知偏好结果
+     */
     public NotificationPreferencesResult getNotificationPreferences(long accountId) {
         requirePositive(accountId, "accountId");
         NotificationPreferencesResult.ServerPreferenceResult server = notificationPreferenceRepository.findServerPreferenceByAccountId(accountId)
@@ -51,6 +59,13 @@ public class NotificationPreferenceApplicationService {
         return new NotificationPreferencesResult(server, channels);
     }
 
+    /**
+     * 更新服务端级通知偏好。
+     * 输入：账号标识、偏好模式与静音截止时间。
+     * 副作用：对目标账号执行 upsert。
+     *
+     * @param command 服务端通知偏好更新命令
+     */
     public void updateServerPreference(UpdateNotificationServerPreferenceCommand command) {
         requirePositive(command.accountId(), "accountId");
         String mode = normalizeMode(command.mode(), SERVER_MODES, "mode");
@@ -65,6 +80,14 @@ public class NotificationPreferenceApplicationService {
         ));
     }
 
+    /**
+     * 更新频道级通知偏好。
+     * 输入：账号标识、频道标识、偏好模式与静音截止时间。
+     * 约束：只有频道成员才能覆盖频道级通知偏好。
+     * 副作用：对目标账号和频道执行 upsert。
+     *
+     * @param command 频道通知偏好更新命令
+     */
     public void updateChannelPreference(UpdateNotificationChannelPreferenceCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");

@@ -79,6 +79,71 @@ class MessageApplicationServiceSendTests {
     }
 
     /**
+     * 验证 mention 持久化中途失败时，不会提前广播已创建的 mention 事件。
+     */
+    @Test
+    @DisplayName("send channel message mention persistence failure does not publish partial mention events")
+    void sendChannelMessage_mentionPersistenceFailure_doesNotPublishPartialMentionEvents() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
+        fixture.channelMemberRepository.save(new ChannelMember(1L, 1003L, ChannelMemberRole.MEMBER, MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2), null));
+        fixture.mentionRepository.failOnSaveCall = 2;
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> fixture.service.sendChannelMessageHttp(
+                        new SendChannelMessageHttpCommand(
+                                1001L,
+                                1L,
+                                "Core:Text",
+                                "1.0.0",
+                                java.util.Map.of("text", "hello @carry-user and @carry-ops"),
+                                null,
+                                List.of(
+                                        new EditChannelMessageCommand.MentionTargetCommand("user", 1002L),
+                                        new EditChannelMessageCommand.MentionTargetCommand("user", 1003L)
+                                ),
+                                null
+                        )
+                )
+        );
+
+        assertEquals("mention persistence failed", exception.getMessage());
+        assertEquals(0, fixture.publisher.createdMentions.size());
+    }
+
+    /**
+     * 验证事务回滚时，不会发送消息广播或 mention 广播。
+     */
+    @Test
+    @DisplayName("send channel message rollback skips message and mention publish")
+    void sendChannelMessage_rollback_skipsMessageAndMentionPublish() {
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(
+                null,
+                new MessageApplicationServiceTestSupport.RollbackingTransactionRunner()
+        );
+
+        IllegalStateException exception = assertThrows(
+                IllegalStateException.class,
+                () -> fixture.service.sendChannelMessageHttp(
+                        new SendChannelMessageHttpCommand(
+                                1001L,
+                                1L,
+                                "Core:Text",
+                                "1.0.0",
+                                java.util.Map.of("text", "hello @carry-user"),
+                                null,
+                                List.of(new EditChannelMessageCommand.MentionTargetCommand("user", 1002L)),
+                                null
+                        )
+                )
+        );
+
+        assertEquals("transaction rolled back", exception.getMessage());
+        assertEquals(0, fixture.publisher.publishedMessages.size());
+        assertEquals(0, fixture.publisher.createdMentions.size());
+    }
+
+    /**
      * 验证通用消息发送入口在 text 草稿场景下保持既有 text 消息语义。
      */
     @Test

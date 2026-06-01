@@ -33,11 +33,26 @@ public class FileChannelMessagePlugin implements ChannelMessagePlugin {
         this.messageAttachmentObjectKeyPolicy = messageAttachmentObjectKeyPolicy;
     }
 
+    /**
+     * 返回当前插件负责的消息类型。
+     *
+     * @return `file` 消息类型标识
+     */
     @Override
     public String supportedType() {
         return "file";
     }
 
+    /**
+     * 校验文件草稿并构造领域文件消息。
+     * 输入：消息构建上下文与文件草稿。
+     * 约束：对象键必须属于当前发送者允许的频道附件作用域。
+     * 输出：包含文件载荷与检索文本的领域消息对象。
+     *
+     * @param context 消息构建上下文
+     * @param draft 入站消息草稿
+     * @return 文件领域消息
+     */
     @Override
     public ChannelMessage createMessage(ChannelMessageBuildContext context, ChannelMessageDraft draft) {
         if (!(draft instanceof FileChannelMessageDraft fileDraft)) {

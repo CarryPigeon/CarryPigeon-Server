@@ -90,6 +90,12 @@ public class ChannelController {
         this(channelApplicationService, null, authRequestContext);
     }
 
+    /**
+     * 返回当前用户可见的频道列表。
+     *
+     * @param request 当前 HTTP 请求
+     * @return 频道摘要列表
+     */
     @GetMapping
     @Operation(summary = "获取频道列表", description = "返回当前登录用户当前可见的频道列表。")
     public ChannelListResponse listChannels(HttpServletRequest request) {

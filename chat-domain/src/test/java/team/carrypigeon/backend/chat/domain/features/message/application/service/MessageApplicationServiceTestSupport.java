@@ -30,6 +30,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
@@ -40,6 +41,8 @@ import team.carrypigeon.backend.chat.domain.features.message.support.plugin.Syst
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -78,6 +81,10 @@ final class MessageApplicationServiceTestSupport {
         final MessageApplicationService service;
 
         Fixture(ObjectStorageService storageService) {
+            this(storageService, new NoopTransactionRunner());
+        }
+
+        Fixture(ObjectStorageService storageService, TransactionRunner transactionRunner) {
             channelRepository.channels.put(1L, new Channel(1L, 1L, "public", "", "", "", "public", true, BASE_TIME, BASE_TIME));
             channelMemberRepository.save(new ChannelMember(1L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
             channelMemberRepository.save(new ChannelMember(1L, 1002L, ChannelMemberRole.MEMBER, BASE_TIME.plusSeconds(1), null));
@@ -95,6 +102,7 @@ final class MessageApplicationServiceTestSupport {
                     new ChannelGovernancePolicy(),
                     messageRepository,
                     mentionRepository,
+                    userProfileRepository(),
                     publisher,
                     channelMessagePluginRegistry(storageService, jsonProvider, objectKeyPolicy),
                     objectKeyPolicy,
@@ -103,7 +111,7 @@ final class MessageApplicationServiceTestSupport {
                     new FixedIdGenerator(),
                     jsonProvider,
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                    new NoopTransactionRunner(),
+                    transactionRunner,
                     objectStorageServiceProvider
             );
         }
@@ -345,9 +353,15 @@ final class MessageApplicationServiceTestSupport {
     static final class InMemoryMentionRepository implements MentionRepository {
 
         final List<Mention> mentions = new ArrayList<>();
+        Integer failOnSaveCall;
+        private int saveCalls;
 
         @Override
         public void save(Mention mention) {
+            saveCalls++;
+            if (failOnSaveCall != null && saveCalls == failOnSaveCall) {
+                throw new IllegalStateException("mention persistence failed");
+            }
             mentions.add(mention);
         }
 
@@ -484,14 +498,16 @@ final class MessageApplicationServiceTestSupport {
     static final class RecordingMessageRealtimePublisher implements MessageRealtimePublisher {
 
         final List<ChannelMessage> publishedMessages = new ArrayList<>();
+        final List<MessageSenderSnapshot> senderSnapshots = new ArrayList<>();
         final List<List<Long>> recipientAccountIds = new ArrayList<>();
         final List<ChannelPin> pinnedMessages = new ArrayList<>();
         final List<ChannelPin> unpinnedMessages = new ArrayList<>();
         final List<Mention> createdMentions = new ArrayList<>();
 
         @Override
-        public void publish(ChannelMessage message, java.util.Collection<Long> recipients) {
+        public void publish(ChannelMessage message, MessageSenderSnapshot senderSnapshot, java.util.Collection<Long> recipients) {
             publishedMessages.add(message);
+            senderSnapshots.add(senderSnapshot);
             recipientAccountIds.add(List.copyOf(recipients));
         }
 
@@ -532,6 +548,21 @@ final class MessageApplicationServiceTestSupport {
         }
     }
 
+    static final class RollbackingTransactionRunner implements TransactionRunner {
+
+        @Override
+        public <T> T runInTransaction(java.util.function.Supplier<T> action) {
+            action.get();
+            throw new IllegalStateException("transaction rolled back");
+        }
+
+        @Override
+        public void runInTransaction(Runnable action) {
+            action.run();
+            throw new IllegalStateException("transaction rolled back");
+        }
+    }
+
     static final class TestObjectStorageService implements ObjectStorageService {
 
         StorageObject putResult = StorageObject.metadata("channels/1/messages/file/accounts/1001/5001-demo.pdf", "application/pdf", 128L);
@@ -558,5 +589,46 @@ final class MessageApplicationServiceTestSupport {
         public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
             return presignedUrl;
         }
+    }
+
+    private static UserProfileRepository userProfileRepository() {
+        return new UserProfileRepository() {
+            @Override
+            public Optional<UserProfile> findByAccountId(long accountId) {
+                return Optional.of(new UserProfile(
+                        accountId,
+                        "carry-user-" + accountId,
+                        "avatars/u/" + accountId + ".png",
+                        "",
+                        BASE_TIME,
+                        BASE_TIME
+                ));
+            }
+
+            @Override
+            public List<UserProfile> findAll() {
+                return List.of();
+            }
+
+            @Override
+            public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
+                return List.of();
+            }
+
+            @Override
+            public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
+                return List.of();
+            }
+
+            @Override
+            public UserProfile save(UserProfile userProfile) {
+                return userProfile;
+            }
+
+            @Override
+            public UserProfile update(UserProfile userProfile) {
+                return userProfile;
+            }
+        };
     }
 }

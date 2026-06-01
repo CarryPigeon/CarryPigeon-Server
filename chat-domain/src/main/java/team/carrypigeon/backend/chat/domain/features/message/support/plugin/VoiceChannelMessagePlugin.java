@@ -32,11 +32,26 @@ public class VoiceChannelMessagePlugin implements ChannelMessagePlugin {
         this.messageAttachmentObjectKeyPolicy = messageAttachmentObjectKeyPolicy;
     }
 
+    /**
+     * 返回当前插件负责的消息类型。
+     *
+     * @return `voice` 消息类型标识
+     */
     @Override
     public String supportedType() {
         return "voice";
     }
 
+    /**
+     * 校验语音草稿并构造语音消息。
+     * 输入：消息构建上下文与语音草稿。
+     * 约束：对象键必须符合发送者附件作用域，时长必须为正数。
+     * 输出：包含语音元数据、转写文本和检索文本的领域消息对象。
+     *
+     * @param context 消息构建上下文
+     * @param draft 入站消息草稿
+     * @return 语音消息领域对象
+     */
     @Override
     public ChannelMessage createMessage(ChannelMessageBuildContext context, ChannelMessageDraft draft) {
         if (!(draft instanceof VoiceChannelMessageDraft voiceDraft)) {

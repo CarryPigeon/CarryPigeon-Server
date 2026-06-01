@@ -40,6 +40,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInviteStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
@@ -62,6 +63,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
  * 频道应用服务。
@@ -74,6 +76,7 @@ public class ChannelApplicationService {
     private static final String PUBLIC_CHANNEL_TYPE = "public";
     private static final String PRIVATE_CHANNEL_TYPE = "private";
     private static final String SYSTEM_CHANNEL_TYPE = "system";
+    private static final long APPLICATION_INVITER_ACCOUNT_ID = 0L;
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "default channel does not exist";
     private static final String SYSTEM_CHANNEL_NOT_FOUND_MESSAGE = "system channel does not exist";
     private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
@@ -176,7 +179,7 @@ public class ChannelApplicationService {
      */
     public ChannelResult createChannel(CreateChannelCommand command) {
         validateCreateChannelCommand(command);
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             long channelId = nextId();
             Channel channel = new Channel(
                     channelId,
@@ -192,7 +195,7 @@ public class ChannelApplicationService {
             );
             channelRepository.save(channel);
             channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.OWNER));
-            channelRealtimePublisher.publishChannelsChanged(command.accountId());
+            publishChannelsChangedAfterCommit(afterCommit, command.accountId());
             return toResult(channel);
         });
     }
@@ -204,7 +207,7 @@ public class ChannelApplicationService {
      */
     public void deleteChannel(DeleteChannelCommand command) {
         validateDeleteChannelCommand(command);
-        transactionRunner.runInTransaction(() -> {
+        transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -212,7 +215,7 @@ public class ChannelApplicationService {
             }
             channelRepository.delete(channel.id());
             appendAuditLog(channel.id(), operator.accountId(), "CHANNEL_DELETED", null, null);
-            channelRealtimePublisher.publishChannelsChanged(operator.accountId());
+            publishChannelsChangedAfterCommit(afterCommit, operator.accountId());
         });
     }
 
@@ -224,7 +227,7 @@ public class ChannelApplicationService {
      */
     public ChannelResult updateChannelProfile(UpdateChannelProfileCommand command) {
         validateUpdateChannelProfileCommand(command);
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             channelGovernancePolicy.requireCanUpdateChannelProfile(channel, operator);
@@ -241,7 +244,7 @@ public class ChannelApplicationService {
                     now()
             );
             channelRepository.update(updated);
-            channelRealtimePublisher.publishChannelChanged(updated, "profile", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, updated, "profile", snapshotChannelRecipientAccountIds(channel.id()));
             return toResult(updated);
         });
     }
@@ -254,7 +257,7 @@ public class ChannelApplicationService {
      */
     public ChannelInviteResult inviteChannelMember(InviteChannelMemberCommand command) {
         validateInviteChannelMemberCommand(command);
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             channelGovernancePolicy.requireCanInvite(channel, operator);
@@ -287,6 +290,8 @@ public class ChannelApplicationService {
             } else {
                 channelInviteRepository.update(invite);
             }
+            publishChannelChangedAfterCommit(afterCommit, channel, "applications", snapshotChannelRecipientAccountIds(channel.id()));
+            publishChannelsChangedAfterCommit(afterCommit, invite.inviteeAccountId());
             return toInviteResult(invite);
         });
     }
@@ -299,7 +304,7 @@ public class ChannelApplicationService {
      */
     public ChannelInviteResult acceptChannelInvite(AcceptChannelInviteCommand command) {
         validateAcceptChannelInviteCommand(command);
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             if (channelMemberRepository.exists(channel.id(), command.accountId())) {
                 throw ProblemException.validationFailed("current account is already a channel member");
@@ -310,6 +315,9 @@ public class ChannelApplicationService {
             );
             ChannelInvite invite = channelInviteRepository.findByChannelIdAndInviteeAccountId(channel.id(), command.accountId())
                     .orElseThrow(() -> ProblemException.notFound(CHANNEL_INVITE_NOT_FOUND_MESSAGE));
+            if (isChannelApplication(invite)) {
+                throw ProblemException.notFound(CHANNEL_INVITE_NOT_FOUND_MESSAGE);
+            }
             channelGovernancePolicy.requireCanAcceptInvite(channel, invite, command.accountId());
             channelMemberRepository.save(newMember(channel.id(), command.accountId(), ChannelMemberRole.MEMBER));
             ChannelInvite acceptedInvite = new ChannelInvite(
@@ -322,14 +330,23 @@ public class ChannelApplicationService {
                     now()
             );
             channelInviteRepository.update(acceptedInvite);
+            publishChannelChangedAfterCommit(afterCommit, channel, "applications", snapshotChannelRecipientAccountIds(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
+            publishChannelsChangedAfterCommit(afterCommit, command.accountId());
             return toInviteResult(acceptedInvite);
         });
     }
 
+    /**
+     * 创建 private channel 入群申请。
+     * 输入：申请人账户、目标频道和申请原因。
+     * 输出：当前申请在公开协议下的结果视图。
+     * 副作用：会写入或重置一条 `PENDING` 申请记录。
+     */
     public ChannelApplicationResult createChannelApplication(CreateChannelApplicationCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             channelGovernancePolicy.requirePrivateChannel(channel);
             if (channelMemberRepository.exists(channel.id(), command.accountId())) {
@@ -352,23 +369,32 @@ public class ChannelApplicationService {
                     now(),
                     null
             );
+            ChannelInvite persistedInvite = invite;
             if (existingInvite == null) {
                 channelInviteRepository.save(invite);
             } else {
-                channelInviteRepository.update(new ChannelInvite(
+                persistedInvite = new ChannelInvite(
                         existingInvite.channelId(),
                         existingInvite.applicationId(),
                         existingInvite.inviteeAccountId(),
-                        existingInvite.inviterAccountId(),
+                        APPLICATION_INVITER_ACCOUNT_ID,
                         ChannelInviteStatus.PENDING,
                         now(),
                         null
-                ));
+                );
+                channelInviteRepository.update(persistedInvite);
             }
-            return toApplicationResult(invite, command.reason());
+            publishChannelChangedAfterCommit(afterCommit, channel, "applications", snapshotChannelRecipientAccountIds(channel.id()));
+            publishChannelsChangedAfterCommit(afterCommit, command.accountId());
+            return toApplicationResult(persistedInvite, command.reason());
         });
     }
 
+    /**
+     * 列出指定 private channel 当前可见的申请记录。
+     * 约束：只有具备邀请权限的成员才能查看。
+     * 输出：结果只暴露申请视图，不返回底层 invite 持久化细节。
+     */
     public List<ChannelApplicationResult> listChannelApplications(ListChannelApplicationsQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
@@ -376,20 +402,30 @@ public class ChannelApplicationService {
         ChannelMember operator = requireMember(channel.id(), query.accountId());
         channelGovernancePolicy.requireCanInvite(channel, operator);
         return channelInviteRepository.findByChannelId(channel.id()).stream()
+                .filter(this::isChannelApplication)
                 .map(invite -> toApplicationResult(invite, ""))
                 .toList();
     }
 
+    /**
+     * 审批 private channel 入群申请。
+     * 输入：操作人、目标频道、申请 ID 与审批决策。
+     * 副作用：可能写入成员关系并把申请状态从 `PENDING` 更新为最终态。
+     * 失败：重复审批会返回冲突错误。
+     */
     public ChannelApplicationResult decideChannelApplication(DecideChannelApplicationCommand command) {
         requirePositive(command.operatorAccountId(), "operatorAccountId");
         requirePositive(command.channelId(), "channelId");
         requirePositive(command.applicationId(), "applicationId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             channelGovernancePolicy.requireCanInvite(channel, operator);
             ChannelInvite invite = channelInviteRepository.findByChannelIdAndApplicationId(channel.id(), command.applicationId())
                     .orElseThrow(() -> ProblemException.notFound("channel application does not exist"));
+            if (!isChannelApplication(invite)) {
+                throw ProblemException.notFound("channel application does not exist");
+            }
             if (invite.status() != ChannelInviteStatus.PENDING) {
                 throw ProblemException.conflict("application_already_processed", "channel application is already processed");
             }
@@ -411,6 +447,11 @@ public class ChannelApplicationService {
                     now()
             );
             channelInviteRepository.update(updated);
+            publishChannelChangedAfterCommit(afterCommit, channel, "applications", snapshotChannelRecipientAccountIds(channel.id()));
+            if (decidedStatus == ChannelInviteStatus.ACCEPTED) {
+                publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
+            }
+            publishChannelsChangedAfterCommit(afterCommit, invite.inviteeAccountId());
             return toApplicationResult(updated, "");
         });
     }
@@ -434,6 +475,11 @@ public class ChannelApplicationService {
                 .toList();
     }
 
+    /**
+     * 查询频道当前生效的封禁列表。
+     * 约束：只有具备解封权限的成员可读取。
+     * 输出：返回面向管理界面的封禁摘要，不暴露内部仓储结构。
+     */
     public List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
@@ -451,6 +497,12 @@ public class ChannelApplicationService {
                 .toList();
     }
 
+    /**
+     * 按过滤条件查询审计日志。
+     * 输入：分页游标、频道、操作者、动作与时间范围。
+     * 输出：公开审计日志结果集合。
+     * 约束：方法内部只做过滤参数规范化，不在这里补游标裁剪协议。
+     */
     public List<AuditLogResult> listAuditLogs(ListAuditLogsQuery query) {
         requirePositive(query.accountId(), "accountId");
         if (query.cursorAuditId() != null && query.cursorAuditId() <= 0) {
@@ -529,6 +581,12 @@ public class ChannelApplicationService {
         return toResult(channel);
     }
 
+    /**
+     * 按公开发现规则返回可发现的频道摘要。
+     * 输入：当前账户、关键字、类型和分页锚点。
+     * 输出：客户端用于频道发现页的最小频道信息。
+     * 约束：只允许发现 `docs/t` 支持的频道类型过滤值。
+     */
     public List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query) {
         requirePositive(query.accountId(), "accountId");
         if (query.cursorChannelId() != null && query.cursorChannelId() <= 0) {
@@ -537,13 +595,11 @@ public class ChannelApplicationService {
         if (query.limit() <= 0 || query.limit() > 50) {
             throw ProblemException.validationFailed("limit must be between 1 and 50");
         }
-        if (query.type() != null && !query.type().isBlank() && !List.of("text", "announcement", "management").contains(query.type().trim())) {
-            throw ProblemException.validationFailed("type is invalid");
-        }
+        String normalizedType = normalizeChannelTypeFilter(query.type());
         return channelRepository.discoverChannels(
                         query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
                         query.cursorChannelId(),
-                        query.type() == null ? null : query.type().trim(),
+                        normalizedType,
                         query.limit() + 1
                 ).stream()
                 .map(channel -> new DiscoverChannelResult(
@@ -557,9 +613,15 @@ public class ChannelApplicationService {
                 .toList();
     }
 
+    /**
+     * 更新成员在频道中的最后已读消息位置。
+     * 输入：账户、频道、最后已读消息和客户端确认时间。
+     * 输出：更新后的已读状态结果。
+     * 副作用：会写入 read-state，并向在线成员广播 `read_state.updated` 事件。
+     */
     public ChannelReadStateResult updateChannelReadState(UpdateChannelReadStateCommand command) {
         validateUpdateChannelReadStateCommand(command);
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             requireMember(channel.id(), command.accountId());
             ChannelMessage message = requireMessage(command.lastReadMessageId());
@@ -585,7 +647,7 @@ public class ChannelApplicationService {
                     now
             );
             channelReadStateRepository.upsert(updated);
-            channelRealtimePublisher.publishReadStateUpdated(updated);
+            publishReadStateUpdatedAfterCommit(afterCommit, updated);
             return new ChannelReadStateResult(
                     Ids.toString(updated.channelId()),
                     Ids.toString(updated.accountId()),
@@ -595,6 +657,11 @@ public class ChannelApplicationService {
         });
     }
 
+    /**
+     * 汇总账户在各频道上的未读统计。
+     * 输出：每个频道的未读数量与最后已读时间。
+     * 边界：这里只做结果投影，不重新计算消息可见性规则。
+     */
     public List<ChannelUnreadResult> listUnreads(long accountId) {
         requirePositive(accountId, "accountId");
         return channelReadStateRepository.listUnreadsByAccountId(accountId).stream()
@@ -614,7 +681,7 @@ public class ChannelApplicationService {
      */
     public ChannelMemberResult promoteChannelMember(PromoteChannelMemberCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -628,7 +695,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(promotedMember);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_PROMOTED_TO_ADMIN", target.accountId(), null);
-            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             return toMemberResult(promotedMember);
         });
     }
@@ -641,7 +708,7 @@ public class ChannelApplicationService {
      */
     public ChannelMemberResult demoteChannelAdmin(DemoteChannelAdminCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -655,7 +722,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(demotedMember);
             appendAuditLog(channel.id(), operator.accountId(), "ADMIN_DEMOTED_TO_MEMBER", target.accountId(), null);
-            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             return toMemberResult(demotedMember);
         });
     }
@@ -668,7 +735,7 @@ public class ChannelApplicationService {
      */
     public ChannelOwnershipTransferResult transferChannelOwnership(TransferChannelOwnershipCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -696,7 +763,7 @@ public class ChannelApplicationService {
                     target.accountId(),
                     "{\"previousOwnerAccountId\":" + operator.accountId() + "}"
             );
-            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             return new ChannelOwnershipTransferResult(
                     channel.id(),
                     previousOwner.accountId(),
@@ -718,7 +785,7 @@ public class ChannelApplicationService {
         if (command.durationSeconds() <= 0) {
             throw ProblemException.validationFailed("durationSeconds must be greater than 0");
         }
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -739,7 +806,7 @@ public class ChannelApplicationService {
                     target.accountId(),
                     "{\"durationSeconds\":" + command.durationSeconds() + "}"
             );
-            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             return toMemberResult(mutedMember);
         });
     }
@@ -752,7 +819,7 @@ public class ChannelApplicationService {
      */
     public ChannelMemberResult unmuteChannelMember(UnmuteChannelMemberCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -766,7 +833,7 @@ public class ChannelApplicationService {
             );
             channelMemberRepository.update(unmutedMember);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNMUTED", target.accountId(), null);
-            channelRealtimePublisher.publishChannelChanged(channel, "members", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             return toMemberResult(unmutedMember);
         });
     }
@@ -778,16 +845,16 @@ public class ChannelApplicationService {
      */
     public void kickChannelMember(KickChannelMemberCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        transactionRunner.runInTransaction(() -> {
+        transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
             channelGovernancePolicy.requireCanModerateMember(channel, operator, target, "channel_kick_forbidden");
-            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
+            List<Long> recipientAccountIds = snapshotChannelRecipientAccountIds(channel.id());
             channelMemberRepository.delete(channel.id(), target.accountId());
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_KICKED", target.accountId(), null);
-            channelRealtimePublisher.publishChannelChanged(channel, "members", recipientAccountIds);
-            channelRealtimePublisher.publishChannelsChanged(target.accountId());
+            publishChannelChangedAfterCommit(afterCommit, channel, "members", recipientAccountIds);
+            publishChannelsChangedAfterCommit(afterCommit, target.accountId());
         });
     }
 
@@ -805,7 +872,7 @@ public class ChannelApplicationService {
         if (command.reason() != null && command.reason().trim().length() > 256) {
             throw ProblemException.validationFailed("reason length must be less than or equal to 256");
         }
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             ChannelMember target = requireTargetMember(channel.id(), command.targetAccountId());
@@ -829,7 +896,7 @@ public class ChannelApplicationService {
             } else {
                 channelBanRepository.update(ban);
             }
-            List<Long> recipientAccountIds = channelMemberRepository.findAccountIdsByChannelId(channel.id());
+            List<Long> recipientAccountIds = snapshotChannelRecipientAccountIds(channel.id());
             channelMemberRepository.delete(channel.id(), target.accountId());
             appendAuditLog(
                     channel.id(),
@@ -838,8 +905,8 @@ public class ChannelApplicationService {
                     target.accountId(),
                     buildBanAuditMetadata(ban)
             );
-            channelRealtimePublisher.publishChannelChanged(channel, "bans", recipientAccountIds);
-            channelRealtimePublisher.publishChannelsChanged(target.accountId());
+            publishChannelChangedAfterCommit(afterCommit, channel, "bans", recipientAccountIds);
+            publishChannelsChangedAfterCommit(afterCommit, target.accountId());
             return toBanResult(ban);
         });
     }
@@ -852,7 +919,7 @@ public class ChannelApplicationService {
      */
     public ChannelBanResult unbanChannelMember(UnbanChannelMemberCommand command) {
         validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId(), "targetAccountId");
-        return transactionRunner.runInTransaction(() -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
             channelGovernancePolicy.requireCanUnban(channel, operator);
@@ -872,10 +939,31 @@ public class ChannelApplicationService {
             );
             channelBanRepository.update(revokedBan);
             appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNBANNED", existingBan.bannedAccountId(), null);
-            channelRealtimePublisher.publishChannelChanged(channel, "bans", channelMemberRepository.findAccountIdsByChannelId(channel.id()));
-            channelRealtimePublisher.publishChannelsChanged(existingBan.bannedAccountId());
+            publishChannelChangedAfterCommit(afterCommit, channel, "bans", snapshotChannelRecipientAccountIds(channel.id()));
+            publishChannelsChangedAfterCommit(afterCommit, existingBan.bannedAccountId());
             return toBanResult(revokedBan);
         });
+    }
+
+    private void publishReadStateUpdatedAfterCommit(AfterCommitExecutor afterCommit, ChannelReadState readState) {
+        afterCommit.execute(() -> channelRealtimePublisher.publishReadStateUpdated(readState));
+    }
+
+    private void publishChannelChangedAfterCommit(
+            AfterCommitExecutor afterCommit,
+            Channel channel,
+            String scope,
+            List<Long> recipientAccountIds
+    ) {
+        afterCommit.execute(() -> channelRealtimePublisher.publishChannelChanged(channel, scope, recipientAccountIds));
+    }
+
+    private void publishChannelsChangedAfterCommit(AfterCommitExecutor afterCommit, long accountId) {
+        afterCommit.execute(() -> channelRealtimePublisher.publishChannelsChanged(accountId));
+    }
+
+    private List<Long> snapshotChannelRecipientAccountIds(long channelId) {
+        return List.copyOf(channelMemberRepository.findAccountIdsByChannelId(channelId));
     }
 
     private ChannelResult toResult(Channel channel) {
@@ -913,6 +1001,10 @@ public class ChannelApplicationService {
                 invite.createdAt(),
                 invite.status().name()
         );
+    }
+
+    private boolean isChannelApplication(ChannelInvite invite) {
+        return invite.inviterAccountId() == APPLICATION_INVITER_ACCOUNT_ID;
     }
 
     private ChannelBanResult toBanResult(ChannelBan ban) {
@@ -1101,6 +1193,17 @@ public class ChannelApplicationService {
             case "message.unpin" -> "MESSAGE_UNPINNED";
             default -> throw ProblemException.validationFailed("action is invalid");
         };
+    }
+
+    private String normalizeChannelTypeFilter(String type) {
+        if (type == null || type.isBlank()) {
+            return null;
+        }
+        String normalizedType = type.trim().toLowerCase();
+        if (!List.of(PUBLIC_CHANNEL_TYPE, PRIVATE_CHANNEL_TYPE, SYSTEM_CHANNEL_TYPE).contains(normalizedType)) {
+            throw ProblemException.validationFailed("type is invalid");
+        }
+        return normalizedType;
     }
 
     private String toAuditAction(String actionType) {

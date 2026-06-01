@@ -35,6 +35,14 @@ public class ChannelMessageV1ResponseMapper {
         this.jsonProvider = jsonProvider;
     }
 
+    /**
+     * 将消息应用层结果映射为 docs/t 对齐的 v1 响应。
+     * 输入：应用层消息结果快照。
+     * 输出：带发送者、mentions、转发来源与 data 结构的稳定协议响应。
+     *
+     * @param result 应用层消息结果
+     * @return v1 消息响应
+     */
     public ChannelMessageV1Response toResponse(ChannelMessageResult result) {
         UserProfileResult sender = userProfileApplicationService == null ? null
                 : userProfileApplicationService.getUserProfileByAccountId(new GetUserProfileByAccountIdCommand(result.senderId()));

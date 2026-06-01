@@ -21,6 +21,15 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
         this.authRefreshSessionMapper = authRefreshSessionMapper;
     }
 
+    /**
+     * 按刷新会话标识读取当前会话记录。
+     * 输入：刷新会话主键。
+     * 输出：存在时返回数据库快照，不存在时返回空。
+     *
+     * @param sessionId 刷新会话标识
+     * @return 刷新会话记录快照
+     * @throws DatabaseServiceException 底层查询失败时抛出
+     */
     @Override
     public Optional<AuthRefreshSessionRecord> findById(long sessionId) {
         return execute(
@@ -29,11 +38,27 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
         );
     }
 
+    /**
+     * 写入新的刷新会话记录。
+     * 输入：已完成业务校验的刷新会话快照。
+     * 副作用：向刷新会话表插入一条记录。
+     *
+     * @param record 刷新会话记录
+     * @throws DatabaseServiceException 底层写入失败时抛出
+     */
     @Override
     public void insert(AuthRefreshSessionRecord record) {
         executeVoid(() -> authRefreshSessionMapper.insert(toEntity(record)), "failed to insert auth refresh session");
     }
 
+    /**
+     * 撤销指定刷新会话。
+     * 输入：刷新会话主键。
+     * 副作用：将对应会话标记为 revoked。
+     *
+     * @param sessionId 刷新会话标识
+     * @throws DatabaseServiceException 底层更新失败时抛出
+     */
     @Override
     public void revoke(long sessionId) {
         executeVoid(() -> authRefreshSessionMapper.revokeById(sessionId), "failed to revoke auth refresh session");

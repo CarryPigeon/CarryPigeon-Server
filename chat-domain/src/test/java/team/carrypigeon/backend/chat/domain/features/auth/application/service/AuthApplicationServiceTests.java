@@ -71,7 +71,7 @@ class AuthApplicationServiceTests {
         assertEquals("", userProfile.avatarUrl());
         assertEquals("", userProfile.bio());
         assertTrue(fixture.channelMemberRepository.exists(1L, 1001L));
-        assertTrue(fixture.channelMemberRepository.exists(1002L, 1001L));
+        assertTrue(fixture.channelMemberRepository.exists(2L, 1001L));
         assertTrue(fixture.channelRepository.findSystemChannel().isPresent());
     }
 
@@ -123,6 +123,24 @@ class AuthApplicationServiceTests {
         assertFalse(accountRepository.findByUsername("carry-user").isPresent());
         assertFalse(userProfileRepository.findByAccountId(1001L).isPresent());
         assertFalse(channelMemberRepository.exists(1L, 1001L));
+    }
+
+    /**
+     * 验证缺少 system 频道时注册会中断，而不是在业务流程里懒创建新频道。
+     */
+    @Test
+    @DisplayName("register missing system channel throws internal problem")
+    void register_missingSystemChannel_throwsInternalProblem() {
+        Fixture fixture = new Fixture();
+        fixture.channelRepository.channels.entrySet().removeIf(entry -> "system".equals(entry.getValue().type()));
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.service.register(new RegisterCommand("carry-user", "password123"))
+        );
+
+        assertEquals("system channel does not exist", exception.getMessage());
+        assertEquals(0, fixture.channelRepository.savedChannels.size());
     }
 
     /**
@@ -451,9 +469,11 @@ class AuthApplicationServiceTests {
     private static class InMemoryChannelRepository implements ChannelRepository {
 
         private final Map<Long, Channel> channels = new HashMap<>();
+        private final List<Channel> savedChannels = new java.util.ArrayList<>();
 
         private InMemoryChannelRepository() {
             channels.put(1L, new Channel(1L, 1L, "public", "", "", "", "public", true, BASE_TIME, BASE_TIME));
+            channels.put(2L, new Channel(2L, 2L, "system", "", "", "", "system", false, BASE_TIME, BASE_TIME));
         }
 
         @Override
@@ -473,6 +493,7 @@ class AuthApplicationServiceTests {
 
         @Override
         public Channel save(Channel channel) {
+            savedChannels.add(channel);
             channels.put(channel.id(), channel);
             return channel;
         }

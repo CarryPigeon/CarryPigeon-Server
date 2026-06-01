@@ -22,16 +22,25 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         this.channelMemberMapper = channelMemberMapper;
     }
 
+    /**
+     * 判断成员关系是否存在。
+     */
     @Override
     public boolean exists(long channelId, long accountId) {
         return execute(() -> channelMemberMapper.countMembership(channelId, accountId) > 0, "failed to query channel membership");
     }
 
+    /**
+     * 插入新的频道成员记录。
+     */
     @Override
     public void insert(ChannelMemberRecord record) {
         executeVoid(() -> channelMemberMapper.insertMembership(toEntity(record)), "failed to insert channel membership");
     }
 
+    /**
+     * 查询单个成员关系记录。
+     */
     @Override
     public Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId) {
         return execute(() ->
@@ -39,16 +48,25 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
                         .map(this::toRecord), "failed to query channel membership");
     }
 
+    /**
+     * 更新既有成员关系记录。
+     */
     @Override
     public void update(ChannelMemberRecord record) {
         executeVoid(() -> channelMemberMapper.updateMembership(toEntity(record)), "failed to update channel membership");
     }
 
+    /**
+     * 删除成员关系记录。
+     */
     @Override
     public void delete(long channelId, long accountId) {
         executeVoid(() -> channelMemberMapper.deleteMembership(channelId, accountId), "failed to delete channel membership");
     }
 
+    /**
+     * 查询频道下全部成员记录。
+     */
     @Override
     public List<ChannelMemberRecord> findByChannelId(long channelId) {
         return execute(() ->
@@ -57,11 +75,17 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
                         .toList(), "failed to query channel members");
     }
 
+    /**
+     * 查询频道下全部成员账户 ID。
+     */
     @Override
     public List<Long> findAccountIdsByChannelId(long channelId) {
         return execute(() -> channelMemberMapper.findAccountIdsByChannelId(channelId), "failed to query channel member account ids");
     }
 
+    /**
+     * 查询账户加入的频道 ID 集合。
+     */
     @Override
     public List<Long> findChannelIdsByAccountId(long accountId) {
         return execute(() -> channelMemberMapper.findChannelIdsByAccountId(accountId), "failed to query account channel ids");

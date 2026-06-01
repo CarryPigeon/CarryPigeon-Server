@@ -262,6 +262,14 @@ public class AuthApplicationService {
         authRefreshSessionRepository.revoke(claims.sessionId());
     }
 
+    /**
+     * 刷新会话并转换为 HTTP v1 需要的会话令牌结果。
+     * 输入：refresh token 刷新命令。
+     * 输出：包含 access token、refresh token 与过期秒数的稳定结果。
+     *
+     * @param command 刷新命令
+     * @return 会话令牌结果
+     */
     public AuthSessionTokenResult refreshTokenSession(RefreshTokenCommand command) {
         AuthTokenResult result = refresh(command);
         return new AuthSessionTokenResult(
@@ -290,18 +298,7 @@ public class AuthApplicationService {
                 null
         ));
         Channel systemChannel = channelRepository.findSystemChannel()
-                .orElseGet(() -> channelRepository.save(new Channel(
-                        idGenerator.nextLongId(),
-                        idGenerator.nextLongId(),
-                        "system",
-                        "",
-                        "",
-                        "",
-                        "system",
-                        false,
-                        timeProvider.nowInstant(),
-                        timeProvider.nowInstant()
-                )));
+                .orElseThrow(() -> ProblemException.fail("system_channel_missing", "system channel does not exist"));
         if (!channelMemberRepository.exists(systemChannel.id(), account.id())) {
             channelMemberRepository.save(new ChannelMember(
                     systemChannel.id(),

@@ -23,6 +23,14 @@ public class RealtimeAccessTokenHandshakeHandler extends ChannelInboundHandlerAd
         this.authTokenService = authTokenService;
     }
 
+    /**
+     * 在握手升级请求进入后写入请求级上下文属性。
+     * 输入：Netty 握手请求或后续管道消息。
+     * 副作用：为匹配的 WS 路由记录 requestId、traceId 与 route 属性。
+     *
+     * @param context Netty 通道上下文
+     * @param message 当前入站消息
+     */
     @Override
     public void channelRead(ChannelHandlerContext context, Object message) {
         if (!(message instanceof FullHttpRequest request)) {

@@ -43,6 +43,13 @@ public class FileApplicationService {
         this.timeProvider = timeProvider;
     }
 
+    /**
+     * 创建一次上传授权。
+     * 职责：为客户端生成稳定 `share_key`、上传地址和过期时间。
+     * 输入：文件名、声明的 MIME 类型和文件大小。
+     * 输出：不带实际二进制内容的上传授权结果。
+     * 约束：只校验上传前置条件，不写入对象存储。
+     */
     public FileUploadGrantResult createUploadGrant(String filename, String mimeType, long sizeBytes) {
         validateUploadGrant(filename, mimeType, sizeBytes);
         long fileId = idGenerator.nextLongId();
@@ -55,6 +62,12 @@ public class FileApplicationService {
         );
     }
 
+    /**
+     * 按 `share_key` 把二进制内容写入对象存储。
+     * 输入：公开 `share_key`、内容类型、字节大小和内容流。
+     * 副作用：会向对象存储写入真实对象。
+     * 失败：当 `share_key`、内容流或大小非法时抛出校验异常。
+     */
     public void uploadFile(String shareKey, String contentType, long sizeBytes, java.io.InputStream content) {
         if (shareKey == null || shareKey.isBlank()) {
             throw ProblemException.validationFailed("share_key must not be blank");
@@ -69,20 +82,38 @@ public class FileApplicationService {
         objectStorageService.put(new PutObjectCommand(resolveObjectKey(shareKey), content, sizeBytes, normalizeContentType(contentType)));
     }
 
+    /**
+     * 查询 `share_key` 对应的对象元数据或内容流。
+     * 输出：对象存在时返回对象存储结果，否则返回空。
+     * 边界：`server_avatar` 与普通上传对象统一走对象存储读取。
+     */
     public Optional<StorageObject> findStorageObject(String shareKey) {
         ObjectStorageService objectStorageService = requireObjectStorageService();
         return objectStorageService.get(new GetObjectCommand(resolveObjectKey(shareKey)));
     }
 
+    /**
+     * 为 `share_key` 生成短期下载地址。
+     * 输出：带过期时间的预签名下载 URL。
+     * 约束：下载 URL 始终基于服务端解析后的 canonical object key 生成。
+     */
     public PresignedUrl createDownloadUrl(String shareKey) {
         ObjectStorageService objectStorageService = requireObjectStorageService();
         return objectStorageService.createPresignedUrl(new PresignedUrlCommand(resolveObjectKey(shareKey), Duration.ofMinutes(30)));
     }
 
+    /**
+     * 判断公开 `share_key` 是否映射为服务端头像对象。
+     * 原因：服务端头像不走常规上传 key 规则，需要单独识别。
+     */
     public boolean isServerAvatar(String shareKey) {
         return SERVER_AVATAR_SHARE_KEY.equals(shareKey);
     }
 
+    /**
+     * 返回客户端上传时需要附带的固定请求头。
+     * 输出：当前实现返回空集合，保留统一扩展点给未来存储策略。
+     */
     public Map<String, String> uploadHeaders() {
         return Map.of();
     }

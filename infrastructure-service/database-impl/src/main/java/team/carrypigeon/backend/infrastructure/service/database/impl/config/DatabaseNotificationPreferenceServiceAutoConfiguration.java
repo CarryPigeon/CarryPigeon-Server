@@ -10,11 +10,21 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ser
 
 /**
  * 通知偏好数据库服务自动配置。
+ * 职责：装配 server feature 所需的通知偏好数据库服务实现。
+ * 边界：不装配其它 feature 的数据库服务。
  */
 @AutoConfiguration(afterName = "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration")
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseNotificationPreferenceServiceAutoConfiguration {
 
+    /**
+     * 装配通知偏好数据库服务。
+     * 输入：通知偏好表 Mapper。
+     * 输出：供 server feature 使用的持久化实现。
+     *
+     * @param notificationPreferenceMapper 通知偏好表 Mapper
+     * @return 通知偏好数据库服务实现
+     */
     @Bean
     @ConditionalOnMissingBean
     public NotificationPreferenceDatabaseService notificationPreferenceDatabaseService(NotificationPreferenceMapper notificationPreferenceMapper) {

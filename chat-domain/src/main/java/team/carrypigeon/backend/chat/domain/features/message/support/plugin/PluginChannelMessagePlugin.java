@@ -25,11 +25,25 @@ public class PluginChannelMessagePlugin implements ChannelMessagePlugin {
         this.jsonProvider = jsonProvider;
     }
 
+    /**
+     * 返回当前插件实例负责的扩展消息类型。
+     *
+     * @return 扩展消息类型标识
+     */
     @Override
     public String supportedType() {
         return supportedType;
     }
 
+    /**
+     * 校验扩展插件草稿并构造领域消息。
+     * 输入：消息构建上下文与插件草稿。
+     * 输出：包含 `plugin_key`、`message_type` 与业务 payload 的领域消息对象。
+     *
+     * @param context 消息构建上下文
+     * @param draft 入站消息草稿
+     * @return 扩展插件领域消息
+     */
     @Override
     public ChannelMessage createMessage(ChannelMessageBuildContext context, ChannelMessageDraft draft) {
         if (!(draft instanceof PluginChannelMessageDraft pluginDraft)) {

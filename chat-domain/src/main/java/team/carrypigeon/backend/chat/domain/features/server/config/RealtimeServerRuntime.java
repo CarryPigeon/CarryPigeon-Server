@@ -33,6 +33,12 @@ public class RealtimeServerRuntime implements SmartLifecycle {
         this.initializer = initializer;
     }
 
+    /**
+     * 启动 Netty realtime 运行时。
+     * 职责：根据配置初始化线程组、绑定监听端口并注册 channel initializer。
+     * 副作用：会创建线程资源并占用网络端口。
+     * 约束：当 runtime 已启动或 realtime 被禁用时直接跳过。
+     */
     @Override
     public void start() {
         if (running) {
@@ -80,6 +86,11 @@ public class RealtimeServerRuntime implements SmartLifecycle {
         }
     }
 
+    /**
+     * 停止 Netty realtime 运行时。
+     * 副作用：关闭服务端通道并回收 boss / worker 线程组。
+     * 约束：重复停止是幂等的。
+     */
     @Override
     public void stop() {
         if (!running) {
@@ -96,22 +107,36 @@ public class RealtimeServerRuntime implements SmartLifecycle {
         }
     }
 
+    /**
+     * 按 `SmartLifecycle` 契约停止运行时并在完成后回调。
+     * 原因：让 Spring 容器能够在关闭阶段继续串联后续生命周期动作。
+     */
     @Override
     public void stop(Runnable callback) {
         stop();
         callback.run();
     }
 
+    /**
+     * 返回 realtime 运行时当前是否已完成绑定并处于运行中。
+     */
     @Override
     public boolean isRunning() {
         return running;
     }
 
+    /**
+     * 声明 realtime runtime 由 Spring 容器自动启动。
+     */
     @Override
     public boolean isAutoStartup() {
         return true;
     }
 
+    /**
+     * 返回 runtime 的生命周期阶段。
+     * 约束：使用最大 phase，确保其在大多数基础 Bean 完成后再启动。
+     */
     @Override
     public int getPhase() {
         return Integer.MAX_VALUE;

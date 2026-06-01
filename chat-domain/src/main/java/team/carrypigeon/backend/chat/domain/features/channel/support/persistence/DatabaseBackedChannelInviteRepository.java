@@ -20,18 +20,27 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
         this.channelInviteDatabaseService = channelInviteDatabaseService;
     }
 
+    /**
+     * 查询频道对目标账户的邀请或申请记录。
+     */
     @Override
     public Optional<ChannelInvite> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
         return channelInviteDatabaseService.findByChannelIdAndInviteeAccountId(channelId, inviteeAccountId)
                 .map(this::toDomain);
     }
 
+    /**
+     * 按申请 ID 查询频道邀请记录。
+     */
     @Override
     public Optional<ChannelInvite> findByChannelIdAndApplicationId(long channelId, long applicationId) {
         return channelInviteDatabaseService.findByChannelIdAndApplicationId(channelId, applicationId)
                 .map(this::toDomain);
     }
 
+    /**
+     * 列出频道下全部邀请 / 申请记录。
+     */
     @Override
     public java.util.List<ChannelInvite> findByChannelId(long channelId) {
         return channelInviteDatabaseService.findByChannelId(channelId).stream()
@@ -39,11 +48,17 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
                 .toList();
     }
 
+    /**
+     * 持久化新的邀请或申请记录。
+     */
     @Override
     public void save(ChannelInvite channelInvite) {
         channelInviteDatabaseService.insert(toRecord(channelInvite));
     }
 
+    /**
+     * 更新既有邀请或申请记录。
+     */
     @Override
     public void update(ChannelInvite channelInvite) {
         channelInviteDatabaseService.update(toRecord(channelInvite));

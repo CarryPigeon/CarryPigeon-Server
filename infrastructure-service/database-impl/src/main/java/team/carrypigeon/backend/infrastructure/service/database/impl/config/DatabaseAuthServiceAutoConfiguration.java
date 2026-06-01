@@ -23,12 +23,28 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ser
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseAuthServiceAutoConfiguration {
 
+    /**
+     * 装配鉴权账号数据库服务。
+     * 输入：鉴权账号表 Mapper。
+     * 输出：供 auth feature 使用的账号持久化实现。
+     *
+     * @param authAccountMapper 鉴权账号表 Mapper
+     * @return 鉴权账号数据库服务实现
+     */
     @Bean
     @ConditionalOnMissingBean
     public AuthAccountDatabaseService authAccountDatabaseService(AuthAccountMapper authAccountMapper) {
         return new MybatisPlusAuthAccountDatabaseService(authAccountMapper);
     }
 
+    /**
+     * 装配刷新会话数据库服务。
+     * 输入：刷新会话表 Mapper。
+     * 输出：供 auth feature 使用的 refresh session 持久化实现。
+     *
+     * @param authRefreshSessionMapper 刷新会话表 Mapper
+     * @return 刷新会话数据库服务实现
+     */
     @Bean
     @ConditionalOnMissingBean
     public AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService(
@@ -37,6 +53,14 @@ public class DatabaseAuthServiceAutoConfiguration {
         return new MybatisPlusAuthRefreshSessionDatabaseService(authRefreshSessionMapper);
     }
 
+    /**
+     * 装配用户资料数据库服务。
+     * 输入：用户资料表 Mapper。
+     * 输出：供 user feature 使用的资料持久化实现。
+     *
+     * @param userProfileMapper 用户资料表 Mapper
+     * @return 用户资料数据库服务实现
+     */
     @Bean
     @ConditionalOnMissingBean
     public UserProfileDatabaseService userProfileDatabaseService(UserProfileMapper userProfileMapper) {

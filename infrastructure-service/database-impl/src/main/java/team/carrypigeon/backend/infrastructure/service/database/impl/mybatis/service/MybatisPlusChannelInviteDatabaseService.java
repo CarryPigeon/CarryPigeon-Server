@@ -22,6 +22,9 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
         this.channelInviteMapper = channelInviteMapper;
     }
 
+    /**
+     * 查询频道对目标账户的邀请或申请记录。
+     */
     @Override
     public Optional<ChannelInviteRecord> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
         return execute(
@@ -31,6 +34,9 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
         );
     }
 
+    /**
+     * 按申请 ID 查询频道邀请记录。
+     */
     @Override
     public Optional<ChannelInviteRecord> findByChannelIdAndApplicationId(long channelId, long applicationId) {
         return execute(
@@ -40,6 +46,9 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
         );
     }
 
+    /**
+     * 查询频道下全部邀请记录。
+     */
     @Override
     public List<ChannelInviteRecord> findByChannelId(long channelId) {
         return execute(
@@ -50,11 +59,17 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
         );
     }
 
+    /**
+     * 插入新的邀请记录。
+     */
     @Override
     public void insert(ChannelInviteRecord record) {
         executeVoid(() -> channelInviteMapper.insert(toEntity(record)), "failed to insert channel invite");
     }
 
+    /**
+     * 更新既有邀请记录。
+     */
     @Override
     public void update(ChannelInviteRecord record) {
         executeVoid(() -> channelInviteMapper.update(toEntity(record)), "failed to update channel invite");

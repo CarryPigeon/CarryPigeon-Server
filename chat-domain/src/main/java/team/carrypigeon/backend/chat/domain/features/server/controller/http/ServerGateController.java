@@ -30,6 +30,12 @@ public class ServerGateController {
         this.serverApplicationService = serverApplicationService;
     }
 
+    /**
+     * 按客户端已安装插件列表执行 required gate 检查。
+     *
+     * @param request gate 检查请求
+     * @return 缺失必需插件列表
+     */
     @PostMapping("/check")
     @Operation(summary = "执行 required gate 预检查", description = "按当前设备已安装插件列表返回缺失的必需插件。")
     @ApiResponses({

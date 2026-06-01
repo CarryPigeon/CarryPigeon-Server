@@ -9,6 +9,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 
 /**
  * 基于 database-api 的频道置顶仓储适配器。
+ * 职责：在 channel feature 内完成置顶领域模型与 database-api 记录模型转换。
+ * 边界：不承载置顶数量、权限或广播规则。
  */
 public class DatabaseBackedChannelPinRepository implements ChannelPinRepository {
 
@@ -18,21 +20,33 @@ public class DatabaseBackedChannelPinRepository implements ChannelPinRepository 
         this.channelPinDatabaseService = channelPinDatabaseService;
     }
 
+    /**
+     * 查询指定消息的置顶记录。
+     */
     @Override
     public Optional<ChannelPin> findByChannelIdAndMessageId(long channelId, long messageId) {
         return channelPinDatabaseService.findByChannelIdAndMessageId(channelId, messageId).map(this::toDomain);
     }
 
+    /**
+     * 持久化一条新的置顶记录。
+     */
     @Override
     public void save(ChannelPin channelPin) {
         channelPinDatabaseService.insert(toRecord(channelPin));
     }
 
+    /**
+     * 删除指定消息的置顶记录。
+     */
     @Override
     public void delete(long channelId, long messageId) {
         channelPinDatabaseService.delete(channelId, messageId);
     }
 
+    /**
+     * 查询频道内早于游标消息的置顶记录集合。
+     */
     @Override
     public List<ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return channelPinDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit).stream()
@@ -40,6 +54,9 @@ public class DatabaseBackedChannelPinRepository implements ChannelPinRepository 
                 .toList();
     }
 
+    /**
+     * 统计频道当前置顶数量。
+     */
     @Override
     public long countByChannelId(long channelId) {
         return channelPinDatabaseService.countByChannelId(channelId);

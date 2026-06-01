@@ -36,6 +36,10 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
         this.idGenerator = idGenerator;
     }
 
+    /**
+     * 广播单个账户的已读状态更新。
+     * 副作用：写入实时事件缓存并只向目标账户在线会话推送事件。
+     */
     @Override
     public void publishReadStateUpdated(ChannelReadState readState) {
         publishEvent("read_state.updated", Map.of(
@@ -46,6 +50,11 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
         ), List.of(readState.accountId()));
     }
 
+    /**
+     * 广播频道局部变化提示。
+     * 输入：频道、变化范围和接收者集合。
+     * 约束：事件只给出 `refresh` hint，不透传完整频道快照。
+     */
     @Override
     public void publishChannelChanged(Channel channel, String scope, Collection<Long> recipientAccountIds) {
         publishEvent("channel.changed", Map.of(
@@ -55,6 +64,9 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
         ), recipientAccountIds);
     }
 
+    /**
+     * 广播账户可见频道集合已变化。
+     */
     @Override
     public void publishChannelsChanged(long accountId) {
         publishEvent("channels.changed", Map.of("hint", "refresh"), List.of(accountId));
@@ -63,7 +75,13 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
     private void publishEvent(String eventType, Object payload, Collection<Long> recipientAccountIds) {
         String eventId = idGenerator.nextStringId();
         long serverTime = timeProvider.nowMillis();
-        realtimeSessionRegistry.appendEvent(new RealtimeSessionRegistry.StoredRealtimeEvent(eventId, eventType, serverTime, payload));
+        realtimeSessionRegistry.appendEvent(RealtimeSessionRegistry.event(
+                eventId,
+                eventType,
+                serverTime,
+                payload,
+                recipientAccountIds
+        ));
         String frameText = jsonProvider.toJson(new RealtimeServerMessage(
                 "event",
                 null,

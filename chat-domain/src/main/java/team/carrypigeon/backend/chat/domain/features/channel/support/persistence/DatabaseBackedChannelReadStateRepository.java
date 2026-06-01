@@ -11,6 +11,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 
 /**
  * 基于 database-api 的频道已读状态仓储适配器。
+ * 职责：在 channel feature 内完成已读状态领域模型与 database-api 记录模型转换。
+ * 边界：不计算未读规则，只桥接读写与结果投影。
  */
 public class DatabaseBackedChannelReadStateRepository implements ChannelReadStateRepository {
 
@@ -20,17 +22,27 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
         this.channelReadStateDatabaseService = channelReadStateDatabaseService;
     }
 
+    /**
+     * 查询账户在频道中的已读状态。
+     */
     @Override
     public Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) {
         return channelReadStateDatabaseService.findByChannelIdAndAccountId(channelId, accountId).map(this::toDomain);
     }
 
+    /**
+     * 新增或覆盖已读状态。
+     * 输出：返回调用方传入的领域对象，保持上层事务上下文一致。
+     */
     @Override
     public ChannelReadState upsert(ChannelReadState readState) {
         channelReadStateDatabaseService.upsert(toRecord(readState));
         return readState;
     }
 
+    /**
+     * 查询账户各频道的未读统计投影。
+     */
     @Override
     public List<ChannelUnread> listUnreadsByAccountId(long accountId) {
         return channelReadStateDatabaseService.listUnreadsByAccountId(accountId).stream()

@@ -14,6 +14,12 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Noti
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ServerPersistenceConfiguration {
 
+    /**
+     * 创建通知偏好仓储适配器。
+     *
+     * @param notificationPreferenceDatabaseService 通知偏好数据库服务契约
+     * @return 面向领域的通知偏好仓储实现
+     */
     @Bean
     public NotificationPreferenceRepository notificationPreferenceRepository(NotificationPreferenceDatabaseService notificationPreferenceDatabaseService) {
         return new DatabaseBackedNotificationPreferenceRepository(notificationPreferenceDatabaseService);

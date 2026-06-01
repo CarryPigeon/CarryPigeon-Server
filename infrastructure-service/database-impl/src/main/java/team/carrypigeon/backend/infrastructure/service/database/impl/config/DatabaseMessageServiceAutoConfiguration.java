@@ -17,6 +17,14 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ser
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseMessageServiceAutoConfiguration {
 
+    /**
+     * 装配消息数据库服务。
+     * 输入：消息表 Mapper。
+     * 输出：供 message feature 使用的持久化实现。
+     *
+     * @param messageMapper 消息表 Mapper
+     * @return 消息数据库服务实现
+     */
     @Bean
     @ConditionalOnMissingBean
     public MessageDatabaseService messageDatabaseService(MessageMapper messageMapper) {

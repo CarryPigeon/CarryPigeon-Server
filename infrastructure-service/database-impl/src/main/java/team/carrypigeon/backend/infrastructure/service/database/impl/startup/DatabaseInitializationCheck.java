@@ -18,11 +18,17 @@ public class DatabaseInitializationCheck implements InitializationCheck {
         this.databaseHealthService = databaseHealthService;
     }
 
+    /**
+     * 返回启动检查项名称。
+     */
     @Override
     public String name() {
         return "database";
     }
 
+    /**
+     * 执行数据库健康检查并转换为统一启动检查结果。
+     */
     @Override
     public InitializationCheckResult check() {
         DatabaseHealth health = databaseHealthService.check();

@@ -20,12 +20,18 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         this.channelBanDatabaseService = channelBanDatabaseService;
     }
 
+    /**
+     * 查询频道对目标账户的封禁记录。
+     */
     @Override
     public Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByChannelIdAndBannedAccountId(channelId, bannedAccountId)
                 .map(this::toDomain);
     }
 
+    /**
+     * 列出频道下全部封禁记录。
+     */
     @Override
     public List<ChannelBan> findByChannelId(long channelId) {
         return channelBanDatabaseService.findByChannelId(channelId).stream()
@@ -33,11 +39,17 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
                 .toList();
     }
 
+    /**
+     * 持久化新的封禁记录。
+     */
     @Override
     public void save(ChannelBan channelBan) {
         channelBanDatabaseService.insert(toRecord(channelBan));
     }
 
+    /**
+     * 更新既有封禁记录。
+     */
     @Override
     public void update(ChannelBan channelBan) {
         channelBanDatabaseService.update(toRecord(channelBan));

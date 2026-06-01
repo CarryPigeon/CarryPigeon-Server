@@ -26,6 +26,16 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
         this.authRequestContext = authRequestContext;
     }
 
+    /**
+     * 校验请求头中的 Bearer access token 并绑定当前主体。
+     * 输入：HTTP 请求上下文。
+     * 副作用：向请求上下文和日志上下文写入当前账号身份。
+     *
+     * @param request 当前 HTTP 请求
+     * @param response 当前 HTTP 响应
+     * @param handler 当前处理器
+     * @return 认证成功时始终返回 true
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String authorization = request.getHeader("Authorization");
@@ -40,6 +50,15 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
         return true;
     }
 
+    /**
+     * 清理请求级日志上下文。
+     * 副作用：移除当前线程中的账号日志键，避免污染后续请求。
+     *
+     * @param request 当前 HTTP 请求
+     * @param response 当前 HTTP 响应
+     * @param handler 当前处理器
+     * @param exception 请求处理过程中抛出的异常
+     */
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception exception) {
         LogContexts.remove(LogKeys.UID);

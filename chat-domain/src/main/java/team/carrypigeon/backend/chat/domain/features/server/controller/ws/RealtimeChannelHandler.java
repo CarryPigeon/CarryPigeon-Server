@@ -112,6 +112,13 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         super.channelInactive(context);
     }
 
+    /**
+     * 记录异常并关闭当前实时连接。
+     * 副作用：写入异常日志并主动关闭 Netty 通道，避免异常连接继续留在会话表中。
+     *
+     * @param context Netty 通道上下文
+     * @param cause 当前异常
+     */
     @Override
     public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
         withMdc(context, () -> {
@@ -120,6 +127,12 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         });
     }
 
+    /**
+     * 创建实时连接读空闲检测处理器。
+     * 输出：60 秒无入站数据即触发空闲事件，供上层决定是否关闭连接。
+     *
+     * @return Netty 读空闲处理器
+     */
     public static IdleStateHandler idleStateHandler() {
         return new IdleStateHandler(60, 0, 0, TimeUnit.SECONDS);
     }
@@ -133,6 +146,10 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         try {
             AuthTokenClaims claims = authTokenService.parseAccessToken(accessToken);
             AuthenticatedPrincipal principal = new AuthenticatedPrincipal(Long.parseLong(claims.subject()), claims.username());
+            AuthenticatedPrincipal previousPrincipal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {
+                realtimeSessionRegistry.unregister(previousPrincipal.accountId(), context.channel());
+            }
             context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(principal);
             realtimeSessionRegistry.register(principal.accountId(), context.channel());
             context.writeAndFlush(serverFrame(
@@ -145,17 +162,17 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                     ),
                     null
             ));
-            replayEvents(context, request.lastEventId());
+            replayEvents(context, principal.accountId(), request.lastEventId());
         } catch (ProblemException exception) {
             context.writeAndFlush(commandError(request.id(), reauth ? "reauth.err" : "auth.err", mapReason(exception), exception.getMessage()));
         }
     }
 
-    private void replayEvents(ChannelHandlerContext context, String lastEventId) {
+    private void replayEvents(ChannelHandlerContext context, long accountId, String lastEventId) {
         if (lastEventId == null || lastEventId.isBlank()) {
             return;
         }
-        List<RealtimeSessionRegistry.StoredRealtimeEvent> events = realtimeSessionRegistry.eventsAfter(lastEventId);
+        List<RealtimeSessionRegistry.StoredRealtimeEvent> events = realtimeSessionRegistry.eventsAfter(accountId, lastEventId);
         if (events == null) {
             context.writeAndFlush(serverFrame("resume.failed", null, Map.of("reason", "event_too_old"), null));
             return;

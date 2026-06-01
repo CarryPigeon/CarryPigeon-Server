@@ -13,6 +13,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 通知偏好数据库服务。
+ * 职责：在 database-impl 中承接服务级与频道级通知偏好的持久化。
+ * 边界：只负责记录映射和异常收口，不解释通知模式含义。
  */
 public class MybatisPlusNotificationPreferenceDatabaseService implements NotificationPreferenceDatabaseService {
 
@@ -22,21 +24,33 @@ public class MybatisPlusNotificationPreferenceDatabaseService implements Notific
         this.notificationPreferenceMapper = notificationPreferenceMapper;
     }
 
+    /**
+     * 查询账户的服务级通知偏好记录。
+     */
     @Override
     public Optional<NotificationServerPreferenceRecord> findServerPreferenceByAccountId(long accountId) {
         return execute(() -> Optional.ofNullable(notificationPreferenceMapper.findServerPreferenceByAccountId(accountId)).map(this::toRecord), "failed to query server notification preference");
     }
 
+    /**
+     * 查询账户的频道级通知偏好记录列表。
+     */
     @Override
     public List<NotificationChannelPreferenceRecord> listChannelPreferencesByAccountId(long accountId) {
         return execute(() -> notificationPreferenceMapper.listChannelPreferencesByAccountId(accountId).stream().map(this::toRecord).toList(), "failed to query channel notification preferences");
     }
 
+    /**
+     * 新增或覆盖服务级通知偏好记录。
+     */
     @Override
     public void upsertServerPreference(NotificationServerPreferenceRecord record) {
         executeVoid(() -> notificationPreferenceMapper.upsertServerPreference(toEntity(record)), "failed to upsert server notification preference");
     }
 
+    /**
+     * 新增或覆盖频道级通知偏好记录。
+     */
     @Override
     public void upsertChannelPreference(NotificationChannelPreferenceRecord record) {
         executeVoid(() -> notificationPreferenceMapper.upsertChannelPreference(toEntity(record)), "failed to upsert channel notification preference");

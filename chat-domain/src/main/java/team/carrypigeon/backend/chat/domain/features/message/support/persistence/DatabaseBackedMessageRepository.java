@@ -19,29 +19,50 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         this.messageDatabaseService = messageDatabaseService;
     }
 
+    /**
+     * 持久化一条新消息。
+     * 输入：已完成业务校验和消息构建的领域消息。
+     * 输出：返回原领域对象，保持上层调用链继续使用同一语义对象。
+     */
     @Override
     public ChannelMessage save(ChannelMessage message) {
         messageDatabaseService.insert(toPersistenceRecord(message));
         return message;
     }
 
+    /**
+     * 按消息 ID 查询单条消息。
+     * 输出：存在时返回领域消息，不存在时返回空。
+     */
     @Override
     public java.util.Optional<ChannelMessage> findById(long messageId) {
         return messageDatabaseService.findById(messageId)
                 .map(this::toDomainMessage);
     }
 
+    /**
+     * 覆盖更新消息的持久化投影。
+     * 副作用：会把编辑后的领域消息写回数据库。
+     */
     @Override
     public ChannelMessage update(ChannelMessage message) {
         messageDatabaseService.update(toPersistenceRecord(message));
         return message;
     }
 
+    /**
+     * 删除指定消息的持久化记录。
+     * 边界：这里只负责数据删除，不定义撤回或审计规则。
+     */
     @Override
     public void delete(long messageId) {
         messageDatabaseService.delete(messageId);
     }
 
+    /**
+     * 查询频道内早于游标的历史消息。
+     * 输出：返回已转换为领域模型的消息列表。
+     */
     @Override
     public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return messageDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit)
@@ -50,6 +71,10 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 .toList();
     }
 
+    /**
+     * 查询频道内晚于锚点消息的增量消息。
+     * 原因：用于客户端补齐断连后的消息窗口。
+     */
     @Override
     public List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
         return messageDatabaseService.findByChannelIdAfter(channelId, afterMessageId, limit)
@@ -58,6 +83,10 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 .toList();
     }
 
+    /**
+     * 在单个频道内执行关键字搜索。
+     * 约束：搜索语义由底层 database-api 实现决定，这里只做模型转换。
+     */
     @Override
     public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
         return messageDatabaseService.searchByChannelId(channelId, keyword, limit)
@@ -66,6 +95,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 .toList();
     }
 
+    /**
+     * 按复合过滤条件搜索频道消息。
+     * 输入：关键字、发送者、领域类型和前后消息锚点等过滤项。
+     * 输出：符合条件的领域消息集合。
+     */
     @Override
     public List<ChannelMessage> searchByChannelId(
             long channelId,

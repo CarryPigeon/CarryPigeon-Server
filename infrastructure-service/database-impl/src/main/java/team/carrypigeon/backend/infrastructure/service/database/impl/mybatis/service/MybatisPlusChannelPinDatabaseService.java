@@ -11,6 +11,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 频道置顶数据库服务。
+ * 职责：在 database-impl 中完成频道置顶记录的最小读写能力。
+ * 边界：只负责记录映射与异常收口，不承载置顶数量和权限规则。
  */
 public class MybatisPlusChannelPinDatabaseService implements ChannelPinDatabaseService {
 
@@ -20,26 +22,41 @@ public class MybatisPlusChannelPinDatabaseService implements ChannelPinDatabaseS
         this.channelPinMapper = channelPinMapper;
     }
 
+    /**
+     * 查询指定消息的置顶记录。
+     */
     @Override
     public Optional<ChannelPinRecord> findByChannelIdAndMessageId(long channelId, long messageId) {
         return execute(() -> Optional.ofNullable(channelPinMapper.findByChannelIdAndMessageId(channelId, messageId)).map(this::toRecord), "failed to query channel pin");
     }
 
+    /**
+     * 插入新的置顶记录。
+     */
     @Override
     public void insert(ChannelPinRecord record) {
         executeVoid(() -> channelPinMapper.insert(toEntity(record)), "failed to insert channel pin");
     }
 
+    /**
+     * 删除置顶记录。
+     */
     @Override
     public void delete(long channelId, long messageId) {
         executeVoid(() -> channelPinMapper.delete(channelId, messageId), "failed to delete channel pin");
     }
 
+    /**
+     * 查询频道内早于游标消息的置顶记录集合。
+     */
     @Override
     public List<ChannelPinRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return execute(() -> channelPinMapper.findByChannelIdBefore(channelId, cursorMessageId, limit).stream().map(this::toRecord).toList(), "failed to query channel pins");
     }
 
+    /**
+     * 统计频道当前置顶数量。
+     */
     @Override
     public long countByChannelId(long channelId) {
         return execute(() -> channelPinMapper.countByChannelId(channelId), "failed to count channel pins");

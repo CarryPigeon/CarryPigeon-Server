@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,38 +37,7 @@ class RealtimeServerConfigurationPublisherFactoryTests {
                         return 1L;
                     }
                 },
-                resolver,
-                new UserProfileRepository() {
-                    @Override
-                    public java.util.Optional<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountId(long accountId) {
-                        return java.util.Optional.empty();
-                    }
-
-                    @Override
-                    public java.util.List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findAll() {
-                        return java.util.List.of();
-                    }
-
-                    @Override
-                    public java.util.List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-                        return java.util.List.of();
-                    }
-
-                    @Override
-                    public java.util.List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-                        return java.util.List.of();
-                    }
-
-                    @Override
-                    public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile save(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) {
-                        return userProfile;
-                    }
-
-                    @Override
-                    public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile update(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) {
-                        return userProfile;
-                    }
-                }
+                resolver
         );
 
         assertThat(publisher).isInstanceOf(NettyMessageRealtimePublisher.class);

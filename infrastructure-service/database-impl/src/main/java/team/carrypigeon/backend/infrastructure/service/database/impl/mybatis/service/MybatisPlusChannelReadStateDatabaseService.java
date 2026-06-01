@@ -12,6 +12,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 频道已读状态数据库服务。
+ * 职责：在 database-impl 中持久化频道已读锚点与未读统计查询。
+ * 边界：不承载未读业务规则，只暴露存储层读写能力。
  */
 public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadStateDatabaseService {
 
@@ -21,16 +23,25 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
         this.channelReadStateMapper = channelReadStateMapper;
     }
 
+    /**
+     * 查询账户在频道中的已读状态记录。
+     */
     @Override
     public Optional<ChannelReadStateRecord> findByChannelIdAndAccountId(long channelId, long accountId) {
         return execute(() -> Optional.ofNullable(channelReadStateMapper.findByChannelIdAndAccountId(channelId, accountId)).map(this::toRecord), "failed to query channel read state");
     }
 
+    /**
+     * 新增或覆盖频道已读状态记录。
+     */
     @Override
     public void upsert(ChannelReadStateRecord record) {
         executeVoid(() -> channelReadStateMapper.upsertState(toEntity(record)), "failed to upsert channel read state");
     }
 
+    /**
+     * 查询账户各频道未读统计。
+     */
     @Override
     public List<ChannelUnreadRecord> listUnreadsByAccountId(long accountId) {
         return execute(() -> channelReadStateMapper.listUnreadsByAccountId(accountId).stream()

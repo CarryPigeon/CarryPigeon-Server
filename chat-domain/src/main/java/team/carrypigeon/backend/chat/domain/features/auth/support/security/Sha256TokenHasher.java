@@ -16,6 +16,12 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 @Component
 public class Sha256TokenHasher implements TokenHasher {
 
+    /**
+     * 对 refresh token 生成稳定 SHA-256 摘要。
+     *
+     * @param token 原始 refresh token
+     * @return 十六进制摘要字符串
+     */
     @Override
     public String hash(String token) {
         try {
