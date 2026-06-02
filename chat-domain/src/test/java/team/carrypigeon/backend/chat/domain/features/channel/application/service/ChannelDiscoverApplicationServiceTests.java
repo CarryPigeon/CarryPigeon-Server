@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.application.query.DiscoverChannelsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
@@ -36,7 +37,7 @@ class ChannelDiscoverApplicationServiceTests {
     @DisplayName("discover channels returns mapped results")
     void discoverChannels_returnsMappedResults() {
         StubChannelRepository channelRepository = new StubChannelRepository();
-        channelRepository.discoverResults = List.of(new Channel(9L, 9L, "General", "讨论区", "avatars/ch/9.png", "1001", "public", false, 42L, false, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")));
+        channelRepository.discoverResults = List.of(new DiscoveredChannel(9L, "General", "讨论区", "avatars/ch/9.png", 42L, false));
         ChannelApplicationService service = createService(channelRepository);
 
         var result = service.discoverChannels(new DiscoverChannelsQuery(1001L, "gen", null, "public", 20));
@@ -75,11 +76,11 @@ class ChannelDiscoverApplicationServiceTests {
     }
 
     private static final class StubChannelRepository implements ChannelRepository {
-        private List<Channel> discoverResults = List.of();
+        private List<DiscoveredChannel> discoverResults = List.of();
         @Override public Optional<Channel> findDefaultChannel() { return Optional.empty(); }
         @Override public Optional<Channel> findSystemChannel() { return Optional.empty(); }
         @Override public Optional<Channel> findById(long channelId) { return Optional.empty(); }
-        @Override public List<Channel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) { return discoverResults; }
+        @Override public List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) { return discoverResults; }
     }
 
     private static final class StubChannelMemberRepository implements ChannelMemberRepository {

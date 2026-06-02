@@ -137,7 +137,9 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
                 metadata = #{metadata},
                 mentions = #{mentions},
                 forwarded_from = #{forwardedFrom},
-                status = #{status}
+                status = #{status},
+                edited_at = #{editedAt},
+                edit_version = #{editVersion}
             WHERE message_id = #{messageId}
             """)
     int updateMessage(MessageEntity entity);

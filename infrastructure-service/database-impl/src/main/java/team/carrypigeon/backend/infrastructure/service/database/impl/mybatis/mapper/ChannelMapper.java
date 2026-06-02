@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 
 /**
@@ -44,7 +45,7 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
             LIMIT #{limit}
             </script>
             """)
-    List<ChannelEntity> discoverChannels(
+    List<ChannelDiscoverProjection> discoverChannels(
             @Param("keyword") String keyword,
             @Param("cursorChannelId") Long cursorChannelId,
             @Param("type") String type,

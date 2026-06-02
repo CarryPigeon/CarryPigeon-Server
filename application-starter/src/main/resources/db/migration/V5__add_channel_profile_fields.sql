@@ -1,5 +1,0 @@
-ALTER TABLE chat_channel
-    ADD COLUMN brief VARCHAR(256) NOT NULL DEFAULT '';
-
-ALTER TABLE chat_channel
-    ADD COLUMN avatar VARCHAR(256) NOT NULL DEFAULT '';

@@ -2,12 +2,15 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 
@@ -146,6 +149,30 @@ class MybatisPlusChannelDatabaseServiceTests {
         assertEquals(2L, record.id());
         assertEquals("system", record.name());
         assertEquals("system", record.type());
+    }
+
+    /**
+     * 验证 discover 查询会映射成独立的 discover 读侧契约。
+     */
+    @Test
+    @DisplayName("discover channels existing rows maps discover records")
+    void discoverChannels_existingRows_mapsDiscoverRecords() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        ChannelDiscoverProjection projection = new ChannelDiscoverProjection();
+        projection.setId(9L);
+        projection.setName("general");
+        projection.setBrief("讨论区");
+        projection.setAvatar("avatars/ch/9.png");
+        projection.setMemberCount(42L);
+        projection.setRequiresApplication(Boolean.FALSE);
+        when(channelMapper.discoverChannels("gen", 10L, "public", 20)).thenReturn(List.of(projection));
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        ChannelDiscoverRecord record = service.discoverChannels("gen", 10L, "public", 20).getFirst();
+
+        assertEquals(9L, record.id());
+        assertEquals(42L, record.memberCount());
+        assertEquals(false, record.requiresApplication());
     }
 
     private static ChannelEntity entity() {

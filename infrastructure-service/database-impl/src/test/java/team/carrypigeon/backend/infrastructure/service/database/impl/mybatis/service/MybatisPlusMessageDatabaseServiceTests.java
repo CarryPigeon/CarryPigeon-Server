@@ -56,6 +56,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         assertEquals(null, entity.getMetadata());
         assertEquals("sent", entity.getStatus());
         assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getCreatedAt());
+        assertEquals(Instant.parse("2026-04-22T00:05:00Z"), entity.getEditedAt());
+        assertEquals(2L, entity.getEditVersion());
     }
 
     /**
@@ -113,6 +115,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         assertEquals("carrypigeon-local", entity.getServerId());
         assertEquals("sent", entity.getStatus());
         assertEquals("[文本消息] hello world", entity.getPreviewText());
+        assertEquals(Instant.parse("2026-04-22T00:05:00Z"), entity.getEditedAt());
+        assertEquals(2L, entity.getEditVersion());
     }
 
     /**
@@ -256,8 +260,12 @@ class MybatisPlusMessageDatabaseServiceTests {
                 "hello world",
                 null,
                 null,
+                null,
+                null,
                 "sent",
-                Instant.parse("2026-04-22T00:00:00Z")
+                Instant.parse("2026-04-22T00:00:00Z"),
+                Instant.parse("2026-04-22T00:05:00Z"),
+                2L
         );
     }
 
@@ -276,6 +284,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         entity.setMetadata(null);
         entity.setStatus("sent");
         entity.setCreatedAt(Instant.parse("2026-04-22T00:00:00Z"));
+        entity.setEditedAt(Instant.parse("2026-04-22T00:05:00Z"));
+        entity.setEditVersion(2L);
         return entity;
     }
 
@@ -294,6 +304,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         entity.setMetadata("{\"trace\":true}");
         entity.setStatus("sent");
         entity.setCreatedAt(Instant.parse("2026-04-23T00:00:00Z"));
+        entity.setEditedAt(null);
+        entity.setEditVersion(1L);
         return entity;
     }
 }

@@ -3,7 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 
@@ -51,8 +53,10 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
      * 输入：关键字、游标、类型与查询上限。
      */
     @Override
-    public List<Channel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
-        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, type, limit).stream().map(this::toDomainModel).toList();
+    public List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, type, limit).stream()
+                .map(this::toDiscoveredChannel)
+                .toList();
     }
 
     /**
@@ -93,10 +97,19 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 "",
                 record.type(),
                 record.defaultChannel(),
-                record.memberCount(),
-                record.requiresApplication(),
                 record.createdAt(),
                 record.updatedAt()
+        );
+    }
+
+    private DiscoveredChannel toDiscoveredChannel(ChannelDiscoverRecord record) {
+        return new DiscoveredChannel(
+                record.id(),
+                record.name(),
+                record.brief(),
+                record.avatar(),
+                record.memberCount(),
+                record.requiresApplication()
         );
     }
 
@@ -109,8 +122,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 channel.avatar(),
                 channel.type(),
                 channel.defaultChannel(),
-                channel.memberCount(),
-                channel.requiresApplication(),
                 channel.createdAt(),
                 channel.updatedAt()
         );

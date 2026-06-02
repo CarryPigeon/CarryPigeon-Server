@@ -1,11 +1,14 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 
@@ -75,10 +78,28 @@ class DatabaseBackedChannelRepositoryTests {
         assertEquals("system", result.orElseThrow().name());
     }
 
+    /**
+     * 验证 discover 查询会映射为独立读模型，而不是复用频道主聚合。
+     */
+    @Test
+    @DisplayName("discover channels maps discover projection")
+    void discoverChannels_mapsDiscoverProjection() {
+        FakeChannelDatabaseService databaseService = new FakeChannelDatabaseService();
+        databaseService.discoverRecords = List.of(new ChannelDiscoverRecord(11L, "general", "公开讨论区", "avatars/ch/11.png", 42L, false));
+        DatabaseBackedChannelRepository repository = new DatabaseBackedChannelRepository(databaseService);
+
+        List<DiscoveredChannel> result = repository.discoverChannels("gen", null, "public", 20);
+
+        assertEquals(1, result.size());
+        assertEquals(11L, result.getFirst().id());
+        assertEquals(42L, result.getFirst().memberCount());
+    }
+
     private static class FakeChannelDatabaseService implements ChannelDatabaseService {
 
         private ChannelRecord record;
         private ChannelRecord systemRecord;
+        private List<ChannelDiscoverRecord> discoverRecords = List.of();
         private ChannelRecord insertedRecord;
         private ChannelRecord updatedRecord;
 
@@ -95,6 +116,11 @@ class DatabaseBackedChannelRepositoryTests {
         @Override
         public Optional<ChannelRecord> findById(long channelId) {
             return Optional.ofNullable(record);
+        }
+
+        @Override
+        public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+            return discoverRecords;
         }
 
         @Override

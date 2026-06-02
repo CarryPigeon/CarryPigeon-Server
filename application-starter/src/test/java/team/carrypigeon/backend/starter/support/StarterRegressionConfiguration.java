@@ -222,7 +222,7 @@ public class StarterRegressionConfiguration {
     @Bean
     @Primary
     public MessageRealtimePublisher messageRealtimePublisher() {
-        return (message, recipientAccountIds) -> {
+        return (message, senderSnapshot, recipientAccountIds) -> {
         };
     }
 

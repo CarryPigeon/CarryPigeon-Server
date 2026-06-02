@@ -11,6 +11,7 @@ import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -138,7 +139,7 @@ class SpringTransactionRunnerTests {
         });
         SpringTransactionRunner runner = new SpringTransactionRunner(transactionTemplate);
 
-        assertThrows(IllegalStateException.class, () -> runner.runInTransaction(afterCommit -> {
+        assertThrows(IllegalStateException.class, () -> runner.runInTransaction((TransactionRunner.TransactionalRunnable) afterCommit -> {
             afterCommit.execute(() -> afterCommitExecuted.set(true));
             throw new IllegalStateException("transaction failed");
         }));
@@ -156,7 +157,7 @@ class SpringTransactionRunnerTests {
         SpringTransactionRunner runner = new SpringTransactionRunner(new TransactionTemplate(transactionManager));
         AtomicBoolean afterCommitExecuted = new AtomicBoolean(false);
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> runner.runInTransaction(afterCommit -> {
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> runner.runInTransaction((TransactionRunner.TransactionalRunnable) afterCommit -> {
             afterCommit.execute(() -> afterCommitExecuted.set(true));
             throw new IllegalStateException("transaction failed");
         }));

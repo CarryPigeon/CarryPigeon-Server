@@ -20,11 +20,6 @@ spring:
       port: 6379
       # 职责：定义 Redis 访问密码。
       password: ${REDIS_PASSWORD:}
-  flyway:
-    # 职责：启用数据库迁移基础能力。
-    enabled: true
-    # 职责：保留第一阶段数据库迁移脚本默认扫描位置。
-    locations: classpath:db/migration
 
 cp:
   chat:

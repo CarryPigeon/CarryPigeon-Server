@@ -5,8 +5,10 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 
@@ -68,8 +70,13 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 输入：关键字、游标、类型和条数上限。
      */
     @Override
-    public List<ChannelRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
-        return execute(() -> channelMapper.discoverChannels(keyword, cursorChannelId, type, limit).stream().map(this::toRecord).toList(), "failed to discover channels");
+    public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+        return execute(
+                () -> channelMapper.discoverChannels(keyword, cursorChannelId, type, limit).stream()
+                        .map(this::toDiscoverRecord)
+                        .toList(),
+                "failed to discover channels"
+        );
     }
 
     /**
@@ -122,10 +129,19 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
                 entity.getAvatar(),
                 entity.getType(),
                 Boolean.TRUE.equals(entity.getDefaultChannel()),
-                entity.getMemberCount() == null ? 0L : entity.getMemberCount(),
-                Boolean.TRUE.equals(entity.getRequiresApplication()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
+        );
+    }
+
+    private ChannelDiscoverRecord toDiscoverRecord(ChannelDiscoverProjection projection) {
+        return new ChannelDiscoverRecord(
+                projection.getId(),
+                projection.getName(),
+                projection.getBrief(),
+                projection.getAvatar(),
+                projection.getMemberCount() == null ? 0L : projection.getMemberCount(),
+                Boolean.TRUE.equals(projection.getRequiresApplication())
         );
     }
 

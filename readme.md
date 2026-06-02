@@ -1,8 +1,8 @@
 # CarryPigeon Backend
 
-CarryPigeon Backend 是一个基于 **Java 21 + Spring Boot + Maven 多模块** 的聊天后端项目。
+CarryPigeon Backend 是一个基于 **Java 21 + Spring Boot + Maven 多模块** 的开源聊天后端项目。
 
-当前仓库处于**重写式重构阶段**：已经具备较清晰的模块边界、Swagger API 门户、测试与分发链路，但仍以**开发环境 / 内网联调 / 持续重构**为主要使用场景，而不是已经完全稳定的对外发布成品。
+当前仓库处于**重写式重构阶段**：已经具备较清晰的模块边界、Swagger API 门户、测试与分发链路，但当前仍以**本地开发 / 自建测试环境 / 持续重构**为主要使用场景，而不是已经完全稳定的通用生产发行版。
 
 ## 当前状态
 
@@ -45,7 +45,11 @@ CarryPigeon Backend 是一个基于 **Java 21 + Spring Boot + Maven 多模块** 
 bash bin/linux/docker-up.sh
 ```
 
-更多环境准备请参考 `docs/部署手册.md`。
+更多环境准备请参考：
+
+- `docs/部署手册.md`
+- `docs/数据库部署手册.md`
+- `docs/sql/README.md`
 
 ### 2. 运行测试
 
@@ -86,6 +90,8 @@ mvn test -DskipTests=false
 - `docs/API.md`：当前 HTTP API 文档与使用说明
 - `docs/架构文档.md`：模块职责与依赖边界
 - `docs/部署手册.md`：运行方式、分发与部署边界
+- `docs/数据库部署手册.md`：MySQL、Flyway 与数据库初始化说明
+- `docs/sql/README.md`：按领域划分的数据库聚合 SQL
 - `docs/测试规范.md`：测试分层与质量门禁
 - `docs/AI协作开发规范.md`：AI / 协作开发规则
 
@@ -97,7 +103,7 @@ mvn test -DskipTests=false
 
 ## 当前边界说明
 
-- 当前项目仍处于重写期，不应默认视为生产级稳定开源成品
+- 当前项目仍处于重写期，不应默认视为生产级稳定发行版
 - Docker 当前只承接外部依赖，不承接应用容器化
 - 当前部署手册不覆盖 Kubernetes、多节点高可用或生产级进程托管方案
 - AI 中间产物统一放入 `ai-agent-workplace/`
@@ -112,4 +118,4 @@ mvn test -DskipTests=false
 
 - **前端联调**：优先打开 Swagger UI 与 `docs/API.md`
 - **后端开发**：优先阅读 `docs/架构文档.md` 与 `docs/测试规范.md`
-- **部署运行**：优先阅读 `docs/部署手册.md`
+- **部署运行**：优先阅读 `docs/部署手册.md` 与 `docs/数据库部署手册.md`

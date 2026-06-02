@@ -1,3 +1,6 @@
+-- User domain
+-- Source: V3
+
 CREATE TABLE user_profile (
     account_id BIGINT NOT NULL,
     nickname VARCHAR(64) NOT NULL,

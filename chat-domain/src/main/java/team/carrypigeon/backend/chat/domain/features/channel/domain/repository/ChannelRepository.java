@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 
 /**
  * 频道仓储抽象。
@@ -33,7 +34,7 @@ public interface ChannelRepository {
      */
     Optional<Channel> findById(long channelId);
 
-    default List<Channel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+    default List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
         throw new UnsupportedOperationException("channel discover is not supported");
     }
 

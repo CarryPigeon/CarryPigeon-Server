@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
 import java.util.Optional;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 
 /**
@@ -33,7 +34,7 @@ public interface ChannelDatabaseService {
      */
     Optional<ChannelRecord> findById(long channelId);
 
-    default List<ChannelRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+    default List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
         throw new UnsupportedOperationException("channel discover is not supported");
     }
 

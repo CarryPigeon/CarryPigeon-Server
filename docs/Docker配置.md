@@ -9,6 +9,8 @@
 若需要查看完整的分发、部署、前后台启动与停止流程，请同时阅读：
 
 - `docs/部署手册.md`
+- `docs/数据库部署手册.md`
+- `docs/sql/README.md`
 
 ## 2. 当前容器化范围
 
@@ -109,6 +111,11 @@ bash bin/linux/docker-logs.sh
 职责：
 
 - 作为当前 `database-impl` 的默认本地数据库
+
+数据库初始化和测试数据导入方式请参考：
+
+- `docs/数据库部署手册.md`
+- `docs/sql/README.md`
 
 当前约定：
 

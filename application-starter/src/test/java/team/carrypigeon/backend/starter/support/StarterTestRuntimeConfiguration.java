@@ -586,6 +586,7 @@ public class StarterTestRuntimeConfiguration {
         private final List<ChannelPin> channelPins = new ArrayList<>();
         private final List<Mention> mentions = new ArrayList<>();
         private Channel defaultChannel;
+        private Channel systemChannel;
 
         public StarterTestState() {
             reset();
@@ -618,7 +619,20 @@ public class StarterTestRuntimeConfiguration {
                     Instant.parse("2026-04-23T00:00:00Z"),
                     Instant.parse("2026-04-23T00:00:00Z")
             );
+            systemChannel = new Channel(
+                    2L,
+                    1L,
+                    "system",
+                    "",
+                    "",
+                    "",
+                    "system",
+                    false,
+                    Instant.parse("2026-04-23T00:00:00Z"),
+                    Instant.parse("2026-04-23T00:00:00Z")
+            );
             channelsById.put(defaultChannel.id(), defaultChannel);
+            channelsById.put(systemChannel.id(), systemChannel);
         }
     }
 }
