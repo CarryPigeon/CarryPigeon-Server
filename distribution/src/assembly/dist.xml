@@ -52,16 +52,36 @@
             <fileMode>0755</fileMode>
             <includes>
                 <include>stop.sh</include>
+                <include>stop.bat</include>
+                <include>stop.ps1</include>
                 <include>start-background.sh</include>
+                <include>start-background.bat</include>
+                <include>start-background.ps1</include>
                 <include>start.sh</include>
                 <include>start.bat</include>
+                <include>start.ps1</include>
+                <include>verify.sh</include>
+                <include>verify.bat</include>
+                <include>verify.ps1</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/service</directory>
+            <outputDirectory>service</outputDirectory>
+            <fileMode>0644</fileMode>
         </fileSet>
         <fileSet>
             <directory>${project.basedir}</directory>
             <outputDirectory>.</outputDirectory>
             <includes>
                 <include>README.md</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/..</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes>
+                <include>.env.example</include>
             </includes>
         </fileSet>
     </fileSets>

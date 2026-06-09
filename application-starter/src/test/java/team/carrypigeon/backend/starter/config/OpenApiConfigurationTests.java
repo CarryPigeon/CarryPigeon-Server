@@ -61,6 +61,8 @@ class OpenApiConfigurationTests {
             OpenApiCustomizer customizer = context.getBean(OpenApiCustomizer.class);
 
             Operation protectedOperation = new Operation();
+            Operation publicRegisterOperation = new Operation();
+            Operation publicLoginOperation = new Operation();
             Operation publicTokenOperation = new Operation();
             Operation publicServerOperation = new Operation();
             Operation publicPluginCatalogOperation = new Operation();
@@ -70,6 +72,8 @@ class OpenApiConfigurationTests {
 
             OpenAPI openAPI = new OpenAPI().paths(new Paths()
                     .addPathItem("/api/users/me", new PathItem().get(protectedOperation))
+                    .addPathItem("/api/auth/register", new PathItem().post(publicRegisterOperation))
+                    .addPathItem("/api/auth/login", new PathItem().post(publicLoginOperation))
                     .addPathItem("/api/auth/tokens", new PathItem().post(publicTokenOperation))
                     .addPathItem("/api/server", new PathItem().get(publicServerOperation))
                     .addPathItem("/api/plugins/catalog", new PathItem().get(publicPluginCatalogOperation))
@@ -84,6 +88,8 @@ class OpenApiConfigurationTests {
                     .isNotNull()
                     .singleElement()
                     .satisfies(requirement -> assertThat(requirement).containsKey("bearerAuth"));
+            assertThat(publicRegisterOperation.getSecurity()).isNull();
+            assertThat(publicLoginOperation.getSecurity()).isNull();
             assertThat(publicTokenOperation.getSecurity()).isNull();
             assertThat(publicServerOperation.getSecurity()).isNull();
             assertThat(publicPluginCatalogOperation.getSecurity()).isNull();

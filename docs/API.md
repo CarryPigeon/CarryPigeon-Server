@@ -50,6 +50,8 @@ HTTP 失败统一返回标准错误对象：
 - `token_expired`
 - `not_found`
 - `internal_error`
+- `mail_service_unavailable`
+- `email_delivery_failed`
 - `required_plugin_missing`
 
 ### 1.3 认证约定
@@ -59,6 +61,8 @@ HTTP 失败统一返回标准错误对象：
 - 当前明确匿名放行的 HTTP 路径：
   - `GET /api/server`
   - `POST /api/gates/required/check`
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
   - `POST /api/auth/email_codes`
   - `POST /api/auth/tokens`
   - `POST /api/auth/refresh`
@@ -214,13 +218,51 @@ HTTP 失败统一返回标准错误对象：
 - **认证**：否
 - **成功**：`204 No Content`
 
+说明：
+
+- 该接口当前会触发真实邮件发送。
+- 运行前提：需要启用 `cp.infrastructure.service.mail.enabled=true`，并提供有效的 `spring.mail.*` 与 `cp.infrastructure.service.mail.from-address` 配置。
+- 若邮件服务未启用或投递失败，接口返回 `503 Service Unavailable`，`error.reason` 分别为 `mail_service_unavailable` 或 `email_delivery_failed`。
+
 请求体：
 
 ```json
 { "email": "user@example.com" }
 ```
 
-### 3.2 创建会话并签发 Token
+### 3.2 用户名密码注册
+
+- **方法**：`POST`
+- **路径**：`/api/auth/register`
+- **认证**：否
+
+请求体：
+
+```json
+{ "username": "carry-user", "password": "password123" }
+```
+
+成功响应：
+
+```json
+{ "uid": "1001", "username": "carry-user" }
+```
+
+### 3.3 用户名密码登录
+
+- **方法**：`POST`
+- **路径**：`/api/auth/login`
+- **认证**：否
+
+请求体：
+
+```json
+{ "username": "carry-user", "password": "password123" }
+```
+
+成功响应结构与 `POST /api/auth/tokens` 一致，当前推荐生产环境优先使用该入口完成公开认证闭环。
+
+### 3.4 创建会话并签发 Token
 
 - **方法**：`POST`
 - **路径**：`/api/auth/tokens`
@@ -259,7 +301,7 @@ required gate 不满足时返回：
 - `error.reason = "required_plugin_missing"`
 - `error.details.missing_plugins = [...]`
 
-### 3.3 刷新 Token
+### 3.5 刷新 Token
 
 - **方法**：`POST`
 - **路径**：`/api/auth/refresh`
@@ -276,7 +318,7 @@ required gate 不满足时返回：
 
 成功响应结构与 `POST /api/auth/tokens` 一致。
 
-### 3.4 撤销 Refresh Token
+### 3.6 撤销 Refresh Token
 
 - **方法**：`POST`
 - **路径**：`/api/auth/revoke`
@@ -292,7 +334,7 @@ required gate 不满足时返回：
 }
 ```
 
-### 3.5 查询当前登录用户（过渡接口）
+### 3.7 查询当前登录用户（过渡接口）
 
 - **方法**：`GET`
 - **路径**：`/api/auth/me`
@@ -566,8 +608,8 @@ required gate 不满足时返回：
 - `domain = Core:Voice`
 - `domain_version = 1.0.0`
 - `Core:Text` 使用 `data.text`
-- `Core:File` 使用 `data.share_key`、`data.filename`
-- `Core:Voice` 使用 `data.share_key`、`data.filename`、`data.duration_millis`
+- `Core:File` 使用 `data.object_key` 或附件 `data.share_key`，并要求 `data.filename`
+- `Core:Voice` 使用 `data.object_key` 或附件 `data.share_key`，并要求 `data.filename`、`data.duration_millis`
 
 ### 6.4 删除消息
 
@@ -591,12 +633,18 @@ required gate 不满足时返回：
   "message": "success",
   "data": {
     "object_key": "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+    "share_key": "shr_att_xxx",
     "filename": "demo.pdf",
     "mime_type": "application/pdf",
     "size": 123
   }
 }
 ```
+
+说明：
+
+- multipart 字段 `file` 为必填。
+- `message_type` 可选，允许值为 `file` 或 `voice`，默认 `file`。
 
 ### 6.6 撤回消息（过渡接口）
 

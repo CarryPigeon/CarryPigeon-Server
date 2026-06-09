@@ -43,6 +43,14 @@
 			<artifactId>storage-api</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>CarryPigeon</groupId>
+			<artifactId>cache-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>CarryPigeon</groupId>
+			<artifactId>mail-api</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 			<exclusions>

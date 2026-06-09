@@ -254,6 +254,58 @@ class ChannelApplicationServiceTests {
     }
 
     /**
+     * 验证存在审计日志依赖时会拒绝删除频道。
+     */
+    @Test
+    @DisplayName("delete channel with dependent audit logs throws conflict problem")
+    void deleteChannel_withDependentAuditLogs_throwsConflictProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelAuditLogRepository.append(new ChannelAuditLog(
+                8001L,
+                9L,
+                1001L,
+                "CHANNEL_UPDATED",
+                null,
+                "{}",
+                BASE_TIME
+        ));
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.deleteChannel(new DeleteChannelCommand(1001L, 9L))
+        );
+
+        assertEquals("channel contains dependent data and cannot be deleted", exception.getMessage());
+        assertEquals("channel_delete_blocked", exception.reason());
+        assertTrue(context.channelRepository.channels.containsKey(9L));
+    }
+
+    /**
+     * 验证底层删除阶段的运行时依赖冲突会被稳定映射为 409，而不是冒泡成 500。
+     */
+    @Test
+    @DisplayName("delete channel runtime delete failure throws conflict problem")
+    void deleteChannel_runtimeDeleteFailure_throwsConflictProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelRepository.deleteFailure = new IllegalStateException("fk constraint");
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.deleteChannel(new DeleteChannelCommand(1001L, 9L))
+        );
+
+        assertEquals("channel contains dependent data and cannot be deleted", exception.getMessage());
+        assertEquals("channel_delete_blocked", exception.reason());
+        assertTrue(context.channelRepository.channels.containsKey(9L));
+    }
+
+    /**
      * 验证 OWNER 可以向 private channel 发起成员邀请。
      */
     @Test
@@ -302,7 +354,7 @@ class ChannelApplicationServiceTests {
                 9L,
                 3001L,
                 1002L,
-                0L,
+                1002L,
                 ChannelInviteStatus.PENDING,
                 BASE_TIME,
                 null
@@ -348,7 +400,7 @@ class ChannelApplicationServiceTests {
                 9L,
                 3001L,
                 1002L,
-                0L,
+                1002L,
                 ChannelInviteStatus.PENDING,
                 BASE_TIME,
                 null
@@ -449,7 +501,7 @@ class ChannelApplicationServiceTests {
                 9L,
                 3001L,
                 1002L,
-                0L,
+                1002L,
                 ChannelInviteStatus.PENDING,
                 BASE_TIME,
                 null
@@ -500,8 +552,41 @@ class ChannelApplicationServiceTests {
         ChannelApplicationResult result = service.createChannelApplication(new CreateChannelApplicationCommand(1002L, 9L, "retry"));
 
         assertEquals(3001L, result.applicationId());
-        assertEquals(0L, context.channelInviteRepository.updatedInvite.inviterAccountId());
+        assertEquals(1002L, context.channelInviteRepository.updatedInvite.inviterAccountId());
         assertEquals(ChannelInviteStatus.PENDING, context.channelInviteRepository.updatedInvite.status());
+    }
+
+    @Test
+    @DisplayName("delete channel with dependent messages throws conflict problem")
+    void deleteChannel_withDependentMessages_throwsConflictProblem() {
+        TestContext context = new TestContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.messageRepository.save(new ChannelMessage(
+                5001L,
+                "550e8400-e29b-41d4-a716-446655440000",
+                9L,
+                9L,
+                1001L,
+                "text",
+                "hello",
+                "hello",
+                "hello",
+                null,
+                null,
+                "sent",
+                BASE_TIME
+        ));
+        ChannelApplicationService service = context.createService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.deleteChannel(new DeleteChannelCommand(1001L, 9L))
+        );
+
+        assertEquals("channel contains dependent data and cannot be deleted", exception.getMessage());
+        assertEquals("channel_delete_blocked", exception.reason());
+        assertTrue(context.channelRepository.channels.containsKey(9L));
     }
 
     /**
@@ -829,7 +914,11 @@ class ChannelApplicationServiceTests {
 
         @Override
         public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-            return List.of();
+            return messagesById.values().stream()
+                    .filter(message -> message.channelId() == channelId)
+                    .sorted(java.util.Comparator.comparingLong(ChannelMessage::messageId).reversed())
+                    .limit(limit)
+                    .toList();
         }
 
         @Override
@@ -864,6 +953,7 @@ class ChannelApplicationServiceTests {
         private final Map<Long, Channel> channels = new HashMap<>();
         private Channel defaultChannel;
         private Channel savedChannel;
+        private RuntimeException deleteFailure;
 
         @Override
         public Optional<Channel> findDefaultChannel() {
@@ -895,6 +985,9 @@ class ChannelApplicationServiceTests {
 
         @Override
         public void delete(long channelId) {
+            if (deleteFailure != null) {
+                throw deleteFailure;
+            }
             this.channels.remove(channelId);
         }
     }
@@ -1078,6 +1171,27 @@ class ChannelApplicationServiceTests {
         @Override
         public void append(ChannelAuditLog channelAuditLog) {
             logs.add(channelAuditLog);
+        }
+
+        @Override
+        public List<ChannelAuditLog> list(
+                Long cursorAuditId,
+                int limit,
+                Long channelId,
+                Long actorAccountId,
+                String actionType,
+                Instant fromTime,
+                Instant toTime
+        ) {
+            return logs.stream()
+                    .filter(log -> channelId == null || log.channelId() == channelId)
+                    .filter(log -> actorAccountId == null || actorAccountId.equals(log.actorAccountId()))
+                    .filter(log -> actionType == null || actionType.equals(log.actionType()))
+                    .filter(log -> fromTime == null || !log.createdAt().isBefore(fromTime))
+                    .filter(log -> toTime == null || !log.createdAt().isAfter(toTime))
+                    .filter(log -> cursorAuditId == null || log.auditId() < cursorAuditId)
+                    .limit(limit)
+                    .toList();
         }
     }
 

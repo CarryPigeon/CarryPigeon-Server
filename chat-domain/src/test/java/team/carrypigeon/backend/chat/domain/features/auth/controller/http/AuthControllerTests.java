@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import java.time.Duration;
+import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -10,7 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -41,7 +46,11 @@ class AuthControllerTests {
     void setUp() {
         authApplicationService = mock(AuthApplicationService.class);
         serverApplicationService = mock(ServerApplicationService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authApplicationService, serverApplicationService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(
+                        authApplicationService,
+                        serverApplicationService,
+                        new AuthJwtProperties("carrypigeon", "0123456789abcdef0123456789abcdef", Duration.ofMinutes(30), Duration.ofDays(14))
+                ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -70,6 +79,40 @@ class AuthControllerTests {
                                 """))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    @Test
+    @DisplayName("send email code mail service unavailable returns 503")
+    void sendEmailCode_mailServiceUnavailable_returns503() throws Exception {
+        doThrow(ProblemException.fail("mail_service_unavailable", "mail service is unavailable"))
+                .when(authApplicationService)
+                .sendEmailCode(any());
+
+        mockMvc.perform(post("/api/auth/email_codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"user@example.com"}
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error.reason").value("mail_service_unavailable"))
+                .andExpect(jsonPath("$.error.message").value("mail service is unavailable"));
+    }
+
+    @Test
+    @DisplayName("send email code delivery failure returns 503")
+    void sendEmailCode_deliveryFailure_returns503() throws Exception {
+        doThrow(ProblemException.fail("email_delivery_failed", "failed to deliver verification email"))
+                .when(authApplicationService)
+                .sendEmailCode(any());
+
+        mockMvc.perform(post("/api/auth/email_codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"user@example.com"}
+                                """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error.reason").value("email_delivery_failed"))
+                .andExpect(jsonPath("$.error.message").value("failed to deliver verification email"));
     }
 
     @Test
@@ -146,6 +189,47 @@ class AuthControllerTests {
                                 """))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    @Test
+    @DisplayName("register success returns 201 and uid")
+    void register_success_returns201AndUid() throws Exception {
+        when(authApplicationService.register(any())).thenReturn(new RegisterResult(1001L, "carry-user"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.username").value("carry-user"));
+    }
+
+    @Test
+    @DisplayName("login success returns token response")
+    void login_success_returnsTokenResponse() throws Exception {
+        when(authApplicationService.login(any())).thenReturn(new AuthTokenResult(
+                1001L,
+                "carry-user",
+                "access-token",
+                Instant.parse("2026-06-02T13:30:00Z"),
+                "refresh-token",
+                Instant.parse("2026-06-16T13:00:00Z")
+        ));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andExpect(jsonPath("$.access_token").value("access-token"))
+                .andExpect(jsonPath("$.refresh_token").value("refresh-token"))
+                .andExpect(jsonPath("$.uid").value("1001"))
+                .andExpect(jsonPath("$.is_new_user").value(false))
+                .andExpect(jsonPath("$.expires_in").value(1800));
     }
 
     @Test

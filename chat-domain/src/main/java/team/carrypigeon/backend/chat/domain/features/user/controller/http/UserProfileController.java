@@ -193,7 +193,13 @@ public class UserProfileController {
         AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
         String shareKey = "profile_bg_" + principal.accountId();
         try {
-            fileApplicationService.uploadFile(shareKey, background.getContentType(), background.getSize(), background.getInputStream());
+            fileApplicationService.uploadFile(
+                    principal.accountId(),
+                    shareKey,
+                    background.getContentType(),
+                    background.getSize(),
+                    background.getInputStream()
+            );
         } catch (IOException exception) {
             throw ProblemException.fail("background_upload_read_failed", "failed to read background upload content");
         }

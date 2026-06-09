@@ -36,7 +36,7 @@
 说明：
 
 - `docker-compose.yaml` 用于编排本地外部服务
-- `.env.example` 用于提供环境变量模板
+- `.env.example` 用于提供环境变量模板，同时也会被仓库启动脚本和分发包启动脚本复用
 
 ## 4. 使用方式
 
@@ -172,21 +172,34 @@ bash bin/linux/docker-logs.sh
 当前 `.env.example` 中已定义：
 
 ```dotenv
+MYSQL_HOST=127.0.0.1
 MYSQL_DATABASE=carrypigeon
 MYSQL_USERNAME=carrypigeon
 MYSQL_PASSWORD=carrypigeon123
 MYSQL_ROOT_PASSWORD=root123456
 MYSQL_PORT=3306
+MYSQL_SERVER_TIMEZONE=Asia/Shanghai
 
+REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=carrypigeon123
 
+MINIO_HOST=127.0.0.1
 MINIO_API_PORT=9000
 MINIO_CONSOLE_PORT=9001
 MINIO_ROOT_USER=carrypigeon
 MINIO_ROOT_PASSWORD=carrypigeon123
 MINIO_BUCKET=carrypigeon
+MINIO_ENDPOINT=http://127.0.0.1:9000
+
+CP_CHAT_AUTH_JWT_SECRET=
+CP_CHAT_SERVER_ID=550e8400-e29b-41d4-a716-446655440000
 ```
+
+补充说明：
+
+- 其中 Docker Compose 实际消费的是外部服务相关变量。
+- 应用运行脚本还会复用其中的 `CP_CHAT_AUTH_JWT_SECRET`、`CP_CHAT_SERVER_ID` 和外部服务地址变量。
 
 ## 7. 设计边界
 

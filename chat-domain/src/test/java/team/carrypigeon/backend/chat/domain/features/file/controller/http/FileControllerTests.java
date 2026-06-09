@@ -28,6 +28,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.Presign
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -57,7 +58,7 @@ class FileControllerTests {
     @DisplayName("create upload authenticated request returns upload grant")
     void createUpload_authenticatedRequest_returnsUploadGrant() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(fileApplicationService.createUploadGrant(any(), any(), any(Long.class)))
+        when(fileApplicationService.createUploadGrant(anyLong(), any(), any(), anyLong()))
                 .thenReturn(new FileUploadGrantResult(7001L, "shr_7001", "/api/files/uploads/shr_7001", Instant.parse("2026-04-23T01:00:00Z")));
         when(fileApplicationService.uploadHeaders()).thenReturn(java.util.Map.of());
 
@@ -79,8 +80,10 @@ class FileControllerTests {
     @DisplayName("download server avatar anonymous request returns file body")
     void download_serverAvatar_anonymousRequest_returnsFileBody() throws Exception {
         when(fileApplicationService.isServerAvatar("server_avatar")).thenReturn(true);
-        when(fileApplicationService.findStorageObject("server_avatar")).thenReturn(Optional.of(StorageObject.withContent("server_avatar", "image/png", 10L, new java.io.ByteArrayInputStream("avatar-bytes".getBytes()))));
-        when(fileApplicationService.createDownloadUrl("server_avatar")).thenReturn(new PresignedUrl(URI.create("http://test.local/objects/server_avatar"), Instant.parse("2026-04-23T01:00:00Z")));
+        when(fileApplicationService.findStorageObject(null, "server_avatar"))
+                .thenReturn(Optional.of(StorageObject.withContent("server_avatar", "image/png", 10L, new java.io.ByteArrayInputStream("avatar-bytes".getBytes()))));
+        when(fileApplicationService.createDownloadUrl(null, "server_avatar"))
+                .thenReturn(new PresignedUrl(URI.create("http://test.local/objects/server_avatar"), Instant.parse("2026-04-23T01:00:00Z")));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/files/download/server_avatar"))
                 .andExpect(status().isOk())
@@ -92,8 +95,10 @@ class FileControllerTests {
     void download_privateFile_authenticatedRequest_returnsFileBody() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(fileApplicationService.isServerAvatar("shr_7001")).thenReturn(false);
-        when(fileApplicationService.findStorageObject("shr_7001")).thenReturn(Optional.of(StorageObject.withContent("files/shr_7001", "application/pdf", 12L, new java.io.ByteArrayInputStream("demo-content".getBytes()))));
-        when(fileApplicationService.createDownloadUrl("shr_7001")).thenReturn(new PresignedUrl(URI.create("http://test.local/objects/files/shr_7001"), Instant.parse("2026-04-23T01:00:00Z")));
+        when(fileApplicationService.findStorageObject(1001L, "shr_7001"))
+                .thenReturn(Optional.of(StorageObject.withContent("files/shr_7001", "application/pdf", 12L, new java.io.ByteArrayInputStream("demo-content".getBytes()))));
+        when(fileApplicationService.createDownloadUrl(1001L, "shr_7001"))
+                .thenReturn(new PresignedUrl(URI.create("http://test.local/objects/files/shr_7001"), Instant.parse("2026-04-23T01:00:00Z")));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/files/download/shr_7001"))
                 .andExpect(status().isOk())
@@ -104,7 +109,7 @@ class FileControllerTests {
     @DisplayName("upload file authenticated request returns 204")
     void uploadFile_authenticatedRequest_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(fileApplicationService).uploadFile(eq("shr_7001"), eq("application/pdf"), eq(12L), any());
+        doNothing().when(fileApplicationService).uploadFile(eq(1001L), eq("shr_7001"), eq("application/pdf"), eq(12L), any());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/api/files/uploads/shr_7001")
                         .contentType(MediaType.APPLICATION_PDF)

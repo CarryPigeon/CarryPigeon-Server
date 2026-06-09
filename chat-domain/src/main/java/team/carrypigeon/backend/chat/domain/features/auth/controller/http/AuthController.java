@@ -13,15 +13,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.application.command.RegisterCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.CreateTokenSessionCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.RefreshTokenCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.application.command.SendEmailCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.AuthSessionTokenResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.CreateTokenSessionRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.LoginRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RefreshAccessTokenRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
@@ -40,13 +48,16 @@ public class AuthController {
 
     private final AuthApplicationService authApplicationService;
     private final ServerApplicationService serverApplicationService;
+    private final AuthJwtProperties authJwtProperties;
 
     public AuthController(
             AuthApplicationService authApplicationService,
-            ServerApplicationService serverApplicationService
+            ServerApplicationService serverApplicationService,
+            AuthJwtProperties authJwtProperties
     ) {
         this.authApplicationService = authApplicationService;
         this.serverApplicationService = serverApplicationService;
+        this.authJwtProperties = authJwtProperties;
     }
 
     /**
@@ -65,6 +76,38 @@ public class AuthController {
     public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeRequest request) {
         authApplicationService.sendEmailCode(new SendEmailCodeCommand(request.email()));
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 用户名密码注册。
+     *
+     * @param request 注册请求
+     * @return 注册成功结果
+     */
+    @PostMapping("/register")
+    @Operation(summary = "用户名密码注册", description = "使用用户名密码创建新账户。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "注册成功")
+    })
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterResult result = authApplicationService.register(new RegisterCommand(request.username().trim(), request.password()));
+        return ResponseEntity.status(201).body(new RegisterResponse(Ids.toString(result.accountId()), result.username()));
+    }
+
+    /**
+     * 用户名密码登录。
+     *
+     * @param request 登录请求
+     * @return 会话令牌响应
+     */
+    @PostMapping("/login")
+    @Operation(summary = "用户名密码登录", description = "使用用户名密码创建会话并签发 token。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
+    })
+    public AuthSessionTokenResponse login(@Valid @RequestBody LoginRequest request) {
+        AuthTokenResult result = authApplicationService.login(new LoginCommand(request.username().trim(), request.password()));
+        return toSessionTokenResponse(result);
     }
 
     /**
@@ -143,6 +186,17 @@ public class AuthController {
                 result.refreshToken(),
                 Ids.toString(result.accountId()),
                 result.newUser()
+        );
+    }
+
+    private AuthSessionTokenResponse toSessionTokenResponse(AuthTokenResult result) {
+        return new AuthSessionTokenResponse(
+                "Bearer",
+                result.accessToken(),
+                authJwtProperties.accessTokenTtl().toSeconds(),
+                result.refreshToken(),
+                Ids.toString(result.accountId()),
+                false
         );
     }
 }

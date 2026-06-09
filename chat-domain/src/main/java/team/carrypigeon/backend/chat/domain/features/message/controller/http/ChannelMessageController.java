@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import java.io.IOException;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,8 +19,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.DeleteChannelMessageCommand;
@@ -30,6 +34,7 @@ import team.carrypigeon.backend.chat.domain.features.message.application.dto.Cha
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelPinResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.ListChannelPinsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
@@ -38,6 +43,7 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Chan
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.EditChannelMessageRequest;
+import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MessageAttachmentUploadResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.PinChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
@@ -266,6 +272,41 @@ public class ChannelMessageController {
                 )
         );
         return ResponseEntity.status(201).body(responseMapper.toResponse(result));
+    }
+
+    @PostMapping(path = "/{channelId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "上传消息附件", description = "上传文件或语音附件并返回后续发送消息可用的稳定引用。")
+    public MessageAttachmentUploadResponse uploadMessageAttachment(
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @RequestParam(name = "message_type", required = false) String messageType,
+            @RequestPart("file") MultipartFile file,
+            HttpServletRequest request
+    ) {
+        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        try {
+            MessageAttachmentUploadResult result = messageApplicationService.uploadMessageAttachment(
+                    principal.accountId(),
+                    channelId,
+                    messageType,
+                    file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename(),
+                    file.getContentType(),
+                    file.getSize(),
+                    file.getInputStream()
+            );
+            return new MessageAttachmentUploadResponse(
+                    100,
+                    "success",
+                    new MessageAttachmentUploadResponse.Data(
+                            result.objectKey(),
+                            result.shareKey(),
+                            result.filename(),
+                            result.mimeType(),
+                            result.size()
+                    )
+            );
+        } catch (IOException exception) {
+            throw ProblemException.fail("attachment_upload_read_failed", "failed to read attachment upload content");
+        }
     }
 
     private java.util.List<EditChannelMessageCommand.MentionTargetCommand> toMentionCommands(

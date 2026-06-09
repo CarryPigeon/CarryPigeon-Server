@@ -78,7 +78,7 @@ public class ServerApplicationService {
                 API_VERSION,
                 resolveWsUrl(),
                 requiredPlugins,
-                new ServerCapabilities(true, true, true),
+                new ServerCapabilities(true, true, realtimeServerProperties.enabled()),
                 timeProvider.nowMillis()
         );
     }
@@ -95,6 +95,9 @@ public class ServerApplicationService {
     }
 
     private String resolveWsUrl() {
-        return "wss://" + realtimeServerProperties.host() + ":" + realtimeServerProperties.port() + realtimeServerProperties.path();
+        if (!realtimeServerProperties.enabled()) {
+            return null;
+        }
+        return "ws://" + realtimeServerProperties.host() + ":" + realtimeServerProperties.port() + realtimeServerProperties.path();
     }
 }

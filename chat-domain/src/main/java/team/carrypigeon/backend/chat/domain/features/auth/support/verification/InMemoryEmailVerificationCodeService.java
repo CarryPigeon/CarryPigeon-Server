@@ -5,26 +5,33 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
+import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
 /**
  * 内存型邮箱验证码服务。
- * 职责：为 v1 邮箱验证码登录提供最小本地验证码签发与校验能力。
- * 边界：当前不负责真实邮件投递，只保证同进程内验证码会话语义自洽。
+ * 职责：为 v1 邮箱验证码登录提供最小本地验证码签发、投递与校验能力。
+ * 边界：使用进程内状态保存验证码，不承担 SMTP 等邮件基础设施实现细节。
  */
-@Component
 public class InMemoryEmailVerificationCodeService implements EmailVerificationCodeService {
 
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
+    private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
     private final Map<String, EmailCodeEntry> issuedCodes = new ConcurrentHashMap<>();
     private final TimeProvider timeProvider;
+    private final MailSenderService mailSenderService;
 
     public InMemoryEmailVerificationCodeService(TimeProvider timeProvider) {
+        this(timeProvider, null);
+    }
+
+    public InMemoryEmailVerificationCodeService(TimeProvider timeProvider, MailSenderService mailSenderService) {
         this.timeProvider = timeProvider;
+        this.mailSenderService = mailSenderService;
     }
 
     /**
@@ -36,7 +43,15 @@ public class InMemoryEmailVerificationCodeService implements EmailVerificationCo
      */
     @Override
     public void issueCode(String email) {
-        issuedCodes.put(normalize(email), new EmailCodeEntry(generateCode(), timeProvider.nowInstant().plus(CODE_TTL)));
+        String normalizedEmail = normalize(email);
+        String code = generateCode();
+        issuedCodes.put(normalizedEmail, new EmailCodeEntry(code, timeProvider.nowInstant().plus(CODE_TTL)));
+        try {
+            deliverCode(normalizedEmail, code);
+        } catch (RuntimeException exception) {
+            issuedCodes.remove(normalizedEmail);
+            throw exception;
+        }
     }
 
     /**
@@ -64,6 +79,22 @@ public class InMemoryEmailVerificationCodeService implements EmailVerificationCo
 
     private String generateCode() {
         return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+    }
+
+    private void deliverCode(String email, String code) {
+        if (mailSenderService == null) {
+            throw ProblemException.fail("mail_service_unavailable", "mail service is unavailable");
+        }
+        try {
+            mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code)));
+        } catch (RuntimeException exception) {
+            throw ProblemException.fail("email_delivery_failed", "failed to deliver verification email");
+        }
+    }
+
+    private String buildMailText(String code) {
+        return "Your CarryPigeon verification code is: " + code + "\n\n"
+                + "This code will expire in 10 minutes.";
     }
 
     private record EmailCodeEntry(String code, Instant expiresAt) {

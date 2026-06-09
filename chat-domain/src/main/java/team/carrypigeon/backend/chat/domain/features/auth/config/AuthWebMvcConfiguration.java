@@ -40,6 +40,8 @@ public class AuthWebMvcConfiguration implements WebMvcConfigurer {
                         "/api/plugins/catalog",
                         "/api/domains/catalog",
                         "/api/files/download/server_avatar",
+                        "/api/auth/register",
+                        "/api/auth/login",
                         "/api/auth/email_codes",
                         "/api/auth/tokens",
                         "/api/auth/refresh",

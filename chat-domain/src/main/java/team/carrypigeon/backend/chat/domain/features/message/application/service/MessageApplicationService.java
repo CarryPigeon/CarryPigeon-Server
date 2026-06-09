@@ -33,6 +33,7 @@ import team.carrypigeon.backend.chat.domain.features.message.application.dto.Cha
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelPinResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.ListChannelPinsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
@@ -55,6 +56,7 @@ import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
@@ -365,6 +367,51 @@ public class MessageApplicationService {
             case "Core:Voice" -> sendHttpVoiceMessage(command);
             default -> throw ProblemException.validationFailed("schema_invalid", "domain is not supported");
         };
+    }
+
+    /**
+     * 上传频道消息附件。
+     * 职责：把附件直接写入对象存储，并返回后续发送消息所需的稳定引用。
+     * 约束：只有允许发送消息的频道成员才能上传附件。
+     */
+    public MessageAttachmentUploadResult uploadMessageAttachment(
+            long accountId,
+            long channelId,
+            String messageType,
+            String filename,
+            String contentType,
+            long size,
+            InputStream content
+    ) {
+        requirePositive(accountId, "accountId");
+        requirePositive(channelId, "channelId");
+        if (content == null) {
+            throw ProblemException.validationFailed("file content must not be null");
+        }
+        if (size <= 0L) {
+            throw ProblemException.validationFailed("size must be greater than 0");
+        }
+        String normalizedMessageType = normalizeAttachmentMessageType(messageType);
+        Channel channel = requireChannel(channelId);
+        ChannelMember member = requireMembership(channel.id(), accountId);
+        channelGovernancePolicy.requireCanSendMessage(channel, member, now());
+        String normalizedFilename = messageAttachmentObjectKeyPolicy.normalizeFilename(filename);
+        String resolvedContentType = resolveContentType(normalizedMessageType, contentType);
+        String objectKey = messageAttachmentObjectKeyPolicy.buildObjectKey(
+                channel.id(),
+                normalizedMessageType,
+                accountId,
+                idGenerator.nextLongId(),
+                normalizedFilename
+        );
+        requireObjectStorageService().put(new PutObjectCommand(objectKey, content, size, resolvedContentType));
+        return new MessageAttachmentUploadResult(
+                objectKey,
+                FileShareKeyCodec.shareKeyForObjectKey(objectKey),
+                normalizedFilename,
+                resolvedContentType,
+                size
+        );
     }
 
     /**
@@ -746,14 +793,13 @@ public class MessageApplicationService {
     }
 
     private ChannelMessageResult sendHttpFileMessage(SendChannelMessageHttpCommand command) {
-        String shareKey = requiredString(command.data(), "share_key", "share_key must not be blank");
         String filename = requiredString(command.data(), "filename", "filename must not be blank");
         String body = optionalString(command.data(), "text");
         Long size = optionalLong(command.data(), "size");
         String mimeType = optionalString(command.data(), "mime_type");
         return sendAttachmentHttpMessage(command, new FileChannelMessageDraft(
                 body,
-                resolveAttachmentObjectKey(shareKey),
+                resolveAttachmentObjectKey(command.data()),
                 filename,
                 mimeType,
                 size,
@@ -762,7 +808,6 @@ public class MessageApplicationService {
     }
 
     private ChannelMessageResult sendHttpVoiceMessage(SendChannelMessageHttpCommand command) {
-        String shareKey = requiredString(command.data(), "share_key", "share_key must not be blank");
         String filename = requiredString(command.data(), "filename", "filename must not be blank");
         Long durationMillis = requiredLong(command.data(), "duration_millis", "duration_millis must be greater than 0");
         String body = optionalString(command.data(), "text");
@@ -771,7 +816,7 @@ public class MessageApplicationService {
         String transcript = optionalString(command.data(), "transcript");
         return sendAttachmentHttpMessage(command, new VoiceChannelMessageDraft(
                 body,
-                resolveAttachmentObjectKey(shareKey),
+                resolveAttachmentObjectKey(command.data()),
                 filename,
                 mimeType,
                 size,
@@ -873,8 +918,22 @@ public class MessageApplicationService {
         );
     }
 
-    private String resolveAttachmentObjectKey(String shareKey) {
-        return FileShareKeyCodec.resolveObjectKey(shareKey);
+    private String resolveAttachmentObjectKey(java.util.Map<String, Object> data) {
+        String objectKey = optionalString(data, "object_key");
+        if (objectKey != null) {
+            return objectKey;
+        }
+        String shareKey = requiredString(data, "share_key", "share_key must not be blank");
+        return FileShareKeyCodec.attachmentObjectKey(shareKey)
+                .orElseThrow(() -> ProblemException.validationFailed("invalid_share_key", "share_key is invalid"));
+    }
+
+    private String normalizeAttachmentMessageType(String messageType) {
+        String normalized = messageType == null || messageType.isBlank() ? FILE_MESSAGE_TYPE : messageType.trim().toLowerCase();
+        if (!FILE_MESSAGE_TYPE.equals(normalized) && !VOICE_MESSAGE_TYPE.equals(normalized)) {
+            throw ProblemException.validationFailed("message_type must be file or voice");
+        }
+        return normalized;
     }
 
     private String requiredString(java.util.Map<String, Object> data, String fieldName, String message) {

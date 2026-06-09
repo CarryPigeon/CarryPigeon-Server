@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -20,6 +21,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.support.Aut
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
@@ -27,12 +29,14 @@ import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -190,6 +194,55 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.domain").value("Core:File"))
                 .andExpect(jsonPath("$.data.share_key").value("shr_7001"))
                 .andExpect(jsonPath("$.data.download_path").value("api/files/download/shr_7001"));
+    }
+
+    @Test
+    @DisplayName("send file channel message object key request returns structured attachment payload")
+    void sendFileChannelMessage_objectKeyRequest_returnsStructuredAttachmentPayload() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+                messageResult(
+                        5004L,
+                        1001L,
+                        "file",
+                        "项目文档",
+                        "[文件消息] demo.pdf",
+                        "{\"share_key\":\"shr_att_demo\",\"download_path\":\"api/files/download/shr_att_demo\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
+                        "sent"
+                )
+        );
+        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+
+        mockMvc.perform(post("/api/channels/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"domain":"Core:File","domain_version":"1.0.0","data":{"object_key":"channels/1/messages/file/accounts/1001/5001-demo.pdf","filename":"demo.pdf","mime_type":"application/pdf","size":123}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.share_key").value("shr_att_demo"));
+    }
+
+    @Test
+    @DisplayName("upload message attachment returns transitional success envelope")
+    void uploadMessageAttachment_returnsTransitionalSuccessEnvelope() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(messageApplicationService.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
+                .thenReturn(new MessageAttachmentUploadResult(
+                        "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+                        "shr_att_demo",
+                        "demo.pdf",
+                        "application/pdf",
+                        123L
+                ));
+
+        mockMvc.perform(multipart("/api/channels/1/messages/attachments")
+                        .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
+                        .param("message_type", "file"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(100))
+                .andExpect(jsonPath("$.message").value("success"))
+                .andExpect(jsonPath("$.data.object_key").value("channels/1/messages/file/accounts/1001/5001-demo.pdf"))
+                .andExpect(jsonPath("$.data.share_key").value("shr_att_demo"));
     }
 
     @Test

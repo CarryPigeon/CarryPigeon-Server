@@ -93,6 +93,16 @@
                 <version>1.0.0</version>
             </dependency>
             <dependency>
+                <groupId>CarryPigeon</groupId>
+                <artifactId>mail-api</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>CarryPigeon</groupId>
+                <artifactId>mail-impl</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-core</artifactId>
                 <version>${hutool.version}</version>

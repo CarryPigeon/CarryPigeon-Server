@@ -1,0 +1,21 @@
+[Unit]
+Description=CarryPigeon Backend Chat Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=carrypigeon
+Group=carrypigeon
+WorkingDirectory=/opt/carrypigeon
+EnvironmentFile=-/opt/carrypigeon/.env
+ExecStart=/usr/bin/env bash /opt/carrypigeon/bin/start.sh
+ExecStop=/usr/bin/env bash /opt/carrypigeon/bin/stop.sh
+Restart=on-failure
+RestartSec=5s
+TimeoutStartSec=90
+TimeoutStopSec=40
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

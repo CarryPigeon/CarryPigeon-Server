@@ -76,7 +76,6 @@ public class ChannelApplicationService {
     private static final String PUBLIC_CHANNEL_TYPE = "public";
     private static final String PRIVATE_CHANNEL_TYPE = "private";
     private static final String SYSTEM_CHANNEL_TYPE = "system";
-    private static final long APPLICATION_INVITER_ACCOUNT_ID = 0L;
     private static final String CHANNEL_NOT_FOUND_MESSAGE = "default channel does not exist";
     private static final String SYSTEM_CHANNEL_NOT_FOUND_MESSAGE = "system channel does not exist";
     private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
@@ -213,8 +212,20 @@ public class ChannelApplicationService {
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.forbidden("channel_owner_required", "channel action requires owner role");
             }
-            channelRepository.delete(channel.id());
-            appendAuditLog(channel.id(), operator.accountId(), "CHANNEL_DELETED", null, null);
+            requireChannelDeleteSafe(channel.id());
+            try {
+                channelMemberRepository.findByChannelId(channel.id()).forEach(member ->
+                        channelMemberRepository.delete(channel.id(), member.accountId())
+                );
+                channelRepository.delete(channel.id());
+            } catch (ProblemException exception) {
+                throw exception;
+            } catch (RuntimeException exception) {
+                throw ProblemException.conflict(
+                        "channel_delete_blocked",
+                        "channel contains dependent data and cannot be deleted"
+                );
+            }
             publishChannelsChangedAfterCommit(afterCommit, operator.accountId());
         });
     }
@@ -364,7 +375,7 @@ public class ChannelApplicationService {
                     channel.id(),
                     nextId(),
                     command.accountId(),
-                    0L,
+                    channelApplicationMarkerAccountId(command.accountId()),
                     ChannelInviteStatus.PENDING,
                     now(),
                     null
@@ -377,7 +388,7 @@ public class ChannelApplicationService {
                         existingInvite.channelId(),
                         existingInvite.applicationId(),
                         existingInvite.inviteeAccountId(),
-                        APPLICATION_INVITER_ACCOUNT_ID,
+                        channelApplicationMarkerAccountId(existingInvite.inviteeAccountId()),
                         ChannelInviteStatus.PENDING,
                         now(),
                         null
@@ -441,7 +452,7 @@ public class ChannelApplicationService {
                     invite.channelId(),
                     invite.applicationId(),
                     invite.inviteeAccountId(),
-                    operator.accountId(),
+                    channelApplicationMarkerAccountId(invite.inviteeAccountId()),
                     decidedStatus,
                     invite.createdAt(),
                     now()
@@ -1004,7 +1015,23 @@ public class ChannelApplicationService {
     }
 
     private boolean isChannelApplication(ChannelInvite invite) {
-        return invite.inviterAccountId() == APPLICATION_INVITER_ACCOUNT_ID;
+        return invite.inviterAccountId() == channelApplicationMarkerAccountId(invite.inviteeAccountId());
+    }
+
+    private long channelApplicationMarkerAccountId(long inviteeAccountId) {
+        return inviteeAccountId;
+    }
+
+    private void requireChannelDeleteSafe(long channelId) {
+        if (!channelInviteRepository.findByChannelId(channelId).isEmpty()
+                || !channelBanRepository.findByChannelId(channelId).isEmpty()
+                || !messageRepository.findByChannelIdBefore(channelId, null, 1).isEmpty()
+                || !channelAuditLogRepository.list(null, 1, channelId, null, null, null, null).isEmpty()) {
+            throw ProblemException.conflict(
+                    "channel_delete_blocked",
+                    "channel contains dependent data and cannot be deleted"
+            );
+        }
     }
 
     private ChannelBanResult toBanResult(ChannelBan ban) {

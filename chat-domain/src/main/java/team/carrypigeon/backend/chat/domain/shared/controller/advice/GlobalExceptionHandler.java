@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
             case CONFLICT -> new ErrorDescriptor(HttpStatus.CONFLICT, exception.reason(), exception.getMessage(), exception.details());
             case FORBIDDEN -> forbiddenDescriptor(exception);
             case NOT_FOUND -> new ErrorDescriptor(HttpStatus.NOT_FOUND, "not_found", exception.getMessage(), null);
-            case INTERNAL -> new ErrorDescriptor(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", "internal server error", null);
+            case INTERNAL -> internalDescriptor(exception);
         };
         if (exception.type() == team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemType.INTERNAL) {
             log.error("Problem exception mapped to internal error, reason={}", exception.reason(), exception);
@@ -186,6 +186,14 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 exception.details()
         );
+    }
+
+    private ErrorDescriptor internalDescriptor(ProblemException exception) {
+        return switch (exception.reason()) {
+            case "mail_service_unavailable", "email_delivery_failed" ->
+                    new ErrorDescriptor(HttpStatus.SERVICE_UNAVAILABLE, exception.reason(), exception.getMessage(), null);
+            default -> new ErrorDescriptor(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", "internal server error", null);
+        };
     }
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(ErrorDescriptor descriptor) {

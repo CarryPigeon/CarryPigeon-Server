@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.application.service;
 
+import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -76,6 +77,76 @@ class MessageApplicationServiceSendTests {
         assertEquals(1, fixture.publisher.createdMentions.size());
         assertEquals(1002L, fixture.publisher.createdMentions.getFirst().targetAccountId());
         assertEquals(5001L, fixture.publisher.createdMentions.getFirst().messageId());
+    }
+
+    /**
+     * 验证 file HTTP 消息可以直接引用附件上传返回的 object_key。
+     */
+    @Test
+    @DisplayName("send channel message file object key persists attachment payload")
+    void sendChannelMessage_fileObjectKey_persistsAttachmentPayload() {
+        MessageApplicationServiceTestSupport.TestObjectStorageService storageService =
+                new MessageApplicationServiceTestSupport.TestObjectStorageService();
+        storageService.getResult = java.util.Optional.of(
+                team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject.metadata(
+                        "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+                        "application/pdf",
+                        123L
+                )
+        );
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(storageService);
+
+        ChannelMessageResult result = fixture.service.sendChannelMessageHttp(
+                new SendChannelMessageHttpCommand(
+                        1001L,
+                        1L,
+                        "Core:File",
+                        "1.0.0",
+                        java.util.Map.of(
+                                "object_key", "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+                                "filename", "demo.pdf",
+                                "mime_type", "application/pdf",
+                                "size", 123L
+                        ),
+                        null,
+                        List.of(),
+                        null
+                )
+        );
+
+        assertEquals("file", result.messageType());
+        assertTrue(fixture.messageRepository.savedMessages.getFirst().payload()
+                .contains("\"object_key\":\"channels/1/messages/file/accounts/1001/5001-demo.pdf\""));
+        assertTrue(result.payload().contains("\"share_key\":\"shr_att_"));
+        assertEquals(5001L, fixture.publisher.publishedMessages.getFirst().messageId());
+    }
+
+    /**
+     * 验证附件上传会写入对象存储并返回后续消息发送可用的稳定引用。
+     */
+    @Test
+    @DisplayName("upload message attachment stores object and returns stable reference")
+    void uploadMessageAttachment_storesObjectAndReturnsStableReference() {
+        MessageApplicationServiceTestSupport.TestObjectStorageService storageService =
+                new MessageApplicationServiceTestSupport.TestObjectStorageService();
+        MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(storageService);
+
+        var result = fixture.service.uploadMessageAttachment(
+                1001L,
+                1L,
+                "file",
+                "demo.pdf",
+                "application/pdf",
+                4L,
+                new ByteArrayInputStream("demo".getBytes(java.nio.charset.StandardCharsets.UTF_8))
+        );
+
+        assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", result.objectKey());
+        assertTrue(result.shareKey().startsWith("shr_att_"));
+        assertEquals("demo.pdf", result.filename());
+        assertEquals("application/pdf", result.mimeType());
+        assertEquals(4L, result.size());
+        assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", storageService.lastPutCommand.objectKey());
     }
 
     /**

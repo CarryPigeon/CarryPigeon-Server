@@ -152,6 +152,7 @@ public class OpenApiConfiguration {
         }
 
         return !"/api/auth/register".equals(path)
+                && !"/api/auth/login".equals(path)
                 && !"/api/auth/email_codes".equals(path)
                 && !"/api/auth/tokens".equals(path)
                 && !"/api/auth/refresh".equals(path)

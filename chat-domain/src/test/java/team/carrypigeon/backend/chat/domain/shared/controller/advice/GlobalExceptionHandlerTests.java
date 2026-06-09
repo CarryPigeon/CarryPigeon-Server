@@ -74,6 +74,36 @@ class GlobalExceptionHandlerTests {
     }
 
     /**
+     * 验证邮件服务未就绪会映射为 503，并保留稳定 reason。
+     */
+    @Test
+    @DisplayName("handle mail service unavailable returns status 503")
+    void handleProblemException_mailServiceUnavailable_returnsStatus503() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleProblemException(
+                ProblemException.fail("mail_service_unavailable", "mail service is unavailable")
+        );
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertEquals("mail_service_unavailable", response.getBody().error().reason());
+        assertEquals("mail service is unavailable", response.getBody().error().message());
+    }
+
+    /**
+     * 验证邮件投递失败会映射为 503，并保留稳定 reason。
+     */
+    @Test
+    @DisplayName("handle email delivery failed returns status 503")
+    void handleProblemException_emailDeliveryFailed_returnsStatus503() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleProblemException(
+                ProblemException.fail("email_delivery_failed", "failed to deliver verification email")
+        );
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertEquals("email_delivery_failed", response.getBody().error().reason());
+        assertEquals("failed to deliver verification email", response.getBody().error().message());
+    }
+
+    /**
      * 验证请求绑定失败会映射到 422 响应码。
      * 输入：带字段错误的 BindException。
      * 输出：HTTP 422，且消息与 field_errors 保持可读。

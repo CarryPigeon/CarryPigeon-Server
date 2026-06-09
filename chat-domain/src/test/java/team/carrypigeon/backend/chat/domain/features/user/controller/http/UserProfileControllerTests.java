@@ -24,6 +24,8 @@ import team.carrypigeon.backend.chat.domain.features.user.application.service.Us
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -152,7 +154,7 @@ class UserProfileControllerTests {
     @DisplayName("upload current user background returns background url")
     void uploadCurrentUserBackground_returnsBackgroundUrl() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(fileApplicationService).uploadFile(any(), any(), any(Long.class), any());
+        doNothing().when(fileApplicationService).uploadFile(eq(1001L), eq("profile_bg_1001"), any(), anyLong(), any());
 
         mockMvc.perform(multipart("/api/users/me/background")
                         .file(new MockMultipartFile("background", "bg.png", "image/png", "img".getBytes()))

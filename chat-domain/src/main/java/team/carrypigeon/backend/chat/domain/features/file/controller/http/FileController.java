@@ -6,8 +6,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -57,8 +57,13 @@ public class FileController {
      * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
      */
     public FileUploadResponse createUpload(@Valid @RequestBody CreateFileUploadRequest request, HttpServletRequest servletRequest) {
-        authRequestContext.requirePrincipal(servletRequest);
-        FileUploadGrantResult result = fileApplicationService.createUploadGrant(request.filename(), request.mimeType(), request.sizeBytes());
+        var principal = authRequestContext.requirePrincipal(servletRequest);
+        FileUploadGrantResult result = fileApplicationService.createUploadGrant(
+                principal.accountId(),
+                request.filename(),
+                request.mimeType(),
+                request.sizeBytes()
+        );
         return new FileUploadResponse(
                 Ids.toString(result.fileId()),
                 result.shareKey(),
@@ -78,9 +83,15 @@ public class FileController {
      */
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
     public ResponseEntity<Void> uploadFile(@PathVariable String shareKey, HttpServletRequest request) {
-        authRequestContext.requirePrincipal(request);
+        var principal = authRequestContext.requirePrincipal(request);
         try {
-            fileApplicationService.uploadFile(shareKey, request.getContentType(), request.getContentLengthLong(), request.getInputStream());
+            fileApplicationService.uploadFile(
+                    principal.accountId(),
+                    shareKey,
+                    request.getContentType(),
+                    request.getContentLengthLong(),
+                    request.getInputStream()
+            );
             return ResponseEntity.noContent().build();
         } catch (IOException exception) {
             throw ProblemException.fail("file_upload_read_failed", "failed to read upload content");
@@ -99,32 +110,22 @@ public class FileController {
      * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
      */
     public ResponseEntity<?> download(@PathVariable String shareKey, HttpServletRequest request) {
+        Long accountId = null;
         if (!fileApplicationService.isServerAvatar(shareKey)) {
-            authRequestContext.requirePrincipal(request);
+            accountId = authRequestContext.requirePrincipal(request).accountId();
         }
-        StorageObject storageObject = fileApplicationService.findStorageObject(shareKey)
+        StorageObject storageObject = fileApplicationService.findStorageObject(accountId, shareKey)
                 .orElseThrow(() -> ProblemException.notFound("file does not exist"));
         if (storageObject.content().isPresent()) {
-            byte[] content = readContent(storageObject);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, storageObject.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : storageObject.contentType())
-                    .header(HttpHeaders.CONTENT_LENGTH, Long.toString(content.length))
-                    .body(content);
+                    .header(HttpHeaders.CONTENT_LENGTH, Long.toString(storageObject.size()))
+                    .body(new InputStreamResource(storageObject.content().orElseThrow()));
         }
-        var presignedUrl = fileApplicationService.createDownloadUrl(shareKey);
+        var presignedUrl = fileApplicationService.createDownloadUrl(accountId, shareKey);
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, presignedUrl.url().toString())
                 .header(HttpHeaders.CONTENT_TYPE, storageObject.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : storageObject.contentType())
                 .build();
-    }
-
-    private byte[] readContent(StorageObject storageObject) {
-        try (var inputStream = storageObject.content().orElseThrow();
-             var outputStream = new ByteArrayOutputStream()) {
-            inputStream.transferTo(outputStream);
-            return outputStream.toByteArray();
-        } catch (IOException exception) {
-            throw ProblemException.fail("file_download_read_failed", "failed to read file content");
-        }
     }
 }

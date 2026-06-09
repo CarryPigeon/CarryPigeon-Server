@@ -205,6 +205,7 @@
 
 - 方法：`POST /api/auth/email_codes`
 - 鉴权：公开
+- 运行前提：服务端已启用邮件服务，并完成有效 SMTP 配置
 - 请求：
 
 ```json
@@ -213,7 +214,35 @@
 
 - 成功：`204 No Content`
 
-### 4.2 创建会话并签发 token（登录/注册合一）
+### 4.2 用户名密码注册
+
+- 方法：`POST /api/auth/register`
+- 鉴权：公开
+- 请求：
+
+```json
+{ "username": "carry-user", "password": "password123" }
+```
+
+- 成功响应：
+
+```json
+{ "uid": "123", "username": "carry-user" }
+```
+
+### 4.3 用户名密码登录
+
+- 方法：`POST /api/auth/login`
+- 鉴权：公开
+- 请求：
+
+```json
+{ "username": "carry-user", "password": "password123" }
+```
+
+- 成功响应：同 `POST /api/auth/tokens`
+
+### 4.4 创建会话并签发 token（登录/注册合一）
 
 > v1 推荐把“注册/登录”统一为“创建会话”：如果邮箱首次出现则视为注册，否则视为登录（服务端可在 `is_new_user` 暴露结果）。
 
@@ -252,7 +281,7 @@
   - `412 Precondition Failed`
   - `error.reason="required_plugin_missing"`
 
-### 4.3 刷新 access token
+### 4.5 刷新 access token
 
 - 方法：`POST /api/auth/refresh`
 - 鉴权：公开（使用 refresh_token）
@@ -264,7 +293,7 @@
 
 - 成功响应：同 `POST /api/auth/tokens`（可轮换 refresh_token）
 
-### 4.4 吊销 refresh token（登出）
+### 4.6 吊销 refresh token（登出）
 
 - 方法：`POST /api/auth/revoke`
 - 鉴权：公开（使用 refresh_token）
@@ -554,8 +583,37 @@
 ```
 
 - 成功：`201 Created`（返回完整 message）
+- 当前最小实现支持：
+  - `Core:Text`：`data.text`
+  - `Core:File`：`data.object_key` 或附件 `data.share_key`，同时要求 `data.filename`
+  - `Core:Voice`：`data.object_key` 或附件 `data.share_key`，同时要求 `data.filename`、`data.duration_millis`
 
-### 7.3 删除消息（硬删除=消失）
+### 7.3 上传消息附件
+
+- 方法：`POST /api/channels/{cid}/messages/attachments`
+- 鉴权：需要登录
+- `Content-Type`：`multipart/form-data`
+- 表单字段：
+  - `file`：必填二进制文件
+  - `message_type`：可选，允许值 `file | voice`，默认 `file`
+
+- 成功响应（当前仍保留过渡 envelope）：
+
+```json
+{
+  "code": 100,
+  "message": "success",
+  "data": {
+    "object_key": "channels/1/messages/file/accounts/1001/5001-demo.pdf",
+    "share_key": "shr_att_xxx",
+    "filename": "demo.pdf",
+    "mime_type": "application/pdf",
+    "size": 123
+  }
+}
+```
+
+### 7.4 删除消息（硬删除=消失）
 
 - 方法：`DELETE /api/messages/{mid}`
 - 成功：`204 No Content`
