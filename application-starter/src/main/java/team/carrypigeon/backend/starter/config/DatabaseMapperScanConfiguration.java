@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
 /**
+ * TODO 此类应该转移到database-impl下，mapper扫描与数据库具体实现强相关
  * 数据库 Mapper 扫描配置。
  * 职责：仅在数据库实现启用时注册 MyBatis Mapper 扫描，避免禁用数据库场景下提前创建 Mapper Bean。
  * 边界：这里只控制数据库 Mapper 的扫描开关，不承载任何业务装配逻辑。

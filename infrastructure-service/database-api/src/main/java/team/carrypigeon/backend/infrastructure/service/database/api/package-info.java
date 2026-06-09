@@ -1,4 +1,5 @@
 /**
+ * TODO 可以将service和model进行重整理，一个service及其对应的model放入一个包中，例如service/AuthAccount/{databaseservice和models}
  * database-api 模块边界说明。
  *
  * <p>职责：</p>

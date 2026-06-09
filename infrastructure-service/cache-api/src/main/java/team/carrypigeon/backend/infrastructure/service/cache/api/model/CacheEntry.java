@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.cache.api.model;
 
 /**
+ * TODO：仅在测试使用，价值存疑
  * 字符串缓存条目。
  * 职责：表达一个待写入或已读取的字符串缓存值。
  * 边界：不承载对象序列化规则，第一阶段只保存字符串值。

@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.health;
 
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealth;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
@@ -27,7 +28,7 @@ public class RedisCacheHealthService implements CacheHealthService {
     @Override
     public CacheHealth check() {
         try {
-            String pong = redisTemplate.execute((RedisConnection connection) -> connection.ping());
+            String pong = redisTemplate.execute(RedisConnectionCommands::ping);
             return new CacheHealth("PONG".equalsIgnoreCase(pong), "redis ping completed");
         } catch (RuntimeException ex) {
             return new CacheHealth(false, "redis ping failed: " + ex.getClass().getSimpleName());

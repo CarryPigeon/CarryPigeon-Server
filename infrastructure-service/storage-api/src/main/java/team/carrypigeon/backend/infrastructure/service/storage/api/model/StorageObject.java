@@ -20,7 +20,6 @@ public record StorageObject(String objectKey, String contentType, long size, Opt
         if (size < 0) {
             throw new IllegalArgumentException("storage object size must not be negative");
         }
-        content = content == null ? Optional.empty() : content;
     }
 
     public static StorageObject metadata(String objectKey, String contentType, long size) {

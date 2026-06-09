@@ -10,6 +10,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
 
 /**
+ * TODO 可以将service、model和entity进行重整理，一个service及其对应的model放入一个包中，例如service/AuthAccount/{databaseservice和models}（针对当前包下的所有内容）
+ * TODO toRecord和toEntity应该定义在entity中而不是service下，应该保持职责的单一纯净
  * MyBatis-Plus 鉴权账户数据库服务。
  * 职责：在 database-impl 中完成鉴权账户的最小查询与写入。
  * 边界：只负责数据库记录映射，不承载注册业务规则与协议决策。

@@ -3,6 +3,7 @@ package team.carrypigeon.backend.starter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -14,9 +15,15 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * 依赖：业务能力来自 `chat-domain`，固定基础设施能力来自 `infrastructure-basic`，
  * 具体外部实现后续由 `infrastructure-service` 的 `*-impl` 在启动层完成装配。
  */
+// 标记springboot启动类
 @SpringBootApplication
+// 启动定时任务
 @EnableScheduling
+// 启动bean扫描
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
+// 启动缓存
+@EnableCaching
+// 启用注解
 @Slf4j
 public class ApplicationStarter {
     /**

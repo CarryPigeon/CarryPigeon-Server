@@ -12,6 +12,5 @@ public final class LogKeys {
     public static final String ROUTE = "route";
     public static final String UID = "uid";
 
-    private LogKeys() {
-    }
+    private LogKeys() {}
 }

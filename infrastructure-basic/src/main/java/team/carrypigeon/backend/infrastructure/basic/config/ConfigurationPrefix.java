@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.config;
 
 /**
+ * TODO：价值存疑，没有引用
  * 项目配置前缀常量。
  * 职责：统一维护配置前缀字符串，避免硬编码分散。
  */

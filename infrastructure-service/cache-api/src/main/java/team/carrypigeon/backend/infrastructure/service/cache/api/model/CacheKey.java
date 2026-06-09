@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.cache.api.model;
 
 /**
+ * TODO：仅在测试使用，价值存疑
  * 缓存键值对象。
  * 职责：表达跨模块缓存键契约，避免上层直接依赖 Redis key 细节。
  * 约束：缓存键不能为空白字符串。

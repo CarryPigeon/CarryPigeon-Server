@@ -99,8 +99,7 @@ public class RedisCacheService implements CacheService {
     public boolean exists(String key) {
         requireKey(key);
         try {
-            Boolean result = redisTemplate.hasKey(key);
-            return Boolean.TRUE.equals(result);
+            return redisTemplate.hasKey(key);
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to check cache entry", ex);
         }
