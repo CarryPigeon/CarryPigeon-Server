@@ -85,7 +85,7 @@ class MinioObjectStorageServiceTests {
      * 验证读取存在对象时只返回元信息，不会额外打开对象内容流。
      */
     @Test
-    @DisplayName("get existing object returns content and metadata")
+    @DisplayName("get existing object returns metadata only")
     void get_existingObject_returnsMetadataOnly() throws Exception {
         MinioClient minioClient = mock(MinioClient.class);
         StatObjectResponse statObjectResponse = mock(StatObjectResponse.class);

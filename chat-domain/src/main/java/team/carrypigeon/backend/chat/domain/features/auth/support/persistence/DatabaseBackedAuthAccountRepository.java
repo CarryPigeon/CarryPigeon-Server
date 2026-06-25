@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.support.persistence;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAccountRecord;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
 
 /**
  * 基于 database-api 的鉴权账户仓储适配器。

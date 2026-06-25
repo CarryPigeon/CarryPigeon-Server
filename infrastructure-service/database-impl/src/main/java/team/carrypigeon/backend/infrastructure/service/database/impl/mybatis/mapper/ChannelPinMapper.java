@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
@@ -10,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 /**
  * 频道置顶 Mapper。
  */
+@Mapper
 public interface ChannelPinMapper {
 
     @Select("""

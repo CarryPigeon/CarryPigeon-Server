@@ -15,8 +15,8 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
@@ -47,7 +47,7 @@ class UserProfileControllerTests {
     private UserProfileApplicationService userProfileApplicationService;
     private EmailVerificationCodeService emailVerificationCodeService;
     private FileApplicationService fileApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -55,7 +55,7 @@ class UserProfileControllerTests {
         userProfileApplicationService = mock(UserProfileApplicationService.class);
         emailVerificationCodeService = mock(EmailVerificationCodeService.class);
         fileApplicationService = mock(FileApplicationService.class);
-        authRequestContext = new AuthRequestContext();
+        authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileApplicationService, emailVerificationCodeService, authRequestContext, fileApplicationService))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -193,15 +193,15 @@ class UserProfileControllerTests {
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
 
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user@example.com"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user@example.com"));
             return true;
         }
     }

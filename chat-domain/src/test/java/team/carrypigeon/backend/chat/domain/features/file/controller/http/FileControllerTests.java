@@ -13,14 +13,15 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.ByteArrayHttpMessageConverter;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.file.application.dto.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -41,15 +42,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FileControllerTests {
 
     private FileApplicationService fileApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         fileApplicationService = mock(FileApplicationService.class);
-        authRequestContext = new AuthRequestContext();
+        authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(new FileController(fileApplicationService, authRequestContext))
-                .setMessageConverters(new ByteArrayHttpMessageConverter(), snakeCaseConverter())
+                .setMessageConverters(new ByteArrayHttpMessageConverter(), new ResourceHttpMessageConverter(), snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -120,7 +121,7 @@ class FileControllerTests {
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(new FileController(fileApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
-                .setMessageConverters(new ByteArrayHttpMessageConverter(), snakeCaseConverter())
+                .setMessageConverters(new ByteArrayHttpMessageConverter(), new ResourceHttpMessageConverter(), snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -132,15 +133,15 @@ class FileControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

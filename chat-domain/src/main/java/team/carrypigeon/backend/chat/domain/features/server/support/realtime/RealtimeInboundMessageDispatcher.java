@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
 import java.util.List;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeClientMessage;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -24,16 +24,16 @@ public class RealtimeInboundMessageDispatcher {
      *
      * @param principal 当前认证主体
      * @param request 入站消息
-     * @param messageApplicationService 消息应用服务
+     * @param messageDeliveryApplicationService 消息发送应用服务
      */
     public void dispatch(
-            AuthenticatedPrincipal principal,
+            AuthenticatedAccount principal,
             RealtimeClientMessage request,
-            MessageApplicationService messageApplicationService
+            MessageDeliveryApplicationService messageDeliveryApplicationService
     ) {
         for (RealtimeInboundMessageHandler handler : handlers) {
             if (handler.supports(request)) {
-                handler.handle(principal, request, messageApplicationService);
+                handler.handle(principal, request, messageDeliveryApplicationService);
                 return;
             }
         }

@@ -9,6 +9,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
 import org.slf4j.MDC;
@@ -32,7 +34,7 @@ class AuthAccessTokenInterceptorTests {
     @Test
     @DisplayName("preHandle valid bearer token binds principal")
     void preHandle_validBearerToken_bindsPrincipal() {
-        AuthRequestContext context = new AuthRequestContext();
+        RequestAuthenticationContext context = new RequestAuthenticationContext();
         AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(new FakeAuthTokenService(), context);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer access-token");
@@ -40,7 +42,7 @@ class AuthAccessTokenInterceptorTests {
         boolean result = interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
 
         assertTrue(result);
-        AuthenticatedPrincipal principal = context.requirePrincipal(request);
+        AuthenticatedAccount principal = context.requirePrincipal(request);
         assertEquals(1001L, principal.accountId());
         assertEquals("carry-user", principal.username());
         assertEquals("1001", MDC.get(LogKeys.UID));
@@ -52,7 +54,7 @@ class AuthAccessTokenInterceptorTests {
     @Test
     @DisplayName("afterCompletion removes uid from mdc")
     void afterCompletion_existingUid_removesMdcValue() {
-        AuthRequestContext context = new AuthRequestContext();
+        RequestAuthenticationContext context = new RequestAuthenticationContext();
         AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(new FakeAuthTokenService(), context);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer access-token");
@@ -71,7 +73,7 @@ class AuthAccessTokenInterceptorTests {
     void preHandle_missingBearerToken_throwsForbiddenProblem() {
         AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(
                 new FakeAuthTokenService(),
-                new AuthRequestContext()
+                new RequestAuthenticationContext()
         );
 
         ProblemException exception = assertThrows(
@@ -90,7 +92,7 @@ class AuthAccessTokenInterceptorTests {
     void preHandle_invalidBearerToken_throwsForbiddenProblem() {
         AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(
                 new InvalidAccessTokenService(),
-                new AuthRequestContext()
+                new RequestAuthenticationContext()
         );
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer invalid-access-token");

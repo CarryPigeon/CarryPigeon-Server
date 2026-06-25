@@ -14,11 +14,12 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelReadStateResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelUnreadResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelAccessApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,15 +33,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("contract")
 class ChannelReadStateControllerTests {
 
-    private ChannelApplicationService channelApplicationService;
-    private AuthRequestContext authRequestContext;
+    private ChannelAccessApplicationService channelAccessApplicationService;
+    private ChannelQueryApplicationService channelQueryApplicationService;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationService = mock(ChannelApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelReadStateController(channelApplicationService, authRequestContext))
+        channelAccessApplicationService = mock(ChannelAccessApplicationService.class);
+        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelReadStateController(channelAccessApplicationService, channelQueryApplicationService, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -50,7 +53,7 @@ class ChannelReadStateControllerTests {
     @DisplayName("update channel read state returns payload")
     void updateChannelReadState_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.updateChannelReadState(any()))
+        when(channelAccessApplicationService.updateChannelReadState(any()))
                 .thenReturn(new ChannelReadStateResult("9", "1001", "5001", 1700000000000L));
 
         mockMvc.perform(put("/api/channels/9/read_state")
@@ -69,7 +72,7 @@ class ChannelReadStateControllerTests {
     @DisplayName("list unreads returns items")
     void listUnreads_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listUnreads(1001L))
+        when(channelQueryApplicationService.listUnreads(1001L))
                 .thenReturn(List.of(new ChannelUnreadResult("9", 3L, 1700000000000L)));
 
         mockMvc.perform(get("/api/unreads"))
@@ -79,7 +82,7 @@ class ChannelReadStateControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelReadStateController(channelApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new ChannelReadStateController(channelAccessApplicationService, channelQueryApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -93,15 +96,15 @@ class ChannelReadStateControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

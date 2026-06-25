@@ -38,7 +38,7 @@ class ChannelDiscoverApplicationServiceTests {
     void discoverChannels_returnsMappedResults() {
         StubChannelRepository channelRepository = new StubChannelRepository();
         channelRepository.discoverResults = List.of(new DiscoveredChannel(9L, "General", "讨论区", "avatars/ch/9.png", 42L, false));
-        ChannelApplicationService service = createService(channelRepository);
+        ChannelQueryApplicationService service = createService(channelRepository);
 
         var result = service.discoverChannels(new DiscoverChannelsQuery(1001L, "gen", null, "public", 20));
 
@@ -49,29 +49,26 @@ class ChannelDiscoverApplicationServiceTests {
     @Test
     @DisplayName("discover channels invalid cursor throws validation")
     void discoverChannels_invalidCursor_throwsValidation() {
-        ChannelApplicationService service = createService(new StubChannelRepository());
+        ChannelQueryApplicationService service = createService(new StubChannelRepository());
 
         ProblemException exception = assertThrows(ProblemException.class, () -> service.discoverChannels(new DiscoverChannelsQuery(1001L, null, 0L, null, 20)));
 
         assertEquals("cursor_invalid", exception.reason());
     }
 
-    private ChannelApplicationService createService(ChannelRepository channelRepository) {
-        return new ChannelApplicationService(
+    private ChannelQueryApplicationService createService(ChannelRepository channelRepository) {
+        StubChannelMemberRepository channelMemberRepository = new StubChannelMemberRepository();
+        StubChannelBanRepository channelBanRepository = new StubChannelBanRepository();
+        StubChannelReadStateRepository channelReadStateRepository = new StubChannelReadStateRepository();
+        StubUserProfileRepository userProfileRepository = new StubUserProfileRepository();
+        return new ChannelQueryApplicationService(
                 channelRepository,
-                new StubChannelMemberRepository(),
-                new StubChannelInviteRepository(),
-                new StubChannelBanRepository(),
+                channelMemberRepository,
+                channelBanRepository,
                 channelAuditLog -> { },
-                new StubChannelReadStateRepository(),
-                new StubMessageRepository(),
-                new StubUserProfileRepository(),
-                new ChannelGovernancePolicy(),
-                new ChannelRealtimePublisher() {
-                },
-                () -> 9001L,
-                new TimeProvider(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC)),
-                new NoopTransactionRunner()
+                channelReadStateRepository,
+                userProfileRepository,
+                new ChannelGovernancePolicy()
         );
     }
 

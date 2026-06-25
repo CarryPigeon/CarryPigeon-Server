@@ -13,10 +13,10 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.AuditLogResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -32,15 +32,15 @@ class AuditLogControllerTests {
 
     private static final String AUDIT_CURSOR_SCOPE = "audit_logs";
 
-    private ChannelApplicationService channelApplicationService;
-    private AuthRequestContext authRequestContext;
+    private ChannelQueryApplicationService channelQueryApplicationService;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationService = mock(ChannelApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuditLogController(channelApplicationService, authRequestContext))
+        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryApplicationService, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -50,7 +50,7 @@ class AuditLogControllerTests {
     @DisplayName("list audit logs returns cursor page")
     void listAuditLogs_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listAuditLogs(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.listAuditLogs(any())).thenReturn(List.of(
                 new AuditLogResult("7001", "9", "1001", "channel.ban.create", "{}", 1714305600000L)
         ));
 
@@ -65,7 +65,7 @@ class AuditLogControllerTests {
     @DisplayName("list audit logs accepts opaque cursor")
     void listAuditLogs_acceptsOpaqueCursor() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listAuditLogs(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.listAuditLogs(any())).thenReturn(List.of(
                 new AuditLogResult("7001", "9", "1001", "channel.ban.create", "{}", 1714305600000L)
         ));
 
@@ -76,7 +76,7 @@ class AuditLogControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new AuditLogController(channelApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -90,10 +90,10 @@ class AuditLogControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) { this.authRequestContext = authRequestContext; }
+        private final RequestAuthenticationContext authRequestContext;
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }
         @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

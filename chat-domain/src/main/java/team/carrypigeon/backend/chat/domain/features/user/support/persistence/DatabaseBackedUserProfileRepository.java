@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 
 /**
  * 基于 database-api 的用户资料仓储适配器。

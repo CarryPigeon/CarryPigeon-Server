@@ -4,11 +4,13 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.UserProfileEntity;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.MybatisPlusUserProfileDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -129,7 +131,15 @@ class MybatisPlusUserProfileDatabaseServiceTests {
 
         service.insert(record());
 
-        verify(userProfileMapper).insert(any(UserProfileEntity.class));
+        ArgumentCaptor<UserProfileEntity> captor = ArgumentCaptor.forClass(UserProfileEntity.class);
+        verify(userProfileMapper).insert(captor.capture());
+        UserProfileEntity entity = captor.getValue();
+        assertEquals(1001L, entity.getAccountId());
+        assertEquals("carry-user", entity.getNickname());
+        assertEquals("https://img.example/avatar.png", entity.getAvatarUrl());
+        assertEquals("hello world", entity.getBio());
+        assertEquals(CREATED_AT, entity.getCreatedAt());
+        assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
 
     /**
@@ -164,7 +174,15 @@ class MybatisPlusUserProfileDatabaseServiceTests {
 
         service.update(record());
 
-        verify(userProfileMapper).updateById(any(UserProfileEntity.class));
+        ArgumentCaptor<UserProfileEntity> captor = ArgumentCaptor.forClass(UserProfileEntity.class);
+        verify(userProfileMapper).updateById(captor.capture());
+        UserProfileEntity entity = captor.getValue();
+        assertEquals(1001L, entity.getAccountId());
+        assertEquals("carry-user", entity.getNickname());
+        assertEquals("https://img.example/avatar.png", entity.getAvatarUrl());
+        assertEquals("hello world", entity.getBio());
+        assertEquals(CREATED_AT, entity.getCreatedAt());
+        assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
 
     /**

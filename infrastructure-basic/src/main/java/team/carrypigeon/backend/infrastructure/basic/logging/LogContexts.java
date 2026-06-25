@@ -4,10 +4,9 @@ import java.util.Map;
 import org.slf4j.MDC;
 
 /**
- * TODO: LogContexts直接向domain层进行了暴露而不是通过InfrastructureBasics对象，应该转变暴露方式
  * MDC 日志上下文辅助工具。
  * 职责：统一管理日志上下文字段的写入与清理，避免业务代码直接散落操作 MDC。
- * 边界：这里只处理日志上下文，不承载业务日志策略。
+ * 边界：作为线程上下文静态辅助能力直接暴露，不承载业务日志策略。
  */
 public final class LogContexts {
 

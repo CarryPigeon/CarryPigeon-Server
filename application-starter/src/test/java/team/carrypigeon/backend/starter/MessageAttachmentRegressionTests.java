@@ -18,7 +18,7 @@ import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateF
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -76,7 +76,8 @@ class MessageAttachmentRegressionTests {
             var downloadResponse = fileController.download(uploadResponse.shareKey(), request);
             assertThat(downloadResponse.getStatusCode().value()).isEqualTo(302);
             assertThat(downloadResponse.getHeaders().getLocation()).isNotNull();
-            assertThat(downloadResponse.getHeaders().getLocation().toString()).contains("files/" + uploadResponse.shareKey());
+            assertThat(downloadResponse.getHeaders().getLocation().toString())
+                    .isEqualTo("http://test.local/objects/files/accounts/" + accountId + "/" + uploadResponse.fileId());
         });
     }
 
@@ -89,7 +90,7 @@ class MessageAttachmentRegressionTests {
             AuthApplicationService authApplicationService = context.getBean(AuthApplicationService.class);
             ChannelMessageController channelMessageController = context.getBean(ChannelMessageController.class);
             ChannelReadStateController channelReadStateController = context.getBean(ChannelReadStateController.class);
-            MessageApplicationService messageApplicationService = context.getBean(MessageApplicationService.class);
+            MessageDeliveryApplicationService messageApplicationService = context.getBean(MessageDeliveryApplicationService.class);
             AuthRequestContext authRequestContext = context.getBean(AuthRequestContext.class);
 
             authApplicationService.register(new RegisterCommand("carry-read-user", "strong-pass-3322"));

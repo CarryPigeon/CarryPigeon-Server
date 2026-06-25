@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
@@ -44,7 +45,15 @@ class MybatisPlusChannelReadStateDatabaseServiceTests {
 
         service.upsert(record());
 
-        verify(mapper).upsertState(any(ChannelReadStateEntity.class));
+        ArgumentCaptor<ChannelReadStateEntity> captor = ArgumentCaptor.forClass(ChannelReadStateEntity.class);
+        verify(mapper).upsertState(captor.capture());
+        ChannelReadStateEntity entity = captor.getValue();
+        assertEquals(1L, entity.getChannelId());
+        assertEquals(1001L, entity.getAccountId());
+        assertEquals(5001L, entity.getLastReadMessageId());
+        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getLastReadTime());
+        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getCreatedAt());
+        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getUpdatedAt());
     }
 
     @Test

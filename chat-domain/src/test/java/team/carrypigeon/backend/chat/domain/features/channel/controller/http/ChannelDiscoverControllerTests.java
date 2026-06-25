@@ -13,10 +13,12 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelGovernanceApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelLifecycleApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -33,17 +35,21 @@ class ChannelDiscoverControllerTests {
 
     private static final String DISCOVER_CURSOR_SCOPE = "channel_discover";
 
-    private ChannelApplicationService channelApplicationService;
+    private ChannelQueryApplicationService channelQueryApplicationService;
+    private ChannelLifecycleApplicationService channelLifecycleApplicationService;
+    private ChannelGovernanceApplicationService channelGovernanceApplicationService;
     private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationService = mock(ChannelApplicationService.class);
+        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
+        channelLifecycleApplicationService = mock(ChannelLifecycleApplicationService.class);
+        channelGovernanceApplicationService = mock(ChannelGovernanceApplicationService.class);
         notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller())
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -53,7 +59,7 @@ class ChannelDiscoverControllerTests {
     @DisplayName("discover channels returns cursor page")
     void discoverChannels_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.discoverChannels(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.discoverChannels(any())).thenReturn(List.of(
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
@@ -68,7 +74,7 @@ class ChannelDiscoverControllerTests {
     @DisplayName("discover channels accepts opaque cursor")
     void discoverChannels_acceptsOpaqueCursor() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.discoverChannels(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.discoverChannels(any())).thenReturn(List.of(
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
@@ -79,11 +85,21 @@ class ChannelDiscoverControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(controller())
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private ChannelController controller() {
+        return new ChannelController(
+                channelQueryApplicationService,
+                channelLifecycleApplicationService,
+                channelGovernanceApplicationService,
+                notificationPreferenceApplicationService,
+                authRequestContext
+        );
     }
 
     private MappingJackson2HttpMessageConverter snakeCaseConverter() {
@@ -93,10 +109,10 @@ class ChannelDiscoverControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) { this.authRequestContext = authRequestContext; }
+        private final RequestAuthenticationContext authRequestContext;
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }
         @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

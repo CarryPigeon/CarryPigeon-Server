@@ -9,6 +9,9 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.LifecycleProcessor;
+import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.context.support.DefaultLifecycleProcessor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
@@ -66,6 +69,16 @@ class RealtimeServerConfigurationContextTests {
         @Bean
         ObjectMapper objectMapper() {
             return new ObjectMapper();
+        }
+
+        @Bean(name = AbstractApplicationContext.LIFECYCLE_PROCESSOR_BEAN_NAME)
+        LifecycleProcessor lifecycleProcessor() {
+            return new DefaultLifecycleProcessor() {
+                @Override
+                public void onRefresh() {
+                    // Context runner tests only verify bean registration and property wiring.
+                }
+            };
         }
 
         @Bean

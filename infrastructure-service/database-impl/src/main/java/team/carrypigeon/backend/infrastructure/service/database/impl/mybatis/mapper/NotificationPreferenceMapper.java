@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -10,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 /**
  * 通知偏好 Mapper。
  */
+@Mapper
 public interface NotificationPreferenceMapper {
 
     @Select("""

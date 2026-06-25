@@ -8,7 +8,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
@@ -32,7 +32,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final AuthTokenService authTokenService;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
+    private final Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
 
     public RealtimeChannelInitializer(
@@ -43,7 +43,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<MessageApplicationService> messageApplicationServiceProvider,
+            ObjectProvider<MessageDeliveryApplicationService> messageDeliveryApplicationServiceProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         this.properties = properties;
@@ -53,7 +53,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         this.authTokenService = authTokenService;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.messageApplicationServiceSupplier = messageApplicationServiceProvider::getIfAvailable;
+        this.messageDeliveryApplicationServiceSupplier = messageDeliveryApplicationServiceProvider::getIfAvailable;
         this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
     }
 
@@ -76,22 +76,22 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 realtimeSessionRegistry,
                 new ObjectProvider<>() {
                     @Override
-                    public MessageApplicationService getObject(Object... args) {
+                    public MessageDeliveryApplicationService getObject(Object... args) {
                         return null;
                     }
 
                     @Override
-                    public MessageApplicationService getIfAvailable() {
+                    public MessageDeliveryApplicationService getIfAvailable() {
                         return null;
                     }
 
                     @Override
-                    public MessageApplicationService getIfUnique() {
+                    public MessageDeliveryApplicationService getIfUnique() {
                         return null;
                     }
 
                     @Override
-                    public MessageApplicationService getObject() {
+                    public MessageDeliveryApplicationService getObject() {
                         return null;
                     }
                 },
@@ -134,7 +134,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 authTokenService,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                messageApplicationServiceSupplier,
+                messageDeliveryApplicationServiceSupplier,
                 realtimeInboundMessageDispatcherSupplier
         ));
     }

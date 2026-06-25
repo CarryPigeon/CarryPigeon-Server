@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import java.util.UUID;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import team.carrypigeon.backend.chat.domain.shared.application.server.ServerIdentityProvider;
 
 /**
  * 服务端身份配置。
@@ -11,7 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param id 当前服务端稳定标识
  */
 @ConfigurationProperties(prefix = "cp.chat.server")
-public record ServerIdentityProperties(String id) {
+public record ServerIdentityProperties(String id) implements ServerIdentityProvider {
 
     public ServerIdentityProperties {
         if (id == null || id.isBlank()) {

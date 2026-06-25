@@ -8,8 +8,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
@@ -20,11 +20,11 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.NotificationPreferenceDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.AuthRefreshSessionMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
@@ -35,7 +35,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MentionMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.NotificationPreferenceMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

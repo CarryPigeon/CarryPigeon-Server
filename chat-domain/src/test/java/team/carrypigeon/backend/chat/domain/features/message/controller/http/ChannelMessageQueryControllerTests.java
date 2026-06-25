@@ -16,13 +16,15 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
@@ -53,19 +55,23 @@ class ChannelMessageQueryControllerTests {
     private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
 
-    private MessageApplicationService messageApplicationService;
+    private MessageDeliveryApplicationService messageDeliveryApplicationService;
+    private MessageModerationApplicationService messageModerationApplicationService;
+    private MessageQueryApplicationService messageQueryApplicationService;
     private UserProfileApplicationService userProfileApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        messageApplicationService = mock(MessageApplicationService.class);
+        messageDeliveryApplicationService = mock(MessageDeliveryApplicationService.class);
+        messageModerationApplicationService = mock(MessageModerationApplicationService.class);
+        messageQueryApplicationService = mock(MessageQueryApplicationService.class);
         userProfileApplicationService = mock(UserProfileApplicationService.class);
-        authRequestContext = new AuthRequestContext();
+        authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext),
-                        new MessageController(messageApplicationService, authRequestContext)
+                        channelMessageController(),
+                        new MessageController(messageModerationApplicationService, authRequestContext)
                 )
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -76,7 +82,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("get channel messages returns v1 cursor page")
     void getChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
+        when(messageQueryApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
                 List.of(messageResult(5001L, 1001L, "text", "hello world", "hello world", null, "sent")),
                 5001L
         ));
@@ -98,7 +104,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("search channel messages returns v1 cursor page")
     void searchChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+        when(messageQueryApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
                 List.of(messageResult(5002L, 1001L, "text", "search body", "search body", null, "sent"))
         ));
         when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
@@ -114,7 +120,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("search channel messages advanced filters are accepted")
     void searchChannelMessages_advancedFilters_areAccepted() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+        when(messageQueryApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
                 List.of(messageResult(5004L, 1002L, "text", "search body", "search body", null, "sent"))
         ));
         when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1002L));
@@ -124,14 +130,14 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].mid").value("5004"));
 
-        verify(messageApplicationService).searchChannelMessages(any());
+        verify(messageQueryApplicationService).searchChannelMessages(any());
     }
 
     @Test
     @DisplayName("get channel messages around_mid request returns contextual page")
     void getChannelMessages_aroundMid_returnsContextualPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
+        when(messageQueryApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
                 List.of(
                         messageResult(5003L, 1002L, "text", "third", "third", null, "sent"),
                         messageResult(5002L, 1001L, "text", "second", "second", null, "sent"),
@@ -151,7 +157,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("send channel message returns 201 and v1 payload")
     void sendChannelMessage_returns201AndV1Payload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(5003L, 1001L, "text", "hello", "hello", null, "sent")
         );
         when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
@@ -171,7 +177,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("send file channel message returns structured attachment payload")
     void sendFileChannelMessage_returnsStructuredAttachmentPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(
                         5004L,
                         1001L,
@@ -200,7 +206,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("send file channel message object key request returns structured attachment payload")
     void sendFileChannelMessage_objectKeyRequest_returnsStructuredAttachmentPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(
                         5004L,
                         1001L,
@@ -226,7 +232,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("upload message attachment returns transitional success envelope")
     void uploadMessageAttachment_returnsTransitionalSuccessEnvelope() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
+        when(messageDeliveryApplicationService.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
                 .thenReturn(new MessageAttachmentUploadResult(
                         "channels/1/messages/file/accounts/1001/5001-demo.pdf",
                         "shr_att_demo",
@@ -249,7 +255,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("delete message returns 204")
     void deleteMessage_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(messageApplicationService).deleteChannelMessage(any());
+        doNothing().when(messageModerationApplicationService).deleteChannelMessage(any());
 
         mockMvc.perform(delete("/api/messages/5009"))
                 .andExpect(status().isNoContent());
@@ -259,7 +265,7 @@ class ChannelMessageQueryControllerTests {
     @DisplayName("edit message returns v1 payload with edited fields")
     void editMessage_returnsV1PayloadWithEditedFields() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.editChannelMessage(any())).thenReturn(new ChannelMessageResult(
+        when(messageModerationApplicationService.editChannelMessage(any())).thenReturn(new ChannelMessageResult(
                 5009L,
                 "550e8400-e29b-41d4-a716-446655440000",
                 1L,
@@ -292,13 +298,23 @@ class ChannelMessageQueryControllerTests {
 
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(
-                        new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext),
-                        new MessageController(messageApplicationService, authRequestContext)
+                        channelMessageController(),
+                        new MessageController(messageModerationApplicationService, authRequestContext)
                 )
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private ChannelMessageController channelMessageController() {
+        return new ChannelMessageController(
+                messageDeliveryApplicationService,
+                messageModerationApplicationService,
+                messageQueryApplicationService,
+                userProfileApplicationService,
+                authRequestContext
+        );
     }
 
     private ChannelMessageResult messageResult(long messageId, long senderId, String messageType, String body, String preview, String payload, String status) {
@@ -330,15 +346,15 @@ class ChannelMessageQueryControllerTests {
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
 
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user@example.com"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user@example.com"));
             return true;
         }
     }

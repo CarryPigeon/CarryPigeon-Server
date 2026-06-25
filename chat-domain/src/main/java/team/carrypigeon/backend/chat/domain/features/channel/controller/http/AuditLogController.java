@@ -6,11 +6,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.AuditLogResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListAuditLogsQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.AuditLogItemResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
@@ -25,11 +25,14 @@ public class AuditLogController {
 
     private static final String AUDIT_CURSOR_SCOPE = "audit_logs";
 
-    private final ChannelApplicationService channelApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final ChannelQueryApplicationService channelQueryApplicationService;
+    private final RequestAuthenticationContext authRequestContext;
 
-    public AuditLogController(ChannelApplicationService channelApplicationService, AuthRequestContext authRequestContext) {
-        this.channelApplicationService = channelApplicationService;
+    public AuditLogController(
+            ChannelQueryApplicationService channelQueryApplicationService,
+            RequestAuthenticationContext authRequestContext
+    ) {
+        this.channelQueryApplicationService = channelQueryApplicationService;
         this.authRequestContext = authRequestContext;
     }
 
@@ -44,8 +47,8 @@ public class AuditLogController {
             @RequestParam(name = "to_time", required = false) Long toTime,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        List<AuditLogResult> items = channelApplicationService.listAuditLogs(new ListAuditLogsQuery(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        List<AuditLogResult> items = channelQueryApplicationService.listAuditLogs(new ListAuditLogsQuery(
                 principal.accountId(),
                 OpaqueCursorCodec.decode(AUDIT_CURSOR_SCOPE, cursor),
                 limit,

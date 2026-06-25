@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelPinRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelPinEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelPinMapper;
@@ -24,10 +25,19 @@ class MybatisPlusChannelPinDatabaseServiceTests {
         ChannelPinMapper mapper = mock(ChannelPinMapper.class);
         when(mapper.insert(any(ChannelPinEntity.class))).thenReturn(1);
         MybatisPlusChannelPinDatabaseService service = new MybatisPlusChannelPinDatabaseService(mapper);
+        ChannelPinRecord record = new ChannelPinRecord(7001L, 1L, 5001L, 1001L, "note", Instant.parse("2026-04-22T00:00:00Z"));
 
-        service.insert(new ChannelPinRecord(7001L, 1L, 5001L, 1001L, "note", Instant.parse("2026-04-22T00:00:00Z")));
+        service.insert(record);
 
-        verify(mapper).insert(any(ChannelPinEntity.class));
+        ArgumentCaptor<ChannelPinEntity> captor = ArgumentCaptor.forClass(ChannelPinEntity.class);
+        verify(mapper).insert(captor.capture());
+        ChannelPinEntity entity = captor.getValue();
+        assertEquals(record.pinId(), entity.getPinId());
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.messageId(), entity.getMessageId());
+        assertEquals(record.pinnedByAccountId(), entity.getPinnedByAccountId());
+        assertEquals(record.note(), entity.getNote());
+        assertEquals(record.pinnedAt(), entity.getPinnedAt());
     }
 
     @Test

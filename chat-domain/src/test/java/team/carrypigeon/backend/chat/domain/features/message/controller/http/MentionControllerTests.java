@@ -15,8 +15,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.MentionResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MentionApplicationService;
@@ -40,13 +40,13 @@ class MentionControllerTests {
     private static final String MENTION_CURSOR_SCOPE = "mentions";
 
     private MentionApplicationService mentionApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mentionApplicationService = mock(MentionApplicationService.class);
-        authRequestContext = new AuthRequestContext();
+        authRequestContext = new RequestAuthenticationContext();
         mockMvc = authenticatedMockMvc();
     }
 
@@ -187,15 +187,15 @@ class MentionControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

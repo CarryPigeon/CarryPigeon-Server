@@ -4,11 +4,13 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.AuthRefreshSessionEntity;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionRecord;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.AuthRefreshSessionEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.MybatisPlusAuthRefreshSessionDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -83,7 +85,16 @@ class MybatisPlusAuthRefreshSessionDatabaseServiceTests {
 
         service.insert(record());
 
-        verify(mapper).insert(any(AuthRefreshSessionEntity.class));
+        ArgumentCaptor<AuthRefreshSessionEntity> captor = ArgumentCaptor.forClass(AuthRefreshSessionEntity.class);
+        verify(mapper).insert(captor.capture());
+        AuthRefreshSessionEntity entity = captor.getValue();
+        assertEquals(9001L, entity.getId());
+        assertEquals(1001L, entity.getAccountId());
+        assertEquals("refresh-hash", entity.getRefreshTokenHash());
+        assertEquals(EXPIRES_AT, entity.getExpiresAt());
+        assertEquals(false, entity.getRevoked());
+        assertEquals(CREATED_AT, entity.getCreatedAt());
+        assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
 
     /**

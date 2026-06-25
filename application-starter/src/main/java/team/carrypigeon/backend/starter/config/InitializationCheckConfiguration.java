@@ -4,6 +4,7 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
 
 /**
  * 初始化检查装配配置。

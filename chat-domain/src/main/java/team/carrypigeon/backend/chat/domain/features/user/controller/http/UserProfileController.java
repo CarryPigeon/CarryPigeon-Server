@@ -24,8 +24,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.command.GetCurrentUserProfileCommand;
@@ -55,13 +55,13 @@ public class UserProfileController {
 
     private final UserProfileApplicationService userProfileApplicationService;
     private final EmailVerificationCodeService emailVerificationCodeService;
-    private final AuthRequestContext authRequestContext;
+    private final RequestAuthenticationContext authRequestContext;
     private final FileApplicationService fileApplicationService;
 
     public UserProfileController(
             UserProfileApplicationService userProfileApplicationService,
             EmailVerificationCodeService emailVerificationCodeService,
-            AuthRequestContext authRequestContext,
+            RequestAuthenticationContext authRequestContext,
             FileApplicationService fileApplicationService
     ) {
         this.userProfileApplicationService = userProfileApplicationService;
@@ -84,7 +84,7 @@ public class UserProfileController {
             @ApiResponse(responseCode = "404", description = "资料不存在")
     })
     public UserMeResponse me(HttpServletRequest request) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         UserProfileResult result = userProfileApplicationService.getCurrentUserProfile(
                 new GetCurrentUserProfileCommand(principal.accountId())
         );
@@ -156,7 +156,7 @@ public class UserProfileController {
             HttpServletRequest request,
             @Valid @RequestBody UpdateCurrentUserEmailRequest body
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         emailVerificationCodeService.verifyCode(body.email(), body.code());
         userProfileApplicationService.updateCurrentUserEmail(principal.accountId(), body.email().trim().toLowerCase());
         return ResponseEntity.noContent().build();
@@ -177,7 +177,7 @@ public class UserProfileController {
             HttpServletRequest request,
             @Valid @RequestBody PatchCurrentUserProfileRequest body
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         userProfileApplicationService.updateCurrentUserProfile(
                 new UpdateCurrentUserProfileCommand(principal.accountId(), body.username(), body.avatar(), body.brief())
         );
@@ -190,7 +190,7 @@ public class UserProfileController {
             HttpServletRequest request,
             @RequestPart("background") MultipartFile background
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         String shareKey = "profile_bg_" + principal.accountId();
         try {
             fileApplicationService.uploadFile(

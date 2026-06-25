@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckFailureException;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;

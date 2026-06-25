@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import io.netty.util.AttributeKey;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 
 /**
  * 实时通道会话上下文。
@@ -15,7 +15,7 @@ public final class RealtimeChannelSession {
     public static final AttributeKey<String> REQUEST_ID_KEY = AttributeKey.valueOf("cp.realtime.request-id");
     public static final AttributeKey<String> ROUTE_KEY = AttributeKey.valueOf("cp.realtime.route");
     public static final AttributeKey<String> LAST_EVENT_ID_KEY = AttributeKey.valueOf("cp.realtime.last-event-id");
-    public static final AttributeKey<AuthenticatedPrincipal> AUTHENTICATED_PRINCIPAL_KEY =
+    public static final AttributeKey<AuthenticatedAccount> AUTHENTICATED_PRINCIPAL_KEY =
             AttributeKey.valueOf("cp.realtime.authenticated-principal");
 
     private RealtimeChannelSession() {

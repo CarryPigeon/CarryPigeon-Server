@@ -5,6 +5,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
@@ -19,9 +21,9 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthTokenService authTokenService;
-    private final AuthRequestContext authRequestContext;
+    private final RequestAuthenticationContext authRequestContext;
 
-    public AuthAccessTokenInterceptor(AuthTokenService authTokenService, AuthRequestContext authRequestContext) {
+    public AuthAccessTokenInterceptor(AuthTokenService authTokenService, RequestAuthenticationContext authRequestContext) {
         this.authTokenService = authTokenService;
         this.authRequestContext = authRequestContext;
     }
@@ -44,9 +46,9 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
         }
 
         AuthTokenClaims claims = authTokenService.parseAccessToken(authorization.substring(BEARER_PREFIX.length()));
-        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(Long.parseLong(claims.subject()), claims.username());
-        authRequestContext.bind(request, principal);
-        LogContexts.uid(Long.toString(principal.accountId()));
+        AuthenticatedAccount authenticatedAccount = new AuthenticatedAccount(Long.parseLong(claims.subject()), claims.username());
+        authRequestContext.bind(request, authenticatedAccount);
+        LogContexts.uid(Long.toString(authenticatedAccount.accountId()));
         return true;
     }
 

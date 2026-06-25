@@ -7,8 +7,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

@@ -14,10 +14,10 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -30,15 +30,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("contract")
 class MessageForwardControllerTests {
 
-    private MessageApplicationService messageApplicationService;
-    private AuthRequestContext authRequestContext;
+    private MessageModerationApplicationService messageModerationApplicationService;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        messageApplicationService = mock(MessageApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new MessageController(messageApplicationService, authRequestContext))
+        messageModerationApplicationService = mock(MessageModerationApplicationService.class);
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(new MessageController(messageModerationApplicationService, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -48,7 +48,7 @@ class MessageForwardControllerTests {
     @DisplayName("forward message returns created target message payload")
     void forwardMessage_returnsCreatedTargetMessagePayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageApplicationService.forwardChannelMessage(any()))
+        when(messageModerationApplicationService.forwardChannelMessage(any()))
                 .thenReturn(new ChannelMessageResult(
                         6001L,
                         "550e8400-e29b-41d4-a716-446655440000",
@@ -82,7 +82,7 @@ class MessageForwardControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new MessageController(messageApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new MessageController(messageModerationApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -96,15 +96,15 @@ class MessageForwardControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

@@ -14,8 +14,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.server.application.dto.NotificationPreferencesResult;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -33,13 +33,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class NotificationPreferenceControllerTests {
 
     private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
-        authRequestContext = new AuthRequestContext();
+        authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceApplicationService, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -91,10 +91,10 @@ class NotificationPreferenceControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) { this.authRequestContext = authRequestContext; }
+        private final RequestAuthenticationContext authRequestContext;
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }
         @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

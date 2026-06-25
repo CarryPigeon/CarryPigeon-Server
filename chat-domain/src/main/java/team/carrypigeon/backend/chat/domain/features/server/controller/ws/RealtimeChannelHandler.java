@@ -13,10 +13,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
@@ -42,7 +42,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final AuthTokenService authTokenService;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<MessageApplicationService> messageApplicationServiceSupplier;
+    private final Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
 
     public RealtimeChannelHandler(
@@ -52,7 +52,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            Supplier<MessageApplicationService> messageApplicationServiceSupplier,
+            Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier,
             Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier
     ) {
         this.jsonProvider = jsonProvider;
@@ -61,7 +61,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         this.authTokenService = authTokenService;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.messageApplicationServiceSupplier = messageApplicationServiceSupplier;
+        this.messageDeliveryApplicationServiceSupplier = messageDeliveryApplicationServiceSupplier;
         this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherSupplier;
     }
 
@@ -104,7 +104,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
         withMdc(context, () -> {
-            AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
             if (principal != null) {
                 realtimeSessionRegistry.unregister(principal.accountId(), context.channel());
             }
@@ -145,8 +145,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         }
         try {
             AuthTokenClaims claims = authTokenService.parseAccessToken(accessToken);
-            AuthenticatedPrincipal principal = new AuthenticatedPrincipal(Long.parseLong(claims.subject()), claims.username());
-            AuthenticatedPrincipal previousPrincipal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+            AuthenticatedAccount principal = new AuthenticatedAccount(Long.parseLong(claims.subject()), claims.username());
+            AuthenticatedAccount previousPrincipal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
             if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {
                 realtimeSessionRegistry.unregister(previousPrincipal.accountId(), context.channel());
             }
@@ -183,19 +183,19 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     }
 
     private void handleCommand(ChannelHandlerContext context, RealtimeClientMessage request) {
-        AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
         if (principal == null) {
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", "unauthorized", "authentication is required"));
             return;
         }
-        MessageApplicationService messageApplicationService = messageApplicationServiceSupplier.get();
+        MessageDeliveryApplicationService messageDeliveryApplicationService = messageDeliveryApplicationServiceSupplier.get();
         RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
-        if (messageApplicationService == null || dispatcher == null) {
+        if (messageDeliveryApplicationService == null || dispatcher == null) {
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", "internal_error", "realtime message service is unavailable"));
             return;
         }
         try {
-            dispatcher.dispatch(principal, request, messageApplicationService);
+            dispatcher.dispatch(principal, request, messageDeliveryApplicationService);
         } catch (ProblemException exception) {
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", mapReason(exception), exception.getMessage()));
         }
@@ -248,7 +248,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     }
 
     private void withMdc(ChannelHandlerContext context, Runnable action) {
-        AuthenticatedPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
         try {
             LogContexts.traceId(context.channel().attr(RealtimeChannelSession.TRACE_ID_KEY).get());
             LogContexts.requestId(context.channel().attr(RealtimeChannelSession.REQUEST_ID_KEY).get());

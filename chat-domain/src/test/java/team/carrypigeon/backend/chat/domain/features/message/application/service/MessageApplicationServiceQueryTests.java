@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * MessageApplicationService 查询契约测试。
+ * 消息查询契约测试。
  * 职责：验证消息历史与搜索查询的应用层编排契约。
  * 边界：不验证 HTTP、Netty 和真实数据库访问，只使用内存替身验证查询语义。
  */
@@ -34,7 +34,7 @@ class MessageApplicationServiceQueryTests {
                 "hello body", "[文本消息] hello body", "hello body", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2)
         ));
 
-        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+        ChannelMessageSearchResult result = fixture.queryService.searchChannelMessages(
                 new SearchChannelMessagesQuery(1001L, 1L, "hello", null, null, null, null, null, 20)
         );
 
@@ -56,7 +56,7 @@ class MessageApplicationServiceQueryTests {
                 5001L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1001L, "text", "first", "[文本消息] first", "first", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
-        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = fixture.queryService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(1001L, 1L, null, null, null, null, 20)
         );
 
@@ -77,7 +77,7 @@ class MessageApplicationServiceQueryTests {
                 MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(1)
         ));
 
-        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = fixture.queryService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(1001L, 1L, null, null, null, null, 20)
         );
 
@@ -101,7 +101,7 @@ class MessageApplicationServiceQueryTests {
                 MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2)
         ));
 
-        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = fixture.queryService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(1001L, 1L, null, null, null, null, 20)
         );
 
@@ -123,7 +123,7 @@ class MessageApplicationServiceQueryTests {
                 "{\"card\":\"server-status\"}", null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(3)
         ));
 
-        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+        ChannelMessageSearchResult result = fixture.queryService.searchChannelMessages(
                 new SearchChannelMessagesQuery(1001L, 1L, "status", null, null, null, null, null, 20)
         );
 
@@ -166,7 +166,7 @@ class MessageApplicationServiceQueryTests {
                 "{\"severity\":\"info\"}", null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(4)
         ));
 
-        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = fixture.queryService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(1001L, 2L, null, null, null, null, 20)
         );
 
@@ -182,7 +182,7 @@ class MessageApplicationServiceQueryTests {
     void searchChannelMessages_recalledContent_noLongerMatches() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+        ChannelMessageSearchResult result = fixture.queryService.searchChannelMessages(
                 new SearchChannelMessagesQuery(1001L, 1L, "hello", null, null, null, null, null, 20)
         );
 
@@ -200,7 +200,7 @@ class MessageApplicationServiceQueryTests {
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
-                () -> fixture.service.getChannelMessageHistory(new GetChannelMessageHistoryQuery(1001L, 9L, null, null, null, null, 20))
+                () -> fixture.queryService.getChannelMessageHistory(new GetChannelMessageHistoryQuery(1001L, 9L, null, null, null, null, 20))
         );
 
         assertEquals("channel does not exist", exception.getMessage());
@@ -221,7 +221,7 @@ class MessageApplicationServiceQueryTests {
         ));
         fixture.messageRepository.messagesById.put(5002L, fixture.messageRepository.history.get(1));
 
-        ChannelMessageHistoryResult result = fixture.service.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = fixture.queryService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(1001L, 1L, null, 5002L, 1, 1, 20)
         );
 
@@ -243,7 +243,7 @@ class MessageApplicationServiceQueryTests {
                 5003L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1003L, "text", "hello beta", "[文本消息] hello beta", "hello beta", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME.plusSeconds(2)
         ));
 
-        ChannelMessageSearchResult result = fixture.service.searchChannelMessages(
+        ChannelMessageSearchResult result = fixture.queryService.searchChannelMessages(
                 new SearchChannelMessagesQuery(1001L, 1L, "hello", 5005L, 1002L, "Core:Text", 5005L, 5001L, 20)
         );
 

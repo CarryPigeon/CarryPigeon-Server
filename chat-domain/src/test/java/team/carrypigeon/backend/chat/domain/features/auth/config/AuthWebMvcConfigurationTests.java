@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.handler.MappedInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
@@ -31,7 +31,7 @@ class AuthWebMvcConfigurationTests {
     @DisplayName("configuration excludes only public discovery catalog gate and auth routes")
     @SuppressWarnings("unchecked")
     void configuration_excludesOnlyPublicAuthRoutesAndServerEcho() throws Exception {
-        AuthWebMvcConfiguration configuration = new AuthWebMvcConfiguration(new FakeAuthTokenService(), new AuthRequestContext());
+        AuthWebMvcConfiguration configuration = new AuthWebMvcConfiguration(new FakeAuthTokenService(), new RequestAuthenticationContext());
         InterceptorRegistry registry = new InterceptorRegistry();
 
         configuration.addInterceptors(registry);

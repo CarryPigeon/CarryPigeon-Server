@@ -4,15 +4,15 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthRefreshSessionDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusUserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.MybatisPlusAuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.session.MybatisPlusAuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.MybatisPlusUserProfileDatabaseService;
 
 /**
  * 鉴权与用户数据库服务自动配置。

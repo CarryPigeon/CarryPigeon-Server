@@ -7,8 +7,8 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

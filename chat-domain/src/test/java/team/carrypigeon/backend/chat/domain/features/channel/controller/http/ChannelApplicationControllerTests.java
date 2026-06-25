@@ -15,10 +15,10 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationFlowApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -32,15 +32,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("contract")
 class ChannelApplicationControllerTests {
 
-    private ChannelApplicationService channelApplicationService;
-    private AuthRequestContext authRequestContext;
+    private ChannelApplicationFlowApplicationService channelApplicationFlowApplicationService;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationService = mock(ChannelApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationService, authRequestContext))
+        channelApplicationFlowApplicationService = mock(ChannelApplicationFlowApplicationService.class);
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowApplicationService, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -50,7 +50,7 @@ class ChannelApplicationControllerTests {
     @DisplayName("create channel application returns payload")
     void createChannelApplication_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.createChannelApplication(any()))
+        when(channelApplicationFlowApplicationService.createChannelApplication(any()))
                 .thenReturn(new ChannelApplicationResult(3001L, 9L, 1002L, "hi", Instant.parse("2026-04-24T12:00:00Z"), "PENDING"));
 
         mockMvc.perform(post("/api/channels/9/applications")
@@ -68,7 +68,7 @@ class ChannelApplicationControllerTests {
     @DisplayName("list channel applications returns items")
     void listChannelApplications_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listChannelApplications(any()))
+        when(channelApplicationFlowApplicationService.listChannelApplications(any()))
                 .thenReturn(List.of(new ChannelApplicationResult(3001L, 9L, 1002L, "hi", Instant.parse("2026-04-24T12:00:00Z"), "PENDING")));
 
         mockMvc.perform(get("/api/channels/9/applications"))
@@ -81,7 +81,7 @@ class ChannelApplicationControllerTests {
     @DisplayName("decide channel application returns payload")
     void decideChannelApplication_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.decideChannelApplication(any()))
+        when(channelApplicationFlowApplicationService.decideChannelApplication(any()))
                 .thenReturn(new ChannelApplicationResult(3001L, 9L, 1002L, "", Instant.parse("2026-04-24T12:00:00Z"), "ACCEPTED"));
 
         mockMvc.perform(post("/api/channels/9/applications/3001/decisions")
@@ -95,7 +95,7 @@ class ChannelApplicationControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowApplicationService, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -109,15 +109,15 @@ class ChannelApplicationControllerTests {
     }
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }

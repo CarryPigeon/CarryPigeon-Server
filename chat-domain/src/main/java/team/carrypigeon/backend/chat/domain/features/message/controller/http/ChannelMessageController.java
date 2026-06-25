@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.DeleteChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.EditChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.PinChannelMessageCommand;
@@ -38,7 +38,9 @@ import team.carrypigeon.backend.chat.domain.features.message.application.dto.Mes
 import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.ListChannelPinsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
@@ -69,27 +71,42 @@ public class ChannelMessageController {
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
     private static final String PIN_CURSOR_SCOPE = "channel_pins";
 
-    private final MessageApplicationService messageApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final MessageDeliveryApplicationService messageDeliveryApplicationService;
+    private final MessageModerationApplicationService messageModerationApplicationService;
+    private final MessageQueryApplicationService messageQueryApplicationService;
+    private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
     public ChannelMessageController(
-            MessageApplicationService messageApplicationService,
+            MessageDeliveryApplicationService messageDeliveryApplicationService,
+            MessageModerationApplicationService messageModerationApplicationService,
+            MessageQueryApplicationService messageQueryApplicationService,
             UserProfileApplicationService userProfileApplicationService,
-            AuthRequestContext authRequestContext,
+            RequestAuthenticationContext authRequestContext,
             JsonProvider jsonProvider
     ) {
-        this.messageApplicationService = messageApplicationService;
+        this.messageDeliveryApplicationService = messageDeliveryApplicationService;
+        this.messageModerationApplicationService = messageModerationApplicationService;
+        this.messageQueryApplicationService = messageQueryApplicationService;
         this.authRequestContext = authRequestContext;
         this.responseMapper = new ChannelMessageV1ResponseMapper(userProfileApplicationService, jsonProvider);
     }
 
     public ChannelMessageController(
-            MessageApplicationService messageApplicationService,
+            MessageDeliveryApplicationService messageDeliveryApplicationService,
+            MessageModerationApplicationService messageModerationApplicationService,
+            MessageQueryApplicationService messageQueryApplicationService,
             UserProfileApplicationService userProfileApplicationService,
-            AuthRequestContext authRequestContext
+            RequestAuthenticationContext authRequestContext
     ) {
-        this(messageApplicationService, userProfileApplicationService, authRequestContext, new JsonProvider(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()));
+        this(
+                messageDeliveryApplicationService,
+                messageModerationApplicationService,
+                messageQueryApplicationService,
+                userProfileApplicationService,
+                authRequestContext,
+                new JsonProvider(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules())
+        );
     }
 
     /**
@@ -119,8 +136,8 @@ public class ChannelMessageController {
             @Max(value = 50, message = "limit must be between 1 and 50") int limit,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageHistoryResult result = messageApplicationService.getChannelMessageHistory(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageHistoryResult result = messageQueryApplicationService.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(
                         principal.accountId(),
                         channelId,
@@ -167,7 +184,7 @@ public class ChannelMessageController {
             @Max(value = 50, message = "limit must be between 1 and 50") int limit,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         String effectiveKeyword = q != null && !q.isBlank() ? q : keyword;
         if (effectiveKeyword == null || effectiveKeyword.isBlank()) {
             throw ProblemException.validationFailed("q must not be blank");
@@ -175,7 +192,7 @@ public class ChannelMessageController {
         if (effectiveKeyword.trim().length() > 100) {
             throw ProblemException.validationFailed("validation_failed", "q length must be between 1 and 100");
         }
-        ChannelMessageSearchResult result = messageApplicationService.searchChannelMessages(
+        ChannelMessageSearchResult result = messageQueryApplicationService.searchChannelMessages(
                 new SearchChannelMessagesQuery(
                         principal.accountId(),
                         channelId,
@@ -211,8 +228,8 @@ public class ChannelMessageController {
             @RequestBody(required = false) PinChannelMessageRequest requestBody,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        ChannelPinResult result = messageApplicationService.pinChannelMessage(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelPinResult result = messageModerationApplicationService.pinChannelMessage(
                 new PinChannelMessageCommand(principal.accountId(), channelId, messageId, requestBody == null ? null : requestBody.note())
         );
         return toPinResponse(result);
@@ -225,8 +242,10 @@ public class ChannelMessageController {
             @PathVariable long messageId,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        messageApplicationService.unpinChannelMessage(new UnpinChannelMessageCommand(principal.accountId(), channelId, messageId));
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        messageModerationApplicationService.unpinChannelMessage(
+                new UnpinChannelMessageCommand(principal.accountId(), channelId, messageId)
+        );
         return ResponseEntity.noContent().build();
     }
 
@@ -238,8 +257,8 @@ public class ChannelMessageController {
             @RequestParam(defaultValue = "20") int limit,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        var items = messageApplicationService.listChannelPins(new ListChannelPinsQuery(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        var items = messageQueryApplicationService.listChannelPins(new ListChannelPinsQuery(
                 principal.accountId(),
                 channelId,
                 decodeCursor(PIN_CURSOR_SCOPE, cursor),
@@ -258,8 +277,8 @@ public class ChannelMessageController {
             @Validated @RequestBody SendChannelMessageRequest requestBody,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageResult result = messageApplicationService.sendChannelMessageHttp(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageResult result = messageDeliveryApplicationService.sendChannelMessageHttp(
                 new SendChannelMessageHttpCommand(
                         principal.accountId(),
                         channelId,
@@ -282,9 +301,9 @@ public class ChannelMessageController {
             @RequestPart("file") MultipartFile file,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         try {
-            MessageAttachmentUploadResult result = messageApplicationService.uploadMessageAttachment(
+            MessageAttachmentUploadResult result = messageDeliveryApplicationService.uploadMessageAttachment(
                     principal.accountId(),
                     channelId,
                     messageType,

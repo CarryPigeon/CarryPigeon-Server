@@ -29,7 +29,7 @@ class MessageApplicationServicePinsTests {
         )));
         fixture.messageRepository.messagesById.put(5001L, new ChannelMessage(5001L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1002L, "text", "hello", "hello", "hello", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME));
 
-        ChannelPinResult result = fixture.service.pinChannelMessage(new PinChannelMessageCommand(1001L, 1L, 5001L, "重要通知"));
+        ChannelPinResult result = fixture.moderationService.pinChannelMessage(new PinChannelMessageCommand(1001L, 1L, 5001L, "重要通知"));
 
         assertEquals(5001L, result.messageId());
         assertEquals(1, fixture.channelPinRepository.pins.size());
@@ -54,7 +54,7 @@ class MessageApplicationServicePinsTests {
                 Instant.parse("2026-04-22T00:00:00Z")
         ));
 
-        fixture.service.unpinChannelMessage(new UnpinChannelMessageCommand(1001L, 1L, 5001L));
+        fixture.moderationService.unpinChannelMessage(new UnpinChannelMessageCommand(1001L, 1L, 5001L));
 
         assertEquals(0, fixture.channelPinRepository.pins.size());
         assertEquals(1, fixture.publisher.unpinnedMessages.size());
@@ -82,7 +82,7 @@ class MessageApplicationServicePinsTests {
                 Instant.parse("2026-04-22T00:00:00Z")
         ));
 
-        List<ChannelPinResult> result = fixture.service.listChannelPins(new ListChannelPinsQuery(1001L, 1L, null, 20));
+        List<ChannelPinResult> result = fixture.queryService.listChannelPins(new ListChannelPinsQuery(1001L, 1L, null, 20));
 
         assertEquals(2, result.size());
         assertEquals(5002L, result.getFirst().messageId());

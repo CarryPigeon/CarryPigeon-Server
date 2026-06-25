@@ -9,14 +9,14 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.ConfigurableApplicationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
 import team.carrypigeon.backend.starter.config.InitializationCheckConfiguration;
-import team.carrypigeon.backend.starter.config.InitializationCheckRunner;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
 import team.carrypigeon.backend.starter.support.StarterRegressionConfiguration;
 import team.carrypigeon.backend.starter.support.StarterTestRuntimeConfiguration;
 
@@ -50,7 +50,7 @@ class ApplicationStarterSmokeTests {
         contextRunner.run(context -> {
             assertThat(context).hasSingleBean(InitializationCheckRunner.class);
             assertThat(context).hasSingleBean(AuthApplicationService.class);
-            assertThat(context).hasSingleBean(MessageApplicationService.class);
+            assertThat(context).hasSingleBean(MessageDeliveryApplicationService.class);
             assertThat(context).hasSingleBean(ChannelMessageController.class);
             assertThat(context).hasSingleBean(MessageAttachmentObjectKeyPolicy.class);
             assertThat(context).hasSingleBean(MessageAttachmentPayloadResolver.class);
@@ -80,7 +80,7 @@ class ApplicationStarterSmokeTests {
                 .run()) {
             assertThat(context.getBeansOfType(InitializationCheckRunner.class)).hasSize(1);
             assertThat(context.getBeansOfType(AuthApplicationService.class)).hasSize(1);
-            assertThat(context.getBeansOfType(MessageApplicationService.class)).hasSize(1);
+            assertThat(context.getBeansOfType(MessageDeliveryApplicationService.class)).hasSize(1);
             assertThat(context.getBeansOfType(ChannelMessageController.class)).hasSize(1);
         }
     }

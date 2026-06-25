@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.dto.MentionResult;
 import team.carrypigeon.backend.chat.domain.features.message.application.query.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.application.service.MentionApplicationService;
@@ -37,9 +37,9 @@ public class MentionController {
     private static final String MENTION_CURSOR_SCOPE = "mentions";
 
     private final MentionApplicationService mentionApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final RequestAuthenticationContext authRequestContext;
 
-    public MentionController(MentionApplicationService mentionApplicationService, AuthRequestContext authRequestContext) {
+    public MentionController(MentionApplicationService mentionApplicationService, RequestAuthenticationContext authRequestContext) {
         this.mentionApplicationService = mentionApplicationService;
         this.authRequestContext = authRequestContext;
     }
@@ -54,7 +54,7 @@ public class MentionController {
             @RequestParam(name = "cid", required = false) String channelId,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         int normalizedLimit = normalizeLimit(limit);
         List<MentionItemResponse> queriedItems = mentionApplicationService.listMentions(new ListMentionsQuery(
                 principal.accountId(),
@@ -80,7 +80,7 @@ public class MentionController {
     @Operation(summary = "标记单条提及已读", description = "将当前用户的一条提及标记为已读。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已标记为已读")})
     public ResponseEntity<Void> markMentionRead(@PathVariable String mentionId, HttpServletRequest request) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         mentionApplicationService.markMentionRead(principal.accountId(), parseRequiredSnowflake(mentionId, "mention_id"));
         return ResponseEntity.noContent().build();
     }
@@ -92,7 +92,7 @@ public class MentionController {
             @RequestBody(required = false) UpdateMentionReadStateRequest body,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         mentionApplicationService.markMentionsRead(
                 principal.accountId(),
                 body == null ? null : parseOptionalSnowflake(body.beforeMentionId(), "before_mention_id", false),

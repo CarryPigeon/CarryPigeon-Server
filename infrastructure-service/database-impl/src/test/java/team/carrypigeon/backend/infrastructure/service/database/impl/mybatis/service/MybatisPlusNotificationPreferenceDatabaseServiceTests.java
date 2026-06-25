@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.NotificationChannelPreferenceRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.NotificationServerPreferenceRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.NotificationChannelPreferenceEntity;
@@ -63,9 +64,50 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
     void upsertServerPreference_delegatesToMapper() {
         NotificationPreferenceMapper mapper = mock(NotificationPreferenceMapper.class);
         MybatisPlusNotificationPreferenceDatabaseService service = new MybatisPlusNotificationPreferenceDatabaseService(mapper);
+        NotificationServerPreferenceRecord record = new NotificationServerPreferenceRecord(
+                1001L,
+                "muted",
+                0L,
+                Instant.parse("2026-04-24T12:00:00Z"),
+                Instant.parse("2026-04-24T12:00:00Z")
+        );
 
-        service.upsertServerPreference(new NotificationServerPreferenceRecord(1001L, "muted", 0L, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")));
+        service.upsertServerPreference(record);
 
-        verify(mapper).upsertServerPreference(org.mockito.ArgumentMatchers.any());
+        ArgumentCaptor<NotificationServerPreferenceEntity> captor = ArgumentCaptor.forClass(NotificationServerPreferenceEntity.class);
+        verify(mapper).upsertServerPreference(captor.capture());
+        NotificationServerPreferenceEntity entity = captor.getValue();
+        assertEquals(record.accountId(), entity.getAccountId());
+        assertEquals(record.mode(), entity.getMode());
+        assertEquals(record.mutedUntil(), entity.getMutedUntil());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.updatedAt(), entity.getUpdatedAt());
+    }
+
+    @Test
+    @DisplayName("upsert channel preference maps all fields")
+    void upsertChannelPreference_mapsAllFields() {
+        NotificationPreferenceMapper mapper = mock(NotificationPreferenceMapper.class);
+        MybatisPlusNotificationPreferenceDatabaseService service = new MybatisPlusNotificationPreferenceDatabaseService(mapper);
+        NotificationChannelPreferenceRecord record = new NotificationChannelPreferenceRecord(
+                1001L,
+                9L,
+                "inherit",
+                0L,
+                Instant.parse("2026-04-24T12:00:00Z"),
+                Instant.parse("2026-04-24T12:00:00Z")
+        );
+
+        service.upsertChannelPreference(record);
+
+        ArgumentCaptor<NotificationChannelPreferenceEntity> captor = ArgumentCaptor.forClass(NotificationChannelPreferenceEntity.class);
+        verify(mapper).upsertChannelPreference(captor.capture());
+        NotificationChannelPreferenceEntity entity = captor.getValue();
+        assertEquals(record.accountId(), entity.getAccountId());
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.mode(), entity.getMode());
+        assertEquals(record.mutedUntil(), entity.getMutedUntil());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.updatedAt(), entity.getUpdatedAt());
     }
 }

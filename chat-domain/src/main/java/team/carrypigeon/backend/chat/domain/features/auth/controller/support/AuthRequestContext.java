@@ -1,40 +1,23 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.support;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 
 /**
- * HTTP 鉴权请求上下文。
- * 职责：在 Spring MVC 请求范围内读写已认证主体。
- * 边界：不使用全局静态会话，不承载 token 校验逻辑。
+ * 旧鉴权请求上下文兼容壳。
+ * 职责：为历史测试和装配代码保留旧类型名，并转发到共享请求认证上下文。
+ * 边界：不再作为主入口注入，新的跨 feature 代码应直接依赖 shared 包中的类型。
  */
-@Component
-public class AuthRequestContext {
-
-    private static final String PRINCIPAL_ATTRIBUTE = AuthRequestContext.class.getName() + ".principal";
+@Deprecated(forRemoval = false)
+public class AuthRequestContext extends RequestAuthenticationContext {
 
     /**
-     * 将认证主体绑定到请求。
+     * 兼容旧调用方传入历史主体类型。
      *
      * @param request 当前 HTTP 请求
-     * @param principal 认证主体
+     * @param principal 历史认证主体
      */
     public void bind(HttpServletRequest request, AuthenticatedPrincipal principal) {
-        request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
-    }
-
-    /**
-     * 读取当前请求认证主体。
-     *
-     * @param request 当前 HTTP 请求
-     * @return 认证主体
-     */
-    public AuthenticatedPrincipal requirePrincipal(HttpServletRequest request) {
-        Object principal = request.getAttribute(PRINCIPAL_ATTRIBUTE);
-        if (principal instanceof AuthenticatedPrincipal authenticatedPrincipal) {
-            return authenticatedPrincipal;
-        }
-        throw ProblemException.forbidden("authentication_required", "authentication is required");
+        super.bind(request, principal.toAuthenticatedAccount());
     }
 }

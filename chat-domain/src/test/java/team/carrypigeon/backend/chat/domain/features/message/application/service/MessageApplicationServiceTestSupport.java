@@ -56,7 +56,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.Storage
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
- * MessageApplicationService 测试支持。
+ * 消息应用测试支撑。
  * 职责：为发送、附件和查询拆分后的契约测试提供共享 fixture 与内存替身。
  * 边界：只服务 message application service 测试，不扩展为通用测试基类体系。
  */
@@ -78,7 +78,9 @@ final class MessageApplicationServiceTestSupport {
         final InMemoryMentionRepository mentionRepository = new InMemoryMentionRepository();
         final RecordingMessageRealtimePublisher publisher = new RecordingMessageRealtimePublisher();
         final JsonProvider jsonProvider = jsonProvider();
-        final MessageApplicationService service;
+        final MessageQueryApplicationService queryService;
+        final MessageDeliveryApplicationService deliveryService;
+        final MessageModerationApplicationService moderationService;
 
         Fixture(ObjectStorageService storageService) {
             this(storageService, new NoopTransactionRunner());
@@ -94,7 +96,15 @@ final class MessageApplicationServiceTestSupport {
                     jsonProvider
             );
             MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
-            this.service = new MessageApplicationService(
+            ChannelMessagePluginRegistry pluginRegistry = channelMessagePluginRegistry(storageService, jsonProvider, objectKeyPolicy);
+            this.queryService = new MessageQueryApplicationService(
+                    channelRepository,
+                    channelMemberRepository,
+                    channelPinRepository,
+                    messageRepository,
+                    payloadResolver
+            );
+            this.deliveryService = new MessageDeliveryApplicationService(
                     channelRepository,
                     channelMemberRepository,
                     channelAuditLogRepository,
@@ -104,7 +114,27 @@ final class MessageApplicationServiceTestSupport {
                     mentionRepository,
                     userProfileRepository(),
                     publisher,
-                    channelMessagePluginRegistry(storageService, jsonProvider, objectKeyPolicy),
+                    pluginRegistry,
+                    objectKeyPolicy,
+                    payloadResolver,
+                    new ServerIdentityProperties(SERVER_ID),
+                    new FixedIdGenerator(),
+                    jsonProvider,
+                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                    transactionRunner,
+                    objectStorageServiceProvider
+            );
+            this.moderationService = new MessageModerationApplicationService(
+                    channelRepository,
+                    channelMemberRepository,
+                    channelAuditLogRepository,
+                    channelPinRepository,
+                    new ChannelGovernancePolicy(),
+                    messageRepository,
+                    mentionRepository,
+                    userProfileRepository(),
+                    publisher,
+                    pluginRegistry,
                     objectKeyPolicy,
                     payloadResolver,
                     new ServerIdentityProperties(SERVER_ID),

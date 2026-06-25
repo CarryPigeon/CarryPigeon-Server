@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.support.persistence;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
 
 /**
  * 基于 database-api 的刷新会话仓储适配器。

@@ -39,7 +39,7 @@ class AuditLogApplicationServiceTests {
     void listAuditLogs_mapsResults() {
         StubChannelAuditLogRepository auditLogRepository = new StubChannelAuditLogRepository();
         auditLogRepository.logs = List.of(new ChannelAuditLog(7001L, 9L, 1001L, "MEMBER_BANNED", 1002L, "{}", Instant.parse("2026-04-24T12:00:00Z")));
-        ChannelApplicationService service = createService(auditLogRepository);
+        ChannelQueryApplicationService service = createService(auditLogRepository);
 
         var result = service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, null, null, null, null, null));
 
@@ -50,29 +50,27 @@ class AuditLogApplicationServiceTests {
     @Test
     @DisplayName("list audit logs invalid cursor throws cursor invalid")
     void listAuditLogs_invalidCursor_throwsCursorInvalid() {
-        ChannelApplicationService service = createService(new StubChannelAuditLogRepository());
+        ChannelQueryApplicationService service = createService(new StubChannelAuditLogRepository());
 
         ProblemException exception = assertThrows(ProblemException.class, () -> service.listAuditLogs(new ListAuditLogsQuery(1001L, 0L, 50, null, null, null, null, null)));
 
         assertEquals("cursor_invalid", exception.reason());
     }
 
-    private ChannelApplicationService createService(ChannelAuditLogRepository auditLogRepository) {
-        return new ChannelApplicationService(
-                new StubChannelRepository(),
-                new StubChannelMemberRepository(),
-                new StubChannelInviteRepository(),
-                new StubChannelBanRepository(),
+    private ChannelQueryApplicationService createService(ChannelAuditLogRepository auditLogRepository) {
+        ChannelRepository channelRepository = new StubChannelRepository();
+        ChannelMemberRepository channelMemberRepository = new StubChannelMemberRepository();
+        ChannelBanRepository channelBanRepository = new StubChannelBanRepository();
+        ChannelReadStateRepository channelReadStateRepository = new StubChannelReadStateRepository();
+        UserProfileRepository userProfileRepository = new StubUserProfileRepository();
+        return new ChannelQueryApplicationService(
+                channelRepository,
+                channelMemberRepository,
+                channelBanRepository,
                 auditLogRepository,
-                new StubChannelReadStateRepository(),
-                new StubMessageRepository(),
-                new StubUserProfileRepository(),
-                new ChannelGovernancePolicy(),
-                new ChannelRealtimePublisher() {
-                },
-                new FixedIdGenerator(),
-                new TimeProvider(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC)),
-                new NoopTransactionRunner()
+                channelReadStateRepository,
+                userProfileRepository,
+                new ChannelGovernancePolicy()
         );
     }
 

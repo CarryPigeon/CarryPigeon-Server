@@ -97,7 +97,7 @@ public class RealtimeServerConfiguration {
      * @param timeProvider 项目统一时间提供器
      * @param authTokenService 项目 access token 校验服务
      * @param realtimeSessionRegistry 实时会话注册表
-     * @param messageApplicationServiceProvider 消息应用服务提供器
+     * @param messageDeliveryApplicationServiceProvider 消息发送应用服务提供器
      * @param realtimeInboundMessageDispatcherProvider realtime 入站消息分发器提供器
      * @return Netty 通道初始化器
      */
@@ -110,7 +110,7 @@ public class RealtimeServerConfiguration {
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService> messageApplicationServiceProvider,
+            ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService> messageDeliveryApplicationServiceProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         return new RealtimeChannelInitializer(
@@ -121,7 +121,7 @@ public class RealtimeServerConfiguration {
                 authTokenService,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                messageApplicationServiceProvider,
+                messageDeliveryApplicationServiceProvider,
                 realtimeInboundMessageDispatcherProvider
         );
     }

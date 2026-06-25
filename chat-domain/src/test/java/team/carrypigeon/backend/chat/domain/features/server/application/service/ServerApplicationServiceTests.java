@@ -52,7 +52,7 @@ class ServerApplicationServiceTests {
         assertEquals("api/files/download/server_avatar", result.avatar());
         assertEquals("1.0", result.apiVersion());
         assertEquals("1.0", result.minSupportedApiVersion());
-        assertEquals("ws://127.0.0.1:28080/api/ws", result.wsUrl());
+        assertEquals("wss://127.0.0.1:28080/api/ws", result.wsUrl());
         assertEquals(java.util.List.of("mc-bind"), result.requiredPlugins());
         assertEquals(1713614400000L, result.serverTime());
         assertEquals(true, result.capabilities().eventResume());

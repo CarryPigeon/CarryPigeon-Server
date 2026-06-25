@@ -1,0 +1,41 @@
+package team.carrypigeon.backend.infrastructure.service.database.api.auth.account;
+
+import java.util.Optional;
+
+/**
+ * 鉴权账户数据库服务抽象。
+ * 职责：向 chat-domain 提供最小账户查询与写入能力。
+ * 边界：不暴露 JDBC、SQL 或具体数据库框架细节。
+ */
+public interface AuthAccountDatabaseService {
+
+    /**
+     * 按用户名查询账户记录。
+     *
+     * @param username 当前服务端内的用户名
+     * @return 命中时返回账户记录，未命中时返回空
+     */
+    Optional<AuthAccountRecord> findByUsername(String username);
+
+    /**
+     * 按账户 ID 查询账户记录。
+     *
+     * @param accountId 账户 ID
+     * @return 命中时返回账户记录，未命中时返回空
+     */
+    Optional<AuthAccountRecord> findById(long accountId);
+
+    /**
+     * 写入新的鉴权账户记录。
+     *
+     * @param record 待持久化的账户记录
+     */
+    void insert(AuthAccountRecord record);
+
+    /**
+     * 更新账户记录。
+     *
+     * @param record 待更新账户记录
+     */
+    void update(AuthAccountRecord record);
+}

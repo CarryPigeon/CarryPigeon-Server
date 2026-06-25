@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataRetrievalFailureException;
+import org.mockito.ArgumentCaptor;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
@@ -75,8 +76,7 @@ class MybatisPlusChannelDatabaseServiceTests {
     void insert_validRecord_delegatesToMapper() {
         ChannelMapper channelMapper = mock(ChannelMapper.class);
         MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
-
-        service.insert(new ChannelRecord(
+        ChannelRecord record = new ChannelRecord(
                 9L,
                 9L,
                 "project-alpha",
@@ -86,9 +86,22 @@ class MybatisPlusChannelDatabaseServiceTests {
                 false,
                 Instant.parse("2026-04-24T12:00:00Z"),
                 Instant.parse("2026-04-24T12:00:00Z")
-        ));
+        );
 
-        verify(channelMapper).insert(org.mockito.ArgumentMatchers.<ChannelEntity>any());
+        service.insert(record);
+
+        ArgumentCaptor<ChannelEntity> captor = ArgumentCaptor.forClass(ChannelEntity.class);
+        verify(channelMapper).insert(captor.capture());
+        ChannelEntity entity = captor.getValue();
+        assertEquals(record.id(), entity.getId());
+        assertEquals(record.conversationId(), entity.getConversationId());
+        assertEquals(record.name(), entity.getName());
+        assertEquals(record.brief(), entity.getBrief());
+        assertEquals(record.avatar(), entity.getAvatar());
+        assertEquals(record.type(), entity.getType());
+        assertEquals(record.defaultChannel(), entity.getDefaultChannel());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.updatedAt(), entity.getUpdatedAt());
     }
 
     @Test
@@ -97,8 +110,7 @@ class MybatisPlusChannelDatabaseServiceTests {
         ChannelMapper channelMapper = mock(ChannelMapper.class);
         when(channelMapper.updateById(any(ChannelEntity.class))).thenReturn(1);
         MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
-
-        service.update(new ChannelRecord(
+        ChannelRecord record = new ChannelRecord(
                 9L,
                 9L,
                 "project-alpha",
@@ -108,9 +120,22 @@ class MybatisPlusChannelDatabaseServiceTests {
                 false,
                 Instant.parse("2026-04-24T12:00:00Z"),
                 Instant.parse("2026-04-24T12:30:00Z")
-        ));
+        );
 
-        verify(channelMapper).updateById(any(ChannelEntity.class));
+        service.update(record);
+
+        ArgumentCaptor<ChannelEntity> captor = ArgumentCaptor.forClass(ChannelEntity.class);
+        verify(channelMapper).updateById(captor.capture());
+        ChannelEntity entity = captor.getValue();
+        assertEquals(record.id(), entity.getId());
+        assertEquals(record.conversationId(), entity.getConversationId());
+        assertEquals(record.name(), entity.getName());
+        assertEquals(record.brief(), entity.getBrief());
+        assertEquals(record.avatar(), entity.getAvatar());
+        assertEquals(record.type(), entity.getType());
+        assertEquals(record.defaultChannel(), entity.getDefaultChannel());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.updatedAt(), entity.getUpdatedAt());
     }
 
     /**

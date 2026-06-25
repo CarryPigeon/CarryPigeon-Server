@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * MessageApplicationService 发送契约测试。
+ * 消息发送契约测试。
  * 职责：验证文本消息发送入口的应用层编排契约与权限失败语义。
  * 边界：不验证 HTTP、Netty 和真实数据库访问，只使用内存替身验证发送相关语义。
  */
@@ -41,7 +41,7 @@ class MessageApplicationServiceSendTests {
     void sendChannelTextMessage_validCommand_persistsAndPublishesSameMessageId() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageResult result = fixture.service.sendChannelTextMessage(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelTextMessage(
                 new SendChannelTextMessageCommand(1001L, 1L, "hello world")
         );
 
@@ -59,7 +59,7 @@ class MessageApplicationServiceSendTests {
     void sendChannelMessage_userMention_persistsMentionAndPublishesRealtimeMention() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageResult result = fixture.service.sendChannelMessageHttp(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelMessageHttp(
                 new SendChannelMessageHttpCommand(
                         1001L,
                         1L,
@@ -96,7 +96,7 @@ class MessageApplicationServiceSendTests {
         );
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(storageService);
 
-        ChannelMessageResult result = fixture.service.sendChannelMessageHttp(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelMessageHttp(
                 new SendChannelMessageHttpCommand(
                         1001L,
                         1L,
@@ -131,7 +131,7 @@ class MessageApplicationServiceSendTests {
                 new MessageApplicationServiceTestSupport.TestObjectStorageService();
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(storageService);
 
-        var result = fixture.service.uploadMessageAttachment(
+        var result = fixture.deliveryService.uploadMessageAttachment(
                 1001L,
                 1L,
                 "file",
@@ -161,7 +161,7 @@ class MessageApplicationServiceSendTests {
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> fixture.service.sendChannelMessageHttp(
+                () -> fixture.deliveryService.sendChannelMessageHttp(
                         new SendChannelMessageHttpCommand(
                                 1001L,
                                 1L,
@@ -195,7 +195,7 @@ class MessageApplicationServiceSendTests {
 
         IllegalStateException exception = assertThrows(
                 IllegalStateException.class,
-                () -> fixture.service.sendChannelMessageHttp(
+                () -> fixture.deliveryService.sendChannelMessageHttp(
                         new SendChannelMessageHttpCommand(
                                 1001L,
                                 1L,
@@ -222,7 +222,7 @@ class MessageApplicationServiceSendTests {
     void sendChannelMessage_textDraft_preservesTextSemantics() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageResult result = fixture.service.sendChannelMessage(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelMessage(
                 new SendChannelMessageCommand(1001L, 1L, new TextChannelMessageDraft("hello plugin world"))
         );
 
@@ -242,7 +242,7 @@ class MessageApplicationServiceSendTests {
     void sendChannelMessage_pluginDraft_persistsPluginMessage() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageResult result = fixture.service.sendChannelMessage(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelMessage(
                 new SendChannelMessageCommand(1001L, 1L, new PluginChannelMessageDraft(
                         "test-extension",
                         "mc bridge",
@@ -265,7 +265,7 @@ class MessageApplicationServiceSendTests {
     void sendChannelMessage_customDraft_persistsCustomMessage() {
         MessageApplicationServiceTestSupport.Fixture fixture = new MessageApplicationServiceTestSupport.Fixture(null);
 
-        ChannelMessageResult result = fixture.service.sendChannelMessage(
+        ChannelMessageResult result = fixture.deliveryService.sendChannelMessage(
                 new SendChannelMessageCommand(1001L, 1L, new CustomChannelMessageDraft(
                         "status card",
                         "{\"card\":\"server-status\"}",
@@ -298,7 +298,7 @@ class MessageApplicationServiceSendTests {
                 MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
-        ChannelMessageResult result = fixture.service.sendSystemChannelMessage(
+        ChannelMessageResult result = fixture.deliveryService.sendSystemChannelMessage(
                 new SendSystemChannelMessageCommand(1001L, 2L, "maintenance notice", "{\"severity\":\"info\"}", null)
         );
 
@@ -317,7 +317,7 @@ class MessageApplicationServiceSendTests {
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
-                () -> fixture.service.sendSystemChannelMessage(
+                () -> fixture.deliveryService.sendSystemChannelMessage(
                         new SendSystemChannelMessageCommand(1001L, 1L, "maintenance notice", "{\"severity\":\"info\"}", null)
                 )
         );
@@ -336,7 +336,7 @@ class MessageApplicationServiceSendTests {
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
-                () -> fixture.service.sendChannelTextMessage(new SendChannelTextMessageCommand(1001L, 1L, "hello world"))
+                () -> fixture.deliveryService.sendChannelTextMessage(new SendChannelTextMessageCommand(1001L, 1L, "hello world"))
         );
 
         assertEquals("channel membership is required", exception.getMessage());
@@ -373,7 +373,7 @@ class MessageApplicationServiceSendTests {
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
-                () -> fixture.service.sendChannelTextMessage(new SendChannelTextMessageCommand(1001L, 1L, "hello world"))
+                () -> fixture.deliveryService.sendChannelTextMessage(new SendChannelTextMessageCommand(1001L, 1L, "hello world"))
         );
 
         assertEquals("channel member is muted", exception.getMessage());
@@ -402,7 +402,7 @@ class MessageApplicationServiceSendTests {
                 MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
-        ChannelMessageResult result = fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5001L));
+        ChannelMessageResult result = fixture.moderationService.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5001L));
 
         assertEquals(5001L, result.messageId());
         assertEquals("recalled", result.status());
@@ -439,7 +439,7 @@ class MessageApplicationServiceSendTests {
                 1L
         ));
 
-        ChannelMessageResult result = fixture.service.editChannelMessage(new EditChannelMessageCommand(
+        ChannelMessageResult result = fixture.moderationService.editChannelMessage(new EditChannelMessageCommand(
                 1001L,
                 5001L,
                 "Core:Text",
@@ -482,7 +482,7 @@ class MessageApplicationServiceSendTests {
                 2L
         ));
 
-        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.service.editChannelMessage(new EditChannelMessageCommand(
+        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.moderationService.editChannelMessage(new EditChannelMessageCommand(
                 1001L,
                 5001L,
                 "Core:Text",
@@ -519,7 +519,7 @@ class MessageApplicationServiceSendTests {
                 1L
         ));
 
-        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.service.editChannelMessage(new EditChannelMessageCommand(
+        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.moderationService.editChannelMessage(new EditChannelMessageCommand(
                 1001L,
                 5001L,
                 "Core:Text",
@@ -563,13 +563,13 @@ class MessageApplicationServiceSendTests {
                 5003L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1003L, "text", "owner", "owner", "owner", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
-        ChannelMessageResult recalled = fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5002L));
+        ChannelMessageResult recalled = fixture.moderationService.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5002L));
 
         assertEquals("recalled", recalled.status());
 
         ProblemException exception = assertThrows(
                 ProblemException.class,
-                () -> fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5003L))
+                () -> fixture.moderationService.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5003L))
         );
 
         assertEquals("target member with OWNER role cannot be moderated", exception.getMessage());
@@ -601,7 +601,7 @@ class MessageApplicationServiceSendTests {
                 5004L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1999L, "text", "former member", "former member", "former member", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME
         ));
 
-        ChannelMessageResult recalled = fixture.service.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5004L));
+        ChannelMessageResult recalled = fixture.moderationService.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5004L));
 
         assertEquals("recalled", recalled.status());
     }

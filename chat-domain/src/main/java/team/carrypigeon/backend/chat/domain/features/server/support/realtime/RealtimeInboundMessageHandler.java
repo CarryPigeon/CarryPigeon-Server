@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeClientMessage;
 
 /**
@@ -24,11 +24,11 @@ public interface RealtimeInboundMessageHandler {
      *
      * @param principal 当前认证主体
      * @param request 入站消息
-     * @param messageApplicationService 消息应用服务
+     * @param messageDeliveryApplicationService 消息发送应用服务
      */
     void handle(
-            AuthenticatedPrincipal principal,
+            AuthenticatedAccount principal,
             RealtimeClientMessage request,
-            MessageApplicationService messageApplicationService
+            MessageDeliveryApplicationService messageDeliveryApplicationService
     );
 }

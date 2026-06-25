@@ -5,11 +5,13 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAccountRecord;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.AuthAccountEntity;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountRecord;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.AuthAccountEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account.MybatisPlusAuthAccountDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -99,7 +101,14 @@ class MybatisPlusAuthAccountDatabaseServiceTests {
 
         service.insert(record());
 
-        verify(authAccountMapper).insert(any(AuthAccountEntity.class));
+        ArgumentCaptor<AuthAccountEntity> captor = ArgumentCaptor.forClass(AuthAccountEntity.class);
+        verify(authAccountMapper).insert(captor.capture());
+        AuthAccountEntity entity = captor.getValue();
+        assertEquals(1001L, entity.getId());
+        assertEquals("carry-user", entity.getUsername());
+        assertEquals("hashed-password", entity.getPasswordHash());
+        assertEquals(CREATED_AT, entity.getCreatedAt());
+        assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
 
     /**
@@ -134,7 +143,14 @@ class MybatisPlusAuthAccountDatabaseServiceTests {
 
         service.update(record());
 
-        verify(authAccountMapper).updateById(any(AuthAccountEntity.class));
+        ArgumentCaptor<AuthAccountEntity> captor = ArgumentCaptor.forClass(AuthAccountEntity.class);
+        verify(authAccountMapper).updateById(captor.capture());
+        AuthAccountEntity entity = captor.getValue();
+        assertEquals(1001L, entity.getId());
+        assertEquals("carry-user", entity.getUsername());
+        assertEquals("hashed-password", entity.getPasswordHash());
+        assertEquals(CREATED_AT, entity.getCreatedAt());
+        assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
 
     private static AuthAccountRecord record() {

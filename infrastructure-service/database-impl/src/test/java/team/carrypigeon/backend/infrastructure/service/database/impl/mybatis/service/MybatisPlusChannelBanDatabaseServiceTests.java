@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
@@ -77,10 +78,28 @@ class MybatisPlusChannelBanDatabaseServiceTests {
     void insert_validRecord_delegatesToMapper() {
         ChannelBanMapper channelBanMapper = mock(ChannelBanMapper.class);
         MybatisPlusChannelBanDatabaseService service = new MybatisPlusChannelBanDatabaseService(channelBanMapper);
+        ChannelBanRecord record = new ChannelBanRecord(
+                1L,
+                1002L,
+                1001L,
+                "spam",
+                null,
+                Instant.parse("2026-04-24T12:20:00Z"),
+                null
+        );
 
-        service.insert(new ChannelBanRecord(1L, 1002L, 1001L, "spam", null, Instant.parse("2026-04-24T12:20:00Z"), null));
+        service.insert(record);
 
-        verify(channelBanMapper).insert(any());
+        ArgumentCaptor<ChannelBanEntity> captor = ArgumentCaptor.forClass(ChannelBanEntity.class);
+        verify(channelBanMapper).insert(captor.capture());
+        ChannelBanEntity entity = captor.getValue();
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.bannedAccountId(), entity.getBannedAccountId());
+        assertEquals(record.operatorAccountId(), entity.getOperatorAccountId());
+        assertEquals(record.reason(), entity.getReason());
+        assertEquals(record.expiresAt(), entity.getExpiresAt());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.revokedAt(), entity.getRevokedAt());
     }
 
     /**

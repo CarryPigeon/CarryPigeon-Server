@@ -4,8 +4,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthAccessTokenInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 
 /**
  * 鉴权 HTTP 拦截配置。
@@ -16,9 +16,9 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTok
 public class AuthWebMvcConfiguration implements WebMvcConfigurer {
 
     private final AuthTokenService authTokenService;
-    private final AuthRequestContext authRequestContext;
+    private final RequestAuthenticationContext authRequestContext;
 
-    public AuthWebMvcConfiguration(AuthTokenService authTokenService, AuthRequestContext authRequestContext) {
+    public AuthWebMvcConfiguration(AuthTokenService authTokenService, RequestAuthenticationContext authRequestContext) {
         this.authTokenService = authTokenService;
         this.authRequestContext = authRequestContext;
     }

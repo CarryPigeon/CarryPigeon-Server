@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Import;
  */
 @AutoConfiguration(afterName = "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration")
 @Import({
+        DatabaseMapperScanAutoConfiguration.class,
         DatabaseInfrastructureAutoConfiguration.class,
         DatabaseAuthServiceAutoConfiguration.class,
         DatabaseChannelServiceAutoConfiguration.class,

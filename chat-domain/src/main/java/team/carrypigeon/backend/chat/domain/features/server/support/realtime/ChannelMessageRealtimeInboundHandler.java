@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
 import java.util.Map;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.CustomChannelMessageDraft;
@@ -10,7 +10,7 @@ import team.carrypigeon.backend.chat.domain.features.message.application.draft.F
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.PluginChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.application.draft.VoiceChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeClientMessage;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -36,14 +36,14 @@ public class ChannelMessageRealtimeInboundHandler implements RealtimeInboundMess
 
     @Override
     public void handle(
-            AuthenticatedPrincipal principal,
+            AuthenticatedAccount principal,
             RealtimeClientMessage request,
-            MessageApplicationService messageApplicationService
+            MessageDeliveryApplicationService messageDeliveryApplicationService
     ) {
         long channelId = requirePositiveLong(request.channelId(), "channel_id");
         String messageType = requireNonBlank(request.messageType(), "message_type must not be blank");
         ChannelMessageDraft draft = toDraft(messageType, request);
-        messageApplicationService.sendChannelMessage(new SendChannelMessageCommand(
+        messageDeliveryApplicationService.sendChannelMessage(new SendChannelMessageCommand(
                 principal.accountId(),
                 channelId,
                 draft

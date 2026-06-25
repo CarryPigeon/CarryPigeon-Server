@@ -7,8 +7,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.support.persistence.DatabaseBackedAuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.support.persistence.DatabaseBackedAuthRefreshSessionRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
 
 /**
  * 鉴权持久化装配配置。

@@ -29,7 +29,7 @@ class MessageApplicationServiceForwardTests {
         )));
         fixture.messageRepository.messagesById.put(5001L, new ChannelMessage(5001L, MessageApplicationServiceTestSupport.SERVER_ID, 1L, 1L, 1002L, "text", "hello", "hello", "hello", null, null, "sent", MessageApplicationServiceTestSupport.BASE_TIME));
 
-        ChannelMessageResult result = fixture.service.forwardChannelMessage(new ForwardChannelMessageCommand(1001L, 5001L, 2L, "FYI"));
+        ChannelMessageResult result = fixture.moderationService.forwardChannelMessage(new ForwardChannelMessageCommand(1001L, 5001L, 2L, "FYI"));
 
         assertEquals(2L, result.channelId());
         assertEquals(true, result.body().contains("[Forwarded] hello"));

@@ -4,6 +4,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelInviteRecord;
@@ -58,10 +59,28 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
     void insert_validRecord_delegatesToMapper() {
         ChannelInviteMapper channelInviteMapper = mock(ChannelInviteMapper.class);
         MybatisPlusChannelInviteDatabaseService service = new MybatisPlusChannelInviteDatabaseService(channelInviteMapper);
+        ChannelInviteRecord record = new ChannelInviteRecord(
+                1L,
+                3001L,
+                1002L,
+                1001L,
+                "PENDING",
+                Instant.parse("2026-04-24T12:10:00Z"),
+                null
+        );
 
-        service.insert(new ChannelInviteRecord(1L, 3001L, 1002L, 1001L, "PENDING", Instant.parse("2026-04-24T12:10:00Z"), null));
+        service.insert(record);
 
-        verify(channelInviteMapper).insert(any());
+        ArgumentCaptor<ChannelInviteEntity> captor = ArgumentCaptor.forClass(ChannelInviteEntity.class);
+        verify(channelInviteMapper).insert(captor.capture());
+        ChannelInviteEntity entity = captor.getValue();
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.applicationId(), entity.getApplicationId());
+        assertEquals(record.inviteeAccountId(), entity.getInviteeAccountId());
+        assertEquals(record.inviterAccountId(), entity.getInviterAccountId());
+        assertEquals(record.status(), entity.getStatus());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
+        assertEquals(record.respondedAt(), entity.getRespondedAt());
     }
 
     /**

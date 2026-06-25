@@ -5,9 +5,11 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,16 +50,24 @@ class MybatisPlusChannelMemberDatabaseServiceTests {
     void insert_validRecord_mapsCompositeKeyFields() {
         ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
         MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
-
-        service.insert(new ChannelMemberRecord(
+        ChannelMemberRecord record = new ChannelMemberRecord(
                 1L,
                 1001L,
                 "MEMBER",
                 Instant.parse("2026-04-22T00:00:00Z"),
                 Instant.parse("2026-04-22T00:05:00Z")
-        ));
+        );
 
-        verify(channelMemberMapper).insertMembership(any());
+        service.insert(record);
+
+        ArgumentCaptor<ChannelMemberEntity> captor = ArgumentCaptor.forClass(ChannelMemberEntity.class);
+        verify(channelMemberMapper).insertMembership(captor.capture());
+        ChannelMemberEntity entity = captor.getValue();
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.accountId(), entity.getAccountId());
+        assertEquals(record.role(), entity.getRole());
+        assertEquals(record.joinedAt(), entity.getJoinedAt());
+        assertEquals(record.mutedUntil(), entity.getMutedUntil());
     }
 
     /**

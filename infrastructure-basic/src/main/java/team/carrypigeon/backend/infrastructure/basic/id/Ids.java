@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.infrastructure.basic.id;
 
 /**
- * TODO：直接对外暴露,应该通过InfrastructureBasics对象暴露
  * ID 相关基础工具。
  * 职责：提供雪花 ID 的基础转换能力，避免业务代码重复处理 ID 文本格式。
+ * 边界：作为无状态静态辅助能力直接暴露，不承担 ID 生成或注入职责。
  */
 public final class Ids {
 

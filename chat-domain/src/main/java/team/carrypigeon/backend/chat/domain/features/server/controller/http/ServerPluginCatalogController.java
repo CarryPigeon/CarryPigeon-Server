@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessagePluginCatalogApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerDiscoveryDocument;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.PluginCatalogItemResponse;
@@ -23,15 +24,22 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Plugi
 @Tag(name = "插件目录", description = "服务端插件目录发现接口。")
 public class ServerPluginCatalogController {
 
-    private final ChannelMessagePluginRegistry pluginRegistry;
+    private final MessagePluginCatalogApplicationService messagePluginCatalogApplicationService;
     private final team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService;
 
     public ServerPluginCatalogController(
-            ChannelMessagePluginRegistry pluginRegistry,
+            MessagePluginCatalogApplicationService messagePluginCatalogApplicationService,
             team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService
     ) {
-        this.pluginRegistry = pluginRegistry;
+        this.messagePluginCatalogApplicationService = messagePluginCatalogApplicationService;
         this.serverApplicationService = serverApplicationService;
+    }
+
+    public ServerPluginCatalogController(
+            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService
+    ) {
+        this(new MessagePluginCatalogApplicationService(channelMessagePluginRegistry), serverApplicationService);
     }
 
     @GetMapping("/catalog")
@@ -41,16 +49,15 @@ public class ServerPluginCatalogController {
     })
     public PluginCatalogResponse getPluginCatalog() {
         ServerDiscoveryDocument discoveryDocument = serverApplicationService.getServerDiscoveryDocument();
-        List<PluginCatalogItemResponse> plugins = pluginRegistry.getDescriptors().stream()
-                .filter(descriptor -> descriptor.publicVisible())
-                .map(descriptor -> new PluginCatalogItemResponse(
-                        descriptor.publicPluginKey(),
-                        descriptor.description(),
+        List<PluginCatalogItemResponse> plugins = messagePluginCatalogApplicationService.listPublicPlugins().stream()
+                .map(plugin -> new PluginCatalogItemResponse(
+                        plugin.publicPluginKey(),
+                        plugin.description(),
                         "1.0.0",
                         "0.1.0",
                         false,
-                        descriptor.declaredPermissions(),
-                        List.of(new PluginDomainResponse(toDomain(descriptor.messageType()), "1.0.0")),
+                        plugin.declaredPermissions(),
+                        List.of(new PluginDomainResponse(toDomain(plugin.messageType()), "1.0.0")),
                         new PluginDownloadResponse(null, null)
                 ))
                 .toList();

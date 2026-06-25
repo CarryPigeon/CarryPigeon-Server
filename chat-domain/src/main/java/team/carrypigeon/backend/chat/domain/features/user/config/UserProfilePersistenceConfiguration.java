@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.support.persistence.DatabaseBackedUserProfileRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 
 /**
  * 用户资料持久化装配配置。

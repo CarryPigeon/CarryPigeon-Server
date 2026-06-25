@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import team.carrypigeon.backend.chat.domain.features.user.config.UserProfilePersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

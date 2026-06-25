@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.file.application.dto.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
@@ -39,9 +39,9 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.Storage
 public class FileController {
 
     private final FileApplicationService fileApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final RequestAuthenticationContext authRequestContext;
 
-    public FileController(FileApplicationService fileApplicationService, AuthRequestContext authRequestContext) {
+    public FileController(FileApplicationService fileApplicationService, RequestAuthenticationContext authRequestContext) {
         this.fileApplicationService = fileApplicationService;
         this.authRequestContext = authRequestContext;
     }

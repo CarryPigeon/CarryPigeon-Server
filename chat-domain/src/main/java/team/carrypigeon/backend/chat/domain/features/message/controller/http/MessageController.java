@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.DeleteChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.EditChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.application.command.ForwardChannelMessageCommand;
@@ -23,7 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Chan
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.EditChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ForwardChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
 import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -39,23 +39,31 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequestMapping("/api/messages")
 public class MessageController {
 
-    private final MessageApplicationService messageApplicationService;
-    private final AuthRequestContext authRequestContext;
+    private final MessageModerationApplicationService messageModerationApplicationService;
+    private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
     public MessageController(
-            MessageApplicationService messageApplicationService,
-            AuthRequestContext authRequestContext,
+            MessageModerationApplicationService messageModerationApplicationService,
+            RequestAuthenticationContext authRequestContext,
             UserProfileApplicationService userProfileApplicationService,
             JsonProvider jsonProvider
     ) {
-        this.messageApplicationService = messageApplicationService;
+        this.messageModerationApplicationService = messageModerationApplicationService;
         this.authRequestContext = authRequestContext;
         this.responseMapper = new ChannelMessageV1ResponseMapper(userProfileApplicationService, jsonProvider);
     }
 
-    public MessageController(MessageApplicationService messageApplicationService, AuthRequestContext authRequestContext) {
-        this(messageApplicationService, authRequestContext, null, new JsonProvider(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()));
+    public MessageController(
+            MessageModerationApplicationService messageModerationApplicationService,
+            RequestAuthenticationContext authRequestContext
+    ) {
+        this(
+                messageModerationApplicationService,
+                authRequestContext,
+                null,
+                new JsonProvider(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules())
+        );
     }
 
     @DeleteMapping("/{messageId}")
@@ -63,8 +71,8 @@ public class MessageController {
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        messageApplicationService.deleteChannelMessage(new DeleteChannelMessageCommand(principal.accountId(), messageId));
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        messageModerationApplicationService.deleteChannelMessage(new DeleteChannelMessageCommand(principal.accountId(), messageId));
         return ResponseEntity.noContent().build();
     }
 
@@ -74,8 +82,8 @@ public class MessageController {
             @RequestBody ForwardChannelMessageRequest body,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageResult result = messageApplicationService.forwardChannelMessage(new ForwardChannelMessageCommand(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageResult result = messageModerationApplicationService.forwardChannelMessage(new ForwardChannelMessageCommand(
                 principal.accountId(),
                 messageId,
                 parseTargetChannelId(body.targetCid()),
@@ -90,8 +98,8 @@ public class MessageController {
             @RequestBody EditChannelMessageRequest body,
             HttpServletRequest request
     ) {
-        AuthenticatedPrincipal principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageResult result = messageApplicationService.editChannelMessage(new EditChannelMessageCommand(
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageResult result = messageModerationApplicationService.editChannelMessage(new EditChannelMessageCommand(
                 principal.accountId(),
                 messageId,
                 body.domain(),

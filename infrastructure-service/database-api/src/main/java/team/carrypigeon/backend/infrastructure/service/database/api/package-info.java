@@ -1,5 +1,4 @@
 /**
- * TODO 可以将service和model进行重整理，一个service及其对应的model放入一个包中，例如service/AuthAccount/{databaseservice和models}
  * database-api 模块边界说明。
  *
  * <p>职责：</p>
@@ -11,7 +10,7 @@
  * <p>允许承载：</p>
  * <ul>
  *   <li>面向数据库能力的 service 抽象</li>
- *   <li>面向数据库读写契约的 record / model</li>
+ *   <li>按能力邻近组织的数据库读写契约 record / model</li>
  *   <li>事务边界抽象</li>
  *   <li>健康检查与数据库服务异常抽象</li>
  * </ul>

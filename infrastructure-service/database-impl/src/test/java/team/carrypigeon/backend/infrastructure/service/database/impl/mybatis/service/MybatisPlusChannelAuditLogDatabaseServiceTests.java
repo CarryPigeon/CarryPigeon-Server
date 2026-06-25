@@ -5,6 +5,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
@@ -38,8 +39,7 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
     void insert_validRecord_delegatesToMapper() {
         ChannelAuditLogMapper channelAuditLogMapper = mock(ChannelAuditLogMapper.class);
         MybatisPlusChannelAuditLogDatabaseService service = new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
-
-        service.insert(new ChannelAuditLogWriteRecord(
+        ChannelAuditLogWriteRecord record = new ChannelAuditLogWriteRecord(
                 7001L,
                 1L,
                 1001L,
@@ -47,9 +47,20 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
                 1002L,
                 "{}",
                 Instant.parse("2026-04-24T12:30:00Z")
-        ));
+        );
 
-        verify(channelAuditLogMapper).insert(any(ChannelAuditLogEntity.class));
+        service.insert(record);
+
+        ArgumentCaptor<ChannelAuditLogEntity> captor = ArgumentCaptor.forClass(ChannelAuditLogEntity.class);
+        verify(channelAuditLogMapper).insert(captor.capture());
+        ChannelAuditLogEntity entity = captor.getValue();
+        assertEquals(record.auditId(), entity.getAuditId());
+        assertEquals(record.channelId(), entity.getChannelId());
+        assertEquals(record.actorAccountId(), entity.getActorAccountId());
+        assertEquals(record.actionType(), entity.getActionType());
+        assertEquals(record.targetAccountId(), entity.getTargetAccountId());
+        assertEquals(record.metadata(), entity.getMetadata());
+        assertEquals(record.createdAt(), entity.getCreatedAt());
     }
 
     /**

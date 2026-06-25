@@ -3,13 +3,14 @@ package team.carrypigeon.backend.chat.domain.features.server.application.service
 import java.util.List;
 import java.time.Clock;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.server.application.dto.RequiredGateCheckResult;
 import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerCapabilities;
 import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerDiscoveryDocument;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
-import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.shared.application.server.ServerIdentityProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -24,43 +25,63 @@ public class ServerApplicationService {
     private static final String DEFAULT_AVATAR = "api/files/download/server_avatar";
     private static final String API_VERSION = "1.0";
 
-    private final ServerIdentityProperties serverIdentityProperties;
+    private final ServerIdentityProvider serverIdentityProvider;
     private final String applicationName;
-    private final ChannelMessagePluginRegistry channelMessagePluginRegistry;
     private final RealtimeServerProperties realtimeServerProperties;
     private final TimeProvider timeProvider;
     private final List<String> requiredPlugins;
 
+    @Autowired
     public ServerApplicationService(
-            ServerIdentityProperties serverIdentityProperties,
+            ServerIdentityProvider serverIdentityProvider,
             @Value("${spring.application.name:CarryPigeonBackend}") String applicationName,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
             RealtimeServerProperties realtimeServerProperties,
             TimeProvider timeProvider,
             @Value("${cp.chat.server.required-plugins:}") List<String> requiredPlugins
     ) {
-        this.serverIdentityProperties = serverIdentityProperties;
+        this.serverIdentityProvider = serverIdentityProvider;
         this.applicationName = applicationName;
-        this.channelMessagePluginRegistry = channelMessagePluginRegistry;
         this.realtimeServerProperties = realtimeServerProperties;
         this.timeProvider = timeProvider;
-        this.requiredPlugins = requiredPlugins == null ? List.of() : List.copyOf(requiredPlugins);
+        this.requiredPlugins = normalizeRequiredPlugins(requiredPlugins);
     }
 
     public ServerApplicationService(
-            ServerIdentityProperties serverIdentityProperties,
+            ServerIdentityProvider serverIdentityProvider,
             String applicationName,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
             RealtimeServerProperties realtimeServerProperties
     ) {
         this(
-                serverIdentityProperties,
+                serverIdentityProvider,
                 applicationName,
-                channelMessagePluginRegistry,
                 realtimeServerProperties,
                 new TimeProvider(Clock.systemUTC()),
                 List.of()
         );
+    }
+
+    public ServerApplicationService(
+            ServerIdentityProvider serverIdentityProvider,
+            String applicationName,
+            ChannelMessagePluginRegistry ignoredPluginRegistry,
+            RealtimeServerProperties realtimeServerProperties
+    ) {
+        this(serverIdentityProvider, applicationName, realtimeServerProperties);
+    }
+
+    public ServerApplicationService(
+            ServerIdentityProvider serverIdentityProvider,
+            String applicationName,
+            ChannelMessagePluginRegistry ignoredPluginRegistry,
+            RealtimeServerProperties realtimeServerProperties,
+            TimeProvider timeProvider,
+            List<String> requiredPlugins
+    ) {
+        this(serverIdentityProvider, applicationName, realtimeServerProperties, timeProvider, requiredPlugins);
+    }
+
+    private static List<String> normalizeRequiredPlugins(List<String> requiredPlugins) {
+        return requiredPlugins == null ? List.of() : List.copyOf(requiredPlugins);
     }
 
     /**
@@ -70,7 +91,7 @@ public class ServerApplicationService {
      */
     public ServerDiscoveryDocument getServerDiscoveryDocument() {
         return new ServerDiscoveryDocument(
-                serverIdentityProperties.id(),
+                serverIdentityProvider.id(),
                 applicationName,
                 DEFAULT_BRIEF,
                 DEFAULT_AVATAR,
@@ -98,6 +119,6 @@ public class ServerApplicationService {
         if (!realtimeServerProperties.enabled()) {
             return null;
         }
-        return "ws://" + realtimeServerProperties.host() + ":" + realtimeServerProperties.port() + realtimeServerProperties.path();
+        return "wss://" + realtimeServerProperties.host() + ":" + realtimeServerProperties.port() + realtimeServerProperties.path();
     }
 }

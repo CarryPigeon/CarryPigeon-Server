@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
@@ -77,8 +77,8 @@ final class RealtimeChannelHandlerTestSupport {
         return new RealtimeInboundMessageDispatcher(List.of(new ChannelMessageRealtimeInboundHandler(jsonProvider)));
     }
 
-    static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageApplicationService service) {
-        Supplier<MessageApplicationService> supplier = () -> service;
+    static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageDeliveryApplicationService service) {
+        Supplier<MessageDeliveryApplicationService> supplier = () -> service;
         JsonProvider jsonProvider = jsonProvider();
         RealtimeInboundMessageDispatcher dispatcher = dispatcher(jsonProvider);
         return new EmbeddedChannel(new RealtimeChannelHandler(
@@ -93,7 +93,7 @@ final class RealtimeChannelHandlerTestSupport {
         ));
     }
 
-    static MessageApplicationService service(RealtimeSessionRegistry registry) {
+    static MessageDeliveryApplicationService service(RealtimeSessionRegistry registry) {
         MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
@@ -116,7 +116,7 @@ final class RealtimeChannelHandlerTestSupport {
                         new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                 )
         ));
-        return new MessageApplicationService(
+        return new MessageDeliveryApplicationService(
                 new ChannelRepository() {
                     @Override
                     public Optional<Channel> findDefaultChannel() {
@@ -256,6 +256,7 @@ final class RealtimeChannelHandlerTestSupport {
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 () -> 7001L,
+                jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
                     @Override
@@ -272,12 +273,12 @@ final class RealtimeChannelHandlerTestSupport {
         );
     }
 
-    static MessageApplicationService failingService() {
+    static MessageDeliveryApplicationService failingService() {
         MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
         ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
-        return new MessageApplicationService(
+        return new MessageDeliveryApplicationService(
                 new ChannelRepository() {
                     @Override
                     public Optional<Channel> findDefaultChannel() {
@@ -411,6 +412,7 @@ final class RealtimeChannelHandlerTestSupport {
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 () -> 7001L,
+                jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
                     @Override
@@ -427,7 +429,7 @@ final class RealtimeChannelHandlerTestSupport {
         );
     }
 
-    static MessageApplicationService serviceWithoutExtensionRegistration(RealtimeSessionRegistry registry) {
+    static MessageDeliveryApplicationService serviceWithoutExtensionRegistration(RealtimeSessionRegistry registry) {
         MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
@@ -449,7 +451,7 @@ final class RealtimeChannelHandlerTestSupport {
                         new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                 )
         ));
-        return new MessageApplicationService(
+        return new MessageDeliveryApplicationService(
                 new ChannelRepository() {
                     @Override
                     public Optional<Channel> findDefaultChannel() {
@@ -589,6 +591,7 @@ final class RealtimeChannelHandlerTestSupport {
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 () -> 7001L,
+                jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
                     @Override

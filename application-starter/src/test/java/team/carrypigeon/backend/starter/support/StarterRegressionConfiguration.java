@@ -32,11 +32,14 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelAccessApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
 import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
@@ -334,7 +337,24 @@ public class StarterRegressionConfiguration {
      * 创建消息应用服务。
      */
     @Bean
-    public MessageApplicationService messageApplicationService(
+    public MessageQueryApplicationService messageQueryApplicationService(
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            ChannelPinRepository channelPinRepository,
+            MessageRepository messageRepository,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
+    ) {
+        return new MessageQueryApplicationService(
+                channelRepository,
+                channelMemberRepository,
+                channelPinRepository,
+                messageRepository,
+                messageAttachmentPayloadResolver
+        );
+    }
+
+    @Bean
+    public MessageDeliveryApplicationService messageDeliveryApplicationService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
@@ -354,7 +374,7 @@ public class StarterRegressionConfiguration {
             TransactionRunner transactionRunner,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
-        return new MessageApplicationService(
+        return new MessageDeliveryApplicationService(
                 channelRepository,
                 channelMemberRepository,
                 channelAuditLogRepository,
@@ -377,7 +397,71 @@ public class StarterRegressionConfiguration {
     }
 
     @Bean
-    public ChannelApplicationService channelApplicationService(
+    public MessageModerationApplicationService messageModerationApplicationService(
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelPinRepository channelPinRepository,
+            ChannelGovernancePolicy channelGovernancePolicy,
+            MessageRepository messageRepository,
+            MentionRepository mentionRepository,
+            UserProfileRepository userProfileRepository,
+            MessageRealtimePublisher messageRealtimePublisher,
+            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
+            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
+            ServerIdentityProperties serverIdentityProperties,
+            IdGenerator idGenerator,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner,
+            ObjectProvider<ObjectStorageService> objectStorageServiceProvider
+    ) {
+        return new MessageModerationApplicationService(
+                channelRepository,
+                channelMemberRepository,
+                channelAuditLogRepository,
+                channelPinRepository,
+                channelGovernancePolicy,
+                messageRepository,
+                mentionRepository,
+                userProfileRepository,
+                messageRealtimePublisher,
+                channelMessagePluginRegistry,
+                messageAttachmentObjectKeyPolicy,
+                messageAttachmentPayloadResolver,
+                serverIdentityProperties,
+                idGenerator,
+                jsonProvider,
+                timeProvider,
+                transactionRunner,
+                objectStorageServiceProvider
+        );
+    }
+
+    @Bean
+    public ChannelQueryApplicationService channelQueryApplicationService(
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            ChannelBanRepository channelBanRepository,
+            ChannelAuditLogRepository channelAuditLogRepository,
+            ChannelReadStateRepository channelReadStateRepository,
+            UserProfileRepository userProfileRepository,
+            ChannelGovernancePolicy channelGovernancePolicy
+    ) {
+        return new ChannelQueryApplicationService(
+                channelRepository,
+                channelMemberRepository,
+                channelBanRepository,
+                channelAuditLogRepository,
+                channelReadStateRepository,
+                userProfileRepository,
+                channelGovernancePolicy
+        );
+    }
+
+    @Bean
+    public ChannelAccessApplicationService channelAccessApplicationService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelInviteRepository channelInviteRepository,
@@ -392,7 +476,7 @@ public class StarterRegressionConfiguration {
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        return new ChannelApplicationService(
+        return new ChannelAccessApplicationService(
                 channelRepository,
                 channelMemberRepository,
                 channelInviteRepository,
@@ -415,9 +499,10 @@ public class StarterRegressionConfiguration {
     @Bean
     public AuthController authController(
             AuthApplicationService authApplicationService,
-            ServerApplicationService serverApplicationService
+            ServerApplicationService serverApplicationService,
+            AuthJwtProperties authJwtProperties
     ) {
-        return new AuthController(authApplicationService, serverApplicationService);
+        return new AuthController(authApplicationService, serverApplicationService, authJwtProperties);
     }
 
     /**
@@ -444,21 +529,38 @@ public class StarterRegressionConfiguration {
      */
     @Bean
     public ChannelMessageController channelMessageController(
-            MessageApplicationService messageApplicationService,
+            MessageDeliveryApplicationService messageDeliveryApplicationService,
+            MessageModerationApplicationService messageModerationApplicationService,
+            MessageQueryApplicationService messageQueryApplicationService,
             UserProfileApplicationService userProfileApplicationService,
             AuthRequestContext authRequestContext,
             JsonProvider jsonProvider
     ) {
-        return new ChannelMessageController(messageApplicationService, userProfileApplicationService, authRequestContext, jsonProvider);
+        return new ChannelMessageController(
+                messageDeliveryApplicationService,
+                messageModerationApplicationService,
+                messageQueryApplicationService,
+                userProfileApplicationService,
+                authRequestContext,
+                jsonProvider
+        );
     }
 
     @Bean
     public FileApplicationService fileApplicationService(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
+            ChannelMemberRepository channelMemberRepository,
             IdGenerator idGenerator,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            AuthJwtProperties authJwtProperties
     ) {
-        return new FileApplicationService(objectStorageServiceProvider, idGenerator, timeProvider);
+        return new FileApplicationService(
+                objectStorageServiceProvider,
+                channelMemberRepository,
+                idGenerator,
+                timeProvider,
+                authJwtProperties
+        );
     }
 
     @Bean
@@ -468,10 +570,11 @@ public class StarterRegressionConfiguration {
 
     @Bean
     public ChannelReadStateController channelReadStateController(
-            ChannelApplicationService channelApplicationService,
+            ChannelAccessApplicationService channelAccessApplicationService,
+            ChannelQueryApplicationService channelQueryApplicationService,
             AuthRequestContext authRequestContext
     ) {
-        return new ChannelReadStateController(channelApplicationService, authRequestContext);
+        return new ChannelReadStateController(channelAccessApplicationService, channelQueryApplicationService, authRequestContext);
     }
 
     private static <T> ObjectProvider<T> objectProvider(T object) {

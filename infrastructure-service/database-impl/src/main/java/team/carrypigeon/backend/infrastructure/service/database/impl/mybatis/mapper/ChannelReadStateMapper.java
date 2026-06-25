@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ma
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -10,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 /**
  * 频道已读状态 Mapper。
  */
+@Mapper
 public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntity> {
 
     @Select("""

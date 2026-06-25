@@ -15,14 +15,16 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelGovernanceApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelLifecycleApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
 import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -46,17 +48,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("contract")
 class ChannelControllerTests {
 
-    private ChannelApplicationService channelApplicationService;
+    private ChannelQueryApplicationService channelQueryApplicationService;
+    private ChannelLifecycleApplicationService channelLifecycleApplicationService;
+    private ChannelGovernanceApplicationService channelGovernanceApplicationService;
     private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
-    private AuthRequestContext authRequestContext;
+    private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationService = mock(ChannelApplicationService.class);
+        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
+        channelLifecycleApplicationService = mock(ChannelLifecycleApplicationService.class);
+        channelGovernanceApplicationService = mock(ChannelGovernanceApplicationService.class);
         notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
-        authRequestContext = new AuthRequestContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
+        authRequestContext = new RequestAuthenticationContext();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller())
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -66,7 +72,7 @@ class ChannelControllerTests {
     @DisplayName("list channels returns channel summaries")
     void listChannels_returnsChannelSummaries() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listChannels(1001L)).thenReturn(List.of(
+        when(channelQueryApplicationService.listChannels(1001L)).thenReturn(List.of(
                 new ChannelResult(1L, 1L, "General", "讨论区", "avatars/ch/1.png", "1001", "public", true, Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")),
                 new ChannelResult(9L, 9L, "project-alpha", "研发讨论", "avatars/ch/9.png", "1001", "private", false, Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"))
         ));
@@ -82,7 +88,7 @@ class ChannelControllerTests {
     @DisplayName("get channel by id returns channel summary")
     void getChannelById_returnsChannelSummary() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.getChannelById(1001L, 9L)).thenReturn(new ChannelResult(
+        when(channelQueryApplicationService.getChannelById(1001L, 9L)).thenReturn(new ChannelResult(
                 9L, 9L, "project-alpha", "研发讨论", "avatars/ch/9.png", "1001", "private", false,
                 Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
         ));
@@ -98,7 +104,7 @@ class ChannelControllerTests {
     @DisplayName("discover channels returns cursor page")
     void discoverChannels_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.discoverChannels(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.discoverChannels(any())).thenReturn(List.of(
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
@@ -113,7 +119,7 @@ class ChannelControllerTests {
     @DisplayName("create channel returns 201")
     void createChannel_returns201() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.createChannel(any())).thenReturn(new ChannelResult(
+        when(channelLifecycleApplicationService.createChannel(any())).thenReturn(new ChannelResult(
                 9L, 9L, "project-alpha", "讨论区", "avatars/ch/9.png", "1001", "private", false,
                 Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
         ));
@@ -132,7 +138,7 @@ class ChannelControllerTests {
     @DisplayName("delete channel returns 204")
     void deleteChannel_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(channelApplicationService).deleteChannel(any());
+        doNothing().when(channelLifecycleApplicationService).deleteChannel(any());
 
         mockMvc.perform(delete("/api/channels/9"))
                 .andExpect(status().isNoContent());
@@ -142,7 +148,7 @@ class ChannelControllerTests {
     @DisplayName("patch channel profile returns 204")
     void patchChannelProfile_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.updateChannelProfile(any())).thenReturn(new ChannelResult(
+        when(channelLifecycleApplicationService.updateChannelProfile(any())).thenReturn(new ChannelResult(
                 9L, 9L, "project-alpha", "new brief", "avatars/ch/9.png", "1001", "private", false,
                 Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:00:00Z")
         ));
@@ -159,7 +165,7 @@ class ChannelControllerTests {
     @DisplayName("list channel members returns items")
     void listChannelMembers_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listChannelMembers(any())).thenReturn(List.of(
+        when(channelQueryApplicationService.listChannelMembers(any())).thenReturn(List.of(
                 new ChannelMemberResult(1001L, "carry-owner", "", "OWNER", Instant.parse("2026-04-24T12:00:00Z"), null)
         ));
 
@@ -173,7 +179,7 @@ class ChannelControllerTests {
     @DisplayName("put admin resource returns 204")
     void promoteChannelMemberV1_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.promoteChannelMember(any())).thenReturn(new ChannelMemberResult(
+        when(channelGovernanceApplicationService.promoteChannelMember(any())).thenReturn(new ChannelMemberResult(
                 1002L, "carry-admin", "", "ADMIN", Instant.parse("2026-04-24T12:00:00Z"), null
         ));
 
@@ -185,7 +191,7 @@ class ChannelControllerTests {
     @DisplayName("delete admin resource returns 204")
     void demoteChannelAdminV1_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.demoteChannelAdmin(any())).thenReturn(new ChannelMemberResult(
+        when(channelGovernanceApplicationService.demoteChannelAdmin(any())).thenReturn(new ChannelMemberResult(
                 1002L, "carry-member", "", "MEMBER", Instant.parse("2026-04-24T12:00:00Z"), null
         ));
 
@@ -197,7 +203,7 @@ class ChannelControllerTests {
     @DisplayName("kick channel member returns 204")
     void kickChannelMember_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(channelApplicationService).kickChannelMember(any());
+        doNothing().when(channelGovernanceApplicationService).kickChannelMember(any());
 
         mockMvc.perform(delete("/api/channels/9/members/1002"))
                 .andExpect(status().isNoContent());
@@ -207,7 +213,7 @@ class ChannelControllerTests {
     @DisplayName("put ban resource returns payload")
     void banChannelMemberV1_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.banChannelMember(any()))
+        when(channelGovernanceApplicationService.banChannelMember(any()))
                 .thenReturn(new ChannelBanResult(9L, 1002L, 1001L, "spam", Instant.parse("2026-04-24T13:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"), null));
 
         mockMvc.perform(put("/api/channels/9/bans/1002")
@@ -225,7 +231,7 @@ class ChannelControllerTests {
     @DisplayName("delete ban resource returns 204")
     void unbanChannelMember_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.unbanChannelMember(any()))
+        when(channelGovernanceApplicationService.unbanChannelMember(any()))
                 .thenReturn(new ChannelBanResult(9L, 1002L, 1001L, "spam", Instant.parse("2026-04-24T13:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"), Instant.parse("2026-04-24T12:10:00Z")));
 
         mockMvc.perform(delete("/api/channels/9/bans/1002"))
@@ -236,7 +242,7 @@ class ChannelControllerTests {
     @DisplayName("list channel bans returns items")
     void listChannelBans_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationService.listChannelBans(any()))
+        when(channelQueryApplicationService.listChannelBans(any()))
                 .thenReturn(List.of(new ChannelBanListItemResult(9L, 1002L, Instant.parse("2026-04-24T12:05:00Z"), "spam", Instant.parse("2026-04-24T12:00:00Z"))));
 
         mockMvc.perform(get("/api/channels/9/bans"))
@@ -260,11 +266,21 @@ class ChannelControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelController(channelApplicationService, notificationPreferenceApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(controller())
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private ChannelController controller() {
+        return new ChannelController(
+                channelQueryApplicationService,
+                channelLifecycleApplicationService,
+                channelGovernanceApplicationService,
+                notificationPreferenceApplicationService,
+                authRequestContext
+        );
     }
 
     private MappingJackson2HttpMessageConverter snakeCaseConverter() {
@@ -275,15 +291,15 @@ class ChannelControllerTests {
 
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
 
-        private final AuthRequestContext authRequestContext;
+        private final RequestAuthenticationContext authRequestContext;
 
-        private BindPrincipalInterceptor(AuthRequestContext authRequestContext) {
+        private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) {
             this.authRequestContext = authRequestContext;
         }
 
         @Override
         public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-            authRequestContext.bind(request, new AuthenticatedPrincipal(1001L, "carry-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(1001L, "carry-user"));
             return true;
         }
     }
