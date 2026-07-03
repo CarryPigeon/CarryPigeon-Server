@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginGovernanceProperties;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 

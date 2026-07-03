@@ -84,6 +84,10 @@ class ChannelBanDatabaseServiceContractTests {
         assertSame(RECORD, service.updatedRecord);
     }
 
+    /**
+     * `MinimalChannelBanDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalChannelBanDatabaseService implements ChannelBanDatabaseService {
 
         @Override
@@ -100,6 +104,10 @@ class ChannelBanDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingChannelBanDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingChannelBanDatabaseService extends MinimalChannelBanDatabaseService {
 
         private ChannelBanRecord insertedRecord;

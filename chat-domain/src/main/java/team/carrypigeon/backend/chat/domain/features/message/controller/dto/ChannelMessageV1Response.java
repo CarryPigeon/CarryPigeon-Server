@@ -50,12 +50,20 @@ public record ChannelMessageV1Response(
         this(mid, cid, uid, sender, sendTime, null, 1L, domain, domainVersion, data, List.of(), null, preview);
     }
 
+    /**
+     * v1 消息响应中的提及目标。
+     * 职责：以协议字段表达消息中规范化后的 mention 目标。
+     */
     public record MentionTargetResponse(
             @Schema(description = "提及目标类型", example = "user") String type,
             @Schema(description = "提及目标用户 ID", example = "67890") String uid
     ) {
     }
 
+    /**
+     * v1 消息响应中的转发来源摘要。
+     * 职责：展示源消息、源频道和源发送者的稳定引用信息。
+     */
     public record ForwardedFromResponse(
             @Schema(description = "源消息 ID", example = "723155640365318144") String mid,
             @Schema(description = "源频道 ID", example = "12345") String cid,

@@ -20,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("contract")
 class RealtimeChannelHandlerLifecycleTests {
 
+    /**
+     * 验证 `userEvent` 在 `handshakeComplete` 条件下满足 `doesNotSendWelcomeBeforeAuth` 的测试契约。
+     */
     @Test
     @DisplayName("handshake complete does not send welcome before auth")
     void userEvent_handshakeComplete_doesNotSendWelcomeBeforeAuth() {
@@ -31,6 +34,9 @@ class RealtimeChannelHandlerLifecycleTests {
         assertNull(sender.readOutbound());
     }
 
+    /**
+     * 验证 `channelRead` 在 `authFrame` 条件下满足 `registersPrincipalAndRepliesAuthOk` 的测试契约。
+     */
     @Test
     @DisplayName("auth frame registers principal and replies auth ok")
     void channelRead_authFrame_registersPrincipalAndRepliesAuthOk() {
@@ -48,6 +54,9 @@ class RealtimeChannelHandlerLifecycleTests {
         assertEquals(1, registry.getChannels(1001L).size());
     }
 
+    /**
+     * 验证 `channelRead` 在 `reauthFrame` 条件下满足 `movesChannelRegistrationToNewAccount` 的测试契约。
+     */
     @Test
     @DisplayName("reauth frame moves channel registration to new account")
     void channelRead_reauthFrame_movesChannelRegistrationToNewAccount() {

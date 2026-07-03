@@ -20,19 +20,22 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageSenderSnapshot;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePublishingDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.support.channel.ChannelBackedMessageChannelBoundary;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
@@ -42,7 +45,7 @@ import team.carrypigeon.backend.chat.domain.features.message.support.plugin.Voic
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
@@ -77,8 +80,8 @@ final class RealtimeChannelHandlerTestSupport {
         return new RealtimeInboundMessageDispatcher(List.of(new ChannelMessageRealtimeInboundHandler(jsonProvider)));
     }
 
-    static EmbeddedChannel channel(RealtimeSessionRegistry registry, MessageDeliveryApplicationService service) {
-        Supplier<MessageDeliveryApplicationService> supplier = () -> service;
+    static EmbeddedChannel channel(RealtimeSessionRegistry registry, ChannelMessagePublishingApi service) {
+        Supplier<ChannelMessagePublishingApi> supplier = () -> service;
         JsonProvider jsonProvider = jsonProvider();
         RealtimeInboundMessageDispatcher dispatcher = dispatcher(jsonProvider);
         return new EmbeddedChannel(new RealtimeChannelHandler(
@@ -93,30 +96,8 @@ final class RealtimeChannelHandlerTestSupport {
         ));
     }
 
-    static MessageDeliveryApplicationService service(RealtimeSessionRegistry registry) {
-        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
-        ObjectStorageService objectStorageService = storageService();
-        JsonProvider jsonProvider = jsonProvider();
-        ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
-        ChannelMessagePluginRegistry pluginRegistry = new ChannelMessagePluginRegistry(List.of(
-                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
-                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
-                registration(
-                        "builtin-file-message",
-                        "file",
-                        "file",
-                        "requires_object_storage",
-                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
-                ),
-                registration(
-                        "builtin-voice-message",
-                        "voice",
-                        "voice",
-                        "requires_object_storage",
-                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
-                )
-        ));
-        return new MessageDeliveryApplicationService(
+    private static MessageChannelBoundary messageChannelBoundary(List<Long> recipientAccountIds) {
+        return new ChannelBackedMessageChannelBoundary(
                 new ChannelRepository() {
                     @Override
                     public Optional<Channel> findDefaultChannel() {
@@ -154,12 +135,12 @@ final class RealtimeChannelHandlerTestSupport {
                     }
 
                     @Override
-                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
+                    public void save(ChannelMember channelMember) {
                     }
 
                     @Override
                     public List<Long> findAccountIdsByChannelId(long channelId) {
-                        return List.of(1001L, 1002L);
+                        return recipientAccountIds;
                     }
                 },
                 new ChannelAuditLogRepository() {
@@ -191,7 +172,35 @@ final class RealtimeChannelHandlerTestSupport {
                         return 0;
                     }
                 },
-                new ChannelGovernancePolicy(),
+                new ChannelGovernancePolicy()
+        );
+    }
+
+    static ChannelMessagePublishingApi service(RealtimeSessionRegistry registry) {
+        MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
+        ObjectStorageService objectStorageService = storageService();
+        JsonProvider jsonProvider = jsonProvider();
+        ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
+        ChannelMessagePluginRegistry pluginRegistry = new ChannelMessagePluginRegistry(List.of(
+                registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
+                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
+                registration(
+                        "builtin-file-message",
+                        "file",
+                        "file",
+                        "requires_object_storage",
+                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                ),
+                registration(
+                        "builtin-voice-message",
+                        "voice",
+                        "voice",
+                        "requires_object_storage",
+                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
+                )
+        ));
+        return channelMessageApi(
+                messageChannelBoundary(List.of(1001L, 1002L)),
                 new MessageRepository() {
                     @Override
                     public ChannelMessage save(ChannelMessage message) {
@@ -252,10 +261,7 @@ final class RealtimeChannelHandlerTestSupport {
                     }
                 },
                 pluginRegistry,
-                objectKeyPolicy,
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
-                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                () -> 7001L,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
@@ -268,92 +274,17 @@ final class RealtimeChannelHandlerTestSupport {
                     public void runInTransaction(Runnable action) {
                         action.run();
                     }
-                },
-                objectStorageServiceProvider
+                }
         );
     }
 
-    static MessageDeliveryApplicationService failingService() {
+    static ChannelMessagePublishingApi failingService() {
         MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
         ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(objectStorageService);
-        return new MessageDeliveryApplicationService(
-                new ChannelRepository() {
-                    @Override
-                    public Optional<Channel> findDefaultChannel() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public Optional<Channel> findSystemChannel() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public Optional<Channel> findById(long channelId) {
-                        return Optional.of(new Channel(
-                                1L, 1L, "public", "", "", "", "public", true,
-                                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
-                        ));
-                    }
-                },
-                new ChannelMemberRepository() {
-                    @Override
-                    public boolean exists(long channelId, long accountId) {
-                        return true;
-                    }
-
-                    @Override
-                    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
-                        return Optional.of(new ChannelMember(
-                                channelId,
-                                accountId,
-                                ChannelMemberRole.MEMBER,
-                                Instant.parse("2026-04-22T00:00:00Z"),
-                                null
-                        ));
-                    }
-
-                    @Override
-                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
-                    }
-
-                    @Override
-                    public List<Long> findAccountIdsByChannelId(long channelId) {
-                        return List.of(1001L);
-                    }
-                },
-                new ChannelAuditLogRepository() {
-                    @Override
-                    public void append(ChannelAuditLog channelAuditLog) {
-                    }
-                },
-                new ChannelPinRepository() {
-                    @Override
-                    public java.util.Optional<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin> findByChannelIdAndMessageId(long channelId, long messageId) {
-                        return java.util.Optional.empty();
-                    }
-
-                    @Override
-                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin channelPin) {
-                    }
-
-                    @Override
-                    public void delete(long channelId, long messageId) {
-                    }
-
-                    @Override
-                    public java.util.List<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-                        return java.util.List.of();
-                    }
-
-                    @Override
-                    public long countByChannelId(long channelId) {
-                        return 0;
-                    }
-                },
-                new ChannelGovernancePolicy(),
+        return channelMessageApi(
+                messageChannelBoundary(List.of(1001L)),
                 new MessageRepository() {
                     @Override
                     public ChannelMessage save(ChannelMessage message) {
@@ -408,10 +339,7 @@ final class RealtimeChannelHandlerTestSupport {
                                 new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                         )
                 )),
-                objectKeyPolicy,
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
-                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                () -> 7001L,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
@@ -424,12 +352,11 @@ final class RealtimeChannelHandlerTestSupport {
                     public void runInTransaction(Runnable action) {
                         action.run();
                     }
-                },
-                objectStorageServiceProvider
+                }
         );
     }
 
-    static MessageDeliveryApplicationService serviceWithoutExtensionRegistration(RealtimeSessionRegistry registry) {
+    static ChannelMessagePublishingApi serviceWithoutExtensionRegistration(RealtimeSessionRegistry registry) {
         MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
         ObjectStorageService objectStorageService = storageService();
         JsonProvider jsonProvider = jsonProvider();
@@ -451,82 +378,8 @@ final class RealtimeChannelHandlerTestSupport {
                         new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, objectKeyPolicy)
                 )
         ));
-        return new MessageDeliveryApplicationService(
-                new ChannelRepository() {
-                    @Override
-                    public Optional<Channel> findDefaultChannel() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public Optional<Channel> findSystemChannel() {
-                        return Optional.empty();
-                    }
-
-                    @Override
-                    public Optional<Channel> findById(long channelId) {
-                        return Optional.of(new Channel(
-                                1L, 1L, "public", "", "", "", "public", true,
-                                Instant.parse("2026-04-22T00:00:00Z"), Instant.parse("2026-04-22T00:00:00Z")
-                        ));
-                    }
-                },
-                new ChannelMemberRepository() {
-                    @Override
-                    public boolean exists(long channelId, long accountId) {
-                        return true;
-                    }
-
-                    @Override
-                    public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
-                        return Optional.of(new ChannelMember(
-                                channelId,
-                                accountId,
-                                ChannelMemberRole.MEMBER,
-                                Instant.parse("2026-04-22T00:00:00Z"),
-                                null
-                        ));
-                    }
-
-                    @Override
-                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember channelMember) {
-                    }
-
-                    @Override
-                    public List<Long> findAccountIdsByChannelId(long channelId) {
-                        return List.of(1001L, 1002L);
-                    }
-                },
-                new ChannelAuditLogRepository() {
-                    @Override
-                    public void append(ChannelAuditLog channelAuditLog) {
-                    }
-                },
-                new ChannelPinRepository() {
-                    @Override
-                    public java.util.Optional<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin> findByChannelIdAndMessageId(long channelId, long messageId) {
-                        return java.util.Optional.empty();
-                    }
-
-                    @Override
-                    public void save(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin channelPin) {
-                    }
-
-                    @Override
-                    public void delete(long channelId, long messageId) {
-                    }
-
-                    @Override
-                    public java.util.List<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-                        return java.util.List.of();
-                    }
-
-                    @Override
-                    public long countByChannelId(long channelId) {
-                        return 0;
-                    }
-                },
-                new ChannelGovernancePolicy(),
+        return channelMessageApi(
+                messageChannelBoundary(List.of(1001L, 1002L)),
                 new MessageRepository() {
                     @Override
                     public ChannelMessage save(ChannelMessage message) {
@@ -587,10 +440,7 @@ final class RealtimeChannelHandlerTestSupport {
                     }
                 },
                 pluginRegistry,
-                objectKeyPolicy,
                 new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider),
-                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                () -> 7001L,
                 jsonProvider,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new TransactionRunner() {
@@ -603,8 +453,35 @@ final class RealtimeChannelHandlerTestSupport {
                     public void runInTransaction(Runnable action) {
                         action.run();
                     }
-                },
-                objectStorageServiceProvider
+                }
+        );
+    }
+
+    private static ChannelMessagePublishingApi channelMessageApi(
+            MessageChannelBoundary messageChannelBoundary,
+            MessageRepository messageRepository,
+            MentionRepository mentionRepository,
+            UserProfileRepository userProfileRepository,
+            MessageRealtimePublisher messageRealtimePublisher,
+            ChannelMessagePluginRegistry pluginRegistry,
+            MessageAttachmentPayloadResolver payloadResolver,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner
+    ) {
+        return new ChannelMessagePublishingDomainApi(
+                messageChannelBoundary,
+                messageRepository,
+                mentionRepository,
+                userProfileRepository,
+                messageRealtimePublisher,
+                pluginRegistry,
+                payloadResolver,
+                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
+                () -> 7001L,
+                jsonProvider,
+                timeProvider,
+                transactionRunner
         );
     }
 

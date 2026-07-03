@@ -4,9 +4,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
@@ -49,7 +50,7 @@ public class MessagePluginConfiguration {
      * @return 消息附件出站载荷解析器
      */
     @Bean
-    public MessageAttachmentPayloadResolver messageAttachmentPayloadResolver(
+    public MessagePayloadResolver messageAttachmentPayloadResolver(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
             JsonProvider jsonProvider
     ) {

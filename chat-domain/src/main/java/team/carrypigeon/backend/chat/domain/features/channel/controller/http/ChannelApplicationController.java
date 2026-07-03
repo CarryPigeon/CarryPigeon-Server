@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreateChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.DecideChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelApplicationsQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationFlowApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.CreateChannelApplicationCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DecideChannelApplicationCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelApplicationResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelApplicationsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelApplicationFlowApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelApplicationListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.CreateChannelApplicationRequest;
@@ -34,14 +34,14 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Tag(name = "频道申请", description = "入群申请与审批能力。")
 public class ChannelApplicationController {
 
-    private final ChannelApplicationFlowApplicationService channelApplicationFlowApplicationService;
+    private final ChannelApplicationFlowApi channelApplicationFlowDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
     public ChannelApplicationController(
-            ChannelApplicationFlowApplicationService channelApplicationFlowApplicationService,
+            ChannelApplicationFlowApi channelApplicationFlowDomainApi,
             RequestAuthenticationContext authRequestContext
     ) {
-        this.channelApplicationFlowApplicationService = channelApplicationFlowApplicationService;
+        this.channelApplicationFlowDomainApi = channelApplicationFlowDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
@@ -54,7 +54,7 @@ public class ChannelApplicationController {
             HttpServletRequest servletRequest
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
-        return toResponse(channelApplicationFlowApplicationService.createChannelApplication(new CreateChannelApplicationCommand(
+        return toResponse(channelApplicationFlowDomainApi.createChannelApplication(new CreateChannelApplicationCommand(
                 principal.accountId(),
                 channelId,
                 request.reason()
@@ -73,7 +73,7 @@ public class ChannelApplicationController {
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回申请列表")})
     public ChannelApplicationListResponse listApplications(@PathVariable long channelId, HttpServletRequest servletRequest) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
-        List<ChannelApplicationResponse> items = channelApplicationFlowApplicationService
+        List<ChannelApplicationResponse> items = channelApplicationFlowDomainApi
                 .listChannelApplications(new ListChannelApplicationsQuery(principal.accountId(), channelId)).stream()
                 .map(this::toResponse)
                 .toList();
@@ -90,7 +90,7 @@ public class ChannelApplicationController {
             HttpServletRequest servletRequest
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
-        return toResponse(channelApplicationFlowApplicationService.decideChannelApplication(new DecideChannelApplicationCommand(
+        return toResponse(channelApplicationFlowDomainApi.decideChannelApplication(new DecideChannelApplicationCommand(
                 principal.accountId(),
                 channelId,
                 applicationId,

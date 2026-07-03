@@ -54,6 +54,10 @@ class DatabaseBackedChannelBanRepositoryTests {
         assertEquals(BASE_TIME.plusSeconds(120), databaseService.updatedRecord.revokedAt());
     }
 
+    /**
+     * `FakeChannelBanDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class FakeChannelBanDatabaseService implements ChannelBanDatabaseService {
 
         private ChannelBanRecord record;

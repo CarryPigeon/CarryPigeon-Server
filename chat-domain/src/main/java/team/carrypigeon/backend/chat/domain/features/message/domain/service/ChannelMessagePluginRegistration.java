@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
+
 /**
  * 频道消息插件注册项。
  * 职责：把运行时插件实现与对应治理描述绑定为一个稳定注册单元。

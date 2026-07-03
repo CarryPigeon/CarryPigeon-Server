@@ -19,6 +19,10 @@ public record RevokeRefreshTokenRequest(
         ClientRequest client
 ) {
 
+    /**
+     * 撤销令牌请求中的客户端上下文。
+     * 职责：携带稳定设备标识，用于定位需要注销的会话。
+     */
     public record ClientRequest(
             @Schema(description = "稳定设备标识", example = "a-stable-device-id")
             @NotBlank(message = "device_id must not be blank")

@@ -60,6 +60,9 @@ class ChannelDatabaseServiceContractTests {
         assertSame(RECORD, service.insertedRecord);
     }
 
+    /**
+     * 验证 `update` 在 `defaultImplementation` 条件下满足 `throwsUnsupportedOperation` 的测试契约。
+     */
     @Test
     @DisplayName("update default implementation throws unsupported operation")
     void update_defaultImplementation_throwsUnsupportedOperation() {
@@ -73,6 +76,9 @@ class ChannelDatabaseServiceContractTests {
         assertEquals("channel update is not supported", exception.getMessage());
     }
 
+    /**
+     * 验证 `update` 在 `overridingImplementation` 条件下满足 `receivesRecord` 的测试契约。
+     */
     @Test
     @DisplayName("update overriding implementation receives record")
     void update_overridingImplementation_receivesRecord() {
@@ -83,6 +89,10 @@ class ChannelDatabaseServiceContractTests {
         assertSame(RECORD, service.updatedRecord);
     }
 
+    /**
+     * `MinimalChannelDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalChannelDatabaseService implements ChannelDatabaseService {
 
         @Override
@@ -101,6 +111,10 @@ class ChannelDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingChannelDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class RecordingChannelDatabaseService extends MinimalChannelDatabaseService {
 
         private ChannelRecord insertedRecord;

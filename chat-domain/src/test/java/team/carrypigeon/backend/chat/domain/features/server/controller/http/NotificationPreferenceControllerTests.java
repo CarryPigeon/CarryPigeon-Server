@@ -15,9 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.NotificationPreferencesResult;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.server.domain.projection.NotificationPreferencesResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -28,29 +28,36 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `NotificationPreferenceController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class NotificationPreferenceControllerTests {
 
-    private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
+    private NotificationPreferenceApi notificationPreferenceDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
+        notificationPreferenceDomainApi = mock(NotificationPreferenceApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceDomainApi, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `getNotificationPreferences` 在 `returnsPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("get notification preferences returns payload")
     void getNotificationPreferences_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(notificationPreferenceApplicationService.getNotificationPreferences(1001L)).thenReturn(new NotificationPreferencesResult(
+        when(notificationPreferenceDomainApi.getNotificationPreferences(1001L)).thenReturn(new NotificationPreferencesResult(
                 new NotificationPreferencesResult.ServerPreferenceResult("all", 0L),
                 List.of(new NotificationPreferencesResult.ChannelPreferenceResult("9", "inherit", 0L))
         ));
@@ -61,11 +68,14 @@ class NotificationPreferenceControllerTests {
                 .andExpect(jsonPath("$.channels[0].cid").value("9"));
     }
 
+    /**
+     * 验证 `updateServerNotificationPreference` 在 `returns204` 场景下的测试契约。
+     */
     @Test
     @DisplayName("update server notification preference returns 204")
     void updateServerNotificationPreference_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(notificationPreferenceApplicationService).updateServerPreference(any());
+        doNothing().when(notificationPreferenceDomainApi).updateServerPreference(any());
 
         mockMvc.perform(put("/api/notification_preferences/server")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -77,7 +87,7 @@ class NotificationPreferenceControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceDomainApi, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -90,6 +100,10 @@ class NotificationPreferenceControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
         private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }

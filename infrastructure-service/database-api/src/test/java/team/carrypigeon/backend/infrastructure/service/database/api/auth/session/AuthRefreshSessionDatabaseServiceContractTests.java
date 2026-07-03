@@ -78,6 +78,10 @@ class AuthRefreshSessionDatabaseServiceContractTests {
         )), service.findById(9001L));
     }
 
+    /**
+     * `InMemoryAuthRefreshSessionDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class InMemoryAuthRefreshSessionDatabaseService implements AuthRefreshSessionDatabaseService {
 
         private final Map<Long, AuthRefreshSessionRecord> recordsById = new HashMap<>();

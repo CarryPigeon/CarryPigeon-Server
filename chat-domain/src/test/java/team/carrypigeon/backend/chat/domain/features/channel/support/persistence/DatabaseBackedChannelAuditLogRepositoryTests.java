@@ -45,6 +45,9 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
         assertEquals("{\"durationSeconds\":300}", databaseService.insertedRecord.metadata());
     }
 
+    /**
+     * 验证 `list` 在 `auditLogs` 条件下满足 `mapsDatabaseRecords` 的测试契约。
+     */
     @Test
     @DisplayName("list audit logs maps database records")
     void list_auditLogs_mapsDatabaseRecords() {
@@ -58,6 +61,10 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
         assertEquals("MEMBER_MUTED", result.actionType());
     }
 
+    /**
+     * `FakeChannelAuditLogDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class FakeChannelAuditLogDatabaseService implements ChannelAuditLogDatabaseService {
 
         private ChannelAuditLogWriteRecord insertedRecord;

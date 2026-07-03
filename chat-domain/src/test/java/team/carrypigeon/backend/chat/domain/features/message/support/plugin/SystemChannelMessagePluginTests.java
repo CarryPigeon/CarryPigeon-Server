@@ -5,9 +5,9 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.SystemChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.SystemChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin.ChannelMessageBuildContext;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin.ChannelMessageBuildContext;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

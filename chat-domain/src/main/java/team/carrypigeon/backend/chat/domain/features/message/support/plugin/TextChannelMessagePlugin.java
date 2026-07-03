@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.plugin;
 
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.ChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**

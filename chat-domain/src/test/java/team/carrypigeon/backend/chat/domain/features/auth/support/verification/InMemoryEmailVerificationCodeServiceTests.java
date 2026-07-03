@@ -97,6 +97,10 @@ class InMemoryEmailVerificationCodeServiceTests {
         return text.substring(start + prefix.length(), start + prefix.length() + 6);
     }
 
+    /**
+     * `RecordingMailSenderService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingMailSenderService implements MailSenderService {
 
         private MailSendCommand lastCommand;

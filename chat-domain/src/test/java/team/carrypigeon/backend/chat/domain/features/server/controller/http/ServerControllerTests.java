@@ -13,12 +13,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
-import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -37,20 +34,23 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ServerControllerTests {
 
     private MockMvc mockMvc;
-    private ServerApplicationService serverApplicationService;
+    private ServerEntranceApi serverEntranceDomainApi;
 
     @BeforeEach
     void setUp() {
-        serverApplicationService = createService(true, java.util.List.of("mc-bind"));
+        serverEntranceDomainApi = createService(true, java.util.List.of("mc-bind"));
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new ServerController(serverApplicationService),
-                        new ServerGateController(serverApplicationService)
+                        new ServerController(serverEntranceDomainApi),
+                        new ServerGateController(serverEntranceDomainApi)
                 )
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `serverDiscovery` 在 `anonymousRequest` 条件下满足 `returnsDiscoveryDocument` 的测试契约。
+     */
     @Test
     @DisplayName("server discovery anonymous request returns discovery document")
     void serverDiscovery_anonymousRequest_returnsDiscoveryDocument() throws Exception {
@@ -70,6 +70,9 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.server_time").value(1713614400000L));
     }
 
+    /**
+     * 验证 `requiredGateCheck` 在 `satisfied` 条件下满足 `returnsEmptyMissingPlugins` 的测试契约。
+     */
     @Test
     @DisplayName("required gate check returns empty missing plugins when satisfied")
     void requiredGateCheck_satisfied_returnsEmptyMissingPlugins() throws Exception {
@@ -82,6 +85,9 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.missing_plugins").isEmpty());
     }
 
+    /**
+     * 验证 `requiredGateCheck` 在 `unsatisfied` 条件下满足 `returnsMissingPlugins` 的测试契约。
+     */
     @Test
     @DisplayName("required gate check returns missing plugins when unsatisfied")
     void requiredGateCheck_unsatisfied_returnsMissingPlugins() throws Exception {
@@ -94,40 +100,13 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.missing_plugins[0]").value("mc-bind"));
     }
 
-    private ServerApplicationService createService(boolean realtimeEnabled, java.util.List<String> requiredPlugins) {
-        return new ServerApplicationService(
+    private ServerEntranceApi createService(boolean realtimeEnabled, java.util.List<String> requiredPlugins) {
+        return new ServerEntranceDomainApi(
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
-                new ChannelMessagePluginRegistry(java.util.List.of(
-                        registration("builtin-voice-message", "voice", "voice", true),
-                        registration("builtin-file-message", "file", "file", true),
-                        registration("builtin-custom-message", "custom", "custom", true),
-                        registration("builtin-text-message", "text", "text", true)
-                )),
                 realtimeProperties(realtimeEnabled),
                 new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
                 requiredPlugins
-        );
-    }
-
-    private ChannelMessagePluginRegistration registration(String pluginKey, String messageType, String publicPluginKey, boolean publicVisible) {
-        return new ChannelMessagePluginRegistration(
-                new ChannelMessagePluginDescriptor(
-                        pluginKey,
-                        messageType,
-                        publicPluginKey,
-                        "test plugin",
-                        publicVisible,
-                        java.util.List.of("message.sent"),
-                        java.util.List.of("message:" + messageType + ":send"),
-                        "test_condition"
-                ),
-                new TextChannelMessagePlugin() {
-                    @Override
-                    public String supportedType() {
-                        return messageType;
-                    }
-                }
         );
     }
 
@@ -137,7 +116,7 @@ class ServerControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
-    private RealtimeServerProperties realtimeProperties(boolean enabled) {
-        return new RealtimeServerProperties(enabled, "127.0.0.1", 28080, "/api/ws", 1, 0);
+    private RealtimeDiscoverySettings realtimeProperties(boolean enabled) {
+        return new RealtimeDiscoverySettings(enabled, "127.0.0.1", 28080, "/api/ws");
     }
 }

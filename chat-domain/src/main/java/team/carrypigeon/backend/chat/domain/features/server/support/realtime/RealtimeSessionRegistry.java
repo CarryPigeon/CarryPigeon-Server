@@ -111,6 +111,10 @@ public class RealtimeSessionRegistry {
         }
     }
 
+    /**
+     * 已缓存的 realtime 事件。
+     * 职责：用于连接恢复时按 eventId 回放离线期间的事件。
+     */
     public record StoredRealtimeEvent(
             String eventId,
             String eventType,

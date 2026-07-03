@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 @Tag("contract")
 class RealtimeAccessTokenHandshakeHandlerTests {
 
+    /**
+     * 验证 `channelRead` 在 `wsPath` 条件下满足 `storesRequestContextAndForwardsRequest` 的测试契约。
+     */
     @Test
     @DisplayName("channel read ws path stores request context and forwards request")
     void channelRead_wsPath_storesRequestContextAndForwardsRequest() {

@@ -55,6 +55,10 @@ class ChannelMemberDatabaseServiceContractTests {
         assertEquals(List.of(RECORD), records);
     }
 
+    /**
+     * `MinimalChannelMemberDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalChannelMemberDatabaseService implements ChannelMemberDatabaseService {
 
         @Override
@@ -85,6 +89,10 @@ class ChannelMemberDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingChannelMemberDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class RecordingChannelMemberDatabaseService extends MinimalChannelMemberDatabaseService {
 
         @Override

@@ -16,9 +16,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelApplicationFlowApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelApplicationResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelApplicationFlowApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -28,29 +28,36 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `ChannelApplicationController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class ChannelApplicationControllerTests {
 
-    private ChannelApplicationFlowApplicationService channelApplicationFlowApplicationService;
+    private ChannelApplicationFlowApi channelApplicationFlowDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelApplicationFlowApplicationService = mock(ChannelApplicationFlowApplicationService.class);
+        channelApplicationFlowDomainApi = mock(ChannelApplicationFlowApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowDomainApi, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `createChannelApplication` 在 `returnsPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("create channel application returns payload")
     void createChannelApplication_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationFlowApplicationService.createChannelApplication(any()))
+        when(channelApplicationFlowDomainApi.createChannelApplication(any()))
                 .thenReturn(new ChannelApplicationResult(3001L, 9L, 1002L, "hi", Instant.parse("2026-04-24T12:00:00Z"), "PENDING"));
 
         mockMvc.perform(post("/api/channels/9/applications")
@@ -64,11 +71,14 @@ class ChannelApplicationControllerTests {
                 .andExpect(jsonPath("$.status").value("pending"));
     }
 
+    /**
+     * 验证 `listChannelApplications` 在 `returnsItems` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list channel applications returns items")
     void listChannelApplications_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationFlowApplicationService.listChannelApplications(any()))
+        when(channelApplicationFlowDomainApi.listChannelApplications(any()))
                 .thenReturn(List.of(new ChannelApplicationResult(3001L, 9L, 1002L, "hi", Instant.parse("2026-04-24T12:00:00Z"), "PENDING")));
 
         mockMvc.perform(get("/api/channels/9/applications"))
@@ -77,11 +87,14 @@ class ChannelApplicationControllerTests {
                 .andExpect(jsonPath("$.items[0].uid").value("1002"));
     }
 
+    /**
+     * 验证 `decideChannelApplication` 在 `returnsPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("decide channel application returns payload")
     void decideChannelApplication_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelApplicationFlowApplicationService.decideChannelApplication(any()))
+        when(channelApplicationFlowDomainApi.decideChannelApplication(any()))
                 .thenReturn(new ChannelApplicationResult(3001L, 9L, 1002L, "", Instant.parse("2026-04-24T12:00:00Z"), "ACCEPTED"));
 
         mockMvc.perform(post("/api/channels/9/applications/3001/decisions")
@@ -95,7 +108,7 @@ class ChannelApplicationControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new ChannelApplicationController(channelApplicationFlowDomainApi, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -108,6 +121,10 @@ class ChannelApplicationControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
 

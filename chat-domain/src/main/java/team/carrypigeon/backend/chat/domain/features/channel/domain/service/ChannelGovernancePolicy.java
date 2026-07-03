@@ -214,16 +214,16 @@ public class ChannelGovernancePolicy {
      *
      * @param channel 频道
      * @param operator 当前活跃成员
-     * @param message 待撤回消息
+     * @param senderAccountId 消息发送者账户 ID
      * @param senderMember 消息发送者当前活跃成员投影，不存在时表示 former / non-active
      */
     public void requireCanRecallMessage(
             Channel channel,
             ChannelMember operator,
-            team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage message,
+            long senderAccountId,
             ChannelMember senderMember
     ) {
-        if (operator.accountId() == message.senderId()) {
+        if (operator.accountId() == senderAccountId) {
             return;
         }
         if (!"private".equals(channel.type())) {

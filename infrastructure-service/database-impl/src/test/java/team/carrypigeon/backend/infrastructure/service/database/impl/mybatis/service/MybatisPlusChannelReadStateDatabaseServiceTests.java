@@ -20,10 +20,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+/**
+ * `MybatisPlusChannelReadStateDatabaseService` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class MybatisPlusChannelReadStateDatabaseServiceTests {
 
+    /**
+     * 验证 `findByChannelAndAccount` 在 `mapsRecord` 场景下的测试契约。
+     */
     @Test
     @DisplayName("find by channel and account maps record")
     void findByChannelAndAccount_mapsRecord() {
@@ -36,6 +43,9 @@ class MybatisPlusChannelReadStateDatabaseServiceTests {
         assertEquals(5001L, record.lastReadMessageId());
     }
 
+    /**
+     * 验证 `upsert` 在 `delegatesToMapper` 场景下的测试契约。
+     */
     @Test
     @DisplayName("upsert delegates to mapper")
     void upsert_delegatesToMapper() {
@@ -56,6 +66,9 @@ class MybatisPlusChannelReadStateDatabaseServiceTests {
         assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getUpdatedAt());
     }
 
+    /**
+     * 验证 `listUnreads` 在 `mapsProjections` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list unreads maps projections")
     void listUnreads_mapsProjections() {
@@ -73,6 +86,9 @@ class MybatisPlusChannelReadStateDatabaseServiceTests {
         assertEquals(3L, record.unreadCount());
     }
 
+    /**
+     * 验证 `findByChannelAndAccount` 在 `wrapsDataAccessFailure` 场景下的测试契约。
+     */
     @Test
     @DisplayName("find by channel and account wraps data access failure")
     void findByChannelAndAccount_wrapsDataAccessFailure() {

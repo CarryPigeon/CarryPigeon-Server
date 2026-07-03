@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.server.application.command.UpdateNotificationServerPreferenceCommand;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.NotificationPreferencesResult;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationServerPreferenceCommand;
+import team.carrypigeon.backend.chat.domain.features.server.domain.projection.NotificationPreferencesResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.NotificationPreferencesResponse;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.UpdateNotificationPreferenceRequest;
 
@@ -22,21 +22,35 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Updat
 @RequestMapping("/api/notification_preferences")
 public class NotificationPreferenceController {
 
-    private final NotificationPreferenceApplicationService notificationPreferenceApplicationService;
+    private final NotificationPreferenceApi notificationPreferenceDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
+    /**
+     * 创建通知偏好 HTTP 入口。
+     *
+     * @param notificationPreferenceDomainApi 通知偏好领域 API
+     * @param authRequestContext 请求认证上下文
+     */
     public NotificationPreferenceController(
-            NotificationPreferenceApplicationService notificationPreferenceApplicationService,
+            NotificationPreferenceApi notificationPreferenceDomainApi,
             RequestAuthenticationContext authRequestContext
     ) {
-        this.notificationPreferenceApplicationService = notificationPreferenceApplicationService;
+        this.notificationPreferenceDomainApi = notificationPreferenceDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
+    /**
+     * 查询当前账号通知偏好。
+     * 输入：当前 HTTP 请求中的认证主体。
+     * 输出：服务级和频道级通知偏好响应。
+     *
+     * @param request 当前 HTTP 请求
+     * @return 当前账号通知偏好响应
+     */
     @GetMapping
     public NotificationPreferencesResponse getNotificationPreferences(HttpServletRequest request) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        NotificationPreferencesResult result = notificationPreferenceApplicationService.getNotificationPreferences(principal.accountId());
+        NotificationPreferencesResult result = notificationPreferenceDomainApi.getNotificationPreferences(principal.accountId());
         return new NotificationPreferencesResponse(
                 new NotificationPreferencesResponse.ServerNotificationPreferenceResponse(result.server().mode(), result.server().mutedUntil()),
                 result.channels().stream()
@@ -45,13 +59,21 @@ public class NotificationPreferenceController {
         );
     }
 
+    /**
+     * 更新当前账号服务级通知偏好。
+     * 副作用：持久化服务级通知偏好。
+     *
+     * @param body 通知偏好更新请求
+     * @param request 当前 HTTP 请求
+     * @return HTTP 204
+     */
     @PutMapping("/server")
     public ResponseEntity<Void> updateServerNotificationPreference(
             @RequestBody UpdateNotificationPreferenceRequest body,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        notificationPreferenceApplicationService.updateServerPreference(new UpdateNotificationServerPreferenceCommand(
+        notificationPreferenceDomainApi.updateServerPreference(new UpdateNotificationServerPreferenceCommand(
                 principal.accountId(),
                 body.mode(),
                 body.mutedUntil()

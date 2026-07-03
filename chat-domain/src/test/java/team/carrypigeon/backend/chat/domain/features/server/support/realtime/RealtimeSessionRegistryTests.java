@@ -16,6 +16,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Tag("contract")
 class RealtimeSessionRegistryTests {
 
+    /**
+     * 验证 `eventsAfter` 在 `noisyOtherAccount` 条件下满足 `keepsCurrentAccountAnchor` 的测试契约。
+     */
     @Test
     @DisplayName("events after noisy other account keeps current account anchor")
     void eventsAfter_noisyOtherAccount_keepsCurrentAccountAnchor() {

@@ -8,9 +8,9 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessagePluginCatalogApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerDiscoveryDocument;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessagePluginCatalogApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.PluginCatalogItemResponse;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.PluginCatalogResponse;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.PluginDomainResponse;
@@ -24,32 +24,37 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Plugi
 @Tag(name = "插件目录", description = "服务端插件目录发现接口。")
 public class ServerPluginCatalogController {
 
-    private final MessagePluginCatalogApplicationService messagePluginCatalogApplicationService;
-    private final team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService;
+    private final MessagePluginCatalogApi messagePluginCatalogDomainApi;
+    private final ServerEntranceApi serverEntranceDomainApi;
 
+    /**
+     * 创建插件目录 HTTP 入口。
+     *
+     * @param messagePluginCatalogDomainApi 消息插件目录领域 API
+     * @param serverEntranceDomainApi 服务入口领域 API
+     */
     public ServerPluginCatalogController(
-            MessagePluginCatalogApplicationService messagePluginCatalogApplicationService,
-            team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService
+            MessagePluginCatalogApi messagePluginCatalogDomainApi,
+            ServerEntranceApi serverEntranceDomainApi
     ) {
-        this.messagePluginCatalogApplicationService = messagePluginCatalogApplicationService;
-        this.serverApplicationService = serverApplicationService;
+        this.messagePluginCatalogDomainApi = messagePluginCatalogDomainApi;
+        this.serverEntranceDomainApi = serverEntranceDomainApi;
     }
 
-    public ServerPluginCatalogController(
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService serverApplicationService
-    ) {
-        this(new MessagePluginCatalogApplicationService(channelMessagePluginRegistry), serverApplicationService);
-    }
-
+    /**
+     * 获取当前服务公开的插件目录。
+     * 输出：包含 required plugin 列表和公开插件能力清单的响应。
+     *
+     * @return 当前服务公开的插件目录
+     */
     @GetMapping("/catalog")
     @Operation(summary = "获取插件目录", description = "返回当前服务端可公开暴露的插件目录。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回插件目录")
     })
     public PluginCatalogResponse getPluginCatalog() {
-        ServerDiscoveryDocument discoveryDocument = serverApplicationService.getServerDiscoveryDocument();
-        List<PluginCatalogItemResponse> plugins = messagePluginCatalogApplicationService.listPublicPlugins().stream()
+        ServerDiscoveryDocument discoveryDocument = serverEntranceDomainApi.getServerDiscoveryDocument();
+        List<PluginCatalogItemResponse> plugins = messagePluginCatalogDomainApi.listPublicPlugins().stream()
                 .map(plugin -> new PluginCatalogItemResponse(
                         plugin.publicPluginKey(),
                         plugin.description(),

@@ -44,6 +44,10 @@ class SmtpMailHealthServiceTests {
         assertEquals("mail service is unavailable: smtp down", health.message());
     }
 
+    /**
+     * `SuccessfulJavaMailSenderImpl` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class SuccessfulJavaMailSenderImpl extends JavaMailSenderImpl {
 
         @Override
@@ -51,6 +55,10 @@ class SmtpMailHealthServiceTests {
         }
     }
 
+    /**
+     * `FailingJavaMailSenderImpl` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class FailingJavaMailSenderImpl extends JavaMailSenderImpl {
 
         @Override

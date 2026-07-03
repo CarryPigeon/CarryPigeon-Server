@@ -15,10 +15,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -26,29 +29,38 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `MessageForwardController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class MessageForwardControllerTests {
 
-    private MessageModerationApplicationService messageModerationApplicationService;
+    private ChannelMessagePublishingApi channelMessagePublishingApi;
+    private ChannelMessageLifecycleApi channelMessageLifecycleApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        messageModerationApplicationService = mock(MessageModerationApplicationService.class);
+        channelMessagePublishingApi = mock(ChannelMessagePublishingApi.class);
+        channelMessageLifecycleApi = mock(ChannelMessageLifecycleApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new MessageController(messageModerationApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new MessageController(channelMessagePublishingApi, channelMessageLifecycleApi, authRequestContext, responseMapper()))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `forwardMessage` 在 `returnsCreatedTargetMessagePayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("forward message returns created target message payload")
     void forwardMessage_returnsCreatedTargetMessagePayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageModerationApplicationService.forwardChannelMessage(any()))
+        when(channelMessagePublishingApi.forwardChannelMessage(any()))
                 .thenReturn(new ChannelMessageResult(
                         6001L,
                         "550e8400-e29b-41d4-a716-446655440000",
@@ -82,7 +94,7 @@ class MessageForwardControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new MessageController(messageModerationApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new MessageController(channelMessagePublishingApi, channelMessageLifecycleApi, authRequestContext, responseMapper()))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -95,6 +107,14 @@ class MessageForwardControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    private ChannelMessageV1ResponseMapper responseMapper() {
+        return new ChannelMessageV1ResponseMapper(null, new JsonProvider(new ObjectMapper().findAndRegisterModules()));
+    }
+
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
 

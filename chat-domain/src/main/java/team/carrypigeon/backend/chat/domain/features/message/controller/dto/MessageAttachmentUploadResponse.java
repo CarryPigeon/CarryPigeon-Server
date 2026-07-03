@@ -15,6 +15,10 @@ public record MessageAttachmentUploadResponse(
         Data data
 ) {
 
+    /**
+     * 附件上传成功后的数据负载。
+     * 职责：返回后续发送附件消息所需的稳定引用和文件元数据。
+     */
     public record Data(
             @Schema(description = "附件对象键", example = "channels/1/messages/file/accounts/1001/5001-demo.pdf")
             String objectKey,

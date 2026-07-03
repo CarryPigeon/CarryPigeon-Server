@@ -14,12 +14,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelReadStateCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelReadStateResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelUnreadResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelAccessApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UpdateChannelReadStateCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelReadStateResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelUnreadResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccessApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelReadStateResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UnreadItemResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UnreadListResponse;
@@ -34,17 +34,17 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Tag(name = "频道读状态", description = "频道已读状态与未读计数能力。")
 public class ChannelReadStateController {
 
-    private final ChannelAccessApplicationService channelAccessApplicationService;
-    private final ChannelQueryApplicationService channelQueryApplicationService;
+    private final ChannelAccessApi channelAccessDomainApi;
+    private final ChannelQueryApi channelQueryDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
     public ChannelReadStateController(
-            ChannelAccessApplicationService channelAccessApplicationService,
-            ChannelQueryApplicationService channelQueryApplicationService,
+            ChannelAccessApi channelAccessDomainApi,
+            ChannelQueryApi channelQueryDomainApi,
             RequestAuthenticationContext authRequestContext
     ) {
-        this.channelAccessApplicationService = channelAccessApplicationService;
-        this.channelQueryApplicationService = channelQueryApplicationService;
+        this.channelAccessDomainApi = channelAccessDomainApi;
+        this.channelQueryDomainApi = channelQueryDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
@@ -57,7 +57,7 @@ public class ChannelReadStateController {
             HttpServletRequest servletRequest
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
-        ChannelReadStateResult result = channelAccessApplicationService.updateChannelReadState(new UpdateChannelReadStateCommand(
+        ChannelReadStateResult result = channelAccessDomainApi.updateChannelReadState(new UpdateChannelReadStateCommand(
                 principal.accountId(),
                 channelId,
                 parseLastReadMid(request.lastReadMid()),
@@ -77,7 +77,7 @@ public class ChannelReadStateController {
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回未读列表")})
     public UnreadListResponse listUnreads(HttpServletRequest servletRequest) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
-        List<UnreadItemResponse> items = channelQueryApplicationService.listUnreads(principal.accountId()).stream()
+        List<UnreadItemResponse> items = channelQueryDomainApi.listUnreads(principal.accountId()).stream()
                 .map(this::toResponse)
                 .toList();
         return new UnreadListResponse(items);

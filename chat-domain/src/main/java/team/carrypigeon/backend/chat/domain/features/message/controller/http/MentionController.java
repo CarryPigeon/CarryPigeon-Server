@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.MentionResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.query.ListMentionsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MentionApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MentionResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListMentionsQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MentionApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MentionItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MentionListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UpdateMentionReadStateRequest;
@@ -36,14 +36,32 @@ public class MentionController {
 
     private static final String MENTION_CURSOR_SCOPE = "mentions";
 
-    private final MentionApplicationService mentionApplicationService;
+    private final MentionApi mentionDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
-    public MentionController(MentionApplicationService mentionApplicationService, RequestAuthenticationContext authRequestContext) {
-        this.mentionApplicationService = mentionApplicationService;
+    /**
+     * 创建提及收件箱 HTTP 入口。
+     *
+     * @param mentionDomainApi 提及领域 API
+     * @param authRequestContext 请求认证上下文
+     */
+    public MentionController(MentionApi mentionDomainApi, RequestAuthenticationContext authRequestContext) {
+        this.mentionDomainApi = mentionDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
+    /**
+     * 查询当前账号的提及收件箱。
+     * 输入：游标、数量、未读筛选和可选频道筛选。
+     * 输出：提及列表分页响应。
+     *
+     * @param cursor 分页游标
+     * @param limit 查询数量
+     * @param unreadOnly 是否仅查询未读提及
+     * @param channelId 可选频道 ID
+     * @param request 当前 HTTP 请求
+     * @return 提及列表分页响应
+     */
     @GetMapping
     @Operation(summary = "获取提及收件箱", description = "按用户返回提及列表。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回提及列表")})
@@ -56,7 +74,7 @@ public class MentionController {
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         int normalizedLimit = normalizeLimit(limit);
-        List<MentionItemResponse> queriedItems = mentionApplicationService.listMentions(new ListMentionsQuery(
+        List<MentionItemResponse> queriedItems = mentionDomainApi.listMentions(new ListMentionsQuery(
                 principal.accountId(),
                 decodeCursor(cursor),
                 normalizedLimit,
@@ -81,10 +99,19 @@ public class MentionController {
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已标记为已读")})
     public ResponseEntity<Void> markMentionRead(@PathVariable String mentionId, HttpServletRequest request) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        mentionApplicationService.markMentionRead(principal.accountId(), parseRequiredSnowflake(mentionId, "mention_id"));
+        mentionDomainApi.markMentionRead(principal.accountId(), parseRequiredSnowflake(mentionId, "mention_id"));
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * 批量标记当前账号提及为已读。
+     * 输入：可选 mention 上界和可选频道 ID。
+     * 副作用：将匹配范围内的提及标记为已读。
+     *
+     * @param body 批量已读条件
+     * @param request 当前 HTTP 请求
+     * @return HTTP 204
+     */
     @PutMapping("/read_state")
     @Operation(summary = "批量标记提及已读", description = "按条件批量标记当前用户提及为已读。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已批量标记为已读")})
@@ -93,7 +120,7 @@ public class MentionController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        mentionApplicationService.markMentionsRead(
+        mentionDomainApi.markMentionsRead(
                 principal.accountId(),
                 body == null ? null : parseOptionalSnowflake(body.beforeMentionId(), "before_mention_id", false),
                 body == null ? null : parseOptionalSnowflake(body.cid(), "cid", false)

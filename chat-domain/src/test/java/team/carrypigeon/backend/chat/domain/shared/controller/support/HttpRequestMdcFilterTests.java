@@ -66,6 +66,10 @@ class HttpRequestMdcFilterTests {
         assertEquals("/api/auth/tokens", chain.route);
     }
 
+    /**
+     * `CapturingFilterChain` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class CapturingFilterChain extends MockFilterChain {
         private String requestId;
         private String traceId;

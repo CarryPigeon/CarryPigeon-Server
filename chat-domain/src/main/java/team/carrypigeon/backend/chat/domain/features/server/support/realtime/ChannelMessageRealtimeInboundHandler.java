@@ -2,22 +2,22 @@ package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 
 import java.util.Map;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.CustomChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.FileChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.PluginChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.VoiceChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.ChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.CustomChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.FileChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.PluginChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.VoiceChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeClientMessage;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
  * 频道消息 realtime 入站处理器。
- * 职责：承接当前保留的 WebSocket 发消息兼容命令，并转换为 message 应用服务命令。
+ * 职责：承接当前保留的 WebSocket 发消息兼容命令，并转换为 message 领域服务命令。
  * 边界：这里只做协议字段校验与草稿映射，不承担频道鉴权、持久化或广播规则。
  */
 @Component
@@ -38,12 +38,12 @@ public class ChannelMessageRealtimeInboundHandler implements RealtimeInboundMess
     public void handle(
             AuthenticatedAccount principal,
             RealtimeClientMessage request,
-            MessageDeliveryApplicationService messageDeliveryApplicationService
+            ChannelMessagePublishingApi channelMessagePublishingApi
     ) {
         long channelId = requirePositiveLong(request.channelId(), "channel_id");
         String messageType = requireNonBlank(request.messageType(), "message_type must not be blank");
         ChannelMessageDraft draft = toDraft(messageType, request);
-        messageDeliveryApplicationService.sendChannelMessage(new SendChannelMessageCommand(
+        channelMessagePublishingApi.sendChannelMessage(new SendChannelMessageCommand(
                 principal.accountId(),
                 channelId,
                 draft

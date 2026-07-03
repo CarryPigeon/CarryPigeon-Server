@@ -18,6 +18,10 @@ public record RequiredGateCheckRequest(
         ClientRequest client
 ) {
 
+    /**
+     * required gate 预检查中的客户端上下文。
+     * 职责：携带设备标识和插件安装态。
+     */
     public record ClientRequest(
             @Schema(description = "稳定设备标识", example = "a-stable-device-id")
             @NotBlank(message = "device_id must not be blank")
@@ -28,6 +32,10 @@ public record RequiredGateCheckRequest(
     ) {
     }
 
+    /**
+     * required gate 预检查中的已安装插件描述。
+     * 职责：供服务端判断客户端是否缺少必需插件。
+     */
     public record InstalledPluginRequest(
             @Schema(description = "插件标识", example = "mc-bind")
             @NotBlank(message = "plugin_id must not be blank")

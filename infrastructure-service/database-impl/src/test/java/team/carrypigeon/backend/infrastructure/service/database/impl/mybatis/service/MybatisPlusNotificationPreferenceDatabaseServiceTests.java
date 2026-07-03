@@ -16,10 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+/**
+ * `MybatisPlusNotificationPreferenceDatabaseService` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class MybatisPlusNotificationPreferenceDatabaseServiceTests {
 
+    /**
+     * 验证 `findServerPreference` 在 `mapsEntityToRecord` 场景下的测试契约。
+     */
     @Test
     @DisplayName("find server preference maps entity to record")
     void findServerPreference_mapsEntityToRecord() {
@@ -39,6 +46,9 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
         assertEquals(0L, record.mutedUntil());
     }
 
+    /**
+     * 验证 `listChannelPreferences` 在 `mapsEntitiesToRecords` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list channel preferences maps entities to records")
     void listChannelPreferences_mapsEntitiesToRecords() {
@@ -59,6 +69,9 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
         assertEquals("inherit", record.mode());
     }
 
+    /**
+     * 验证 `upsertServerPreference` 在 `delegatesToMapper` 场景下的测试契约。
+     */
     @Test
     @DisplayName("upsert server preference delegates to mapper")
     void upsertServerPreference_delegatesToMapper() {
@@ -84,6 +97,9 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
         assertEquals(record.updatedAt(), entity.getUpdatedAt());
     }
 
+    /**
+     * 验证 `upsertChannelPreference` 在 `mapsAllFields` 场景下的测试契约。
+     */
     @Test
     @DisplayName("upsert channel preference maps all fields")
     void upsertChannelPreference_mapsAllFields() {

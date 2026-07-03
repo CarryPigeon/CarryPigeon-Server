@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.shared.controller.support;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**

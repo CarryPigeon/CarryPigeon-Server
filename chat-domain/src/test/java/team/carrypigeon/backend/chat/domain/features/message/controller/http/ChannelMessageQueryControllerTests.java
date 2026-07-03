@@ -17,18 +17,21 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -55,38 +58,43 @@ class ChannelMessageQueryControllerTests {
     private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
 
-    private MessageDeliveryApplicationService messageDeliveryApplicationService;
-    private MessageModerationApplicationService messageModerationApplicationService;
-    private MessageQueryApplicationService messageQueryApplicationService;
-    private UserProfileApplicationService userProfileApplicationService;
+    private ChannelMessagePublishingApi channelMessagePublishingApi;
+    private ChannelMessageTimelineApi channelMessageTimelineApi;
+    private ChannelMessageLifecycleApi channelMessageLifecycleApi;
+    private ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
+    private UserProfileApi userProfileDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        messageDeliveryApplicationService = mock(MessageDeliveryApplicationService.class);
-        messageModerationApplicationService = mock(MessageModerationApplicationService.class);
-        messageQueryApplicationService = mock(MessageQueryApplicationService.class);
-        userProfileApplicationService = mock(UserProfileApplicationService.class);
+        channelMessagePublishingApi = mock(ChannelMessagePublishingApi.class);
+        channelMessageTimelineApi = mock(ChannelMessageTimelineApi.class);
+        channelMessageLifecycleApi = mock(ChannelMessageLifecycleApi.class);
+        channelMessageAttachmentDomainApi = mock(ChannelMessageAttachmentApi.class);
+        userProfileDomainApi = mock(UserProfileApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(
                         channelMessageController(),
-                        new MessageController(messageModerationApplicationService, authRequestContext)
+                        new MessageController(channelMessagePublishingApi, channelMessageLifecycleApi, authRequestContext, responseMapper())
                 )
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `getChannelMessages` 在 `returnsV1CursorPage` 场景下的测试契约。
+     */
     @Test
     @DisplayName("get channel messages returns v1 cursor page")
     void getChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
+        when(channelMessageTimelineApi.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
                 List.of(messageResult(5001L, 1001L, "text", "hello world", "hello world", null, "sent")),
                 5001L
         ));
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(get("/api/channels/1/messages?limit=20"))
                 .andExpect(status().isOk())
@@ -100,14 +108,17 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.has_more").value(true));
     }
 
+    /**
+     * 验证 `searchChannelMessages` 在 `returnsV1CursorPage` 场景下的测试契约。
+     */
     @Test
     @DisplayName("search channel messages returns v1 cursor page")
     void searchChannelMessages_returnsV1CursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+        when(channelMessageTimelineApi.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
                 List.of(messageResult(5002L, 1001L, "text", "search body", "search body", null, "sent"))
         ));
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(get("/api/channels/1/messages/search?q=search&limit=20"))
                 .andExpect(status().isOk())
@@ -116,28 +127,34 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.has_more").value(false));
     }
 
+    /**
+     * 验证 `searchChannelMessages` 在 `advancedFilters` 条件下满足 `areAccepted` 的测试契约。
+     */
     @Test
     @DisplayName("search channel messages advanced filters are accepted")
     void searchChannelMessages_advancedFilters_areAccepted() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
+        when(channelMessageTimelineApi.searchChannelMessages(any())).thenReturn(new ChannelMessageSearchResult(
                 List.of(messageResult(5004L, 1002L, "text", "search body", "search body", null, "sent"))
         ));
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1002L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1002L));
 
         mockMvc.perform(get("/api/channels/1/messages/search?q=search&sender_uid=1002&domain=Core:Text&before_mid=6000&after_mid=4000")
                         .param("cursor", OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE, 7000L)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[0].mid").value("5004"));
 
-        verify(messageQueryApplicationService).searchChannelMessages(any());
+        verify(channelMessageTimelineApi).searchChannelMessages(any());
     }
 
+    /**
+     * 验证 `getChannelMessages` 在 `aroundMid` 条件下满足 `returnsContextualPage` 的测试契约。
+     */
     @Test
     @DisplayName("get channel messages around_mid request returns contextual page")
     void getChannelMessages_aroundMid_returnsContextualPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
+        when(channelMessageTimelineApi.getChannelMessageHistory(any())).thenReturn(new ChannelMessageHistoryResult(
                 List.of(
                         messageResult(5003L, 1002L, "text", "third", "third", null, "sent"),
                         messageResult(5002L, 1001L, "text", "second", "second", null, "sent"),
@@ -145,7 +162,7 @@ class ChannelMessageQueryControllerTests {
                 ),
                 null
         ));
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(get("/api/channels/1/messages?around_mid=5001&before=10&after=10"))
                 .andExpect(status().isOk())
@@ -153,14 +170,17 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.has_more").value(false));
     }
 
+    /**
+     * 验证 `sendChannelMessage` 在 `returns201AndV1Payload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("send channel message returns 201 and v1 payload")
     void sendChannelMessage_returns201AndV1Payload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(channelMessagePublishingApi.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(5003L, 1001L, "text", "hello", "hello", null, "sent")
         );
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -173,11 +193,14 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.data.text").value("hello"));
     }
 
+    /**
+     * 验证 `sendFileChannelMessage` 在 `returnsStructuredAttachmentPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("send file channel message returns structured attachment payload")
     void sendFileChannelMessage_returnsStructuredAttachmentPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(channelMessagePublishingApi.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(
                         5004L,
                         1001L,
@@ -188,7 +211,7 @@ class ChannelMessageQueryControllerTests {
                         "sent"
                 )
         );
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -202,11 +225,14 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.data.download_path").value("api/files/download/shr_7001"));
     }
 
+    /**
+     * 验证 `sendFileChannelMessage` 在 `objectKeyRequest` 条件下满足 `returnsStructuredAttachmentPayload` 的测试契约。
+     */
     @Test
     @DisplayName("send file channel message object key request returns structured attachment payload")
     void sendFileChannelMessage_objectKeyRequest_returnsStructuredAttachmentPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageDeliveryApplicationService.sendChannelMessageHttp(any())).thenReturn(
+        when(channelMessagePublishingApi.sendChannelMessageHttp(any())).thenReturn(
                 messageResult(
                         5004L,
                         1001L,
@@ -217,7 +243,7 @@ class ChannelMessageQueryControllerTests {
                         "sent"
                 )
         );
-        when(userProfileApplicationService.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
 
         mockMvc.perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -228,11 +254,14 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.data.share_key").value("shr_att_demo"));
     }
 
+    /**
+     * 验证 `uploadMessageAttachment` 在 `returnsTransitionalSuccessEnvelope` 场景下的测试契约。
+     */
     @Test
     @DisplayName("upload message attachment returns transitional success envelope")
     void uploadMessageAttachment_returnsTransitionalSuccessEnvelope() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageDeliveryApplicationService.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
+        when(channelMessageAttachmentDomainApi.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
                 .thenReturn(new MessageAttachmentUploadResult(
                         "channels/1/messages/file/accounts/1001/5001-demo.pdf",
                         "shr_att_demo",
@@ -251,21 +280,27 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.data.share_key").value("shr_att_demo"));
     }
 
+    /**
+     * 验证 `deleteMessage` 在 `returns204` 场景下的测试契约。
+     */
     @Test
     @DisplayName("delete message returns 204")
     void deleteMessage_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(messageModerationApplicationService).deleteChannelMessage(any());
+        doNothing().when(channelMessageLifecycleApi).deleteChannelMessage(any());
 
         mockMvc.perform(delete("/api/messages/5009"))
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * 验证 `editMessage` 在 `returnsV1PayloadWithEditedFields` 场景下的测试契约。
+     */
     @Test
     @DisplayName("edit message returns v1 payload with edited fields")
     void editMessage_returnsV1PayloadWithEditedFields() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageModerationApplicationService.editChannelMessage(any())).thenReturn(new ChannelMessageResult(
+        when(channelMessageLifecycleApi.editChannelMessage(any())).thenReturn(new ChannelMessageResult(
                 5009L,
                 "550e8400-e29b-41d4-a716-446655440000",
                 1L,
@@ -299,7 +334,7 @@ class ChannelMessageQueryControllerTests {
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(
                         channelMessageController(),
-                        new MessageController(messageModerationApplicationService, authRequestContext)
+                        new MessageController(channelMessagePublishingApi, channelMessageLifecycleApi, authRequestContext, responseMapper())
                 )
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
@@ -309,11 +344,11 @@ class ChannelMessageQueryControllerTests {
 
     private ChannelMessageController channelMessageController() {
         return new ChannelMessageController(
-                messageDeliveryApplicationService,
-                messageModerationApplicationService,
-                messageQueryApplicationService,
-                userProfileApplicationService,
-                authRequestContext
+                channelMessagePublishingApi,
+                channelMessageTimelineApi,
+                channelMessageAttachmentDomainApi,
+                authRequestContext,
+                responseMapper()
         );
     }
 
@@ -344,6 +379,14 @@ class ChannelMessageQueryControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    private ChannelMessageV1ResponseMapper responseMapper() {
+        return new ChannelMessageV1ResponseMapper(userProfileDomainApi, new JsonProvider(new ObjectMapper().findAndRegisterModules()));
+    }
+
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
 
         private final RequestAuthenticationContext authRequestContext;

@@ -11,15 +11,20 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthController;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthSessionDomainApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.Argon2PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.HmacJwtAuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.Sha256TokenHasher;
@@ -31,36 +36,53 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelAccessApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelMessageBoundary;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelAccessDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelQueryDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.support.message.MessageBackedChannelMessageBoundary;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
-import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.port.FileAttachmentAccessAuthorizer;
+import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileTransferDomainApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageLifecycleDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageAttachmentDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageTimelineDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePublishingDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
+import team.carrypigeon.backend.chat.domain.features.message.support.channel.ChannelBackedMessageChannelBoundary;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -287,10 +309,62 @@ public class StarterRegressionConfiguration {
     }
 
     /**
-     * 创建鉴权应用服务。
+     * 创建领域侧 token 签发设置。
      */
     @Bean
-    public AuthApplicationService authApplicationService(
+    public AuthTokenSettings authTokenSettings(AuthJwtProperties authJwtProperties) {
+        return new AuthTokenSettings(authJwtProperties.accessTokenTtl(), authJwtProperties.refreshTokenTtl());
+    }
+
+    /**
+     * 创建测试验证码服务替身。
+     */
+    @Bean
+    public EmailVerificationCodeService emailVerificationCodeService() {
+        return new EmailVerificationCodeService() {
+            @Override
+            public void issueCode(String email) {
+            }
+
+            @Override
+            public void verifyCode(String email, String code) {
+            }
+        };
+    }
+
+    /**
+     * 创建鉴权账号领域 API。
+     */
+    @Bean
+    public AuthAccountApi authAccountDomainApi(
+            AuthAccountRepository authAccountRepository,
+            UserProfileRepository userProfileRepository,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
+            PasswordHasher passwordHasher,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner,
+            EmailVerificationCodeService emailVerificationCodeService
+    ) {
+        return new AuthAccountDomainApi(
+                authAccountRepository,
+                userProfileRepository,
+                channelRepository,
+                channelMemberRepository,
+                passwordHasher,
+                idGenerator,
+                timeProvider,
+                transactionRunner,
+                emailVerificationCodeService
+        );
+    }
+
+    /**
+     * 创建鉴权会话领域 API。
+     */
+    @Bean
+    public AuthSessionApi authSessionDomainApi(
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
             UserProfileRepository userProfileRepository,
@@ -299,12 +373,13 @@ public class StarterRegressionConfiguration {
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
             AuthTokenService authTokenService,
-            AuthJwtProperties authJwtProperties,
+            AuthTokenSettings authTokenSettings,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner
+            TransactionRunner transactionRunner,
+            EmailVerificationCodeService emailVerificationCodeService
     ) {
-        return new AuthApplicationService(
+        return new AuthSessionDomainApi(
                 authAccountRepository,
                 authRefreshSessionRepository,
                 userProfileRepository,
@@ -313,134 +388,169 @@ public class StarterRegressionConfiguration {
                 passwordHasher,
                 tokenHasher,
                 authTokenService,
-                authJwtProperties,
+                authTokenSettings,
                 idGenerator,
                 timeProvider,
-                transactionRunner
+                transactionRunner,
+                emailVerificationCodeService
         );
     }
 
     /**
-     * 创建用户资料应用服务。
+     * 创建用户资料领域 API。
      */
     @Bean
-    public UserProfileApplicationService userProfileApplicationService(
+    public UserProfileApi userProfileDomainApi(
             AuthAccountRepository authAccountRepository,
             UserProfileRepository userProfileRepository,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        return new UserProfileApplicationService(authAccountRepository, userProfileRepository, timeProvider, transactionRunner);
+        return new UserProfileDomainApi(authAccountRepository, userProfileRepository, timeProvider, transactionRunner);
     }
 
     /**
-     * 创建消息应用服务。
+     * 创建消息侧频道边界适配器。
      */
     @Bean
-    public MessageQueryApplicationService messageQueryApplicationService(
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            ChannelPinRepository channelPinRepository,
-            MessageRepository messageRepository,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
-    ) {
-        return new MessageQueryApplicationService(
-                channelRepository,
-                channelMemberRepository,
-                channelPinRepository,
-                messageRepository,
-                messageAttachmentPayloadResolver
-        );
-    }
-
-    @Bean
-    public MessageDeliveryApplicationService messageDeliveryApplicationService(
+    public MessageChannelBoundary messageChannelBoundary(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelPinRepository channelPinRepository,
-            ChannelGovernancePolicy channelGovernancePolicy,
+            ChannelGovernancePolicy channelGovernancePolicy
+    ) {
+        return new ChannelBackedMessageChannelBoundary(
+                channelRepository,
+                channelMemberRepository,
+                channelAuditLogRepository,
+                channelPinRepository,
+                channelGovernancePolicy
+        );
+    }
+
+    @Bean
+    public ChannelMessageBoundary channelMessageBoundary(MessageRepository messageRepository) {
+        return new MessageBackedChannelMessageBoundary(messageRepository);
+    }
+
+    @Bean
+    public ServerIdentityProvider serverIdentityProvider(ServerIdentityProperties serverIdentityProperties) {
+        return serverIdentityProperties;
+    }
+
+    @Bean
+    public ChannelMessagePublishingApi channelMessagePublishingDomainApi(
+            MessageChannelBoundary messageChannelBoundary,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
             UserProfileRepository userProfileRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProperties serverIdentityProperties,
+            MessagePayloadResolver messageAttachmentPayloadResolver,
+            ServerIdentityProvider serverIdentityProvider,
             IdGenerator idGenerator,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner,
-            ObjectProvider<ObjectStorageService> objectStorageServiceProvider
+            TransactionRunner transactionRunner
     ) {
-        return new MessageDeliveryApplicationService(
-                channelRepository,
-                channelMemberRepository,
-                channelAuditLogRepository,
-                channelPinRepository,
-                channelGovernancePolicy,
+        return new ChannelMessagePublishingDomainApi(
+                messageChannelBoundary,
                 messageRepository,
                 mentionRepository,
                 userProfileRepository,
                 messageRealtimePublisher,
                 channelMessagePluginRegistry,
-                messageAttachmentObjectKeyPolicy,
                 messageAttachmentPayloadResolver,
-                serverIdentityProperties,
+                serverIdentityProvider,
                 idGenerator,
                 jsonProvider,
                 timeProvider,
-                transactionRunner,
-                objectStorageServiceProvider
+                transactionRunner
         );
     }
 
     @Bean
-    public MessageModerationApplicationService messageModerationApplicationService(
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            ChannelAuditLogRepository channelAuditLogRepository,
-            ChannelPinRepository channelPinRepository,
-            ChannelGovernancePolicy channelGovernancePolicy,
+    public ChannelMessageLifecycleApi channelMessageLifecycleDomainApi(
+            MessageChannelBoundary messageChannelBoundary,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
             UserProfileRepository userProfileRepository,
             MessageRealtimePublisher messageRealtimePublisher,
             ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProperties serverIdentityProperties,
+            MessagePayloadResolver messageAttachmentPayloadResolver,
+            ServerIdentityProvider serverIdentityProvider,
             IdGenerator idGenerator,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner,
-            ObjectProvider<ObjectStorageService> objectStorageServiceProvider
+            TransactionRunner transactionRunner
     ) {
-        return new MessageModerationApplicationService(
-                channelRepository,
-                channelMemberRepository,
-                channelAuditLogRepository,
-                channelPinRepository,
-                channelGovernancePolicy,
+        return new ChannelMessageLifecycleDomainApi(
+                messageChannelBoundary,
                 messageRepository,
                 mentionRepository,
                 userProfileRepository,
                 messageRealtimePublisher,
                 channelMessagePluginRegistry,
-                messageAttachmentObjectKeyPolicy,
                 messageAttachmentPayloadResolver,
-                serverIdentityProperties,
+                serverIdentityProvider,
                 idGenerator,
                 jsonProvider,
                 timeProvider,
-                transactionRunner,
+                transactionRunner
+        );
+    }
+
+    @Bean
+    public ChannelMessageTimelineApi channelMessageTimelineDomainApi(
+            MessageChannelBoundary messageChannelBoundary,
+            MessageRepository messageRepository,
+            MentionRepository mentionRepository,
+            UserProfileRepository userProfileRepository,
+            MessageRealtimePublisher messageRealtimePublisher,
+            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+            MessagePayloadResolver messageAttachmentPayloadResolver,
+            ServerIdentityProvider serverIdentityProvider,
+            IdGenerator idGenerator,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            TransactionRunner transactionRunner
+    ) {
+        return new ChannelMessageTimelineDomainApi(
+                messageChannelBoundary,
+                messageRepository,
+                mentionRepository,
+                userProfileRepository,
+                messageRealtimePublisher,
+                channelMessagePluginRegistry,
+                messageAttachmentPayloadResolver,
+                serverIdentityProvider,
+                idGenerator,
+                jsonProvider,
+                timeProvider,
+                transactionRunner
+        );
+    }
+
+    @Bean
+    public ChannelMessageAttachmentDomainApi channelMessageAttachmentDomainApi(
+            MessageChannelBoundary messageChannelBoundary,
+            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            ObjectProvider<ObjectStorageService> objectStorageServiceProvider
+    ) {
+        return new ChannelMessageAttachmentDomainApi(
+                messageChannelBoundary,
+                messageAttachmentObjectKeyPolicy,
+                idGenerator,
+                timeProvider,
                 objectStorageServiceProvider
         );
     }
 
     @Bean
-    public ChannelQueryApplicationService channelQueryApplicationService(
+    public ChannelQueryDomainApi channelQueryDomainApi(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelBanRepository channelBanRepository,
@@ -449,7 +559,7 @@ public class StarterRegressionConfiguration {
             UserProfileRepository userProfileRepository,
             ChannelGovernancePolicy channelGovernancePolicy
     ) {
-        return new ChannelQueryApplicationService(
+        return new ChannelQueryDomainApi(
                 channelRepository,
                 channelMemberRepository,
                 channelBanRepository,
@@ -461,14 +571,14 @@ public class StarterRegressionConfiguration {
     }
 
     @Bean
-    public ChannelAccessApplicationService channelAccessApplicationService(
+    public ChannelAccessDomainApi channelAccessDomainApi(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelInviteRepository channelInviteRepository,
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            MessageRepository messageRepository,
+            ChannelMessageBoundary channelMessageBoundary,
             UserProfileRepository userProfileRepository,
             ChannelGovernancePolicy channelGovernancePolicy,
             ChannelRealtimePublisher channelRealtimePublisher,
@@ -476,14 +586,14 @@ public class StarterRegressionConfiguration {
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        return new ChannelAccessApplicationService(
+        return new ChannelAccessDomainApi(
                 channelRepository,
                 channelMemberRepository,
                 channelInviteRepository,
                 channelBanRepository,
                 channelAuditLogRepository,
                 channelReadStateRepository,
-                messageRepository,
+                channelMessageBoundary,
                 userProfileRepository,
                 channelGovernancePolicy,
                 channelRealtimePublisher,
@@ -498,27 +608,26 @@ public class StarterRegressionConfiguration {
      */
     @Bean
     public AuthController authController(
-            AuthApplicationService authApplicationService,
-            ServerApplicationService serverApplicationService,
-            AuthJwtProperties authJwtProperties
+            AuthAccountApi authAccountDomainApi,
+            AuthSessionApi authSessionDomainApi,
+            ServerEntranceApi serverEntranceDomainApi,
+            AuthTokenSettings authTokenSettings
     ) {
-        return new AuthController(authApplicationService, serverApplicationService, authJwtProperties);
+        return new AuthController(authAccountDomainApi, authSessionDomainApi, serverEntranceDomainApi, authTokenSettings);
     }
 
     /**
-     * 创建服务发现应用服务。
+     * 创建服务入口领域 API。
      */
     @Bean
-    public ServerApplicationService serverApplicationService(
-            ServerIdentityProperties serverIdentityProperties,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
+    public ServerEntranceApi serverEntranceDomainApi(
+            ServerIdentityProvider serverIdentityProvider,
             TimeProvider timeProvider
     ) {
-        return new ServerApplicationService(
-                serverIdentityProperties,
+        return new ServerEntranceDomainApi(
+                serverIdentityProvider,
                 "CarryPigeonBackend",
-                channelMessagePluginRegistry,
-                new RealtimeServerProperties(true, "127.0.0.1", 28080, "/api/ws", 1, 0),
+                new team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings(true, "127.0.0.1", 28080, "/api/ws"),
                 timeProvider,
                 java.util.List.of()
         );
@@ -529,52 +638,68 @@ public class StarterRegressionConfiguration {
      */
     @Bean
     public ChannelMessageController channelMessageController(
-            MessageDeliveryApplicationService messageDeliveryApplicationService,
-            MessageModerationApplicationService messageModerationApplicationService,
-            MessageQueryApplicationService messageQueryApplicationService,
-            UserProfileApplicationService userProfileApplicationService,
+            ChannelMessagePublishingApi channelMessagePublishingDomainApi,
+            ChannelMessageTimelineApi channelMessageTimelineDomainApi,
+            ChannelMessageAttachmentDomainApi channelMessageAttachmentDomainApi,
             AuthRequestContext authRequestContext,
-            JsonProvider jsonProvider
+            ChannelMessageV1ResponseMapper responseMapper
     ) {
         return new ChannelMessageController(
-                messageDeliveryApplicationService,
-                messageModerationApplicationService,
-                messageQueryApplicationService,
-                userProfileApplicationService,
+                channelMessagePublishingDomainApi,
+                channelMessageTimelineDomainApi,
+                channelMessageAttachmentDomainApi,
                 authRequestContext,
-                jsonProvider
+                responseMapper
         );
     }
 
     @Bean
-    public FileApplicationService fileApplicationService(
+    public ChannelMessageV1ResponseMapper channelMessageV1ResponseMapper(
+            UserProfileApi userProfileDomainApi,
+            JsonProvider jsonProvider
+    ) {
+        return new ChannelMessageV1ResponseMapper(userProfileDomainApi, jsonProvider);
+    }
+
+    @Bean
+    public FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer(ChannelMemberRepository channelMemberRepository) {
+        return new team.carrypigeon.backend.chat.domain.features.file.support.ChannelMemberFileAttachmentAccessAuthorizer(channelMemberRepository);
+    }
+
+    @Bean
+    public FileUploadShareKeyCodec fileUploadShareKeyCodec(AuthJwtProperties authJwtProperties) {
+        return new FileUploadShareKeyCodec(authJwtProperties.secret());
+    }
+
+    @Bean
+    public FileTransferApi fileTransferDomainApi(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-            ChannelMemberRepository channelMemberRepository,
+            FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthJwtProperties authJwtProperties
+            FileUploadShareKeyCodec fileUploadShareKeyCodec
     ) {
-        return new FileApplicationService(
+        return new FileTransferDomainApi(
                 objectStorageServiceProvider,
-                channelMemberRepository,
+                fileAttachmentAccessAuthorizer,
                 idGenerator,
                 timeProvider,
-                authJwtProperties
+                fileUploadShareKeyCodec
         );
     }
 
     @Bean
-    public FileController fileController(FileApplicationService fileApplicationService, AuthRequestContext authRequestContext) {
-        return new FileController(fileApplicationService, authRequestContext);
+    public FileController fileController(FileTransferApi fileTransferDomainApi, AuthRequestContext authRequestContext) {
+        return new FileController(fileTransferDomainApi, authRequestContext);
     }
 
     @Bean
     public ChannelReadStateController channelReadStateController(
-            ChannelAccessApplicationService channelAccessApplicationService,
-            ChannelQueryApplicationService channelQueryApplicationService,
+            ChannelAccessDomainApi channelAccessDomainApi,
+            ChannelQueryDomainApi channelQueryDomainApi,
             AuthRequestContext authRequestContext
     ) {
-        return new ChannelReadStateController(channelAccessApplicationService, channelQueryApplicationService, authRequestContext);
+        return new ChannelReadStateController(channelAccessDomainApi, channelQueryDomainApi, authRequestContext);
     }
 
     private static <T> ObjectProvider<T> objectProvider(T object) {
@@ -606,7 +731,7 @@ public class StarterRegressionConfiguration {
             String messageType,
             String publicPluginKey,
             String availabilityCondition,
-            team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin plugin
+            ChannelMessagePlugin plugin
     ) {
         return new ChannelMessagePluginRegistration(
                 new ChannelMessagePluginDescriptor(

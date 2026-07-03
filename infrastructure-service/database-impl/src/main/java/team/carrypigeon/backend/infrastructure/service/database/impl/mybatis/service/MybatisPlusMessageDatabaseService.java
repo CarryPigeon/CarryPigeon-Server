@@ -194,11 +194,19 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         return entity;
     }
 
+    /**
+     * 有返回值的数据库访问操作。
+     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
+     */
     @FunctionalInterface
     private interface DatabaseOperation<T> {
         T run();
     }
 
+    /**
+     * 无返回值的数据库访问操作。
+     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
+     */
     @FunctionalInterface
     private interface VoidDatabaseOperation {
         void run();

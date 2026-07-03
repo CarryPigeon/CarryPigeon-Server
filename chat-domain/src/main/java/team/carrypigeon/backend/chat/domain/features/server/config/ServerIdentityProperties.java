@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import java.util.UUID;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import team.carrypigeon.backend.chat.domain.shared.application.server.ServerIdentityProvider;
+import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
 
 /**
  * 服务端身份配置。

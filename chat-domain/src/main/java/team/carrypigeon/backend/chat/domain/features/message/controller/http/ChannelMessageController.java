@@ -24,41 +24,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.DeleteChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.EditChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.PinChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageHttpCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.UnpinChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageHistoryResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelPinResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageSearchResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.query.GetChannelMessageHistoryQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.query.ListChannelPinsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.query.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinItemResponse;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinListResponse;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.EditChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageHttpCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetChannelMessageHistoryQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.EditChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MessageAttachmentUploadResponse;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.PinChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
-import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
  * 频道消息 HTTP 入口。
- * 职责：提供频道消息历史/搜索查询、发送与置顶的协议能力。
+ * 职责：提供频道消息历史/搜索查询、发送、编辑、删除与附件上传协议能力。
  * 边界：只承接协议层请求，不承载消息业务规则。
  */
 @Validated
@@ -69,44 +58,24 @@ public class ChannelMessageController {
 
     private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
-    private static final String PIN_CURSOR_SCOPE = "channel_pins";
-
-    private final MessageDeliveryApplicationService messageDeliveryApplicationService;
-    private final MessageModerationApplicationService messageModerationApplicationService;
-    private final MessageQueryApplicationService messageQueryApplicationService;
+    private final ChannelMessagePublishingApi channelMessagePublishingApi;
+    private final ChannelMessageTimelineApi channelMessageTimelineApi;
+    private final ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
     private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
     public ChannelMessageController(
-            MessageDeliveryApplicationService messageDeliveryApplicationService,
-            MessageModerationApplicationService messageModerationApplicationService,
-            MessageQueryApplicationService messageQueryApplicationService,
-            UserProfileApplicationService userProfileApplicationService,
+            ChannelMessagePublishingApi channelMessagePublishingApi,
+            ChannelMessageTimelineApi channelMessageTimelineApi,
+            ChannelMessageAttachmentApi channelMessageAttachmentDomainApi,
             RequestAuthenticationContext authRequestContext,
-            JsonProvider jsonProvider
+            ChannelMessageV1ResponseMapper responseMapper
     ) {
-        this.messageDeliveryApplicationService = messageDeliveryApplicationService;
-        this.messageModerationApplicationService = messageModerationApplicationService;
-        this.messageQueryApplicationService = messageQueryApplicationService;
+        this.channelMessagePublishingApi = channelMessagePublishingApi;
+        this.channelMessageTimelineApi = channelMessageTimelineApi;
+        this.channelMessageAttachmentDomainApi = channelMessageAttachmentDomainApi;
         this.authRequestContext = authRequestContext;
-        this.responseMapper = new ChannelMessageV1ResponseMapper(userProfileApplicationService, jsonProvider);
-    }
-
-    public ChannelMessageController(
-            MessageDeliveryApplicationService messageDeliveryApplicationService,
-            MessageModerationApplicationService messageModerationApplicationService,
-            MessageQueryApplicationService messageQueryApplicationService,
-            UserProfileApplicationService userProfileApplicationService,
-            RequestAuthenticationContext authRequestContext
-    ) {
-        this(
-                messageDeliveryApplicationService,
-                messageModerationApplicationService,
-                messageQueryApplicationService,
-                userProfileApplicationService,
-                authRequestContext,
-                new JsonProvider(new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules())
-        );
+        this.responseMapper = responseMapper;
     }
 
     /**
@@ -137,7 +106,7 @@ public class ChannelMessageController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageHistoryResult result = messageQueryApplicationService.getChannelMessageHistory(
+        ChannelMessageHistoryResult result = channelMessageTimelineApi.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(
                         principal.accountId(),
                         channelId,
@@ -192,7 +161,7 @@ public class ChannelMessageController {
         if (effectiveKeyword.trim().length() > 100) {
             throw ProblemException.validationFailed("validation_failed", "q length must be between 1 and 100");
         }
-        ChannelMessageSearchResult result = messageQueryApplicationService.searchChannelMessages(
+        ChannelMessageSearchResult result = channelMessageTimelineApi.searchChannelMessages(
                 new SearchChannelMessagesQuery(
                         principal.accountId(),
                         channelId,
@@ -220,56 +189,6 @@ public class ChannelMessageController {
         return searchChannelMessages(channelId, keyword, null, null, null, null, null, null, limit, request);
     }
 
-    @PostMapping("/{channelId}/pins/{messageId}")
-    @Operation(summary = "置顶频道消息", description = "置顶指定消息。")
-    public ChannelPinItemResponse pinChannelMessage(
-            @PathVariable long channelId,
-            @PathVariable long messageId,
-            @RequestBody(required = false) PinChannelMessageRequest requestBody,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        ChannelPinResult result = messageModerationApplicationService.pinChannelMessage(
-                new PinChannelMessageCommand(principal.accountId(), channelId, messageId, requestBody == null ? null : requestBody.note())
-        );
-        return toPinResponse(result);
-    }
-
-    @DeleteMapping("/{channelId}/pins/{messageId}")
-    @Operation(summary = "取消置顶频道消息", description = "取消置顶指定消息。")
-    public ResponseEntity<Void> unpinChannelMessage(
-            @PathVariable long channelId,
-            @PathVariable long messageId,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        messageModerationApplicationService.unpinChannelMessage(
-                new UnpinChannelMessageCommand(principal.accountId(), channelId, messageId)
-        );
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{channelId}/pins")
-    @Operation(summary = "获取频道置顶列表", description = "按频道返回置顶消息列表。")
-    public ChannelPinListResponse listChannelPins(
-            @PathVariable long channelId,
-            @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        var items = messageQueryApplicationService.listChannelPins(new ListChannelPinsQuery(
-                principal.accountId(),
-                channelId,
-                decodeCursor(PIN_CURSOR_SCOPE, cursor),
-                limit
-        ));
-        boolean hasMore = items.size() > limit;
-        var pageItems = hasMore ? items.subList(0, limit) : items;
-        String nextCursor = hasMore ? encodeCursor(PIN_CURSOR_SCOPE, pageItems.get(pageItems.size() - 1).messageId()) : null;
-        return new ChannelPinListResponse(pageItems.stream().map(this::toPinResponse).toList(), nextCursor, hasMore);
-    }
-
     @PostMapping("/{channelId}/messages")
     @Operation(summary = "发送消息", description = "按 v1 语义发送频道消息；当前支持 Core:Text / Core:File / Core:Voice。")
     public ResponseEntity<ChannelMessageV1Response> sendChannelMessage(
@@ -278,7 +197,7 @@ public class ChannelMessageController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageResult result = messageDeliveryApplicationService.sendChannelMessageHttp(
+        ChannelMessageResult result = channelMessagePublishingApi.sendChannelMessageHttp(
                 new SendChannelMessageHttpCommand(
                         principal.accountId(),
                         channelId,
@@ -303,7 +222,7 @@ public class ChannelMessageController {
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         try {
-            MessageAttachmentUploadResult result = messageDeliveryApplicationService.uploadMessageAttachment(
+            MessageAttachmentUploadResult result = channelMessageAttachmentDomainApi.uploadMessageAttachment(
                     principal.accountId(),
                     channelId,
                     messageType,
@@ -345,16 +264,6 @@ public class ChannelMessageController {
             ));
         }
         return commands;
-    }
-
-    private ChannelPinItemResponse toPinResponse(ChannelPinResult result) {
-        return new ChannelPinItemResponse(
-                Ids.toString(result.channelId()),
-                Ids.toString(result.messageId()),
-                Ids.toString(result.pinnedByAccountId()),
-                result.pinnedAt().toEpochMilli(),
-                result.note()
-        );
     }
 
     private Long parseOptionalSnowflake(String rawValue, String fieldName, boolean cursorField) {

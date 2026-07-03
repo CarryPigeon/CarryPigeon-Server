@@ -8,8 +8,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
@@ -105,6 +105,10 @@ class AuthAccessTokenInterceptorTests {
         assertEquals("access token is invalid", exception.getMessage());
     }
 
+    /**
+     * `FakeAuthTokenService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class FakeAuthTokenService implements AuthTokenService {
 
         @Override
@@ -128,6 +132,10 @@ class AuthAccessTokenInterceptorTests {
         }
     }
 
+    /**
+     * `InvalidAccessTokenService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class InvalidAccessTokenService extends FakeAuthTokenService {
 
         @Override

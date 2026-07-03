@@ -5,10 +5,12 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
@@ -46,20 +48,30 @@ public class RealtimeServerConfiguration {
      * @return 基于 Netty 的实时消息发布器
      */
     @Bean
+    public RealtimeDiscoverySettings realtimeDiscoverySettings(RealtimeServerProperties properties) {
+        return new RealtimeDiscoverySettings(
+                properties.enabled(),
+                properties.host(),
+                properties.port(),
+                properties.path()
+        );
+    }
+
+    @Bean
     @Primary
     public MessageRealtimePublisher messageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
             IdGenerator idGenerator,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
+            MessagePayloadResolver messagePayloadResolver
     ) {
         return new NettyMessageRealtimePublisher(
                 realtimeSessionRegistry,
                 jsonProvider,
                 timeProvider,
                 idGenerator,
-                messageAttachmentPayloadResolver
+                messagePayloadResolver
         );
     }
 
@@ -97,7 +109,7 @@ public class RealtimeServerConfiguration {
      * @param timeProvider 项目统一时间提供器
      * @param authTokenService 项目 access token 校验服务
      * @param realtimeSessionRegistry 实时会话注册表
-     * @param messageDeliveryApplicationServiceProvider 消息发送应用服务提供器
+     * @param channelMessagePublishingApiProvider 频道消息发布领域 API 提供器
      * @param realtimeInboundMessageDispatcherProvider realtime 入站消息分发器提供器
      * @return Netty 通道初始化器
      */
@@ -110,7 +122,7 @@ public class RealtimeServerConfiguration {
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService> messageDeliveryApplicationServiceProvider,
+            ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         return new RealtimeChannelInitializer(
@@ -121,7 +133,7 @@ public class RealtimeServerConfiguration {
                 authTokenService,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                messageDeliveryApplicationServiceProvider,
+                channelMessagePublishingApiProvider,
                 realtimeInboundMessageDispatcherProvider
         );
     }

@@ -50,6 +50,9 @@ class MybatisPlusChannelBanDatabaseServiceTests {
         assertEquals(1001L, record.operatorAccountId());
     }
 
+    /**
+     * 验证 `findByChannelId` 在 `existingRows` 条件下满足 `returnBanRecords` 的测试契约。
+     */
     @Test
     @DisplayName("find by channel existing rows return ban records")
     void findByChannelId_existingRows_returnBanRecords() {

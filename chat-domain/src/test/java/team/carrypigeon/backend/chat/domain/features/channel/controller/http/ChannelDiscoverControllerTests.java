@@ -14,12 +14,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelGovernanceApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelLifecycleApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.DiscoverChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelGovernanceApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -29,25 +29,29 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `ChannelDiscoverController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class ChannelDiscoverControllerTests {
 
     private static final String DISCOVER_CURSOR_SCOPE = "channel_discover";
 
-    private ChannelQueryApplicationService channelQueryApplicationService;
-    private ChannelLifecycleApplicationService channelLifecycleApplicationService;
-    private ChannelGovernanceApplicationService channelGovernanceApplicationService;
-    private NotificationPreferenceApplicationService notificationPreferenceApplicationService;
+    private ChannelQueryApi channelQueryDomainApi;
+    private ChannelLifecycleApi channelLifecycleDomainApi;
+    private ChannelGovernanceApi channelGovernanceDomainApi;
+    private NotificationPreferenceApi notificationPreferenceDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
-        channelLifecycleApplicationService = mock(ChannelLifecycleApplicationService.class);
-        channelGovernanceApplicationService = mock(ChannelGovernanceApplicationService.class);
-        notificationPreferenceApplicationService = mock(NotificationPreferenceApplicationService.class);
+        channelQueryDomainApi = mock(ChannelQueryApi.class);
+        channelLifecycleDomainApi = mock(ChannelLifecycleApi.class);
+        channelGovernanceDomainApi = mock(ChannelGovernanceApi.class);
+        notificationPreferenceDomainApi = mock(NotificationPreferenceApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(controller())
                 .setMessageConverters(snakeCaseConverter())
@@ -55,11 +59,14 @@ class ChannelDiscoverControllerTests {
                 .build();
     }
 
+    /**
+     * 验证 `discoverChannels` 在 `returnsCursorPage` 场景下的测试契约。
+     */
     @Test
     @DisplayName("discover channels returns cursor page")
     void discoverChannels_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelQueryApplicationService.discoverChannels(any())).thenReturn(List.of(
+        when(channelQueryDomainApi.discoverChannels(any())).thenReturn(List.of(
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
@@ -70,11 +77,14 @@ class ChannelDiscoverControllerTests {
                 .andExpect(jsonPath("$.has_more").value(false));
     }
 
+    /**
+     * 验证 `discoverChannels` 在 `acceptsOpaqueCursor` 场景下的测试契约。
+     */
     @Test
     @DisplayName("discover channels accepts opaque cursor")
     void discoverChannels_acceptsOpaqueCursor() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelQueryApplicationService.discoverChannels(any())).thenReturn(List.of(
+        when(channelQueryDomainApi.discoverChannels(any())).thenReturn(List.of(
                 new DiscoverChannelResult("9", "General", "讨论区", "avatars/ch/9.png", 42L, false)
         ));
 
@@ -94,10 +104,10 @@ class ChannelDiscoverControllerTests {
 
     private ChannelController controller() {
         return new ChannelController(
-                channelQueryApplicationService,
-                channelLifecycleApplicationService,
-                channelGovernanceApplicationService,
-                notificationPreferenceApplicationService,
+                channelQueryDomainApi,
+                channelLifecycleDomainApi,
+                channelGovernanceDomainApi,
+                notificationPreferenceDomainApi,
                 authRequestContext
         );
     }
@@ -108,6 +118,10 @@ class ChannelDiscoverControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
         private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }

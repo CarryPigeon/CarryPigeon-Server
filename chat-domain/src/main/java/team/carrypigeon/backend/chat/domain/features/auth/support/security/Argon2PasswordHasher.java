@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.support.security;
 
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
 
 /**
  * Argon2 密码哈希实现。

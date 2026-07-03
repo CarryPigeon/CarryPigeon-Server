@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeServerMessage;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;

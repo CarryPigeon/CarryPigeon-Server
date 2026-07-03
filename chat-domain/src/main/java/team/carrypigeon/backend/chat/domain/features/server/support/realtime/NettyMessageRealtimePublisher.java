@@ -5,13 +5,13 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
 import org.springframework.context.annotation.Primary;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageSenderSnapshot;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeServerMessage;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -32,14 +32,14 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
     private final JsonProvider jsonProvider;
     private final TimeProvider timeProvider;
     private final IdGenerator idGenerator;
-    private final MessageAttachmentPayloadResolver messageAttachmentPayloadResolver;
+    private final MessagePayloadResolver messageAttachmentPayloadResolver;
 
     public NettyMessageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
             IdGenerator idGenerator,
-            MessageAttachmentPayloadResolver messageAttachmentPayloadResolver
+            MessagePayloadResolver messageAttachmentPayloadResolver
     ) {
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.jsonProvider = jsonProvider;
@@ -80,7 +80,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      * 输出：下发 `message.pinned` 事件，携带稳定 `pin_id` 与操作人信息。
      */
     @Override
-    public void publishPin(ChannelPin pin, Collection<Long> recipientAccountIds) {
+    public void publishPin(MessageChannelBoundary.MessageChannelPin pin, Collection<Long> recipientAccountIds) {
         publishEvent("message.pinned", Map.of(
                 "cid", Long.toString(pin.channelId()),
                 "mid", Long.toString(pin.messageId()),
@@ -96,7 +96,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      * 副作用：向所有目标在线会话推送 `message.unpinned`。
      */
     @Override
-    public void publishUnpin(ChannelPin pin, long unpinnedByAccountId, long unpinnedAt, Collection<Long> recipientAccountIds) {
+    public void publishUnpin(MessageChannelBoundary.MessageChannelPin pin, long unpinnedByAccountId, long unpinnedAt, Collection<Long> recipientAccountIds) {
         publishEvent("message.unpinned", Map.of(
                 "cid", Long.toString(pin.channelId()),
                 "mid", Long.toString(pin.messageId()),

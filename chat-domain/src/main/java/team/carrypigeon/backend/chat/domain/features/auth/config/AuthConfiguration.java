@@ -4,7 +4,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.support.verification.CacheBackedEmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.support.verification.InMemoryEmailVerificationCodeService;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -19,6 +20,18 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
 @Configuration
 @EnableConfigurationProperties(AuthJwtProperties.class)
 public class AuthConfiguration {
+
+    /**
+     * 创建领域侧 token 签发设置。
+     * 职责：把配置绑定对象转换为领域服务需要的最小时间参数。
+     *
+     * @param properties JWT 配置绑定对象
+     * @return token 签发设置
+     */
+    @Bean
+    public AuthTokenSettings authTokenSettings(AuthJwtProperties properties) {
+        return new AuthTokenSettings(properties.accessTokenTtl(), properties.refreshTokenTtl());
+    }
 
     /**
      * 创建邮箱验证码服务。

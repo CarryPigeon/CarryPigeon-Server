@@ -13,10 +13,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
@@ -42,7 +42,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final AuthTokenService authTokenService;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier;
+    private final Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
 
     public RealtimeChannelHandler(
@@ -52,7 +52,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier,
+            Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier,
             Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier
     ) {
         this.jsonProvider = jsonProvider;
@@ -61,7 +61,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         this.authTokenService = authTokenService;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.messageDeliveryApplicationServiceSupplier = messageDeliveryApplicationServiceSupplier;
+        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiSupplier;
         this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherSupplier;
     }
 
@@ -188,14 +188,14 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", "unauthorized", "authentication is required"));
             return;
         }
-        MessageDeliveryApplicationService messageDeliveryApplicationService = messageDeliveryApplicationServiceSupplier.get();
+        ChannelMessagePublishingApi channelMessagePublishingApi = channelMessagePublishingApiSupplier.get();
         RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
-        if (messageDeliveryApplicationService == null || dispatcher == null) {
+        if (channelMessagePublishingApi == null || dispatcher == null) {
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", "internal_error", "realtime message service is unavailable"));
             return;
         }
         try {
-            dispatcher.dispatch(principal, request, messageDeliveryApplicationService);
+            dispatcher.dispatch(principal, request, channelMessagePublishingApi);
         } catch (ProblemException exception) {
             context.writeAndFlush(commandError(request.id(), request.type() + ".err", mapReason(exception), exception.getMessage()));
         }

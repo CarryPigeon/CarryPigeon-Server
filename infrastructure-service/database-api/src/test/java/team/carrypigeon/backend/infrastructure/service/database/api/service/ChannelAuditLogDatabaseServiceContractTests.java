@@ -81,6 +81,10 @@ class ChannelAuditLogDatabaseServiceContractTests {
         assertSame(WRITE_RECORD, service.insertedRecord);
     }
 
+    /**
+     * `MinimalChannelAuditLogDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalChannelAuditLogDatabaseService implements ChannelAuditLogDatabaseService {
 
         @Override
@@ -88,6 +92,10 @@ class ChannelAuditLogDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingChannelAuditLogDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingChannelAuditLogDatabaseService extends MinimalChannelAuditLogDatabaseService {
 
         private ChannelAuditLogWriteRecord insertedRecord;

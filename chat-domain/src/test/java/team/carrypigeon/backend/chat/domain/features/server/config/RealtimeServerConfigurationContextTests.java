@@ -14,14 +14,14 @@ import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.DefaultLifecycleProcessor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
@@ -58,6 +58,10 @@ class RealtimeServerConfigurationContextTests {
                     VoiceMessageTypePluginConfiguration.class
             );
 
+    /**
+     * 实时服务装配测试支撑配置。
+     * 职责：提供配置测试所需的时间、JSON、鉴权、用户资料和生命周期处理器替身。
+     */
     @Configuration
     static class TestSupportConfiguration {
 

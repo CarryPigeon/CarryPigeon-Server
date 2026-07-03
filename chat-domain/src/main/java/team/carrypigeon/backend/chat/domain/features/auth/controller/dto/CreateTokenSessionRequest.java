@@ -28,6 +28,10 @@ public record CreateTokenSessionRequest(
         ClientRequest client
 ) {
 
+    /**
+     * 创建会话时的客户端上下文。
+     * 职责：携带设备标识和当前设备插件安装态。
+     */
     public record ClientRequest(
             @Schema(description = "稳定设备标识", example = "a-stable-device-id")
             @NotBlank(message = "device_id must not be blank")
@@ -38,6 +42,10 @@ public record CreateTokenSessionRequest(
     ) {
     }
 
+    /**
+     * 当前设备已安装插件描述。
+     * 职责：供 required plugin gate 判断客户端能力缺口。
+     */
     public record InstalledPluginRequest(
             @Schema(description = "插件标识", example = "mc-bind")
             @NotBlank(message = "plugin_id must not be blank")

@@ -15,10 +15,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+/**
+ * `MybatisPlusChannelPinDatabaseService` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class MybatisPlusChannelPinDatabaseServiceTests {
 
+    /**
+     * 验证 `insert` 在 `delegatesToMapper` 场景下的测试契约。
+     */
     @Test
     @DisplayName("insert delegates to mapper")
     void insert_delegatesToMapper() {
@@ -40,6 +47,9 @@ class MybatisPlusChannelPinDatabaseServiceTests {
         assertEquals(record.pinnedAt(), entity.getPinnedAt());
     }
 
+    /**
+     * 验证 `findByChannel` 在 `returnsPinRecords` 场景下的测试契约。
+     */
     @Test
     @DisplayName("find by channel returns pin records")
     void findByChannel_returnsPinRecords() {

@@ -49,9 +49,17 @@ class JacksonAutoConfigurationTests {
         });
     }
 
+    /**
+     * `SnakeCaseProbe` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private record SnakeCaseProbe(String displayName) {
     }
 
+    /**
+     * `InstantProbe` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private record InstantProbe(Instant createdAt) {
     }
 }

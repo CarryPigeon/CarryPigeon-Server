@@ -8,8 +8,8 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
@@ -32,7 +32,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final AuthTokenService authTokenService;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<MessageDeliveryApplicationService> messageDeliveryApplicationServiceSupplier;
+    private final Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
 
     public RealtimeChannelInitializer(
@@ -43,7 +43,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             AuthTokenService authTokenService,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<MessageDeliveryApplicationService> messageDeliveryApplicationServiceProvider,
+            ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
         this.properties = properties;
@@ -53,7 +53,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         this.authTokenService = authTokenService;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.messageDeliveryApplicationServiceSupplier = messageDeliveryApplicationServiceProvider::getIfAvailable;
+        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiProvider::getIfAvailable;
         this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
     }
 
@@ -76,22 +76,22 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 realtimeSessionRegistry,
                 new ObjectProvider<>() {
                     @Override
-                    public MessageDeliveryApplicationService getObject(Object... args) {
+                    public ChannelMessagePublishingApi getObject(Object... args) {
                         return null;
                     }
 
                     @Override
-                    public MessageDeliveryApplicationService getIfAvailable() {
+                    public ChannelMessagePublishingApi getIfAvailable() {
                         return null;
                     }
 
                     @Override
-                    public MessageDeliveryApplicationService getIfUnique() {
+                    public ChannelMessagePublishingApi getIfUnique() {
                         return null;
                     }
 
                     @Override
-                    public MessageDeliveryApplicationService getObject() {
+                    public ChannelMessagePublishingApi getObject() {
                         return null;
                     }
                 },
@@ -134,7 +134,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 authTokenService,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                messageDeliveryApplicationServiceSupplier,
+                channelMessagePublishingApiSupplier,
                 realtimeInboundMessageDispatcherSupplier
         ));
     }

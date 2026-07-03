@@ -25,6 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Tag("contract")
 class CacheBackedEmailVerificationCodeServiceTests {
 
+    /**
+     * 验证 `issueAndVerifyCode` 在 `normalizedEmail` 条件下满足 `deletesCacheEntry` 的测试契约。
+     */
     @Test
     @DisplayName("issue and verify code normalized email deletes cache entry")
     void issueAndVerifyCode_normalizedEmail_deletesCacheEntry() {
@@ -46,6 +49,9 @@ class CacheBackedEmailVerificationCodeServiceTests {
         assertFalse(cacheService.exists("auth:email-code:carry-user@example.com"));
     }
 
+    /**
+     * 验证 `verifyCode` 在 `mismatch` 条件下满足 `throwsValidationProblem` 的测试契约。
+     */
     @Test
     @DisplayName("verify code mismatch throws validation problem")
     void verifyCode_mismatch_throwsValidationProblem() {
@@ -104,6 +110,10 @@ class CacheBackedEmailVerificationCodeServiceTests {
         assertEquals("auth:email-code:user@example.com", cacheService.lastDeletedKey);
     }
 
+    /**
+     * `RecordingCacheService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingCacheService implements CacheService {
 
         private final Map<String, String> values = new HashMap<>();
@@ -137,6 +147,10 @@ class CacheBackedEmailVerificationCodeServiceTests {
         }
     }
 
+    /**
+     * `RecordingMailSenderService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingMailSenderService implements MailSenderService {
 
         private MailSendCommand lastCommand;

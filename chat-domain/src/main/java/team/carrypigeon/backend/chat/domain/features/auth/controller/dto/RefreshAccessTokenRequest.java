@@ -19,6 +19,10 @@ public record RefreshAccessTokenRequest(
         ClientRequest client
 ) {
 
+    /**
+     * 刷新令牌请求中的客户端上下文。
+     * 职责：携带稳定设备标识，用于校验 refresh token 归属。
+     */
     public record ClientRequest(
             @Schema(description = "稳定设备标识", example = "a-stable-device-id")
             @NotBlank(message = "device_id must not be blank")

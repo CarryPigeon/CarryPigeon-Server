@@ -14,6 +14,10 @@ public record FileUploadResponse(
         @Schema(description = "上传信息")
         UploadResponse upload
 ) {
+    /**
+     * 文件上传目标信息。
+     * 职责：描述客户端完成上传所需的 HTTP 方法、地址、请求头和过期时间。
+     */
     public record UploadResponse(
             @Schema(description = "上传方法", example = "PUT")
             String method,

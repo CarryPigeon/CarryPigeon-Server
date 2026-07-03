@@ -53,6 +53,9 @@ class MybatisPlusMentionDatabaseServiceTests {
         assertEquals(false, entity.getRead());
     }
 
+    /**
+     * 验证 `listByAccountId` 在 `mapsEntitiesToRecords` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list by account id maps entities to records")
     void listByAccountId_mapsEntitiesToRecords() {

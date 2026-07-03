@@ -207,6 +207,15 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(descriptor.status()).body(response);
     }
 
+    /**
+     * HTTP 错误响应描述。
+     * 职责：在异常映射阶段承载状态码、稳定原因、客户端消息和可选明细。
+     *
+     * @param status HTTP 状态码
+     * @param reason 稳定错误原因
+     * @param message 客户端可读错误消息
+     * @param details 错误明细，可为空
+     */
     private record ErrorDescriptor(
             HttpStatus status,
             String reason,

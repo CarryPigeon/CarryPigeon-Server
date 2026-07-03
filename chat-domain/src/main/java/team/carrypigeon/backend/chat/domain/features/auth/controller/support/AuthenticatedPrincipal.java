@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.support;
 
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 
 /**
  * 旧 HTTP 认证主体兼容壳。

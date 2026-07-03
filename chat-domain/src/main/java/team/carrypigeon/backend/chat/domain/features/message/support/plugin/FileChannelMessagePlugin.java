@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.plugin;
 
 import java.util.Optional;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.FileChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.ChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.FileChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -127,6 +127,15 @@ public class FileChannelMessagePlugin implements ChannelMessagePlugin {
                 .orElse("");
     }
 
+    /**
+     * 文件消息 payload。
+     * 职责：保存文件对象键和展示元数据，作为 file 消息类型的稳定结构化载荷。
+     *
+     * @param objectKey 对象存储键
+     * @param filename 文件名
+     * @param mimeType 文件 MIME 类型
+     * @param size 文件大小，单位字节
+     */
     private record FileMessagePayload(String objectKey, String filename, String mimeType, long size) {
     }
 }

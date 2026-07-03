@@ -104,6 +104,9 @@ class MybatisPlusChannelDatabaseServiceTests {
         assertEquals(record.updatedAt(), entity.getUpdatedAt());
     }
 
+    /**
+     * 验证 `update` 在 `validRecord` 条件下满足 `delegatesToMapper` 的测试契约。
+     */
     @Test
     @DisplayName("update valid record delegates to mapper")
     void update_validRecord_delegatesToMapper() {

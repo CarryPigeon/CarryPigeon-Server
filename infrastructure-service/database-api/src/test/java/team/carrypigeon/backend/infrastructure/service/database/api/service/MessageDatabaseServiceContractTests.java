@@ -110,6 +110,10 @@ class MessageDatabaseServiceContractTests {
         assertSame(RECORD, service.updatedRecord);
     }
 
+    /**
+     * `MinimalMessageDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalMessageDatabaseService implements MessageDatabaseService {
 
         @Override
@@ -136,6 +140,10 @@ class MessageDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingMessageDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingMessageDatabaseService extends MinimalMessageDatabaseService {
 
         private MessageRecord insertedRecord;

@@ -64,6 +64,10 @@ class DatabaseBackedChannelInviteRepositoryTests {
         assertEquals(BASE_TIME.plusSeconds(60), databaseService.updatedRecord.respondedAt());
     }
 
+    /**
+     * `FakeChannelInviteDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class FakeChannelInviteDatabaseService implements ChannelInviteDatabaseService {
 
         private ChannelInviteRecord record;

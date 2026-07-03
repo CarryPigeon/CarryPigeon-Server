@@ -76,6 +76,10 @@ class AuthAccountDatabaseServiceContractTests {
         assertEquals(Optional.of(updatedRecord), service.findByUsername("carry-user"));
     }
 
+    /**
+     * `InMemoryAuthAccountDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class InMemoryAuthAccountDatabaseService implements AuthAccountDatabaseService {
 
         private final Map<Long, AuthAccountRecord> recordsById = new HashMap<>();

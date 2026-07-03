@@ -186,7 +186,7 @@
                     <!-- 启用详细日志 -->
                     <printSummary>true</printSummary>
                     <!-- 设置编码 -->
-                    <argLine>@{argLine} -Dfile.encoding=UTF-8</argLine>
+                    <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dfile.encoding=UTF-8</argLine>
                 </configuration>
             </plugin>
         </plugins>

@@ -16,10 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.MentionResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.query.ListMentionsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MentionApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MentionResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListMentionsQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MentionApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -33,27 +33,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+/**
+ * `MentionController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class MentionControllerTests {
 
     private static final String MENTION_CURSOR_SCOPE = "mentions";
 
-    private MentionApplicationService mentionApplicationService;
+    private MentionApi mentionDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mentionApplicationService = mock(MentionApplicationService.class);
+        mentionDomainApi = mock(MentionApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = authenticatedMockMvc();
     }
 
+    /**
+     * 验证 `listMentions` 在 `returnsPagedPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list mentions returns paged payload")
     void listMentions_returnsPagedPayload() throws Exception {
-        when(mentionApplicationService.listMentions(any())).thenReturn(List.of(
+        when(mentionDomainApi.listMentions(any())).thenReturn(List.of(
                 mention(13L, false),
                 mention(12L, true),
                 mention(11L, false)
@@ -69,7 +76,7 @@ class MentionControllerTests {
                 .andExpect(jsonPath("$.has_more").value(true));
 
         ArgumentCaptor<ListMentionsQuery> captor = ArgumentCaptor.forClass(ListMentionsQuery.class);
-        verify(mentionApplicationService).listMentions(captor.capture());
+        verify(mentionDomainApi).listMentions(captor.capture());
         assertEquals(1001L, captor.getValue().accountId());
         assertNull(captor.getValue().cursorMentionId());
         assertEquals(2, captor.getValue().limit());
@@ -77,6 +84,9 @@ class MentionControllerTests {
         assertEquals(9L, captor.getValue().channelId());
     }
 
+    /**
+     * 验证 `listMentions` 在 `invalidLimit` 条件下满足 `returnsBadRequest` 的测试契约。
+     */
     @Test
     @DisplayName("list mentions invalid limit returns bad request")
     void listMentions_invalidLimit_returnsBadRequest() throws Exception {
@@ -85,6 +95,9 @@ class MentionControllerTests {
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
+    /**
+     * 验证 `listMentions` 在 `limitTooLarge` 条件下满足 `returnsBadRequest` 的测试契约。
+     */
     @Test
     @DisplayName("list mentions limit too large returns bad request")
     void listMentions_limitTooLarge_returnsBadRequest() throws Exception {
@@ -94,6 +107,9 @@ class MentionControllerTests {
                 .andExpect(jsonPath("$.error.message").value("limit must be between 1 and 50"));
     }
 
+    /**
+     * 验证 `listMentions` 在 `invalidCursor` 条件下满足 `returnsCursorInvalid` 的测试契约。
+     */
     @Test
     @DisplayName("list mentions invalid cursor returns cursor invalid")
     void listMentions_invalidCursor_returnsCursorInvalid() throws Exception {
@@ -102,6 +118,9 @@ class MentionControllerTests {
                 .andExpect(jsonPath("$.error.reason").value("cursor_invalid"));
     }
 
+    /**
+     * 验证 `listMentions` 在 `invalidCid` 条件下满足 `returnsValidationFailed` 的测试契约。
+     */
     @Test
     @DisplayName("list mentions invalid cid returns validation failed")
     void listMentions_invalidCid_returnsValidationFailed() throws Exception {
@@ -111,10 +130,13 @@ class MentionControllerTests {
                 .andExpect(jsonPath("$.error.message").value("cid must be decimal snowflake string"));
     }
 
+    /**
+     * 验证 `listMentions` 在 `forwardsTrimmedCursorAndCid` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list mentions forwards trimmed cursor and cid")
     void listMentions_forwardsTrimmedCursorAndCid() throws Exception {
-        when(mentionApplicationService.listMentions(any())).thenReturn(List.of(mention(13L, false)));
+        when(mentionDomainApi.listMentions(any())).thenReturn(List.of(mention(13L, false)));
 
         mockMvc.perform(get("/api/mentions")
                         .param("cursor", OpaqueCursorCodec.encode(MENTION_CURSOR_SCOPE, 88L))
@@ -123,28 +145,34 @@ class MentionControllerTests {
                 .andExpect(status().isOk());
 
         ArgumentCaptor<ListMentionsQuery> captor = ArgumentCaptor.forClass(ListMentionsQuery.class);
-        verify(mentionApplicationService).listMentions(captor.capture());
+        verify(mentionDomainApi).listMentions(captor.capture());
         assertEquals(88L, captor.getValue().cursorMentionId());
         assertEquals(9L, captor.getValue().channelId());
         assertEquals(false, captor.getValue().unreadOnly());
         assertEquals(20, captor.getValue().limit());
     }
 
+    /**
+     * 验证 `markMentionRead` 在 `returnsNoContent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("mark mention read returns no content")
     void markMentionRead_returnsNoContent() throws Exception {
-        doNothing().when(mentionApplicationService).markMentionRead(1001L, 11L);
+        doNothing().when(mentionDomainApi).markMentionRead(1001L, 11L);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/mentions/11/read"))
                 .andExpect(status().isNoContent());
 
-        verify(mentionApplicationService).markMentionRead(1001L, 11L);
+        verify(mentionDomainApi).markMentionRead(1001L, 11L);
     }
 
+    /**
+     * 验证 `markMentionsRead` 在 `returnsNoContent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("mark mentions read returns no content")
     void markMentionsRead_returnsNoContent() throws Exception {
-        doNothing().when(mentionApplicationService).markMentionsRead(1001L, 88L, 9L);
+        doNothing().when(mentionDomainApi).markMentionsRead(1001L, 88L, 9L);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/mentions/read_state")
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
@@ -154,22 +182,25 @@ class MentionControllerTests {
                                 "}"))
                 .andExpect(status().isNoContent());
 
-        verify(mentionApplicationService).markMentionsRead(1001L, 88L, 9L);
+        verify(mentionDomainApi).markMentionsRead(1001L, 88L, 9L);
     }
 
+    /**
+     * 验证 `markMentionsRead` 在 `emptyBody` 条件下满足 `returnsNoContent` 的测试契约。
+     */
     @Test
     @DisplayName("mark mentions read empty body returns no content")
     void markMentionsRead_emptyBody_returnsNoContent() throws Exception {
-        doNothing().when(mentionApplicationService).markMentionsRead(1001L, null, null);
+        doNothing().when(mentionDomainApi).markMentionsRead(1001L, null, null);
 
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/mentions/read_state"))
                 .andExpect(status().isNoContent());
 
-        verify(mentionApplicationService).markMentionsRead(1001L, null, null);
+        verify(mentionDomainApi).markMentionsRead(1001L, null, null);
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new MentionController(mentionApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new MentionController(mentionDomainApi, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -186,6 +217,10 @@ class MentionControllerTests {
         return new MentionResult(mentionId, 9L, 5001L + mentionId, 1002L, "user", 1001L, Instant.parse("2026-04-24T12:00:00Z"), read);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
 

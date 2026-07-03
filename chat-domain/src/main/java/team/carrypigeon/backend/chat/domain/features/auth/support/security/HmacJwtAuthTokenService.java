@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
@@ -149,6 +149,10 @@ public class HmacJwtAuthTokenService implements AuthTokenService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    /**
+     * 消息摘要比较支撑。
+     * 职责：为 JWT 签名校验提供固定时间字符串比较，避免短路比较暴露签名差异位置。
+     */
     private static final class MessageDigestSupport {
 
         private MessageDigestSupport() {

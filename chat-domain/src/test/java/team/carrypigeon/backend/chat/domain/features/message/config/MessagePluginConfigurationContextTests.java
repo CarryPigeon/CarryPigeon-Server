@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileMessageTypePluginConfiguration;
@@ -132,6 +132,10 @@ class MessagePluginConfigurationContextTests {
                 });
     }
 
+    /**
+     * 对象存储测试支撑配置。
+     * 职责：为插件装配测试提供可用的对象存储 Bean，使 file/voice 插件具备注册条件。
+     */
     @Configuration
     static class StorageSupportConfiguration {
 
@@ -161,6 +165,10 @@ class MessagePluginConfigurationContextTests {
         }
     }
 
+    /**
+     * 基础测试支撑配置。
+     * 职责：提供插件配置测试所需的 JSON 基础设施 Bean。
+     */
     @Configuration
     static class TestSupportConfiguration {
 

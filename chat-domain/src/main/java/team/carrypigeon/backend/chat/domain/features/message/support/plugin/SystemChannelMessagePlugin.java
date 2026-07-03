@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.plugin;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.SystemChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.ChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.SystemChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 

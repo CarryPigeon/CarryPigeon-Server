@@ -10,7 +10,7 @@ import org.springframework.web.servlet.handler.MappedInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -62,6 +62,10 @@ class AuthWebMvcConfigurationTests {
         assertThat(excludePatterns).doesNotContain("/api/server/**");
     }
 
+    /**
+     * `FakeAuthTokenService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class FakeAuthTokenService implements AuthTokenService {
 
         @Override

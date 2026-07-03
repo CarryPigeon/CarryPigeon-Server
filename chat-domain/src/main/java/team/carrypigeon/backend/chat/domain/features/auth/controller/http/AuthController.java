@@ -13,17 +13,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.CreateTokenSessionCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.LogoutCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.RefreshTokenCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.SendEmailCodeCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthSessionTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.RegisterResult;
-import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
-import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LoginCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.CreateTokenSessionCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LogoutCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RefreshTokenCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.SendEmailCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthSessionTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.AuthSessionTokenResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.CreateTokenSessionRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.LoginRequest;
@@ -32,7 +33,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.SendEmailCodeRequest;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
@@ -46,18 +47,29 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Tag(name = "认证与会话", description = "邮箱验证码、会话令牌签发、刷新与撤销。")
 public class AuthController {
 
-    private final AuthApplicationService authApplicationService;
-    private final ServerApplicationService serverApplicationService;
-    private final AuthJwtProperties authJwtProperties;
+    private final AuthAccountApi authAccountDomainApi;
+    private final AuthSessionApi authSessionDomainApi;
+    private final ServerEntranceApi serverEntranceDomainApi;
+    private final AuthTokenSettings authTokenSettings;
 
+    /**
+     * 创建鉴权 HTTP 入口。
+     *
+     * @param authAccountDomainApi 鉴权账号领域 API
+     * @param authSessionDomainApi 鉴权会话领域 API
+     * @param serverEntranceDomainApi 服务入口领域 API
+     * @param authTokenSettings token 展示用配置
+     */
     public AuthController(
-            AuthApplicationService authApplicationService,
-            ServerApplicationService serverApplicationService,
-            AuthJwtProperties authJwtProperties
+            AuthAccountApi authAccountDomainApi,
+            AuthSessionApi authSessionDomainApi,
+            ServerEntranceApi serverEntranceDomainApi,
+            AuthTokenSettings authTokenSettings
     ) {
-        this.authApplicationService = authApplicationService;
-        this.serverApplicationService = serverApplicationService;
-        this.authJwtProperties = authJwtProperties;
+        this.authAccountDomainApi = authAccountDomainApi;
+        this.authSessionDomainApi = authSessionDomainApi;
+        this.serverEntranceDomainApi = serverEntranceDomainApi;
+        this.authTokenSettings = authTokenSettings;
     }
 
     /**
@@ -74,7 +86,7 @@ public class AuthController {
             @ApiResponse(responseCode = "204", description = "验证码请求受理成功")
     })
     public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeRequest request) {
-        authApplicationService.sendEmailCode(new SendEmailCodeCommand(request.email()));
+        authAccountDomainApi.sendEmailCode(new SendEmailCodeCommand(request.email()));
         return ResponseEntity.noContent().build();
     }
 
@@ -90,7 +102,7 @@ public class AuthController {
             @ApiResponse(responseCode = "201", description = "注册成功")
     })
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterResult result = authApplicationService.register(new RegisterCommand(request.username().trim(), request.password()));
+        RegisterResult result = authAccountDomainApi.register(new RegisterCommand(request.username().trim(), request.password()));
         return ResponseEntity.status(201).body(new RegisterResponse(Ids.toString(result.accountId()), result.username()));
     }
 
@@ -106,7 +118,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
     })
     public AuthSessionTokenResponse login(@Valid @RequestBody LoginRequest request) {
-        AuthTokenResult result = authApplicationService.login(new LoginCommand(request.username().trim(), request.password()));
+        AuthTokenResult result = authSessionDomainApi.login(new LoginCommand(request.username().trim(), request.password()));
         return toSessionTokenResponse(result);
     }
 
@@ -124,7 +136,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
     })
     public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
-        List<String> missingPlugins = serverApplicationService.findMissingRequiredPlugins(
+        List<String> missingPlugins = serverEntranceDomainApi.findMissingRequiredPlugins(
                 request.client().installedPlugins() == null
                         ? List.of()
                         : request.client().installedPlugins().stream().map(CreateTokenSessionRequest.InstalledPluginRequest::pluginId).toList()
@@ -136,7 +148,7 @@ public class AuthController {
                     java.util.Map.of("missing_plugins", missingPlugins)
             );
         }
-        AuthSessionTokenResult result = authApplicationService.createTokenSession(
+        AuthSessionTokenResult result = authSessionDomainApi.createTokenSession(
                 new CreateTokenSessionCommand(request.grantType(), request.email(), request.code())
         );
         return toSessionTokenResponse(result);
@@ -156,7 +168,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
     })
     public AuthSessionTokenResponse refresh(@Valid @RequestBody RefreshAccessTokenRequest request) {
-        AuthSessionTokenResult result = authApplicationService.refreshTokenSession(new RefreshTokenCommand(request.refreshToken()));
+        AuthSessionTokenResult result = authSessionDomainApi.refreshTokenSession(new RefreshTokenCommand(request.refreshToken()));
         return toSessionTokenResponse(result);
     }
 
@@ -174,7 +186,7 @@ public class AuthController {
             @ApiResponse(responseCode = "204", description = "撤销成功")
     })
     public ResponseEntity<Void> revoke(@Valid @RequestBody RevokeRefreshTokenRequest request) {
-        authApplicationService.logout(new LogoutCommand(request.refreshToken()));
+        authSessionDomainApi.logout(new LogoutCommand(request.refreshToken()));
         return ResponseEntity.noContent().build();
     }
 
@@ -193,7 +205,7 @@ public class AuthController {
         return new AuthSessionTokenResponse(
                 "Bearer",
                 result.accessToken(),
-                authJwtProperties.accessTokenTtl().toSeconds(),
+                authTokenSettings.accessTokenTtl().toSeconds(),
                 result.refreshToken(),
                 Ids.toString(result.accountId()),
                 false

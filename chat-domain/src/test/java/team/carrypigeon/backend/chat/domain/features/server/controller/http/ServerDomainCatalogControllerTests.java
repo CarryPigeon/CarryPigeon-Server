@@ -10,7 +10,8 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessagePluginCatalogDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.MessageTypePluginRegistrationSupport;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -41,12 +42,16 @@ class ServerDomainCatalogControllerTests {
                         new TextChannelMessagePlugin()
                 )
         ));
-        mockMvc = MockMvcBuilders.standaloneSetup(new ServerDomainCatalogController(registry))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ServerDomainCatalogController(new MessagePluginCatalogDomainApi(registry)))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `getDomainCatalog` 在 `returnsPublicDomains` 场景下的测试契约。
+     */
     @Test
     @DisplayName("get domain catalog returns public domains")
     void getDomainCatalog_returnsPublicDomains() throws Exception {

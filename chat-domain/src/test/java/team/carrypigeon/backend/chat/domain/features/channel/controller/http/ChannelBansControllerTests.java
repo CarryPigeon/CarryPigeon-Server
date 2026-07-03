@@ -10,42 +10,50 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelGovernanceApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelLifecycleApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.BanChannelMemberUntilCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelGovernanceApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `ChannelBansController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class ChannelBansControllerTests {
 
-    private ChannelQueryApplicationService channelQueryApplicationService;
-    private ChannelLifecycleApplicationService channelLifecycleApplicationService;
-    private ChannelGovernanceApplicationService channelGovernanceApplicationService;
+    private ChannelQueryApi channelQueryDomainApi;
+    private ChannelLifecycleApi channelLifecycleDomainApi;
+    private ChannelGovernanceApi channelGovernanceDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
-        channelLifecycleApplicationService = mock(ChannelLifecycleApplicationService.class);
-        channelGovernanceApplicationService = mock(ChannelGovernanceApplicationService.class);
+        channelQueryDomainApi = mock(ChannelQueryApi.class);
+        channelLifecycleDomainApi = mock(ChannelLifecycleApi.class);
+        channelGovernanceDomainApi = mock(ChannelGovernanceApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(controller())
                 .setMessageConverters(snakeCaseConverter())
@@ -53,11 +61,14 @@ class ChannelBansControllerTests {
                 .build();
     }
 
+    /**
+     * 验证 `listChannelBans` 在 `returnsItems` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list channel bans returns items")
     void listChannelBans_returnsItems() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelQueryApplicationService.listChannelBans(any()))
+        when(channelQueryDomainApi.listChannelBans(any()))
                 .thenReturn(List.of(new ChannelBanListItemResult(9L, 1002L, Instant.parse("2026-04-24T12:05:00Z"), "spam", Instant.parse("2026-04-24T12:00:00Z"))));
 
         mockMvc.perform(get("/api/channels/9/bans"))
@@ -67,11 +78,14 @@ class ChannelBansControllerTests {
                 .andExpect(jsonPath("$.items[0].reason").value("spam"));
     }
 
+    /**
+     * 验证 `banChannelMemberV1` 在 `returnsPayload` 场景下的测试契约。
+     */
     @Test
     @DisplayName("ban channel member v1 path returns payload")
     void banChannelMemberV1_returnsPayload() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelGovernanceApplicationService.banChannelMember(any()))
+        when(channelGovernanceDomainApi.banChannelMemberUntil(any()))
                 .thenReturn(new ChannelBanResult(9L, 1002L, 1001L, "spam", Instant.parse("2026-04-24T13:00:00Z"), Instant.parse("2026-04-24T12:00:00Z"), null));
 
         mockMvc.perform(put("/api/channels/9/bans/1002")
@@ -84,6 +98,9 @@ class ChannelBansControllerTests {
                 .andExpect(jsonPath("$.cid").value("9"))
                 .andExpect(jsonPath("$.uid").value("1002"))
                 .andExpect(jsonPath("$.reason").value("spam"));
+        ArgumentCaptor<BanChannelMemberUntilCommand> commandCaptor = ArgumentCaptor.forClass(BanChannelMemberUntilCommand.class);
+        verify(channelGovernanceDomainApi).banChannelMemberUntil(commandCaptor.capture());
+        assertEquals(1776819600000L, commandCaptor.getValue().untilEpochMillis());
     }
 
     private MockMvc authenticatedMockMvc() {
@@ -96,9 +113,9 @@ class ChannelBansControllerTests {
 
     private ChannelController controller() {
         return new ChannelController(
-                channelQueryApplicationService,
-                channelLifecycleApplicationService,
-                channelGovernanceApplicationService,
+                channelQueryDomainApi,
+                channelLifecycleDomainApi,
+                channelGovernanceDomainApi,
                 authRequestContext
         );
     }
@@ -109,6 +126,10 @@ class ChannelBansControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
 

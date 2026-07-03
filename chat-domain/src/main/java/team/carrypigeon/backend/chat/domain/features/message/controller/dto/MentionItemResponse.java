@@ -14,6 +14,10 @@ public record MentionItemResponse(
         @Schema(description = "创建时间", example = "1700000000000") long createdAt,
         @Schema(description = "是否已读", example = "false") boolean read
 ) {
+    /**
+     * 提及列表项中的目标摘要。
+     * 职责：表达当前 mention 指向的目标类型与目标账号。
+     */
     public record MentionTargetResponse(
             @Schema(description = "目标类型", example = "user") String type,
             @Schema(description = "目标用户 ID", example = "123") String uid

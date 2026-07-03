@@ -68,6 +68,10 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     List<UnreadProjection> listUnreadsByAccountId(@Param("accountId") long accountId);
 
+    /**
+     * 未读统计查询投影。
+     * 职责：承接 MyBatis 聚合查询结果，避免把 SQL 聚合字段泄漏到数据库 API 契约。
+     */
     interface UnreadProjection {
         long getChannelId();
         long getUnreadCount();

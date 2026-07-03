@@ -5,33 +5,35 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MessageSenderResponse;
-import team.carrypigeon.backend.chat.domain.features.user.application.command.GetUserProfileByAccountIdCommand;
-import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import org.springframework.stereotype.Component;
 
 /**
  * v1 消息响应映射器。
  * 职责：统一把消息应用层结果转换为 docs/t 对齐的公共消息响应。
  * 边界：只负责 HTTP 出站映射，不承载消息业务校验。
  */
+@Component
 public class ChannelMessageV1ResponseMapper {
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {
     };
 
-    private final UserProfileApplicationService userProfileApplicationService;
+    private final UserProfileApi userProfileDomainApi;
     private final JsonProvider jsonProvider;
 
     public ChannelMessageV1ResponseMapper(
-            UserProfileApplicationService userProfileApplicationService,
+            UserProfileApi userProfileDomainApi,
             JsonProvider jsonProvider
     ) {
-        this.userProfileApplicationService = userProfileApplicationService;
+        this.userProfileDomainApi = userProfileDomainApi;
         this.jsonProvider = jsonProvider;
     }
 
@@ -44,8 +46,8 @@ public class ChannelMessageV1ResponseMapper {
      * @return v1 消息响应
      */
     public ChannelMessageV1Response toResponse(ChannelMessageResult result) {
-        UserProfileResult sender = userProfileApplicationService == null ? null
-                : userProfileApplicationService.getUserProfileByAccountId(new GetUserProfileByAccountIdCommand(result.senderId()));
+        UserProfileResult sender = userProfileDomainApi == null ? null
+                : userProfileDomainApi.getUserProfileByAccountId(new GetUserProfileByAccountIdCommand(result.senderId()));
         return new ChannelMessageV1Response(
                 Ids.toString(result.messageId()),
                 Ids.toString(result.channelId()),

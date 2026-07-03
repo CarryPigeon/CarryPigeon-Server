@@ -45,6 +45,12 @@ public class MessagePluginGovernanceProperties {
         return systemEnabled;
     }
 
+    /**
+     * 设置 system 消息插件是否启用。
+     * 影响范围：关闭后系统消息类型不会注册到消息插件目录。
+     *
+     * @param systemEnabled true 表示启用 system 消息插件
+     */
     public void setSystemEnabled(boolean systemEnabled) {
         this.systemEnabled = systemEnabled;
     }
@@ -53,6 +59,12 @@ public class MessagePluginGovernanceProperties {
         return fileEnabled;
     }
 
+    /**
+     * 设置 file 消息插件是否启用。
+     * 影响范围：关闭后文件消息类型不会注册到消息插件目录。
+     *
+     * @param fileEnabled true 表示启用 file 消息插件
+     */
     public void setFileEnabled(boolean fileEnabled) {
         this.fileEnabled = fileEnabled;
     }
@@ -61,6 +73,12 @@ public class MessagePluginGovernanceProperties {
         return voiceEnabled;
     }
 
+    /**
+     * 设置 voice 消息插件是否启用。
+     * 影响范围：关闭后语音消息类型不会注册到消息插件目录。
+     *
+     * @param voiceEnabled true 表示启用 voice 消息插件
+     */
     public void setVoiceEnabled(boolean voiceEnabled) {
         this.voiceEnabled = voiceEnabled;
     }

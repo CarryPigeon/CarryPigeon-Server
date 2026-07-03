@@ -22,28 +22,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.CreateChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.DeleteChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.DemoteChannelAdminCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.KickChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.PromoteChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.UpdateChannelProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.BanChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.command.UnbanChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.server.application.command.UpdateNotificationChannelPreferenceCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanListItemResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.DiscoverChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.ChannelMemberResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelBansQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.application.query.DiscoverChannelsQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.application.query.ListChannelMembersQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelGovernanceApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelLifecycleApplicationService;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.NotificationPreferenceApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.CreateChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DeleteChannelCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DemoteChannelAdminCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.KickChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.PromoteChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UpdateChannelProfileCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.BanChannelMemberUntilCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UnbanChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.DiscoverChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMemberResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelBansQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.query.DiscoverChannelsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelMembersQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelGovernanceApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.BanChannelMemberV1Request;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelBanV1Response;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelBanListItemResponse;
@@ -74,36 +74,36 @@ public class ChannelController {
 
     private static final String DISCOVER_CURSOR_SCOPE = "channel_discover";
 
-    private final ChannelQueryApplicationService channelQueryApplicationService;
-    private final ChannelLifecycleApplicationService channelLifecycleApplicationService;
-    private final ChannelGovernanceApplicationService channelGovernanceApplicationService;
-    private final NotificationPreferenceApplicationService notificationPreferenceApplicationService;
+    private final ChannelQueryApi channelQueryDomainApi;
+    private final ChannelLifecycleApi channelLifecycleDomainApi;
+    private final ChannelGovernanceApi channelGovernanceDomainApi;
+    private final NotificationPreferenceApi notificationPreferenceDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
     public ChannelController(
-            ChannelQueryApplicationService channelQueryApplicationService,
-            ChannelLifecycleApplicationService channelLifecycleApplicationService,
-            ChannelGovernanceApplicationService channelGovernanceApplicationService,
-            NotificationPreferenceApplicationService notificationPreferenceApplicationService,
+            ChannelQueryApi channelQueryDomainApi,
+            ChannelLifecycleApi channelLifecycleDomainApi,
+            ChannelGovernanceApi channelGovernanceDomainApi,
+            NotificationPreferenceApi notificationPreferenceDomainApi,
             RequestAuthenticationContext authRequestContext
     ) {
-        this.channelQueryApplicationService = channelQueryApplicationService;
-        this.channelLifecycleApplicationService = channelLifecycleApplicationService;
-        this.channelGovernanceApplicationService = channelGovernanceApplicationService;
-        this.notificationPreferenceApplicationService = notificationPreferenceApplicationService;
+        this.channelQueryDomainApi = channelQueryDomainApi;
+        this.channelLifecycleDomainApi = channelLifecycleDomainApi;
+        this.channelGovernanceDomainApi = channelGovernanceDomainApi;
+        this.notificationPreferenceDomainApi = notificationPreferenceDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
     public ChannelController(
-            ChannelQueryApplicationService channelQueryApplicationService,
-            ChannelLifecycleApplicationService channelLifecycleApplicationService,
-            ChannelGovernanceApplicationService channelGovernanceApplicationService,
+            ChannelQueryApi channelQueryDomainApi,
+            ChannelLifecycleApi channelLifecycleDomainApi,
+            ChannelGovernanceApi channelGovernanceDomainApi,
             RequestAuthenticationContext authRequestContext
     ) {
         this(
-                channelQueryApplicationService,
-                channelLifecycleApplicationService,
-                channelGovernanceApplicationService,
+                channelQueryDomainApi,
+                channelLifecycleDomainApi,
+                channelGovernanceDomainApi,
                 null,
                 authRequestContext
         );
@@ -119,7 +119,7 @@ public class ChannelController {
     @Operation(summary = "获取频道列表", description = "返回当前登录用户当前可见的频道列表。")
     public ChannelListResponse listChannels(HttpServletRequest request) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        return new ChannelListResponse(channelQueryApplicationService.listChannels(principal.accountId()).stream()
+        return new ChannelListResponse(channelQueryDomainApi.listChannels(principal.accountId()).stream()
                 .map(this::toChannelSummaryResponse)
                 .toList());
     }
@@ -131,7 +131,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        return toChannelSummaryResponse(channelQueryApplicationService.getChannelById(principal.accountId(), channelId));
+        return toChannelSummaryResponse(channelQueryDomainApi.getChannelById(principal.accountId(), channelId));
     }
 
     @GetMapping("/discover")
@@ -143,7 +143,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        List<DiscoverChannelResult> items = channelQueryApplicationService.discoverChannels(new DiscoverChannelsQuery(
+        List<DiscoverChannelResult> items = channelQueryDomainApi.discoverChannels(new DiscoverChannelsQuery(
                 principal.accountId(),
                 keyword,
                 OpaqueCursorCodec.decode(DISCOVER_CURSOR_SCOPE, cursor),
@@ -170,7 +170,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        ChannelResult result = channelLifecycleApplicationService.createChannel(new CreateChannelCommand(
+        ChannelResult result = channelLifecycleDomainApi.createChannel(new CreateChannelCommand(
                 principal.accountId(),
                 body.name(),
                 body.brief(),
@@ -186,7 +186,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelLifecycleApplicationService.deleteChannel(new DeleteChannelCommand(principal.accountId(), channelId));
+        channelLifecycleDomainApi.deleteChannel(new DeleteChannelCommand(principal.accountId(), channelId));
         return ResponseEntity.noContent().build();
     }
 
@@ -198,7 +198,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelLifecycleApplicationService.updateChannelProfile(new UpdateChannelProfileCommand(
+        channelLifecycleDomainApi.updateChannelProfile(new UpdateChannelProfileCommand(
                 principal.accountId(),
                 channelId,
                 body.name(),
@@ -225,7 +225,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        List<ChannelMemberResult> result = channelQueryApplicationService.listChannelMembers(
+        List<ChannelMemberResult> result = channelQueryDomainApi.listChannelMembers(
                 new ListChannelMembersQuery(principal.accountId(), channelId)
         );
         return new ChannelMemberListResponse(result.stream().map(this::toChannelMemberV1Response).toList());
@@ -239,7 +239,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelGovernanceApplicationService.promoteChannelMember(
+        channelGovernanceDomainApi.promoteChannelMember(
                 new PromoteChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
@@ -253,7 +253,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelGovernanceApplicationService.demoteChannelAdmin(
+        channelGovernanceDomainApi.demoteChannelAdmin(
                 new DemoteChannelAdminCommand(principal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
@@ -275,7 +275,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelGovernanceApplicationService.kickChannelMember(
+        channelGovernanceDomainApi.kickChannelMember(
                 new KickChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
@@ -290,16 +290,13 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        long durationSeconds = body.until() == null
-                ? 0L
-                : Math.max(1L, (body.until() - java.time.Instant.now().toEpochMilli()) / 1000L);
-        ChannelBanResult result = channelGovernanceApplicationService.banChannelMember(
-                new BanChannelMemberCommand(
+        ChannelBanResult result = channelGovernanceDomainApi.banChannelMemberUntil(
+                new BanChannelMemberUntilCommand(
                         principal.accountId(),
                         channelId,
                         targetAccountId,
                         body.reason(),
-                        body.until() == null ? null : durationSeconds
+                        body.until()
                 )
         );
         return ResponseEntity.ok(new ChannelBanV1Response(
@@ -322,7 +319,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelGovernanceApplicationService.unbanChannelMember(
+        channelGovernanceDomainApi.unbanChannelMember(
                 new UnbanChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
@@ -335,7 +332,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        return new ChannelBanListResponse(channelQueryApplicationService.listChannelBans(
+        return new ChannelBanListResponse(channelQueryDomainApi.listChannelBans(
                 new ListChannelBansQuery(principal.accountId(), channelId)
         )
                 .stream()
@@ -350,7 +347,7 @@ public class ChannelController {
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        notificationPreferenceApplicationService.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(
+        notificationPreferenceDomainApi.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(
                 principal.accountId(),
                 channelId,
                 body.mode(),

@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import io.netty.util.AttributeKey;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 
 /**
  * 实时通道会话上下文。

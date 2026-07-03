@@ -79,6 +79,9 @@ class MessageAttachmentPayloadResolverTests {
         assertEquals("not-json", resolved);
     }
 
+    /**
+     * 验证 `resolve` 在 `shareKeyPayload` 条件下满足 `keepsStableExternalFields` 的测试契约。
+     */
     @Test
     @DisplayName("resolve share key payload keeps stable external fields")
     void resolve_shareKeyPayload_keepsStableExternalFields() {
@@ -126,6 +129,10 @@ class MessageAttachmentPayloadResolverTests {
         };
     }
 
+    /**
+     * `TestObjectStorageService` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class TestObjectStorageService implements ObjectStorageService {
 
         @Override

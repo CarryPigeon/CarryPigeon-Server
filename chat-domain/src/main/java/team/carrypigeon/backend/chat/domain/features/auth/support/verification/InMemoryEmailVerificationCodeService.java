@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
@@ -97,6 +97,13 @@ public class InMemoryEmailVerificationCodeService implements EmailVerificationCo
                 + "This code will expire in 10 minutes.";
     }
 
+    /**
+     * 内存验证码条目。
+     * 职责：保存验证码明文和过期时间，仅用于本地内存实现的短期验证流程。
+     *
+     * @param code 六位邮箱验证码
+     * @param expiresAt 验证码过期时间
+     */
     private record EmailCodeEntry(String code, Instant expiresAt) {
     }
 }

@@ -71,16 +71,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
                             .object(command.objectKey())
                             .build()
             );
-            return Optional.of(StorageObject.withContent(
+            return Optional.of(StorageObject.metadata(
                     command.objectKey(),
                     stat.contentType(),
-                    stat.size(),
-                    minioClient.getObject(
-                            io.minio.GetObjectArgs.builder()
-                                    .bucket(properties.bucket())
-                                    .object(command.objectKey())
-                                    .build()
-                    )
+                    stat.size()
             ));
         } catch (ErrorResponseException ex) {
             if ("NoSuchKey".equalsIgnoreCase(ex.errorResponse().code()) || "NoSuchObject".equalsIgnoreCase(ex.errorResponse().code())) {

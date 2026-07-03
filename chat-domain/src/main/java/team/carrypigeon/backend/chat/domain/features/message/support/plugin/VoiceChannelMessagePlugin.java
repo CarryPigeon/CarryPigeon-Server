@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.plugin;
 
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.ChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.VoiceChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.ChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.VoiceChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.attachment.MessageAttachmentObjectKeyPolicy;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -143,6 +143,17 @@ public class VoiceChannelMessagePlugin implements ChannelMessagePlugin {
                 .orElse("");
     }
 
+    /**
+     * 语音消息 payload。
+     * 职责：保存语音对象键、媒体元数据、时长和可选转写文本，作为 voice 消息类型的稳定结构化载荷。
+     *
+     * @param objectKey 对象存储键
+     * @param filename 文件名
+     * @param mimeType 语音 MIME 类型
+     * @param size 文件大小，单位字节
+     * @param durationMillis 语音时长，单位毫秒
+     * @param transcript 语音转写文本，可为空
+     */
     private record VoiceMessagePayload(
             String objectKey,
             String filename,

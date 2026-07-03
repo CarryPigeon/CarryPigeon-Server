@@ -83,6 +83,9 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
         assertSame(cause, exception.getCause());
     }
 
+    /**
+     * 验证 `listQuery` 在 `mapsEntitiesToRecords` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list query maps entities to records")
     void listQuery_mapsEntitiesToRecords() {

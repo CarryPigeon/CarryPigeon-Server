@@ -15,10 +15,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelPin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageSenderSnapshot;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -179,6 +179,9 @@ class NettyMessageRealtimePublisherTests {
         assertTrue(frame.text().contains("\"mid\":\"5010\""));
     }
 
+    /**
+     * 验证 `publishUpdate` 在 `editedMessage` 条件下满足 `usesMessageUpdatedEventType` 的测试契约。
+     */
     @Test
     @DisplayName("publish update edited message uses message updated event type")
     void publishUpdate_editedMessage_usesMessageUpdatedEventType() {
@@ -225,6 +228,9 @@ class NettyMessageRealtimePublisherTests {
         assertEquals("5000", root.path("data").path("payload").path("message").path("forwarded_from").path("mid").asText());
     }
 
+    /**
+     * 验证 `publishPin` 在 `emitsMessagePinnedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish pin emits message pinned event")
     void publishPin_emitsMessagePinnedEvent() {
@@ -240,7 +246,7 @@ class NettyMessageRealtimePublisherTests {
                 new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
-        publisher.publishPin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), List.of(1001L));
+        publisher.publishPin(new MessageChannelBoundary.MessageChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -251,6 +257,9 @@ class NettyMessageRealtimePublisherTests {
         assertEquals("5001", root.path("data").path("payload").path("mid").asText());
     }
 
+    /**
+     * 验证 `publishUnpin` 在 `emitsMessageUnpinnedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish unpin emits message unpinned event")
     void publishUnpin_emitsMessageUnpinnedEvent() {
@@ -266,7 +275,7 @@ class NettyMessageRealtimePublisherTests {
                 new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider)
         );
 
-        publisher.publishUnpin(new ChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), 1001L, 1776816600000L, List.of(1001L));
+        publisher.publishUnpin(new MessageChannelBoundary.MessageChannelPin(7001L, 9L, 5001L, 1001L, "important", Instant.parse("2026-04-22T00:09:00Z")), 1001L, 1776816600000L, List.of(1001L));
 
         TextWebSocketFrame frame = channel.readOutbound();
 
@@ -277,6 +286,9 @@ class NettyMessageRealtimePublisherTests {
         assertEquals("1001", root.path("data").path("payload").path("unpinned_by_uid").asText());
     }
 
+    /**
+     * 验证 `publishMentionCreated` 在 `emitsMentionCreatedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish mention created emits mention created event")
     void publishMentionCreated_emitsMentionCreatedEvent() {
@@ -333,6 +345,10 @@ class NettyMessageRealtimePublisherTests {
         };
     }
 
+    /**
+     * `TestObjectStorageService` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class TestObjectStorageService implements ObjectStorageService {
 
         private PresignedUrl presignedUrl = new PresignedUrl(

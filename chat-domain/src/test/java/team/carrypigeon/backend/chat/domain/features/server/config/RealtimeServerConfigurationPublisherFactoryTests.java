@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.server.config;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;

@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.features.file.application.dto.FileUploadGrantResult;
-import team.carrypigeon.backend.chat.domain.features.file.application.service.FileApplicationService;
+import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.FileUploadResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 
 /**
  * 文件 HTTP 入口。
@@ -38,27 +38,37 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.Storage
 @Tag(name = "文件", description = "文件上传申请与下载能力。")
 public class FileController {
 
-    private final FileApplicationService fileApplicationService;
+    private final FileTransferApi fileTransferDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
-    public FileController(FileApplicationService fileApplicationService, RequestAuthenticationContext authRequestContext) {
-        this.fileApplicationService = fileApplicationService;
+    /**
+     * 创建文件 HTTP 入口。
+     *
+     * @param fileTransferDomainApi 文件传输领域 API
+     * @param authRequestContext 请求认证上下文
+     */
+    public FileController(FileTransferApi fileTransferDomainApi, RequestAuthenticationContext authRequestContext) {
+        this.fileTransferDomainApi = fileTransferDomainApi;
         this.authRequestContext = authRequestContext;
     }
 
+    /**
+     * 申请文件上传授权。
+     * 输入：文件名、MIME 类型和声明大小。
+     * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
+     *
+     * @param request 上传申请请求
+     * @param servletRequest 当前 HTTP 请求，用于读取认证主体
+     * @return 文件上传授权响应
+     */
     @PostMapping("/uploads")
     @Operation(summary = "申请文件上传", description = "生成同源上传入口与稳定 share_key。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回上传授权结果")
     })
-    /**
-     * 申请文件上传授权。
-     * 输入：文件名、MIME 类型和声明大小。
-     * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
-     */
     public FileUploadResponse createUpload(@Valid @RequestBody CreateFileUploadRequest request, HttpServletRequest servletRequest) {
         var principal = authRequestContext.requirePrincipal(servletRequest);
-        FileUploadGrantResult result = fileApplicationService.createUploadGrant(
+        FileUploadGrantResult result = fileTransferDomainApi.createUploadGrant(
                 principal.accountId(),
                 request.filename(),
                 request.mimeType(),
@@ -70,7 +80,7 @@ public class FileController {
                 new FileUploadResponse.UploadResponse(
                         "PUT",
                         result.uploadUrl(),
-                        fileApplicationService.uploadHeaders(),
+                        fileTransferDomainApi.uploadHeaders(),
                         result.expiresAt().toEpochMilli()
                 )
         );
@@ -80,12 +90,16 @@ public class FileController {
      * 通过同源 HTTP PUT 写入文件内容。
      * 副作用：会把请求体内容写入对象存储。
      * 失败：当请求体读取失败时返回统一业务失败异常。
+     *
+     * @param shareKey 上传授权 share key
+     * @param request 当前 HTTP 请求，提供认证主体和上传内容流
+     * @return HTTP 204
      */
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
     public ResponseEntity<Void> uploadFile(@PathVariable String shareKey, HttpServletRequest request) {
         var principal = authRequestContext.requirePrincipal(request);
         try {
-            fileApplicationService.uploadFile(
+            fileTransferDomainApi.uploadFile(
                     principal.accountId(),
                     shareKey,
                     request.getContentType(),
@@ -98,34 +112,37 @@ public class FileController {
         }
     }
 
+    /**
+     * 按 `share_key` 下载文件。
+     * 约束：普通文件要求登录；服务端头像允许匿名访问。
+     * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
+     *
+     * @param shareKey 下载 share key
+     * @param request 当前 HTTP 请求，用于需要认证的下载场景
+     * @return 文件内容响应或下载重定向响应
+     */
     @GetMapping("/download/{shareKey}")
     @Operation(summary = "获取文件下载", description = "按 share_key 返回下载入口。")
     @ApiResponses({
             @ApiResponse(responseCode = "302", description = "重定向到对象下载地址"),
             @ApiResponse(responseCode = "404", description = "文件不存在")
     })
-    /**
-     * 按 `share_key` 下载文件。
-     * 约束：普通文件要求登录；服务端头像允许匿名访问。
-     * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
-     */
     public ResponseEntity<?> download(@PathVariable String shareKey, HttpServletRequest request) {
         Long accountId = null;
-        if (!fileApplicationService.isServerAvatar(shareKey)) {
+        if (!fileTransferDomainApi.isServerAvatar(shareKey)) {
             accountId = authRequestContext.requirePrincipal(request).accountId();
         }
-        StorageObject storageObject = fileApplicationService.findStorageObject(accountId, shareKey)
+        FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(accountId, shareKey)
                 .orElseThrow(() -> ProblemException.notFound("file does not exist"));
-        if (storageObject.content().isPresent()) {
+        if (downloadResult.content().isPresent()) {
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, storageObject.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : storageObject.contentType())
-                    .header(HttpHeaders.CONTENT_LENGTH, Long.toString(storageObject.size()))
-                    .body(new InputStreamResource(storageObject.content().orElseThrow()));
+                    .header(HttpHeaders.CONTENT_TYPE, downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType())
+                    .header(HttpHeaders.CONTENT_LENGTH, Long.toString(downloadResult.size()))
+                    .body(new InputStreamResource(downloadResult.content().orElseThrow()));
         }
-        var presignedUrl = fileApplicationService.createDownloadUrl(accountId, shareKey);
         return ResponseEntity.status(HttpStatus.FOUND)
-                .header(HttpHeaders.LOCATION, presignedUrl.url().toString())
-                .header(HttpHeaders.CONTENT_TYPE, storageObject.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : storageObject.contentType())
+                .header(HttpHeaders.LOCATION, downloadResult.redirectUrl().orElseThrow().toString())
+                .header(HttpHeaders.CONTENT_TYPE, downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType())
                 .build();
     }
 }

@@ -20,6 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag("contract")
 class RealtimeChannelHandlerMessageDispatchTests {
 
+    /**
+     * 验证 `channelRead` 在 `ping` 条件下满足 `returnsPong` 的测试契约。
+     */
     @Test
     @DisplayName("ping command returns pong frame")
     void channelRead_ping_returnsPong() {
@@ -35,6 +38,9 @@ class RealtimeChannelHandlerMessageDispatchTests {
         assertTrue(frame.text().contains("\"type\":\"pong\""));
     }
 
+    /**
+     * 验证 `channelRead` 在 `authWithStaleResume` 条件下满足 `returnsResumeFailed` 的测试契约。
+     */
     @Test
     @DisplayName("auth with stale resume returns resume failed")
     void channelRead_authWithStaleResume_returnsResumeFailed() {
@@ -53,6 +59,9 @@ class RealtimeChannelHandlerMessageDispatchTests {
         assertTrue(frame.text().contains("event_too_old"));
     }
 
+    /**
+     * 验证 `channelRead` 在 `authResume` 条件下满足 `onlyReplaysEventsForCurrentAccount` 的测试契约。
+     */
     @Test
     @DisplayName("auth resume only replays events for current account")
     void channelRead_authResume_onlyReplaysEventsForCurrentAccount() {
@@ -72,6 +81,9 @@ class RealtimeChannelHandlerMessageDispatchTests {
         assertNull(sender.readOutbound());
     }
 
+    /**
+     * 验证 `channelRead` 在 `unsupportedCommandAfterAuth` 条件下满足 `returnsValidationError` 的测试契约。
+     */
     @Test
     @DisplayName("unsupported command after auth returns validation error")
     void channelRead_unsupportedCommandAfterAuth_returnsValidationError() {
@@ -93,6 +105,9 @@ class RealtimeChannelHandlerMessageDispatchTests {
         assertTrue(frame.text().contains("\"reason\":\"validation_failed\""));
     }
 
+    /**
+     * 验证 `channelRead` 在 `sendChannelMessageAfterAuth` 条件下满足 `publishesChannelMessageFrame` 的测试契约。
+     */
     @Test
     @DisplayName("send channel message after auth publishes channel message frame")
     void channelRead_sendChannelMessageAfterAuth_publishesChannelMessageFrame() {

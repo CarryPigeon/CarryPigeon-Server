@@ -16,13 +16,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.application.dto.ChannelPinResult;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageModerationApplicationService;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageQueryApplicationService;
-import team.carrypigeon.backend.chat.domain.features.user.application.dto.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.application.service.UserProfileApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelPinResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelPinApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -35,25 +31,23 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `ChannelPinsController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class ChannelPinsControllerTests {
 
     private static final String PIN_CURSOR_SCOPE = "channel_pins";
 
-    private MessageDeliveryApplicationService messageDeliveryApplicationService;
-    private MessageModerationApplicationService messageModerationApplicationService;
-    private MessageQueryApplicationService messageQueryApplicationService;
-    private UserProfileApplicationService userProfileApplicationService;
+    private ChannelPinApi channelPinDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        messageDeliveryApplicationService = mock(MessageDeliveryApplicationService.class);
-        messageModerationApplicationService = mock(MessageModerationApplicationService.class);
-        messageQueryApplicationService = mock(MessageQueryApplicationService.class);
-        userProfileApplicationService = mock(UserProfileApplicationService.class);
+        channelPinDomainApi = mock(ChannelPinApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(controller())
                 .setMessageConverters(snakeCaseConverter())
@@ -61,11 +55,14 @@ class ChannelPinsControllerTests {
                 .build();
     }
 
+    /**
+     * 验证 `pinChannelMessage` 在 `returnsPinnedItem` 场景下的测试契约。
+     */
     @Test
     @DisplayName("pin channel message returns pinned item")
     void pinChannelMessage_returnsPinnedItem() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageModerationApplicationService.pinChannelMessage(any()))
+        when(channelPinDomainApi.pinChannelMessage(any()))
                 .thenReturn(new ChannelPinResult(7001L, 9L, 5001L, 1001L, Instant.parse("2026-04-24T12:00:00Z"), "重要通知"));
 
         mockMvc.perform(post("/api/channels/9/pins/5001")
@@ -79,21 +76,27 @@ class ChannelPinsControllerTests {
                 .andExpect(jsonPath("$.pinned_by_uid").value("1001"));
     }
 
+    /**
+     * 验证 `unpinChannelMessage` 在 `returns204` 场景下的测试契约。
+     */
     @Test
     @DisplayName("unpin channel message returns 204")
     void unpinChannelMessage_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(messageModerationApplicationService).unpinChannelMessage(any());
+        doNothing().when(channelPinDomainApi).unpinChannelMessage(any());
 
         mockMvc.perform(delete("/api/channels/9/pins/5001"))
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * 验证 `listChannelPins` 在 `returnsCursorPage` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list channel pins returns cursor page")
     void listChannelPins_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.listChannelPins(any()))
+        when(channelPinDomainApi.listChannelPins(any()))
                 .thenReturn(List.of(new ChannelPinResult(7001L, 9L, 5001L, 1001L, Instant.parse("2026-04-24T12:00:00Z"), "重要通知")));
 
         mockMvc.perform(get("/api/channels/9/pins?limit=20"))
@@ -103,11 +106,14 @@ class ChannelPinsControllerTests {
                 .andExpect(jsonPath("$.has_more").value(false));
     }
 
+    /**
+     * 验证 `listChannelPins` 在 `acceptsOpaqueCursor` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list channel pins accepts opaque cursor")
     void listChannelPins_acceptsOpaqueCursor() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(messageQueryApplicationService.listChannelPins(any()))
+        when(channelPinDomainApi.listChannelPins(any()))
                 .thenReturn(List.of(new ChannelPinResult(7001L, 9L, 5001L, 1001L, Instant.parse("2026-04-24T12:00:00Z"), "重要通知")));
 
         mockMvc.perform(get("/api/channels/9/pins")
@@ -124,12 +130,9 @@ class ChannelPinsControllerTests {
                 .build();
     }
 
-    private ChannelMessageController controller() {
-        return new ChannelMessageController(
-                messageDeliveryApplicationService,
-                messageModerationApplicationService,
-                messageQueryApplicationService,
-                userProfileApplicationService,
+    private ChannelPinsController controller() {
+        return new ChannelPinsController(
+                channelPinDomainApi,
                 authRequestContext
         );
     }
@@ -140,6 +143,10 @@ class ChannelPinsControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
 

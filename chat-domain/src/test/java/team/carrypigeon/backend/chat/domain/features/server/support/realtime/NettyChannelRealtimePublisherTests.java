@@ -27,6 +27,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @Tag("contract")
 class NettyChannelRealtimePublisherTests {
 
+    /**
+     * 验证 `publishReadStateUpdated` 在 `emitsReadStateUpdatedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish read state updated emits read state updated event")
     void publishReadStateUpdated_emitsReadStateUpdatedEvent() {
@@ -52,6 +55,9 @@ class NettyChannelRealtimePublisherTests {
         assertEquals("5001", root.path("data").path("payload").path("last_read_mid").asText());
     }
 
+    /**
+     * 验证 `publishChannelChanged` 在 `emitsChannelChangedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish channel changed emits channel changed event")
     void publishChannelChanged_emitsChannelChangedEvent() {
@@ -78,6 +84,9 @@ class NettyChannelRealtimePublisherTests {
         assertEquals("refresh", root.path("data").path("payload").path("hint").asText());
     }
 
+    /**
+     * 验证 `publishChannelsChanged` 在 `emitsChannelsChangedEvent` 场景下的测试契约。
+     */
     @Test
     @DisplayName("publish channels changed emits channels changed event")
     void publishChannelsChanged_emitsChannelsChangedEvent() {

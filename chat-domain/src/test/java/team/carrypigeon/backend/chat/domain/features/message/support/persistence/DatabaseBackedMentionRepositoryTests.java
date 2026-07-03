@@ -17,6 +17,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Tag("contract")
 class DatabaseBackedMentionRepositoryTests {
 
+    /**
+     * 验证 `listByAccountId` 在 `mapsDatabaseRecordsToDomainMentions` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list by account id maps database records to domain mentions")
     void listByAccountId_mapsDatabaseRecordsToDomainMentions() {
@@ -36,6 +39,9 @@ class DatabaseBackedMentionRepositoryTests {
         assertEquals("user", mention.targetType());
     }
 
+    /**
+     * 验证 `markAsRead` 在 `delegatesToDatabaseService` 场景下的测试契约。
+     */
     @Test
     @DisplayName("mark as read delegates to database service")
     void markAsRead_delegatesToDatabaseService() {
@@ -50,6 +56,9 @@ class DatabaseBackedMentionRepositoryTests {
         assertEquals(11L, databaseService.markAsReadMentionId);
     }
 
+    /**
+     * 验证 `save` 在 `delegatesToDatabaseService` 场景下的测试契约。
+     */
     @Test
     @DisplayName("save delegates to database service")
     void save_delegatesToDatabaseService() {
@@ -62,6 +71,9 @@ class DatabaseBackedMentionRepositoryTests {
         assertEquals(5002L, databaseService.insertedRecord.messageId());
     }
 
+    /**
+     * 验证 `markAllAsRead` 在 `delegatesToDatabaseService` 场景下的测试契约。
+     */
     @Test
     @DisplayName("mark all as read delegates to database service")
     void markAllAsRead_delegatesToDatabaseService() {
@@ -77,6 +89,10 @@ class DatabaseBackedMentionRepositoryTests {
         assertEquals(9L, databaseService.markAllChannelId);
     }
 
+    /**
+     * `RecordingMentionDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingMentionDatabaseService implements MentionDatabaseService {
         private long accountId;
         private Long cursorMentionId;

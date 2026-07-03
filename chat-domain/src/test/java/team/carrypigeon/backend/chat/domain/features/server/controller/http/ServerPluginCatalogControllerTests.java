@@ -13,11 +13,13 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.ChannelMessagePluginRegistry;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessagePluginCatalogDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.MessageTypePluginRegistrationSupport;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
-import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -48,20 +50,23 @@ class ServerPluginCatalogControllerTests {
                         new TextChannelMessagePlugin()
                 )
         ));
-        ServerApplicationService service = new ServerApplicationService(
+        ServerEntranceApi service = new ServerEntranceDomainApi(
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
-                registry,
-                new RealtimeServerProperties(true, "127.0.0.1", 28080, "/api/ws", 1, 0),
+                new RealtimeDiscoverySettings(true, "127.0.0.1", 28080, "/api/ws"),
                 new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
                 java.util.List.of("mc-bind")
         );
-        mockMvc = MockMvcBuilders.standaloneSetup(new ServerPluginCatalogController(registry, service))
+        mockMvc = MockMvcBuilders.standaloneSetup(
+                        new ServerPluginCatalogController(new MessagePluginCatalogDomainApi(registry), service))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `getPluginCatalog` 在 `returnsPublicPlugins` 场景下的测试契约。
+     */
     @Test
     @DisplayName("get plugin catalog returns public plugins")
     void getPluginCatalog_returnsPublicPlugins() throws Exception {

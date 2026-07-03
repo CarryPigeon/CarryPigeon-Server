@@ -4,9 +4,9 @@ import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin.ChannelMessageBuildContext;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin.ChannelMessageBuildContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * TextChannelMessagePlugin 契约测试。
  * 职责：验证文本消息插件的正文归一化与基础校验语义。
- * 边界：只验证 text 插件自身规则，不覆盖消息应用服务编排。
+ * 边界：只验证 text 插件自身规则，不覆盖消息领域服务编排。
  */
 @Tag("contract")
 class TextChannelMessagePluginTests {

@@ -6,19 +6,20 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.LoginCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.application.dto.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.application.service.AuthApplicationService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LoginCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UpdateChannelReadStateRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
-import team.carrypigeon.backend.chat.domain.features.message.application.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.application.draft.TextChannelMessageDraft;
-import team.carrypigeon.backend.chat.domain.features.message.application.service.MessageDeliveryApplicationService;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -53,12 +54,13 @@ class MessageAttachmentRegressionTests {
         contextRunner.run(context -> {
             StarterTestRuntimeConfiguration.StarterTestState state = context.getBean(StarterTestRuntimeConfiguration.StarterTestState.class);
             state.reset();
-            AuthApplicationService authApplicationService = context.getBean(AuthApplicationService.class);
+            AuthAccountApi authAccountApi = context.getBean(AuthAccountApi.class);
+            AuthSessionApi authSessionApi = context.getBean(AuthSessionApi.class);
             FileController fileController = context.getBean(FileController.class);
             AuthRequestContext authRequestContext = context.getBean(AuthRequestContext.class);
 
-            authApplicationService.register(new RegisterCommand("carry-storage-user", "strong-pass-9911"));
-            AuthTokenResult loginResult = authApplicationService.login(new LoginCommand("carry-storage-user", "strong-pass-9911"));
+            authAccountApi.register(new RegisterCommand("carry-storage-user", "strong-pass-9911"));
+            AuthTokenResult loginResult = authSessionApi.login(new LoginCommand("carry-storage-user", "strong-pass-9911"));
             long accountId = loginResult.accountId();
 
             MockHttpServletRequest request = new MockHttpServletRequest();
@@ -87,22 +89,23 @@ class MessageAttachmentRegressionTests {
         contextRunner.run(context -> {
             StarterTestRuntimeConfiguration.StarterTestState state = context.getBean(StarterTestRuntimeConfiguration.StarterTestState.class);
             state.reset();
-            AuthApplicationService authApplicationService = context.getBean(AuthApplicationService.class);
+            AuthAccountApi authAccountApi = context.getBean(AuthAccountApi.class);
+            AuthSessionApi authSessionApi = context.getBean(AuthSessionApi.class);
             ChannelMessageController channelMessageController = context.getBean(ChannelMessageController.class);
             ChannelReadStateController channelReadStateController = context.getBean(ChannelReadStateController.class);
-            MessageDeliveryApplicationService messageApplicationService = context.getBean(MessageDeliveryApplicationService.class);
+            ChannelMessagePublishingApi channelMessagePublishingApi = context.getBean(ChannelMessagePublishingApi.class);
             AuthRequestContext authRequestContext = context.getBean(AuthRequestContext.class);
 
-            authApplicationService.register(new RegisterCommand("carry-read-user", "strong-pass-3322"));
-            AuthTokenResult loginResult = authApplicationService.login(new LoginCommand("carry-read-user", "strong-pass-3322"));
+            authAccountApi.register(new RegisterCommand("carry-read-user", "strong-pass-3322"));
+            AuthTokenResult loginResult = authSessionApi.login(new LoginCommand("carry-read-user", "strong-pass-3322"));
             long accountId = loginResult.accountId();
-            authApplicationService.register(new RegisterCommand("carry-read-peer", "strong-pass-4411"));
-            AuthTokenResult peerLoginResult = authApplicationService.login(new LoginCommand("carry-read-peer", "strong-pass-4411"));
+            authAccountApi.register(new RegisterCommand("carry-read-peer", "strong-pass-4411"));
+            AuthTokenResult peerLoginResult = authSessionApi.login(new LoginCommand("carry-read-peer", "strong-pass-4411"));
 
             MockHttpServletRequest request = new MockHttpServletRequest();
             authRequestContext.bind(request, new AuthenticatedPrincipal(accountId, "carry-read-user"));
 
-            messageApplicationService.sendChannelMessage(new SendChannelMessageCommand(
+            channelMessagePublishingApi.sendChannelMessage(new SendChannelMessageCommand(
                     peerLoginResult.accountId(),
                     1L,
                     new TextChannelMessageDraft("未读消息")

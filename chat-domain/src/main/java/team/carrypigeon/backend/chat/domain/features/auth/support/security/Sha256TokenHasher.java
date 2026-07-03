@@ -5,7 +5,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHasher;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**

@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.RequiredGateCheckResult;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.domain.projection.RequiredGateCheckResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.RequiredGateCheckRequest;
 
 /**
@@ -24,10 +24,15 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Requi
 @Tag(name = "Required Gate", description = "登录前置 required 插件检查。")
 public class ServerGateController {
 
-    private final ServerApplicationService serverApplicationService;
+    private final ServerEntranceApi serverEntranceDomainApi;
 
-    public ServerGateController(ServerApplicationService serverApplicationService) {
-        this.serverApplicationService = serverApplicationService;
+    /**
+     * 创建 required gate HTTP 入口。
+     *
+     * @param serverEntranceDomainApi 服务入口领域 API
+     */
+    public ServerGateController(ServerEntranceApi serverEntranceDomainApi) {
+        this.serverEntranceDomainApi = serverEntranceDomainApi;
     }
 
     /**
@@ -42,7 +47,7 @@ public class ServerGateController {
             @ApiResponse(responseCode = "200", description = "返回当前缺失插件列表；空列表表示 gate 已满足")
     })
     public RequiredGateCheckResult check(@Valid @RequestBody RequiredGateCheckRequest request) {
-        List<String> missingPlugins = serverApplicationService.findMissingRequiredPlugins(
+        List<String> missingPlugins = serverEntranceDomainApi.findMissingRequiredPlugins(
                 request.client().installedPlugins() == null
                         ? List.of()
                         : request.client().installedPlugins().stream().map(RequiredGateCheckRequest.InstalledPluginRequest::pluginId).toList()

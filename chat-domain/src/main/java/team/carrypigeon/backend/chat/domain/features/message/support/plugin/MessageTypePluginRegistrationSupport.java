@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.plugin;
 
 import java.util.List;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 

@@ -14,9 +14,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.application.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.application.dto.AuditLogResult;
-import team.carrypigeon.backend.chat.domain.features.channel.application.service.ChannelQueryApplicationService;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.AuditLogResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -26,31 +26,38 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+/**
+ * `AuditLogController` 契约测试。
+ * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ */
 
 @Tag("contract")
 class AuditLogControllerTests {
 
     private static final String AUDIT_CURSOR_SCOPE = "audit_logs";
 
-    private ChannelQueryApplicationService channelQueryApplicationService;
+    private ChannelQueryApi channelQueryDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        channelQueryApplicationService = mock(ChannelQueryApplicationService.class);
+        channelQueryDomainApi = mock(ChannelQueryApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryApplicationService, authRequestContext))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryDomainApi, authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    /**
+     * 验证 `listAuditLogs` 在 `returnsCursorPage` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list audit logs returns cursor page")
     void listAuditLogs_returnsCursorPage() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelQueryApplicationService.listAuditLogs(any())).thenReturn(List.of(
+        when(channelQueryDomainApi.listAuditLogs(any())).thenReturn(List.of(
                 new AuditLogResult("7001", "9", "1001", "channel.ban.create", "{}", 1714305600000L)
         ));
 
@@ -61,11 +68,14 @@ class AuditLogControllerTests {
                 .andExpect(jsonPath("$.has_more").value(false));
     }
 
+    /**
+     * 验证 `listAuditLogs` 在 `acceptsOpaqueCursor` 场景下的测试契约。
+     */
     @Test
     @DisplayName("list audit logs accepts opaque cursor")
     void listAuditLogs_acceptsOpaqueCursor() throws Exception {
         mockMvc = authenticatedMockMvc();
-        when(channelQueryApplicationService.listAuditLogs(any())).thenReturn(List.of(
+        when(channelQueryDomainApi.listAuditLogs(any())).thenReturn(List.of(
                 new AuditLogResult("7001", "9", "1001", "channel.ban.create", "{}", 1714305600000L)
         ));
 
@@ -76,7 +86,7 @@ class AuditLogControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryApplicationService, authRequestContext))
+        return MockMvcBuilders.standaloneSetup(new AuditLogController(channelQueryDomainApi, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -89,6 +99,10 @@ class AuditLogControllerTests {
         return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
+    /**
+     * `BindPrincipalInterceptor` 测试辅助类型。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class BindPrincipalInterceptor implements HandlerInterceptor {
         private final RequestAuthenticationContext authRequestContext;
         private BindPrincipalInterceptor(RequestAuthenticationContext authRequestContext) { this.authRequestContext = authRequestContext; }

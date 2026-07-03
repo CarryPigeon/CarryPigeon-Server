@@ -23,6 +23,10 @@ public record EditChannelMessageRequest(
         Long expectedEditVersion
 ) {
 
+    /**
+     * 编辑消息请求中的提及目标。
+     * 职责：承载调用方希望写入消息正文的 mention 目标。
+     */
     public record MentionTargetRequest(
             @Schema(description = "提及目标类型", example = "user") String type,
             @Schema(description = "提及目标用户 ID", example = "67890") String uid

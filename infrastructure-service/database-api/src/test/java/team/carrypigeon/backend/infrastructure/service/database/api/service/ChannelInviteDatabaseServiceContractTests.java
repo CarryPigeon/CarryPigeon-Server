@@ -110,6 +110,10 @@ class ChannelInviteDatabaseServiceContractTests {
         assertSame(RECORD, service.updatedRecord);
     }
 
+    /**
+     * `MinimalChannelInviteDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static class MinimalChannelInviteDatabaseService implements ChannelInviteDatabaseService {
 
         @Override
@@ -126,6 +130,10 @@ class ChannelInviteDatabaseServiceContractTests {
         }
     }
 
+    /**
+     * `RecordingChannelInviteDatabaseService` 测试替身。
+     * 职责：隔离外部依赖，使测试只验证当前契约边界。
+     */
     private static final class RecordingChannelInviteDatabaseService extends MinimalChannelInviteDatabaseService {
 
         private ChannelInviteRecord insertedRecord;

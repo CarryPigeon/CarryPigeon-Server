@@ -7,8 +7,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.server.application.dto.ServerDiscoveryDocument;
-import team.carrypigeon.backend.chat.domain.features.server.application.service.ServerApplicationService;
+import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 
 /**
  * 服务基础 HTTP 入口。
@@ -20,10 +20,15 @@ import team.carrypigeon.backend.chat.domain.features.server.application.service.
 @Tag(name = "服务基础", description = "服务发现与当前节点在线状态查询能力。")
 public class ServerController {
 
-    private final ServerApplicationService serverApplicationService;
+    private final ServerEntranceApi serverEntranceDomainApi;
 
-    public ServerController(ServerApplicationService serverApplicationService) {
-        this.serverApplicationService = serverApplicationService;
+    /**
+     * 创建服务基础 HTTP 入口。
+     *
+     * @param serverEntranceDomainApi 服务入口领域 API
+     */
+    public ServerController(ServerEntranceApi serverEntranceDomainApi) {
+        this.serverEntranceDomainApi = serverEntranceDomainApi;
     }
 
     /**
@@ -37,6 +42,6 @@ public class ServerController {
             @ApiResponse(responseCode = "200", description = "返回服务发现文档")
     })
     public ServerDiscoveryDocument getServerDiscoveryDocument() {
-        return serverApplicationService.getServerDiscoveryDocument();
+        return serverEntranceDomainApi.getServerDiscoveryDocument();
     }
 }
