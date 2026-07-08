@@ -112,7 +112,7 @@ public class UserProfileController {
      * @return 统一响应包装的用户资料
      */
     @GetMapping("/{accountId}")
-    @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取资料；当前实现仅允许访问当前登录账户自己的资料。")
+    @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取用户公开资料。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回用户公开资料"),
             @ApiResponse(responseCode = "401", description = "未认证"),
@@ -195,7 +195,14 @@ public class UserProfileController {
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         userProfileDomainApi.updateCurrentUserProfile(
-                new UpdateCurrentUserProfileCommand(principal.accountId(), body.username(), body.avatar(), body.brief())
+                new UpdateCurrentUserProfileCommand(
+                        principal.accountId(),
+                        body.username(),
+                        body.avatar(),
+                        body.brief(),
+                        body.sex() == null ? 0L : body.sex(),
+                        body.birthday() == null ? 0L : body.birthday()
+                )
         );
         return ResponseEntity.noContent().build();
     }
@@ -227,7 +234,7 @@ public class UserProfileController {
         } catch (IOException exception) {
             throw ProblemException.fail("background_upload_read_failed", "failed to read background upload content");
         }
-        return new UserBackgroundUploadResponse("api/files/download/" + shareKey);
+        return new UserBackgroundUploadResponse("/api/files/download/" + shareKey);
     }
 
     private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {

@@ -103,8 +103,7 @@ public class UserProfileDomainApi implements UserProfileApi {
         if (accountIds == null || accountIds.isEmpty()) {
             return List.of();
         }
-        return userProfileRepository.findAll().stream()
-                .filter(userProfile -> accountIds.contains(userProfile.accountId()))
+        return userProfileRepository.findByAccountIds(accountIds).stream()
                 .map(this::toResult)
                 .toList();
     }
@@ -117,11 +116,10 @@ public class UserProfileDomainApi implements UserProfileApi {
      */
     public UserProfilePageResult getUserProfiles(GetUserProfilesQuery query) {
         validatePageQuery(query.accountId(), query.cursorAccountId(), query.limit());
-        List<UserProfileResult> users = userProfileRepository.findByAccountId(query.accountId())
-                .filter(userProfile -> query.cursorAccountId() == null || userProfile.accountId() < query.cursorAccountId())
+        List<UserProfileResult> users = userProfileRepository.findByAccountIdBefore(query.cursorAccountId(), query.limit())
+                .stream()
                 .map(this::toResult)
-                .map(List::of)
-                .orElseGet(List::of);
+                .toList();
         return new UserProfilePageResult(users, nextCursor(users));
     }
 
@@ -137,12 +135,10 @@ public class UserProfileDomainApi implements UserProfileApi {
             throw ProblemException.validationFailed("keyword must not be blank");
         }
         String keyword = query.keyword().trim();
-        List<UserProfileResult> users = userProfileRepository.findByAccountId(query.accountId())
-                .filter(userProfile -> query.cursorAccountId() == null || userProfile.accountId() < query.cursorAccountId())
-                .filter(userProfile -> userProfile.nickname().contains(keyword) || userProfile.bio().contains(keyword))
+        List<UserProfileResult> users = userProfileRepository.searchByKeyword(keyword, query.cursorAccountId(), query.limit())
+                .stream()
                 .map(this::toResult)
-                .map(List::of)
-                .orElseGet(List::of);
+                .toList();
         return new UserProfilePageResult(users, nextCursor(users));
     }
 
@@ -161,6 +157,8 @@ public class UserProfileDomainApi implements UserProfileApi {
                     command.nickname(),
                     command.avatarUrl(),
                     command.bio(),
+                    command.sex(),
+                    command.birthday(),
                     timeProvider.nowInstant()
             );
 
@@ -200,6 +198,8 @@ public class UserProfileDomainApi implements UserProfileApi {
                 userProfile.nickname(),
                 userProfile.avatarUrl(),
                 userProfile.bio(),
+                userProfile.sex(),
+                userProfile.birthday(),
                 userProfile.createdAt(),
                 userProfile.updatedAt()
         );

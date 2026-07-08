@@ -42,7 +42,7 @@ public record ChannelMessageResponse(
         String body,
         @Schema(description = "预览文本", example = "Hello CarryPigeon")
         String previewText,
-        @Schema(description = "结构化载荷 JSON 字符串", example = "{\"share_key\":\"shr_7001\",\"download_path\":\"api/files/download/shr_7001\"}")
+        @Schema(description = "结构化载荷 JSON 字符串", example = "{\"share_key\":\"shr_7001\",\"download_path\":\"/api/files/download/shr_7001\"}")
         String payload,
         @Schema(description = "元数据 JSON 字符串", example = "{\"lang\":\"zh-CN\"}")
         String metadata,

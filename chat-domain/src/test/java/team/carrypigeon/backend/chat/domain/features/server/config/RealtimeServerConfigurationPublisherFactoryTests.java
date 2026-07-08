@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,7 +38,8 @@ class RealtimeServerConfigurationPublisherFactoryTests {
                         return 1L;
                     }
                 },
-                resolver
+                resolver,
+                RealtimeNotificationPreferenceFilter.allowAll()
         );
 
         assertThat(publisher).isInstanceOf(NettyMessageRealtimePublisher.class);

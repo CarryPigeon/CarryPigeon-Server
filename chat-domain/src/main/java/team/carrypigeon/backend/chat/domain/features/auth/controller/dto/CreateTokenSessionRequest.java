@@ -30,11 +30,10 @@ public record CreateTokenSessionRequest(
 
     /**
      * 创建会话时的客户端上下文。
-     * 职责：携带设备标识和当前设备插件安装态。
+     * 职责：携带可选设备标识和当前设备插件安装态。
      */
     public record ClientRequest(
-            @Schema(description = "稳定设备标识", example = "a-stable-device-id")
-            @NotBlank(message = "device_id must not be blank")
+            @Schema(description = "可选稳定设备标识；当前版本不参与 refresh session 归属校验", example = "a-stable-device-id")
             String deviceId,
             @Schema(description = "当前设备已安装插件列表")
             @Valid

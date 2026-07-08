@@ -122,14 +122,12 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
             ChannelMessage existingMessage = requireMessage(command.messageId());
             messageChannelBoundary.requireRecallPermission(channel.id(), command.accountId(), existingMessage);
             if (isRecalled(existingMessage)) {
-                PersistedMessage recalledResult = new PersistedMessage(
+                return new PersistedMessage(
                         existingMessage,
                         snapshotSender(existingMessage.senderId()),
                         messageChannelBoundary.recipientAccountIds(channel.id()),
                         List.of()
                 );
-                messageAfterCommitPublisher.publishMessageUpdatedAfterCommit(afterCommit, recalledResult);
-                return recalledResult;
             }
             ChannelMessage recalledMessage = messageRepository.update(toRecalledMessage(existingMessage));
             appendRecallAudit(channel.id(), command.accountId(), recalledMessage.messageId(), recalledMessage.senderId());
@@ -154,6 +152,8 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
             ChannelMessage existingMessage = requireMessage(command.messageId());
             MessageChannelBoundary.MessageChannel channel = requireChannel(existingMessage.channelId());
             messageChannelBoundary.requireRecallPermission(channel.id(), command.accountId(), existingMessage);
+            messageChannelBoundary.deletePinsByMessageId(existingMessage.messageId());
+            messageMentionManager.deleteByMessageId(existingMessage.messageId());
             messageRepository.delete(existingMessage.messageId());
             List<Long> recipientAccountIds = messageChannelBoundary.recipientAccountIds(channel.id());
             PersistedMessage deletedMessage = new PersistedMessage(
@@ -162,7 +162,7 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
                     recipientAccountIds,
                     List.of()
             );
-            messageAfterCommitPublisher.publishMessageUpdatedAfterCommit(afterCommit, deletedMessage);
+            messageAfterCommitPublisher.publishMessageDeletedAfterCommit(afterCommit, deletedMessage);
         });
     }
 

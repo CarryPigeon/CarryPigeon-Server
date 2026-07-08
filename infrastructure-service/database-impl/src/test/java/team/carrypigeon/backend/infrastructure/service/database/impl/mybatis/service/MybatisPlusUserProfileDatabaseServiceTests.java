@@ -47,6 +47,8 @@ class MybatisPlusUserProfileDatabaseServiceTests {
         assertEquals("carry-user", record.nickname());
         assertEquals("https://img.example/avatar.png", record.avatarUrl());
         assertEquals("hello world", record.bio());
+        assertEquals(1L, record.sex());
+        assertEquals(20260420L, record.birthday());
         assertEquals(CREATED_AT, record.createdAt());
         assertEquals(UPDATED_AT, record.updatedAt());
     }
@@ -85,6 +87,36 @@ class MybatisPlusUserProfileDatabaseServiceTests {
 
         assertEquals(1, records.size());
         assertEquals(1001L, records.get(0).accountId());
+    }
+
+    /**
+     * 验证按账户 ID 集合查询会返回批量查询结果。
+     */
+    @Test
+    @DisplayName("find by account ids maps rows")
+    void findByAccountIds_mapsRows() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        when(userProfileMapper.selectList(any())).thenReturn(java.util.List.of(entity()));
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+
+        java.util.List<UserProfileRecord> records = service.findByAccountIds(java.util.List.of(1001L, 1002L));
+
+        assertEquals(1, records.size());
+        assertEquals(1001L, records.get(0).accountId());
+    }
+
+    /**
+     * 验证空账户 ID 集合不会访问 mapper。
+     */
+    @Test
+    @DisplayName("find by account ids empty returns empty list")
+    void findByAccountIds_empty_returnsEmptyList() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+
+        java.util.List<UserProfileRecord> records = service.findByAccountIds(java.util.List.of());
+
+        assertEquals(0, records.size());
     }
 
     /**
@@ -138,6 +170,8 @@ class MybatisPlusUserProfileDatabaseServiceTests {
         assertEquals("carry-user", entity.getNickname());
         assertEquals("https://img.example/avatar.png", entity.getAvatarUrl());
         assertEquals("hello world", entity.getBio());
+        assertEquals(1L, entity.getSex());
+        assertEquals(20260420L, entity.getBirthday());
         assertEquals(CREATED_AT, entity.getCreatedAt());
         assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
@@ -181,6 +215,8 @@ class MybatisPlusUserProfileDatabaseServiceTests {
         assertEquals("carry-user", entity.getNickname());
         assertEquals("https://img.example/avatar.png", entity.getAvatarUrl());
         assertEquals("hello world", entity.getBio());
+        assertEquals(1L, entity.getSex());
+        assertEquals(20260420L, entity.getBirthday());
         assertEquals(CREATED_AT, entity.getCreatedAt());
         assertEquals(UPDATED_AT, entity.getUpdatedAt());
     }
@@ -229,6 +265,8 @@ class MybatisPlusUserProfileDatabaseServiceTests {
                 "carry-user",
                 "https://img.example/avatar.png",
                 "hello world",
+                1L,
+                20260420L,
                 CREATED_AT,
                 UPDATED_AT
         );
@@ -240,6 +278,8 @@ class MybatisPlusUserProfileDatabaseServiceTests {
         entity.setNickname("carry-user");
         entity.setAvatarUrl("https://img.example/avatar.png");
         entity.setBio("hello world");
+        entity.setSex(1L);
+        entity.setBirthday(20260420L);
         entity.setCreatedAt(CREATED_AT);
         entity.setUpdatedAt(UPDATED_AT);
         return entity;

@@ -135,11 +135,12 @@ class UserProfileDomainApiTests {
         fixture.repository.save(profile(1002L, "carry-friend", "", "friend bio", BASE_TIME));
         fixture.repository.save(profile(1003L, "carry-third", "", "third bio", BASE_TIME));
 
-        UserProfilePageResult result = fixture.service.getUserProfiles(new GetUserProfilesQuery(1001L, 1002L, 2));
+        UserProfilePageResult result = fixture.service.getUserProfiles(new GetUserProfilesQuery(1001L, 1004L, 2));
 
-        assertEquals(1, result.users().size());
-        assertEquals(1001L, result.users().get(0).accountId());
-        assertEquals(1001L, result.nextCursor());
+        assertEquals(2, result.users().size());
+        assertEquals(1003L, result.users().get(0).accountId());
+        assertEquals(1002L, result.users().get(1).accountId());
+        assertEquals(1002L, result.nextCursor());
     }
 
     /**
@@ -171,8 +172,9 @@ class UserProfileDomainApiTests {
 
         UserProfilePageResult result = fixture.service.searchUserProfiles(new SearchUserProfilesQuery(1001L, "carry", null, 10));
 
-        assertEquals(1, result.users().size());
-        assertEquals(1001L, result.users().get(0).accountId());
+        assertEquals(2, result.users().size());
+        assertEquals(1003L, result.users().get(0).accountId());
+        assertEquals(1001L, result.users().get(1).accountId());
         assertEquals(1001L, result.nextCursor());
     }
 
@@ -205,16 +207,22 @@ class UserProfileDomainApiTests {
                 1001L,
                 "new-name",
                 "https://img.example/new.png",
-                "new bio"
+                "new bio",
+                2L,
+                20260421L
         ));
 
         assertEquals(1001L, result.accountId());
         assertEquals("new-name", result.nickname());
         assertEquals("https://img.example/new.png", result.avatarUrl());
         assertEquals("new bio", result.bio());
+        assertEquals(2L, result.sex());
+        assertEquals(20260421L, result.birthday());
         assertEquals(BASE_TIME, result.createdAt());
         assertEquals(UPDATED_TIME, result.updatedAt());
         assertEquals(UPDATED_TIME, fixture.repository.findByAccountId(1001L).orElseThrow().updatedAt());
+        assertEquals(2L, fixture.repository.findByAccountId(1001L).orElseThrow().sex());
+        assertEquals(20260421L, fixture.repository.findByAccountId(1001L).orElseThrow().birthday());
     }
 
     /**
@@ -231,7 +239,9 @@ class UserProfileDomainApiTests {
                         1001L,
                         "new-name",
                         "https://img.example/new.png",
-                        "new bio"
+                        "new bio",
+                        0L,
+                        0L
                 ))
         );
 
@@ -250,6 +260,8 @@ class UserProfileDomainApiTests {
         assertEquals("carry-user", userProfile.nickname());
         assertEquals("", userProfile.avatarUrl());
         assertEquals("", userProfile.bio());
+        assertEquals(0L, userProfile.sex());
+        assertEquals(0L, userProfile.birthday());
         assertEquals(BASE_TIME, userProfile.createdAt());
         assertEquals(UPDATED_TIME, userProfile.updatedAt());
     }
@@ -262,18 +274,20 @@ class UserProfileDomainApiTests {
     void userProfile_updateMethod_preservesCreatedAtAndRefreshesEditableFields() {
         UserProfile userProfile = profile(1001L, "old-name", "https://img.example/old.png", "old bio", BASE_TIME);
 
-        UserProfile updated = userProfile.updateProfile("new-name", "https://img.example/new.png", "new bio", UPDATED_TIME);
+        UserProfile updated = userProfile.updateProfile("new-name", "https://img.example/new.png", "new bio", 1L, 20260420L, UPDATED_TIME);
 
         assertEquals(1001L, updated.accountId());
         assertEquals("new-name", updated.nickname());
         assertEquals("https://img.example/new.png", updated.avatarUrl());
         assertEquals("new bio", updated.bio());
+        assertEquals(1L, updated.sex());
+        assertEquals(20260420L, updated.birthday());
         assertEquals(BASE_TIME, updated.createdAt());
         assertEquals(UPDATED_TIME, updated.updatedAt());
     }
 
     private static UserProfile profile(long accountId, String nickname, String avatarUrl, String bio, Instant time) {
-        return new UserProfile(accountId, nickname, avatarUrl, bio, time, time);
+        return new UserProfile(accountId, nickname, avatarUrl, bio, 0L, 0L, time, time);
     }
 
     /**

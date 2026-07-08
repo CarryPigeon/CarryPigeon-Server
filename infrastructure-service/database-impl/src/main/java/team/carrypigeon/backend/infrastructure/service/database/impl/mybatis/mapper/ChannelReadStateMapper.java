@@ -57,9 +57,10 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             LEFT JOIN chat_channel_read_state r
                    ON r.channel_id = cm.channel_id AND r.account_id = cm.account_id
             LEFT JOIN chat_message m
-                   ON m.channel_id = cm.channel_id
+                  ON m.channel_id = cm.channel_id
                   AND m.message_id &gt; COALESCE(r.last_read_message_id, 0)
                   AND m.sender_id != cm.account_id
+                  AND m.status != 'recalled'
             WHERE cm.account_id = #{accountId}
             GROUP BY cm.channel_id, r.last_read_time, c.created_at
             HAVING COUNT(m.message_id) &gt; 0

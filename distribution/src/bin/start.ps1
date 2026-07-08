@@ -28,14 +28,14 @@ function Import-EnvFile {
 
 function Test-TcpPort {
     param(
-        [Parameter(Mandatory = $true)][string]$Host,
+        [Parameter(Mandatory = $true)][string]$TargetHost,
         [Parameter(Mandatory = $true)][int]$Port,
         [Parameter(Mandatory = $true)][string]$ServiceName
     )
 
     $client = [System.Net.Sockets.TcpClient]::new()
     try {
-        $task = $client.ConnectAsync($Host, $Port)
+        $task = $client.ConnectAsync($TargetHost, $Port)
         if (-not $task.Wait(1000)) {
             throw 'timeout'
         }
@@ -44,7 +44,7 @@ function Test-TcpPort {
         }
     }
     catch {
-        throw "$ServiceName is not reachable at $Host`:$Port."
+        throw "$ServiceName is not reachable at $TargetHost`:$Port."
     }
     finally {
         $client.Dispose()
@@ -110,15 +110,15 @@ $minioHost = if ([string]::IsNullOrWhiteSpace($env:MINIO_HOST)) { '127.0.0.1' } 
 $minioPort = if ([string]::IsNullOrWhiteSpace($env:MINIO_API_PORT)) { 9000 } else { [int]$env:MINIO_API_PORT }
 
 if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_DATABASE_ENABLED -Default $true) {
-    Test-TcpPort -Host $mysqlHost -Port $mysqlPort -ServiceName 'MySQL'
+    Test-TcpPort -TargetHost $mysqlHost -Port $mysqlPort -ServiceName 'MySQL'
 }
 
 if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_CACHE_ENABLED -Default $true) {
-    Test-TcpPort -Host $redisHost -Port $redisPort -ServiceName 'Redis'
+    Test-TcpPort -TargetHost $redisHost -Port $redisPort -ServiceName 'Redis'
 }
 
 if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_STORAGE_ENABLED -Default $true) {
-    Test-TcpPort -Host $minioHost -Port $minioPort -ServiceName 'MinIO'
+    Test-TcpPort -TargetHost $minioHost -Port $minioPort -ServiceName 'MinIO'
 }
 
 New-Item -ItemType Directory -Force -Path $DefaultLogHome | Out-Null

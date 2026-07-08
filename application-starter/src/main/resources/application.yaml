@@ -57,8 +57,8 @@ cp:
       id: ${CP_CHAT_SERVER_ID:550e8400-e29b-41d4-a716-446655440000}
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
-        # 约束：默认关闭，避免在未完成握手鉴权与部署隔离前暴露独立监听端口。
-        enabled: ${CP_CHAT_REALTIME_ENABLED:false}
+        # 约束：默认开启，生产环境外放前仍应通过防火墙或网关限制监听边界。
+        enabled: ${CP_CHAT_REALTIME_ENABLED:true}
         # 职责：定义 Netty 实时通道监听地址。
         # 约束：默认仅绑定本机回环地址，需在明确部署场景下再外放。
         host: ${CP_CHAT_REALTIME_HOST:127.0.0.1}

@@ -10,6 +10,10 @@ public interface MentionDatabaseService {
 
     void insert(MentionRecord record);
 
+    default void deleteByMessageId(long messageId) {
+        throw new UnsupportedOperationException("mention delete by message is not supported");
+    }
+
     List<MentionRecord> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId);
 
     boolean markAsRead(long accountId, long mentionId);

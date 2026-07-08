@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ma
 
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -37,6 +38,12 @@ public interface MentionMapper {
             )
             """)
     int insert(MentionEntity entity);
+
+    @Delete("""
+            DELETE FROM chat_mention
+            WHERE message_id = #{messageId}
+            """)
+    int deleteByMessageId(@Param("messageId") long messageId);
 
     @Select("""
             <script>

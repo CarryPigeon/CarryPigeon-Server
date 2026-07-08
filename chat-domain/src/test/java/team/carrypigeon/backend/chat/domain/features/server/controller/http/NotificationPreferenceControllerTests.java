@@ -86,6 +86,21 @@ class NotificationPreferenceControllerTests {
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * 验证服务级通知偏好请求体为 JSON null 时返回稳定校验错误。
+     */
+    @Test
+    @DisplayName("update server notification preference null body returns validation error")
+    void updateServerNotificationPreference_nullBody_returnsValidationError() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(put("/api/notification_preferences/server")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("null"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(new NotificationPreferenceController(notificationPreferenceDomainApi, authRequestContext))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))

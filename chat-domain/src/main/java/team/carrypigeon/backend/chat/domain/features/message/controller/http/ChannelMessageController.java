@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
@@ -26,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.EditChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageHttpCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
@@ -34,6 +37,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.M
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
@@ -61,6 +65,7 @@ public class ChannelMessageController {
     private final ChannelMessagePublishingApi channelMessagePublishingApi;
     private final ChannelMessageTimelineApi channelMessageTimelineApi;
     private final ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
+    private final ChannelMessageLifecycleApi channelMessageLifecycleApi;
     private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
@@ -68,12 +73,14 @@ public class ChannelMessageController {
             ChannelMessagePublishingApi channelMessagePublishingApi,
             ChannelMessageTimelineApi channelMessageTimelineApi,
             ChannelMessageAttachmentApi channelMessageAttachmentDomainApi,
+            ChannelMessageLifecycleApi channelMessageLifecycleApi,
             RequestAuthenticationContext authRequestContext,
             ChannelMessageV1ResponseMapper responseMapper
     ) {
         this.channelMessagePublishingApi = channelMessagePublishingApi;
         this.channelMessageTimelineApi = channelMessageTimelineApi;
         this.channelMessageAttachmentDomainApi = channelMessageAttachmentDomainApi;
+        this.channelMessageLifecycleApi = channelMessageLifecycleApi;
         this.authRequestContext = authRequestContext;
         this.responseMapper = responseMapper;
     }
@@ -193,7 +200,7 @@ public class ChannelMessageController {
     @Operation(summary = "发送消息", description = "按 v1 语义发送频道消息；当前支持 Core:Text / Core:File / Core:Voice。")
     public ResponseEntity<ChannelMessageV1Response> sendChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @Validated @RequestBody SendChannelMessageRequest requestBody,
+            @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
@@ -245,6 +252,30 @@ public class ChannelMessageController {
         } catch (IOException exception) {
             throw ProblemException.fail("attachment_upload_read_failed", "failed to read attachment upload content");
         }
+    }
+
+    /**
+     * 撤回指定频道消息。
+     * 输入：频道 ID 与消息 ID。
+     * 输出：撤回后的消息 v1 响应。
+     *
+     * @param channelId 频道 ID
+     * @param messageId 消息 ID
+     * @param request 当前 HTTP 请求
+     * @return 撤回后的消息响应
+     */
+    @PostMapping("/{channelId}/messages/{messageId}/recall")
+    @Operation(summary = "撤回消息", description = "按频道与消息 ID 撤回指定消息。")
+    public ChannelMessageV1Response recallChannelMessage(
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
+            HttpServletRequest request
+    ) {
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        ChannelMessageResult result = channelMessageLifecycleApi.recallChannelMessage(
+                new RecallChannelMessageCommand(principal.accountId(), channelId, messageId)
+        );
+        return responseMapper.toResponse(result);
     }
 
     private java.util.List<EditChannelMessageCommand.MentionTargetCommand> toMentionCommands(

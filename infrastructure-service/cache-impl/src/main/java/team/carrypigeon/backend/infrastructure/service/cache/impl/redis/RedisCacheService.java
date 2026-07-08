@@ -1,8 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.redis;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.config.CacheServiceProperties;
@@ -13,6 +15,17 @@ import team.carrypigeon.backend.infrastructure.service.cache.impl.config.CacheSe
  * 边界：Redis 访问细节封装在 impl 内，不向上层泄露。
  */
 public class RedisCacheService implements CacheService {
+
+    private static final DefaultRedisScript<Boolean> CONSUME_IF_EQUALS_SCRIPT = new DefaultRedisScript<>(
+            """
+            if redis.call('GET', KEYS[1]) == ARGV[1] then
+                redis.call('DEL', KEYS[1])
+                return 1
+            end
+            return 0
+            """,
+            Boolean.class
+    );
 
     private final StringRedisTemplate redisTemplate;
     private final CacheServiceProperties properties;
@@ -82,6 +95,25 @@ public class RedisCacheService implements CacheService {
             redisTemplate.delete(key);
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to delete cache entry", ex);
+        }
+    }
+
+    /**
+     * 原子比较并删除指定缓存键。
+     * 原因：邮箱验证码等一次性凭证需要避免 get 后 delete 的并发重复消费窗口。
+     */
+    @Override
+    public boolean consumeIfEquals(String key, String expectedValue) {
+        requireKey(key);
+        requireValue(expectedValue);
+        try {
+            return Boolean.TRUE.equals(redisTemplate.execute(
+                    CONSUME_IF_EQUALS_SCRIPT,
+                    List.of(key),
+                    expectedValue
+            ));
+        } catch (RuntimeException ex) {
+            throw new CacheServiceException("failed to consume cache entry", ex);
         }
     }
 

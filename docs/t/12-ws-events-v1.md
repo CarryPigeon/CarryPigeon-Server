@@ -6,7 +6,7 @@
 ## 1. 连接入口
 
 - URL：`wss://{host}/api/ws`
-- 连接成功后必须先发 `auth`（见 `docs/api/10-http-ws-protocol-v1.md`）。
+- 连接成功后必须先发 `auth`（见 `docs/t/10-http-ws-protocol-v1.md`）。
 
 ## 2. 事件 envelope（服务端 -> 客户端）
 
@@ -48,7 +48,7 @@
 约定：
 - `id` 必须回显客户端请求的 `id`，用于匹配请求/响应。
 - `data` 为命令响应数据（不同命令不同字段）。
-- `error` 结构应与 HTTP `error` 模型一致（字段子集即可），详见 `docs/api/13-error-model-and-reasons-v1.md`。
+- `error` 结构应与 HTTP `error` 模型一致（字段子集即可），详见 `docs/t/13-error-model-and-reasons-v1.md`。
 
 可选扩展（当需要显式订阅时）：
 
@@ -61,6 +61,31 @@
 ```json
 { "type": "subscribe.ok", "id": "3", "data": { "cids": ["1", "2", "3"] } }
 ```
+
+### 3.1 发送频道消息命令
+
+客户端可在完成 `auth` 后通过 WebSocket 发送频道消息：
+
+```json
+{
+  "type": "send_channel_message",
+  "id": "msg-1",
+  "data": {
+    "channel_id": "12345",
+    "message_type": "text",
+    "body": "hello"
+  }
+}
+```
+
+字段说明：
+- `channel_id`：目标频道 ID，十进制雪花字符串或数字。
+- `message_type`：消息类型；当前内置支持 `text`、`file`、`voice`，其它插件类型按服务端插件注册表处理。
+- `body`：消息正文，可为空字符串；文本消息由领域服务校验非空。
+- `payload`：文件、语音或插件消息的结构化载荷。`file` / `voice` 需要 `object_key` 与 `filename`；`voice` 还需要 `duration_millis`。
+- `metadata`：可选元数据对象。
+
+成功语义：服务端持久化消息后通过 `message.created` 事件下发；客户端应以该事件作为消息创建确认。失败时返回 `{ "type": "send_channel_message.err", "id": "...", "error": { ... } }`。
 
 ## 4. resume（断线恢复）
 
@@ -129,7 +154,23 @@
 - 收到后必须从内存与本地缓存移除该消息。
 - 若当前在该频道且 `mid` 不在本地列表，也应视为“状态已同步”而非报错。
 
-### 5.3 `read_state.updated`
+### 5.3 `message.recalled`
+
+触发：消息被撤回（消息身份保留，内容脱敏）
+
+```json
+{
+  "cid": "12345",
+  "mid": "1",
+  "recall_time": 1700000001000
+}
+```
+
+客户端要求（必须）：
+- 收到后应保留本地消息位置和 ID，但将正文、预览和附件展示替换为撤回状态。
+- 若当前本地没有该 `mid`，应视为“状态已同步”而非报错。
+
+### 5.4 `read_state.updated`
 
 触发：同一 `uid` 的任一会话更新读状态后，推送给该 `uid` 的所有在线会话
 
@@ -142,7 +183,7 @@
 }
 ```
 
-### 5.4 `channel.changed`
+### 5.5 `channel.changed`
 
 触发：频道资料/成员/管理员/禁言/申请等导致“频道视图需要刷新”的变更
 

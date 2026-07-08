@@ -20,6 +20,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
 import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageSenderSnapshot;
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
@@ -33,6 +35,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -93,7 +96,7 @@ class NettyMessageRealtimePublisherTests {
         var messageData = jsonProvider.readTree(frame.text()).path("data").path("payload").path("message").path("data");
         assertEquals("Core:File", jsonProvider.readTree(frame.text()).path("data").path("payload").path("message").path("domain").asText());
         assertEquals("shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", messageData.path("share_key").asText());
-        assertEquals("api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", messageData.path("download_path").asText());
+        assertEquals("/api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", messageData.path("download_path").asText());
     }
 
     /**
@@ -138,6 +141,49 @@ class NettyMessageRealtimePublisherTests {
     }
 
     /**
+     * 验证全局静音接收人不会收到消息创建实时事件。
+     */
+    @Test
+    @DisplayName("publish muted recipient skips message realtime event")
+    void publish_mutedRecipient_skipsMessageRealtimeEvent() {
+        JsonProvider jsonProvider = jsonProvider();
+        RealtimeSessionRegistry realtimeSessionRegistry = new RealtimeSessionRegistry();
+        EmbeddedChannel channel = new EmbeddedChannel();
+        realtimeSessionRegistry.register(1001L, channel);
+        NettyMessageRealtimePublisher publisher = new NettyMessageRealtimePublisher(
+                realtimeSessionRegistry,
+                jsonProvider,
+                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
+                () -> 9001L,
+                new MessageAttachmentPayloadResolver(objectProvider(null), jsonProvider),
+                new RealtimeNotificationPreferenceFilter(
+                        new ServerMutedNotificationPreferenceRepository(1001L),
+                        new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC))
+                )
+        );
+
+        publisher.publish(new ChannelMessage(
+                5002L,
+                "550e8400-e29b-41d4-a716-446655440000",
+                1L,
+                1L,
+                1001L,
+                "text",
+                "hello",
+                "hello",
+                "hello",
+                null,
+                null,
+                "sent",
+                Instant.parse("2026-04-22T00:00:00Z")
+        ), senderSnapshot(1001L), List.of(1001L));
+
+        TextWebSocketFrame frame = channel.readOutbound();
+
+        assertNull(frame);
+    }
+
+    /**
      * 验证撤回更新会通过独立的消息更新事件类型下发给在线成员。
      */
     @Test
@@ -175,7 +221,7 @@ class NettyMessageRealtimePublisherTests {
 
         assertNotNull(frame);
         assertTrue(frame.text().contains("\"type\":\"event\""));
-        assertTrue(frame.text().contains("\"event_type\":\"message.deleted\""));
+        assertTrue(frame.text().contains("\"event_type\":\"message.recalled\""));
         assertTrue(frame.text().contains("\"mid\":\"5010\""));
     }
 
@@ -379,5 +425,46 @@ class NettyMessageRealtimePublisherTests {
 
     private static MessageSenderSnapshot senderSnapshot(long accountId) {
         return new MessageSenderSnapshot(accountId, "carry-user", "avatars/u/" + accountId + ".png");
+    }
+
+    /**
+     * `ServerMutedNotificationPreferenceRepository` 测试替身。
+     * 职责：为发布器测试提供最小通知偏好端口实现。
+     */
+    private static final class ServerMutedNotificationPreferenceRepository implements NotificationPreferenceRepository {
+        private final long mutedAccountId;
+
+        private ServerMutedNotificationPreferenceRepository(long mutedAccountId) {
+            this.mutedAccountId = mutedAccountId;
+        }
+
+        @Override
+        public Optional<NotificationServerPreference> findServerPreferenceByAccountId(long accountId) {
+            if (accountId != mutedAccountId) {
+                return Optional.empty();
+            }
+            return Optional.of(new NotificationServerPreference(
+                    accountId,
+                    "muted",
+                    0L,
+                    Instant.parse("2026-04-22T00:00:00Z"),
+                    Instant.parse("2026-04-22T00:00:00Z")
+            ));
+        }
+
+        @Override
+        public List<team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference> listChannelPreferencesByAccountId(long accountId) {
+            return List.of();
+        }
+
+        @Override
+        public NotificationServerPreference upsertServerPreference(NotificationServerPreference preference) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference upsertChannelPreference(team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference preference) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

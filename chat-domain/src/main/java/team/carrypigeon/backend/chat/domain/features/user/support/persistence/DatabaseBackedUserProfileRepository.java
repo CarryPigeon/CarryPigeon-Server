@@ -41,6 +41,17 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     }
 
     /**
+     * 按账户 ID 集合查询资料。
+     * 边界：批量过滤下推到 database-api，避免领域服务读取全部用户资料。
+     */
+    @Override
+    public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+        return userProfileDatabaseService.findByAccountIds(accountIds).stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
+    /**
      * 按账户游标倒序拉取资料列表。
      * 原因：供用户列表和分页接口使用稳定锚点。
      */
@@ -86,6 +97,8 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 record.nickname(),
                 record.avatarUrl(),
                 record.bio(),
+                record.sex(),
+                record.birthday(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -97,6 +110,8 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 userProfile.nickname(),
                 userProfile.avatarUrl(),
                 userProfile.bio(),
+                userProfile.sex(),
+                userProfile.birthday(),
                 userProfile.createdAt(),
                 userProfile.updatedAt()
         );

@@ -38,7 +38,7 @@
 对 `GET /api/channels/{cid}/messages`：
 
 - 排序：必须以 `mid`（或 `send_time + mid`）作为稳定排序键
-  - `mid` 为服务端雪花 ID（JSON 中为十进制字符串，详见 `docs/api/10-http-ws-protocol-v1.md`）
+  - `mid` 为服务端雪花 ID（JSON 中为十进制字符串，详见 `docs/t/10-http-ws-protocol-v1.md`）
 - 删除语义：硬删除后不得出现在任何分页结果中
 - 客户端要求：
   - 必须按 `mid` 去重（WS 推送与 HTTP 补拉可能重叠）

@@ -31,6 +31,9 @@ services:
     image: redis:7.4-alpine
     container_name: carrypigeon-redis
     restart: unless-stopped
+    environment:
+      # 职责：向容器内健康检查提供与 Redis 启动命令一致的访问密码。
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-carrypigeon123}
     command:
       - redis-server
       - --appendonly

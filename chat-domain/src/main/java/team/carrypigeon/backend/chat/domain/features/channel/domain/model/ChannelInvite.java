@@ -11,6 +11,7 @@ import java.time.Instant;
  * @param applicationId 申请/邀请 ID
  * @param inviteeAccountId 被邀请账户 ID
  * @param inviterAccountId 发起邀请账户 ID
+ * @param reason 申请理由；普通邀请为空
  * @param status 邀请状态
  * @param createdAt 创建时间
  * @param respondedAt 响应时间；未响应时为空
@@ -20,8 +21,21 @@ public record ChannelInvite(
         long applicationId,
         long inviteeAccountId,
         long inviterAccountId,
+        String reason,
         ChannelInviteStatus status,
         Instant createdAt,
         Instant respondedAt
 ) {
+
+    public ChannelInvite(
+            long channelId,
+            long applicationId,
+            long inviteeAccountId,
+            long inviterAccountId,
+            ChannelInviteStatus status,
+            Instant createdAt,
+            Instant respondedAt
+    ) {
+        this(channelId, applicationId, inviteeAccountId, inviterAccountId, null, status, createdAt, respondedAt);
+    }
 }

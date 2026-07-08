@@ -63,7 +63,7 @@ final class ChannelDomainApiTestSupport {
     }
 
     static UserProfile profile(long accountId, String nickname) {
-        return new UserProfile(accountId, nickname, "", "", BASE_TIME, BASE_TIME);
+        return new UserProfile(accountId, nickname, "", "", 0L, 0L, BASE_TIME, BASE_TIME);
     }
 
     /**

@@ -67,7 +67,7 @@ public final class FileShareKeyCodec {
      * 生成对外下载路径。
      */
     public static String downloadPath(String shareKey) {
-        return "api/files/download/" + requireNonBlank(shareKey, "shareKey");
+        return "/api/files/download/" + requireNonBlank(shareKey, "shareKey");
     }
 
     /**

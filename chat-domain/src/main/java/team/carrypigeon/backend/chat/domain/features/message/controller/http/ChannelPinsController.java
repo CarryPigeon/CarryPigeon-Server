@@ -1,8 +1,13 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,6 +36,8 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
  */
 @RestController
 @RequestMapping("/api/channels")
+@Tag(name = "频道置顶", description = "频道消息置顶、取消置顶与置顶列表查询能力。")
+@Validated
 public class ChannelPinsController {
 
     private static final String PIN_CURSOR_SCOPE = "channel_pins";
@@ -64,8 +71,8 @@ public class ChannelPinsController {
     @PostMapping("/{channelId}/pins/{messageId}")
     @Operation(summary = "置顶频道消息", description = "置顶指定消息。")
     public ChannelPinItemResponse pinChannelMessage(
-            @PathVariable long channelId,
-            @PathVariable long messageId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             @RequestBody(required = false) PinChannelMessageRequest requestBody,
             HttpServletRequest request
     ) {
@@ -87,8 +94,8 @@ public class ChannelPinsController {
     @DeleteMapping("/{channelId}/pins/{messageId}")
     @Operation(summary = "取消置顶频道消息", description = "取消置顶指定消息。")
     public ResponseEntity<Void> unpinChannelMessage(
-            @PathVariable long channelId,
-            @PathVariable long messageId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
@@ -110,9 +117,9 @@ public class ChannelPinsController {
     @GetMapping("/{channelId}/pins")
     @Operation(summary = "获取频道置顶列表", description = "按频道返回置顶消息列表。")
     public ChannelPinListResponse listChannelPins(
-            @PathVariable long channelId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
@@ -124,7 +131,9 @@ public class ChannelPinsController {
         ));
         boolean hasMore = items.size() > limit;
         var pageItems = hasMore ? items.subList(0, limit) : items;
-        String nextCursor = hasMore ? OpaqueCursorCodec.encode(PIN_CURSOR_SCOPE, pageItems.get(pageItems.size() - 1).messageId()) : null;
+        String nextCursor = hasMore && !pageItems.isEmpty()
+                ? OpaqueCursorCodec.encode(PIN_CURSOR_SCOPE, pageItems.get(pageItems.size() - 1).messageId())
+                : null;
         return new ChannelPinListResponse(pageItems.stream().map(this::toPinResponse).toList(), nextCursor, hasMore);
     }
 

@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -32,6 +34,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @RestController
 @RequestMapping("/api")
 @Tag(name = "频道读状态", description = "频道已读状态与未读计数能力。")
+@Validated
 public class ChannelReadStateController {
 
     private final ChannelAccessApi channelAccessDomainApi;
@@ -52,7 +55,7 @@ public class ChannelReadStateController {
     @Operation(summary = "更新频道已读状态", description = "只前进不后退。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回已读状态")})
     public ChannelReadStateResponse updateReadState(
-            @PathVariable long channelId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UpdateChannelReadStateRequest request,
             HttpServletRequest servletRequest
     ) {

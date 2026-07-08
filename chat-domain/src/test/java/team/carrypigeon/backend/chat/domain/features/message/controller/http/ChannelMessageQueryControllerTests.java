@@ -194,6 +194,21 @@ class ChannelMessageQueryControllerTests {
     }
 
     /**
+     * 验证发送消息请求体为 JSON null 时返回稳定校验错误。
+     */
+    @Test
+    @DisplayName("send channel message null body returns validation error")
+    void sendChannelMessage_nullBody_returnsValidationError() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(post("/api/channels/1/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("null"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
      * 验证 `sendFileChannelMessage` 在 `returnsStructuredAttachmentPayload` 场景下的测试契约。
      */
     @Test
@@ -207,7 +222,7 @@ class ChannelMessageQueryControllerTests {
                         "file",
                         "项目文档",
                         "[文件消息] demo.pdf",
-                        "{\"share_key\":\"shr_7001\",\"download_path\":\"api/files/download/shr_7001\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
+                        "{\"share_key\":\"shr_7001\",\"download_path\":\"/api/files/download/shr_7001\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
                         "sent"
                 )
         );
@@ -222,7 +237,7 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.mid").value("5004"))
                 .andExpect(jsonPath("$.domain").value("Core:File"))
                 .andExpect(jsonPath("$.data.share_key").value("shr_7001"))
-                .andExpect(jsonPath("$.data.download_path").value("api/files/download/shr_7001"));
+                .andExpect(jsonPath("$.data.download_path").value("/api/files/download/shr_7001"));
     }
 
     /**
@@ -239,7 +254,7 @@ class ChannelMessageQueryControllerTests {
                         "file",
                         "项目文档",
                         "[文件消息] demo.pdf",
-                        "{\"share_key\":\"shr_att_demo\",\"download_path\":\"api/files/download/shr_att_demo\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
+                        "{\"share_key\":\"shr_att_demo\",\"download_path\":\"/api/files/download/shr_att_demo\",\"filename\":\"demo.pdf\",\"mime_type\":\"application/pdf\",\"size\":123}",
                         "sent"
                 )
         );
@@ -331,6 +346,60 @@ class ChannelMessageQueryControllerTests {
                 .andExpect(jsonPath("$.mentions[0].uid").value("1002"));
     }
 
+    /**
+     * 验证编辑消息请求体字段缺失时返回统一校验错误，而不是进入领域服务。
+     */
+    @Test
+    @DisplayName("edit message invalid body returns validation error")
+    void editMessage_invalidBody_returnsValidationError() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(patch("/api/messages/5009")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证转发消息请求体字段缺失时返回统一校验错误，而不是进入领域服务。
+     */
+    @Test
+    @DisplayName("forward message invalid body returns validation error")
+    void forwardMessage_invalidBody_returnsValidationError() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(post("/api/messages/5001/forward")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证撤回消息 HTTP 入口会把频道、消息与当前账号映射到生命周期领域 API。
+     */
+    @Test
+    @DisplayName("recall channel message returns v1 payload")
+    void recallChannelMessage_returnsV1Payload() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelMessageLifecycleApi.recallChannelMessage(any())).thenReturn(
+                messageResult(5010L, 1001L, "text", "[消息已撤回]", "[消息已撤回]", null, "recalled")
+        );
+        when(userProfileDomainApi.getUserProfileByAccountId(any())).thenReturn(senderProfile(1001L));
+
+        mockMvc.perform(post("/api/channels/1/messages/5010/recall"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mid").value("5010"))
+                .andExpect(jsonPath("$.data.text").value("[消息已撤回]"));
+
+        verify(channelMessageLifecycleApi).recallChannelMessage(any());
+    }
+
     private MockMvc authenticatedMockMvc() {
         return MockMvcBuilders.standaloneSetup(
                         channelMessageController(),
@@ -347,6 +416,7 @@ class ChannelMessageQueryControllerTests {
                 channelMessagePublishingApi,
                 channelMessageTimelineApi,
                 channelMessageAttachmentDomainApi,
+                channelMessageLifecycleApi,
                 authRequestContext,
                 responseMapper()
         );
@@ -370,7 +440,7 @@ class ChannelMessageQueryControllerTests {
     }
 
     private UserProfileResult senderProfile(long accountId) {
-        return new UserProfileResult(accountId, "carry-user", "avatars/u/1001.png", "hello", Instant.parse("2026-04-20T12:00:00Z"), Instant.parse("2026-04-21T12:00:00Z"));
+        return new UserProfileResult(accountId, "carry-user", "avatars/u/1001.png", "hello", 0L, 0L, Instant.parse("2026-04-20T12:00:00Z"), Instant.parse("2026-04-21T12:00:00Z"));
     }
 
     private MappingJackson2HttpMessageConverter snakeCaseConverter() {

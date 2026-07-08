@@ -52,6 +52,22 @@ class FileTransferDomainApiTests {
     }
 
     /**
+     * 验证 `createUploadGrant` 在账号 ID 非法时返回业务校验异常。
+     */
+    @Test
+    @DisplayName("create upload grant invalid account id throws validation problem")
+    void createUploadGrant_invalidAccountId_throwsValidationProblem() {
+        FileTransferDomainApi service = createService(new RecordingObjectStorageService());
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.createUploadGrant(0L, "image.png", "image/png", 123L)
+        );
+
+        assertEquals("accountId must be greater than 0", exception.getMessage());
+    }
+
+    /**
      * 验证 `downloadFile` 在 `withoutContent` 条件下满足 `usesDerivedFileObjectKeyForRedirect` 的测试契约。
      */
     @Test

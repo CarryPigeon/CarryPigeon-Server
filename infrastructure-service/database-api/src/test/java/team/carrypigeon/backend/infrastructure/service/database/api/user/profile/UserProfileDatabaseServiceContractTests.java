@@ -27,6 +27,8 @@ class UserProfileDatabaseServiceContractTests {
             "carry-user",
             "https://img.example/avatar.png",
             "hello world",
+            1L,
+            20260420L,
             Instant.parse("2026-04-20T12:00:00Z"),
             Instant.parse("2026-04-21T12:00:00Z")
     );
@@ -58,6 +60,8 @@ class UserProfileDatabaseServiceContractTests {
                 "carry-old",
                 "",
                 "archive",
+                0L,
+                0L,
                 RECORD.createdAt(),
                 RECORD.updatedAt()
         );
@@ -81,6 +85,8 @@ class UserProfileDatabaseServiceContractTests {
                 "plain-user",
                 "",
                 "carry project member",
+                0L,
+                0L,
                 RECORD.createdAt(),
                 RECORD.updatedAt()
         ));
@@ -103,6 +109,8 @@ class UserProfileDatabaseServiceContractTests {
                 "carry-user-v2",
                 "https://img.example/avatar-v2.png",
                 "updated bio",
+                2L,
+                20260422L,
                 RECORD.createdAt(),
                 Instant.parse("2026-04-22T12:00:00Z")
         );

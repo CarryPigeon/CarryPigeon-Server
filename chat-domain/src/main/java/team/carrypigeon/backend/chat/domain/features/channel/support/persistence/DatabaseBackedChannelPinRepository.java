@@ -45,6 +45,14 @@ public class DatabaseBackedChannelPinRepository implements ChannelPinRepository 
     }
 
     /**
+     * 删除指定消息的全部置顶关系。
+     */
+    @Override
+    public void deleteByMessageId(long messageId) {
+        channelPinDatabaseService.deleteByMessageId(messageId);
+    }
+
+    /**
      * 查询频道内早于游标消息的置顶记录集合。
      */
     @Override

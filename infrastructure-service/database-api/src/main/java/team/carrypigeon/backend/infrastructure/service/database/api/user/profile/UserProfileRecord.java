@@ -11,6 +11,8 @@ import java.time.Instant;
  * @param nickname 用户昵称
  * @param avatarUrl 用户头像地址
  * @param bio 用户简介
+ * @param sex 用户性别协议值
+ * @param birthday 用户生日协议值
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -19,6 +21,8 @@ public record UserProfileRecord(
         String nickname,
         String avatarUrl,
         String bio,
+        long sex,
+        long birthday,
         Instant createdAt,
         Instant updatedAt
 ) {

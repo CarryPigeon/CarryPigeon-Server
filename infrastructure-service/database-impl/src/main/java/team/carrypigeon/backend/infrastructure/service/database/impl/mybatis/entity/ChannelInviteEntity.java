@@ -17,6 +17,7 @@ public class ChannelInviteEntity {
     private Long applicationId;
     private Long inviteeAccountId;
     private Long inviterAccountId;
+    private String reason;
     private String status;
     private Instant createdAt;
     private Instant respondedAt;

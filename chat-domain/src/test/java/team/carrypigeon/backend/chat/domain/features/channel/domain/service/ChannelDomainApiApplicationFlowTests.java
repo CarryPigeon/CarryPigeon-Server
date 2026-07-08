@@ -8,6 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Crea
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DecideChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.InviteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelApplicationsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInvite;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInviteStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
@@ -154,6 +155,37 @@ class ChannelDomainApiApplicationFlowTests {
         assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
         assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
         assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+    }
+
+    /**
+     * 验证申请人在提交申请后被封禁时，审批通过会被封禁策略拦截。
+     */
+    @Test
+    @DisplayName("decide channel application approve active ban throws forbidden problem")
+    void decideChannelApplication_approveActiveBan_throwsForbiddenProblem() {
+        TestContext context = newContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L,
+                3001L,
+                1002L,
+                1002L,
+                ChannelInviteStatus.PENDING,
+                BASE_TIME.minusSeconds(60),
+                null
+        );
+        context.channelBanRepository.save(new ChannelBan(9L, 1002L, 1001L, "spam", null, BASE_TIME, null));
+        ChannelApplicationFlowDomainApi service = context.createApplicationFlowService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.decideChannelApplication(new DecideChannelApplicationCommand(1001L, 9L, 3001L, "approve"))
+        );
+
+        assertEquals("channel ban is still active", exception.getMessage());
+        assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
+        assertEquals(ChannelInviteStatus.PENDING, context.channelInviteRepository.savedInvite.status());
     }
 
     /**

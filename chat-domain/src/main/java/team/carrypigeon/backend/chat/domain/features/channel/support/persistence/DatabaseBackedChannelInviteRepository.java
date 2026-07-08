@@ -70,6 +70,7 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
                 record.applicationId(),
                 record.inviteeAccountId(),
                 record.inviterAccountId(),
+                record.reason(),
                 ChannelInviteStatus.valueOf(record.status()),
                 record.createdAt(),
                 record.respondedAt()
@@ -82,6 +83,7 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
                 channelInvite.applicationId(),
                 channelInvite.inviteeAccountId(),
                 channelInvite.inviterAccountId(),
+                channelInvite.reason(),
                 channelInvite.status().name(),
                 channelInvite.createdAt(),
                 channelInvite.respondedAt()

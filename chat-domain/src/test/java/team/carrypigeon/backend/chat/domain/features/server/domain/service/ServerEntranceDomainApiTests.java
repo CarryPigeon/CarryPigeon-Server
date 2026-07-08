@@ -38,10 +38,10 @@ class ServerEntranceDomainApiTests {
         assertEquals("550e8400-e29b-41d4-a716-446655440000", result.serverId());
         assertEquals("CarryPigeonBackend", result.name());
         assertEquals("A self-hosted chat server", result.brief());
-        assertEquals("api/files/download/server_avatar", result.avatar());
+        assertEquals("/api/files/download/server_avatar", result.avatar());
         assertEquals("1.0", result.apiVersion());
         assertEquals("1.0", result.minSupportedApiVersion());
-        assertEquals("wss://127.0.0.1:28080/api/ws", result.wsUrl());
+        assertEquals("ws://127.0.0.1:28080/api/ws", result.wsUrl());
         assertEquals(java.util.List.of("mc-bind"), result.requiredPlugins());
         assertEquals(1713614400000L, result.serverTime());
         assertEquals(true, result.capabilities().eventResume());

@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -80,6 +81,7 @@ public class ChannelController {
     private final NotificationPreferenceApi notificationPreferenceDomainApi;
     private final RequestAuthenticationContext authRequestContext;
 
+    @Autowired
     public ChannelController(
             ChannelQueryApi channelQueryDomainApi,
             ChannelLifecycleApi channelLifecycleDomainApi,

@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,6 +34,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @RestController
 @RequestMapping("/api/channels")
 @Tag(name = "频道申请", description = "入群申请与审批能力。")
+@Validated
 public class ChannelApplicationController {
 
     private final ChannelApplicationFlowApi channelApplicationFlowDomainApi;
@@ -49,7 +52,7 @@ public class ChannelApplicationController {
     @Operation(summary = "申请加入频道", description = "为当前账户创建入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回申请结果")})
     public ChannelApplicationResponse createApplication(
-            @PathVariable long channelId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody CreateChannelApplicationRequest request,
             HttpServletRequest servletRequest
     ) {
@@ -71,7 +74,10 @@ public class ChannelApplicationController {
     @GetMapping("/{channelId}/applications")
     @Operation(summary = "获取入群申请列表", description = "按频道读取入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回申请列表")})
-    public ChannelApplicationListResponse listApplications(@PathVariable long channelId, HttpServletRequest servletRequest) {
+    public ChannelApplicationListResponse listApplications(
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            HttpServletRequest servletRequest
+    ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
         List<ChannelApplicationResponse> items = channelApplicationFlowDomainApi
                 .listChannelApplications(new ListChannelApplicationsQuery(principal.accountId(), channelId)).stream()
@@ -84,8 +90,8 @@ public class ChannelApplicationController {
     @Operation(summary = "审批入群申请", description = "approve/reject 入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回审批后的申请结果")})
     public ChannelApplicationResponse decideApplication(
-            @PathVariable long channelId,
-            @PathVariable long applicationId,
+            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable @Positive(message = "applicationId must be greater than 0") long applicationId,
             @Valid @RequestBody DecideChannelApplicationRequest request,
             HttpServletRequest servletRequest
     ) {

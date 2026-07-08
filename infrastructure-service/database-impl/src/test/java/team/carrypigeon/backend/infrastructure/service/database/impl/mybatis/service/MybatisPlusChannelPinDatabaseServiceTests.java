@@ -69,4 +69,19 @@ class MybatisPlusChannelPinDatabaseServiceTests {
         assertEquals(5001L, record.messageId());
         assertEquals(7001L, record.pinId());
     }
+
+    /**
+     * 验证按消息删除置顶记录时会委托 mapper 执行依赖清理。
+     */
+    @Test
+    @DisplayName("delete by message id delegates to mapper")
+    void deleteByMessageId_delegatesToMapper() {
+        ChannelPinMapper mapper = mock(ChannelPinMapper.class);
+        when(mapper.deleteByMessageId(5001L)).thenReturn(1);
+        MybatisPlusChannelPinDatabaseService service = new MybatisPlusChannelPinDatabaseService(mapper);
+
+        service.deleteByMessageId(5001L);
+
+        verify(mapper).deleteByMessageId(5001L);
+    }
 }

@@ -9,6 +9,15 @@ package team.carrypigeon.backend.chat.domain.features.user.domain.command;
  * @param nickname 用户昵称
  * @param avatarUrl 用户头像地址
  * @param bio 用户简介
+ * @param sex 用户性别协议值
+ * @param birthday 用户生日协议值
  */
-public record UpdateCurrentUserProfileCommand(long accountId, String nickname, String avatarUrl, String bio) {
+public record UpdateCurrentUserProfileCommand(
+        long accountId,
+        String nickname,
+        String avatarUrl,
+        String bio,
+        long sex,
+        long birthday
+) {
 }

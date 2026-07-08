@@ -30,6 +30,14 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
+     * 删除指定消息产生的全部提及记录。
+     */
+    @Override
+    public void deleteByMessageId(long messageId) {
+        executeVoid(() -> mentionMapper.deleteByMessageId(messageId), "failed to delete mentions by message");
+    }
+
+    /**
      * 查询账户的提及记录流。
      */
     @Override

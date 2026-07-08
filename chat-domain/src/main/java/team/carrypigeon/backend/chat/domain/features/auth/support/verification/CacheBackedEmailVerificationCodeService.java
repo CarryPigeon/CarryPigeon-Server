@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.support.verification;
 
 import java.time.Duration;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -48,11 +47,12 @@ public class CacheBackedEmailVerificationCodeService implements EmailVerificatio
 
     @Override
     public void verifyCode(String email, String code) {
-        Optional<String> issuedCode = cacheService.get(cacheKey(email));
-        if (issuedCode.isEmpty() || !issuedCode.get().equals(code)) {
+        if (code == null || code.isBlank()) {
             throw ProblemException.validationFailed("email code is invalid");
         }
-        cacheService.delete(cacheKey(email));
+        if (!cacheService.consumeIfEquals(cacheKey(email), code)) {
+            throw ProblemException.validationFailed("email code is invalid");
+        }
     }
 
     private String cacheKey(String email) {

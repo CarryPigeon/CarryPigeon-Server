@@ -102,6 +102,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                     nextId(),
                     command.inviteeAccountId(),
                     command.operatorAccountId(),
+                    null,
                     ChannelInviteStatus.PENDING,
                     now(),
                     null
@@ -147,6 +148,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                     invite.applicationId(),
                     invite.inviteeAccountId(),
                     invite.inviterAccountId(),
+                    invite.reason(),
                     ChannelInviteStatus.ACCEPTED,
                     invite.createdAt(),
                     now()
@@ -189,6 +191,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                     nextId(),
                     command.accountId(),
                     channelApplicationMarkerAccountId(command.accountId()),
+                    normalizeApplicationReason(command.reason()),
                     ChannelInviteStatus.PENDING,
                     now(),
                     null
@@ -202,6 +205,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                         existingInvite.applicationId(),
                         existingInvite.inviteeAccountId(),
                         channelApplicationMarkerAccountId(existingInvite.inviteeAccountId()),
+                        normalizeApplicationReason(command.reason()),
                         ChannelInviteStatus.PENDING,
                         now(),
                         null
@@ -229,7 +233,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
         channelGovernancePolicy.requireCanInvite(channel, operator);
         return channelInviteRepository.findByChannelId(channel.id()).stream()
                 .filter(this::isChannelApplication)
-                .map(invite -> toApplicationResult(invite, ""))
+                .map(invite -> toApplicationResult(invite, null))
                 .toList();
     }
 
@@ -263,6 +267,10 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
             };
             if (decidedStatus == ChannelInviteStatus.ACCEPTED
                     && !channelMemberRepository.exists(channel.id(), invite.inviteeAccountId())) {
+                channelGovernancePolicy.requireBanInactive(
+                        channelBanRepository.findByChannelIdAndBannedAccountId(channel.id(), invite.inviteeAccountId()).orElse(null),
+                        now()
+                );
                 channelMemberRepository.save(newMember(channel.id(), invite.inviteeAccountId(), ChannelMemberRole.MEMBER));
             }
             ChannelInvite updated = new ChannelInvite(
@@ -270,6 +278,7 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                     invite.applicationId(),
                     invite.inviteeAccountId(),
                     channelApplicationMarkerAccountId(invite.inviteeAccountId()),
+                    invite.reason(),
                     decidedStatus,
                     invite.createdAt(),
                     now()
@@ -280,7 +289,11 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
                 channelAfterCommitPublisher.publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
             }
             channelAfterCommitPublisher.publishChannelsChangedAfterCommit(afterCommit, invite.inviteeAccountId());
-            return toApplicationResult(updated, "");
+            return toApplicationResult(updated, null);
         });
+    }
+
+    private String normalizeApplicationReason(String reason) {
+        return reason == null || reason.isBlank() ? "" : reason.trim();
     }
 }

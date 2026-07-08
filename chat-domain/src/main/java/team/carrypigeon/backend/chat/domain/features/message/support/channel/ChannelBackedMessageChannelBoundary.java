@@ -126,6 +126,11 @@ public class ChannelBackedMessageChannelBoundary implements MessageChannelBounda
     }
 
     @Override
+    public void deletePinsByMessageId(long messageId) {
+        channelPinRepository.deleteByMessageId(messageId);
+    }
+
+    @Override
     public List<MessageChannelPin> findPinsBefore(long channelId, Long cursorMessageId, int limit) {
         return channelPinRepository.findByChannelIdBefore(channelId, cursorMessageId, limit).stream()
                 .map(this::toMessageChannelPin)

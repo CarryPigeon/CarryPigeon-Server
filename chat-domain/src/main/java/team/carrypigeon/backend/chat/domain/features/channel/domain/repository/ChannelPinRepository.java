@@ -15,6 +15,15 @@ public interface ChannelPinRepository {
 
     void delete(long channelId, long messageId);
 
+    /**
+     * 删除指定消息关联的所有置顶记录。
+     *
+     * @param messageId 消息 ID
+     */
+    default void deleteByMessageId(long messageId) {
+        // Optional capability for persistence-backed repositories.
+    }
+
     List<ChannelPin> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
 
     long countByChannelId(long channelId);

@@ -328,9 +328,14 @@ public class ChannelGovernanceDomainApi extends AbstractChannelDomainSupport imp
      * @return 封禁结果
      */
     public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
-        Long durationSeconds = command.untilEpochMillis() == null
-                ? null
-                : Math.max(1L, (command.untilEpochMillis() - timeProvider.nowMillis()) / 1000L);
+        Long durationSeconds = null;
+        if (command.untilEpochMillis() != null) {
+            long nowMillis = timeProvider.nowMillis();
+            if (command.untilEpochMillis() <= nowMillis) {
+                throw ProblemException.validationFailed("until must be greater than current time");
+            }
+            durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
+        }
         return banChannelMember(new BanChannelMemberCommand(
                 command.operatorAccountId(),
                 command.channelId(),

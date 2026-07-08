@@ -10,12 +10,12 @@ public record RealtimeDiscoverySettings(boolean enabled, String host, int port, 
     /**
      * 返回服务发现可公开的 websocket 地址。
      *
-     * @return realtime 启用时返回 wss 地址；禁用时返回 null
+     * @return realtime 启用时返回 ws 地址；禁用时返回 null
      */
     public String wsUrl() {
         if (!enabled) {
             return null;
         }
-        return "wss://" + host + ":" + port + path;
+        return "ws://" + host + ":" + port + path;
     }
 }

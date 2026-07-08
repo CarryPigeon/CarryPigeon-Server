@@ -26,6 +26,21 @@ public interface UserProfileDatabaseService {
     List<UserProfileRecord> findAll();
 
     /**
+     * 按账户 ID 集合查询用户资料记录。
+     *
+     * @param accountIds 目标账户 ID 集合
+     * @return 命中的用户资料记录列表
+     */
+    default List<UserProfileRecord> findByAccountIds(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
+        return findAll().stream()
+                .filter(record -> accountIds.contains(record.accountId()))
+                .toList();
+    }
+
+    /**
      * 按账户 ID 游标查询用户资料记录分页。
      *
      * @param cursorAccountId 游标账户 ID，可为空

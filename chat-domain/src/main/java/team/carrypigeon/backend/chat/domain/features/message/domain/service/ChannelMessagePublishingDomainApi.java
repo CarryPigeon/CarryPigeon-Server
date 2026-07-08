@@ -163,7 +163,8 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
             throw ProblemException.validationFailed("comment length must be less than or equal to 500");
         }
         ChannelMessage sourceMessage = requireMessage(command.sourceMessageId());
-        MessageChannelBoundary.MessageChannel targetChannel = requireMemberChannel(command.targetChannelId(), command.accountId());
+        requireMemberChannel(sourceMessage.channelId(), command.accountId());
+        MessageChannelBoundary.MessageChannel targetChannel = requireSendableChannel(command.targetChannelId(), command.accountId());
         StringBuilder forwardedText = new StringBuilder();
         if (command.comment() != null && !command.comment().isBlank()) {
             forwardedText.append(command.comment().trim()).append("\n\n");

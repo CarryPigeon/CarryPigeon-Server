@@ -43,6 +43,27 @@ public interface CacheService {
     void delete(String key);
 
     /**
+     * 当缓存值与期望值一致时原子消费该缓存键。
+     * 语义：返回 true 表示值匹配且键已被删除；返回 false 表示未命中或值不匹配。
+     * 默认实现只表达兼容语义，强一致一次性消费应由具体实现覆盖。
+     *
+     * @param key 缓存键
+     * @param expectedValue 期望缓存值
+     * @return 是否匹配并消费成功
+     */
+    default boolean consumeIfEquals(String key, String expectedValue) {
+        if (expectedValue == null) {
+            throw new IllegalArgumentException("expected cache value must not be null");
+        }
+        Optional<String> value = get(key);
+        if (value.isEmpty() || !value.get().equals(expectedValue)) {
+            return false;
+        }
+        delete(key);
+        return true;
+    }
+
+    /**
      * 判断指定缓存键是否存在。
      *
      * @param key 缓存键

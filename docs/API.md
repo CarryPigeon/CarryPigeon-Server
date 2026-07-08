@@ -91,10 +91,10 @@ HTTP 失败统一返回标准错误对象：
   "server_id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "CarryPigeonBackend",
   "brief": "A self-hosted chat server",
-  "avatar": "api/files/download/server_avatar",
+  "avatar": "/api/files/download/server_avatar",
   "api_version": "1.0",
   "min_supported_api_version": "1.0",
-  "ws_url": "wss://127.0.0.1:18080/api/ws",
+  "ws_url": "ws://127.0.0.1:18080/api/ws",
   "required_plugins": [],
   "capabilities": {
     "message_domains": true,
@@ -107,9 +107,10 @@ HTTP 失败统一返回标准错误对象：
 
 当前代码口径补充：
 
-- `ws_url` 由 `cp.chat.server.realtime.host`、`port`、`path` 直接拼装，当前固定使用 `wss://` scheme。
+- `ws_url` 由 `cp.chat.server.realtime.host`、`port`、`path` 直接拼装，当前内置 Netty discovery 返回 `ws://` scheme。
+- 当前内置 Netty realtime 监听链路未装配 TLS handler；直接连接内置端口时是明文 WebSocket。生产环境要使用真实 WSS，需要在前置网关、反向代理或负载均衡层完成 TLS 终止并转发到内置 realtime 端口，或由外部网关对客户端公开 WSS 地址。
 - `capabilities` 当前表示协议面最小公开能力，不表示实时监听端口此刻一定可连接。
-- `cp.chat.server.realtime.enabled=false` 只控制 Netty realtime 运行时是否启动，不会抑制 discovery 中的 `ws_url` 或 capability 字段输出。
+- `cp.chat.server.realtime.enabled=false` 会阻止 Netty realtime 运行时启动，并使 discovery 返回 `ws_url=null`、`capabilities.websocket=false`。
 
 ### 2.2 required gate 预检查
 
@@ -652,7 +653,7 @@ required gate 不满足时返回：
 - **路径**：`/api/channels/{cid}/messages/{mid}/recall`
 - **认证**：是
 
-该接口当前仍保留旧成功 envelope，作为过渡能力存在。
+成功响应返回撤回后的 v1 消息对象；撤回后消息正文按撤回语义脱敏，并通过实时通道推送 `message.recalled` 事件。
 
 ## 7. 服务基础接口
 
@@ -671,8 +672,8 @@ required gate 不满足时返回：
 - **默认路径**：`/api/ws`
 - **配置来源**：`cp.chat.server.realtime.path`
 - **默认监听端口**：`18080`
-- **默认开关**：`cp.chat.server.realtime.enabled=false`
-- **公开发现语义**：即使 realtime 开关关闭，`GET /api/server` 当前仍会返回按配置拼装的 `ws_url`
+- **默认开关**：`cp.chat.server.realtime.enabled=true`
+- **公开发现语义**：realtime 开关关闭时，`GET /api/server` 当前返回 `ws_url=null`，并将 `capabilities.websocket=false`
 - **广播退化语义**：当 realtime 未装配时，消息与频道 realtime 发布器退化为空实现，主业务链路继续运行但不会产生实际推送
 
 ### 8.1 连接与认证
@@ -774,7 +775,7 @@ required gate 不满足时返回：
 - 频道旧动作式路径仍保留
 - 消息 HTTP 发送当前仅最小支持 `Core:Text@1.0.0`
 - WS `resume` 仍是单节点内存实现
-- discovery 当前不会根据 realtime 开关动态隐藏 `ws_url` 或 capability
+- discovery 当前会根据 realtime 开关输出 `ws_url` 与 `capabilities.websocket`
 - system channel 当前由数据库迁移种子保证存在，但数据库层未建立唯一约束
 
 当前对外接口事实来源仍以源码、测试和运行时 OpenAPI 文档为准。

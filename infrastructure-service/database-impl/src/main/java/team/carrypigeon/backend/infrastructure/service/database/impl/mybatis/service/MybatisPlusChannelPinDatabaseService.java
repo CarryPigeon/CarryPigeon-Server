@@ -47,6 +47,14 @@ public class MybatisPlusChannelPinDatabaseService implements ChannelPinDatabaseS
     }
 
     /**
+     * 删除指定消息关联的全部置顶记录。
+     */
+    @Override
+    public void deleteByMessageId(long messageId) {
+        executeVoid(() -> channelPinMapper.deleteByMessageId(messageId), "failed to delete channel pins by message");
+    }
+
+    /**
      * 查询频道内早于游标消息的置顶记录集合。
      */
     @Override

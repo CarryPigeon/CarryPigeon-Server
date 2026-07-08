@@ -124,9 +124,11 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         if (query.limit() <= 0 || query.limit() > 100) {
             throw ProblemException.validationFailed("limit must be between 1 and 100");
         }
-        if (query.channelId() != null) {
-            requirePositive(query.channelId(), "channelId");
+        if (query.channelId() == null) {
+            throw ProblemException.validationFailed("channelId must not be null");
         }
+        requirePositive(query.channelId(), "channelId");
+        requireMember(query.channelId(), query.accountId());
         if (query.actorAccountId() != null) {
             requirePositive(query.actorAccountId(), "actorAccountId");
         }
@@ -180,7 +182,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
 
     /**
      * 按 ID 查询账号可见频道。
-     * 约束：system 频道只允许成员访问。
+     * 约束：system 与 private 频道只允许成员访问。
      *
      * @param accountId 当前账号 ID
      * @param channelId 频道 ID
@@ -190,8 +192,9 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         requirePositive(accountId, "accountId");
         requirePositive(channelId, "channelId");
         Channel channel = requireChannel(channelId);
-        if (SYSTEM_CHANNEL_TYPE.equals(channel.type()) && !channelMemberRepository.exists(channel.id(), accountId)) {
-            throw ProblemException.forbidden("system_channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
+        if ((SYSTEM_CHANNEL_TYPE.equals(channel.type()) || PRIVATE_CHANNEL_TYPE.equals(channel.type()))
+                && !channelMemberRepository.exists(channel.id(), accountId)) {
+            throw ProblemException.forbidden("channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
         }
         return toResult(channel);
     }

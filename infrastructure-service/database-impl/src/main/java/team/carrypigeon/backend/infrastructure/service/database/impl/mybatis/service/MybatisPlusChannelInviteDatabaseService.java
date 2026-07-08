@@ -116,6 +116,7 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
                 entity.getApplicationId(),
                 entity.getInviteeAccountId(),
                 entity.getInviterAccountId(),
+                entity.getReason(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getRespondedAt()
@@ -128,6 +129,7 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
         entity.setApplicationId(record.applicationId());
         entity.setInviteeAccountId(record.inviteeAccountId());
         entity.setInviterAccountId(record.inviterAccountId());
+        entity.setReason(record.reason());
         entity.setStatus(record.status());
         entity.setCreatedAt(record.createdAt());
         entity.setRespondedAt(record.respondedAt());

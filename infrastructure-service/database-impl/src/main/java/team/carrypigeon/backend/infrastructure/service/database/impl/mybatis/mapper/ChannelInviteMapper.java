@@ -22,8 +22,8 @@ public interface ChannelInviteMapper {
      * @return 受影响行数
      */
     @Insert("""
-            INSERT INTO chat_channel_invite (channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at)
-            VALUES (#{channelId}, #{applicationId}, #{inviteeAccountId}, #{inviterAccountId}, #{status}, #{createdAt}, #{respondedAt})
+            INSERT INTO chat_channel_invite (channel_id, application_id, invitee_account_id, inviter_account_id, reason, status, created_at, responded_at)
+            VALUES (#{channelId}, #{applicationId}, #{inviteeAccountId}, #{inviterAccountId}, #{reason}, #{status}, #{createdAt}, #{respondedAt})
             """)
     int insert(ChannelInviteEntity entity);
 
@@ -35,7 +35,7 @@ public interface ChannelInviteMapper {
      * @return 邀请实体；未命中时返回空
      */
     @Select("""
-            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, reason, status, created_at, responded_at
             FROM chat_channel_invite
             WHERE channel_id = #{channelId} AND invitee_account_id = #{inviteeAccountId}
             """)
@@ -45,7 +45,7 @@ public interface ChannelInviteMapper {
     );
 
     @Select("""
-            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, reason, status, created_at, responded_at
             FROM chat_channel_invite
             WHERE channel_id = #{channelId} AND application_id = #{applicationId}
             LIMIT 1
@@ -56,7 +56,7 @@ public interface ChannelInviteMapper {
     );
 
     @Select("""
-            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, status, created_at, responded_at
+            SELECT channel_id, application_id, invitee_account_id, inviter_account_id, reason, status, created_at, responded_at
             FROM chat_channel_invite
             WHERE channel_id = #{channelId}
             ORDER BY created_at DESC
@@ -73,6 +73,7 @@ public interface ChannelInviteMapper {
             UPDATE chat_channel_invite
             SET application_id = #{applicationId},
                 inviter_account_id = #{inviterAccountId},
+                reason = #{reason},
                 status = #{status},
                 created_at = #{createdAt},
                 responded_at = #{respondedAt}

@@ -96,6 +96,21 @@ class MybatisPlusMentionDatabaseServiceTests {
     }
 
     /**
+     * 验证按消息删除提及时会委托 mapper 执行依赖清理。
+     */
+    @Test
+    @DisplayName("delete by message id delegates to mapper")
+    void deleteByMessageId_delegatesToMapper() {
+        MentionMapper mapper = mock(MentionMapper.class);
+        when(mapper.deleteByMessageId(5001L)).thenReturn(2);
+        MybatisPlusMentionDatabaseService service = new MybatisPlusMentionDatabaseService(mapper);
+
+        service.deleteByMessageId(5001L);
+
+        verify(mapper).deleteByMessageId(5001L);
+    }
+
+    /**
      * 验证单条已读更新时会返回 mapper 的更新结果。
      */
     @Test

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 /**
  * 撤销 refresh token 请求。
  * 职责：承载 `POST /api/auth/revoke` 的最小输入。
- * 边界：当前仅按 refresh token 与设备标识定位会话。
+ * 边界：当前仅按 refresh token 定位会话；设备标识保留为可选客户端上下文字段。
  */
 public record RevokeRefreshTokenRequest(
         @Schema(description = "待撤销的 refresh token", example = "eyJhbGciOiJIUzI1NiJ9.refresh.token")
@@ -21,11 +21,10 @@ public record RevokeRefreshTokenRequest(
 
     /**
      * 撤销令牌请求中的客户端上下文。
-     * 职责：携带稳定设备标识，用于定位需要注销的会话。
+     * 职责：携带可选稳定设备标识；当前版本不参与会话定位。
      */
     public record ClientRequest(
-            @Schema(description = "稳定设备标识", example = "a-stable-device-id")
-            @NotBlank(message = "device_id must not be blank")
+            @Schema(description = "可选稳定设备标识；当前版本不参与 refresh session 定位", example = "a-stable-device-id")
             String deviceId
     ) {
     }

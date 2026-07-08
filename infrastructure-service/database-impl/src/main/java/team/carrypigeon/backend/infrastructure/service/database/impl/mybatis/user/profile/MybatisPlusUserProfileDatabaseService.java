@@ -50,6 +50,25 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
     }
 
     /**
+     * 按账户 ID 集合查询资料记录。
+     * 输出：按账户 ID 升序返回稳定结果，空集合直接返回空列表。
+     */
+    @Override
+    public List<UserProfileRecord> findByAccountIds(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
+        return execute(
+                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
+                        .in(UserProfileEntity::getAccountId, accountIds)
+                        .orderByAsc(UserProfileEntity::getAccountId)).stream()
+                        .map(UserProfileEntity::toRecord)
+                        .toList(),
+                "failed to query user profiles by account ids"
+        );
+    }
+
+    /**
      * 按账户游标倒序拉取资料记录。
      */
     @Override

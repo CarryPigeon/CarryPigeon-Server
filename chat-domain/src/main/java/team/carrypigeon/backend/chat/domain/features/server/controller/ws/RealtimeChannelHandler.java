@@ -94,6 +94,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 }
             } catch (InfrastructureException exception) {
                 context.writeAndFlush(commandError(null, "command.err", "validation_failed", "request body is invalid"));
+            } catch (ProblemException exception) {
+                context.writeAndFlush(commandError(null, "command.err", mapReason(exception), exception.getMessage()));
             } catch (RuntimeException exception) {
                 log.warn("Failed to handle realtime frame", exception);
                 context.writeAndFlush(commandError(null, "command.err", "internal_error", "internal server error"));
@@ -212,7 +214,9 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                      "channel_role_forbidden",
                      "channel_ownership_forbidden",
                      "channel_ban_forbidden",
-                     "channel_pin_forbidden",
+            "channel_pin_forbidden",
+                     "channel_membership_required",
+                     "not_channel_member",
                      "channel_message_recall_forbidden",
                      "system_channel_membership_required",
                      "system_channel_members_hidden",

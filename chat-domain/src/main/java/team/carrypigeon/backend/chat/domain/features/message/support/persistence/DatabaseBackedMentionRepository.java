@@ -37,6 +37,14 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
     }
 
     /**
+     * 删除指定消息产生的提及记录。
+     */
+    @Override
+    public void deleteByMessageId(long messageId) {
+        mentionDatabaseService.deleteByMessageId(messageId);
+    }
+
+    /**
      * 查询账户的提及流。
      * 输入：账户、游标、未读过滤和可选频道范围。
      * 输出：已转换为领域模型的提及列表。

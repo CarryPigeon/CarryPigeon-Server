@@ -641,6 +641,7 @@ public class StarterRegressionConfiguration {
             ChannelMessagePublishingApi channelMessagePublishingDomainApi,
             ChannelMessageTimelineApi channelMessageTimelineDomainApi,
             ChannelMessageAttachmentDomainApi channelMessageAttachmentDomainApi,
+            team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi channelMessageLifecycleDomainApi,
             AuthRequestContext authRequestContext,
             ChannelMessageV1ResponseMapper responseMapper
     ) {
@@ -648,6 +649,7 @@ public class StarterRegressionConfiguration {
                 channelMessagePublishingDomainApi,
                 channelMessageTimelineDomainApi,
                 channelMessageAttachmentDomainApi,
+                channelMessageLifecycleDomainApi,
                 authRequestContext,
                 responseMapper
         );

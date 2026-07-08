@@ -48,7 +48,7 @@ class AuditLogDomainApiTests {
         auditLogRepository.logs = List.of(new ChannelAuditLog(7001L, 9L, 1001L, "MEMBER_BANNED", 1002L, "{}", Instant.parse("2026-04-24T12:00:00Z")));
         ChannelQueryDomainApi service = createService(auditLogRepository);
 
-        var result = service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, null, null, null, null, null));
+        var result = service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, 9L, null, null, null, null));
 
         assertEquals("7001", result.getFirst().auditId());
         assertEquals("channel.ban.create", result.getFirst().action());
@@ -63,7 +63,7 @@ class AuditLogDomainApiTests {
         StubChannelAuditLogRepository auditLogRepository = new StubChannelAuditLogRepository();
         ChannelQueryDomainApi service = createService(auditLogRepository);
 
-        service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, null, null, "message.pin", null, null));
+        service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, 9L, null, "message.pin", null, null));
 
         assertEquals("MESSAGE_PINNED", auditLogRepository.lastActionType);
     }

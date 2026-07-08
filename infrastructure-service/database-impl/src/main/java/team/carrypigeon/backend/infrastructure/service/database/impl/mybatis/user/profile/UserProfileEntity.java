@@ -21,6 +21,8 @@ public class UserProfileEntity {
     private String nickname;
     private String avatarUrl;
     private String bio;
+    private Long sex;
+    private Long birthday;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -36,6 +38,8 @@ public class UserProfileEntity {
         entity.setNickname(record.nickname());
         entity.setAvatarUrl(record.avatarUrl());
         entity.setBio(record.bio());
+        entity.setSex(record.sex());
+        entity.setBirthday(record.birthday());
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
@@ -52,6 +56,8 @@ public class UserProfileEntity {
                 nickname,
                 avatarUrl,
                 bio,
+                sex == null ? 0L : sex,
+                birthday == null ? 0L : birthday,
                 createdAt,
                 updatedAt
         );

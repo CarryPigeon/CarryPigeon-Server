@@ -140,10 +140,10 @@ abstract class AbstractChannelDomainSupport {
 
     /**
      * 将邀请记录转换为入群申请投影。
-     * 语义：当前模型复用 invite 存储申请状态，reason 来自命令输入或查询上下文。
+     * 语义：当前模型复用 invite 存储申请状态，reason 来自持久化邀请记录。
      *
      * @param invite 复用邀请模型承载的申请记录
-     * @param reason 申请理由，缺失时输出空字符串
+     * @param reason 申请理由，缺失时回退使用邀请记录内的理由
      * @return 入群申请结果投影
      */
     protected ChannelApplicationResult toApplicationResult(ChannelInvite invite, String reason) {
@@ -151,10 +151,14 @@ abstract class AbstractChannelDomainSupport {
                 invite.applicationId(),
                 invite.channelId(),
                 invite.inviteeAccountId(),
-                reason == null ? "" : reason,
+                normalizeApplicationReason(reason == null ? invite.reason() : reason),
                 invite.createdAt(),
                 invite.status().name()
                 );
+    }
+
+    private String normalizeApplicationReason(String reason) {
+        return reason == null ? "" : reason;
     }
 
     /**

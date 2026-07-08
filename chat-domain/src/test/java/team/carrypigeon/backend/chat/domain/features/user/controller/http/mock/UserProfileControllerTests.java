@@ -184,6 +184,8 @@ class UserProfileControllerTests {
         assertEquals("carry-user", commandCaptor.getValue().nickname());
         assertEquals("avatars/u/1001.png", commandCaptor.getValue().avatarUrl());
         assertEquals("hello world", commandCaptor.getValue().bio());
+        assertEquals(0L, commandCaptor.getValue().sex());
+        assertEquals(0L, commandCaptor.getValue().birthday());
     }
 
     /**
@@ -215,7 +217,7 @@ class UserProfileControllerTests {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.background_url").value("api/files/download/profile_bg_1001"));
+                .andExpect(jsonPath("$.background_url").value("/api/files/download/profile_bg_1001"));
     }
 
     private MockMvc authenticatedMockMvc() {
@@ -232,6 +234,8 @@ class UserProfileControllerTests {
                 "carry-user",
                 "avatars/u/1001.png",
                 "hello world",
+                0L,
+                0L,
                 Instant.parse("2026-04-20T12:00:00Z"),
                 Instant.parse("2026-04-21T12:00:00Z")
         );

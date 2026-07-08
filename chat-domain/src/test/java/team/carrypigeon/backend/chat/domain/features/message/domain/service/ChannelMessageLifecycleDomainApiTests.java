@@ -59,6 +59,42 @@ class ChannelMessageLifecycleDomainApiTests {
     }
 
     /**
+     * 验证重复撤回已撤回消息时保持幂等返回且不重复发布事件。
+     */
+    @Test
+    @DisplayName("recall channel message already recalled returns result without publishing update")
+    void recallChannelMessage_alreadyRecalled_returnsResultWithoutPublishingUpdate() {
+        MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(null);
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageDomainApiTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "text",
+                "[消息已撤回]",
+                "[消息已撤回]",
+                "",
+                null,
+                null,
+                null,
+                null,
+                "recalled",
+                MessageDomainApiTestSupport.BASE_TIME,
+                MessageDomainApiTestSupport.BASE_TIME.plusSeconds(1),
+                1L
+        ));
+
+        ChannelMessageResult result = fixture.lifecycleApi.recallChannelMessage(new RecallChannelMessageCommand(1001L, 1L, 5001L));
+
+        assertEquals(5001L, result.messageId());
+        assertEquals("recalled", result.status());
+        assertEquals(0, fixture.publisher.publishedMessages.size());
+        assertEquals(0, fixture.messageRepository.updatedMessages.size());
+        assertEquals(0, fixture.channelAuditLogRepository.logs.size());
+    }
+
+    /**
      * 验证发送者编辑自己的消息时会更新正文、版本与 mention。
      */
     @Test

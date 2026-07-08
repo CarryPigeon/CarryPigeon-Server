@@ -30,7 +30,7 @@ class DatabaseBackedUserProfileRepositoryTests {
     @DisplayName("find by account id existing record maps to domain model")
     void findByAccountId_existingRecord_mapsToDomainModel() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", 1L, 20260420L, BASE_TIME, BASE_TIME);
         DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
 
         Optional<UserProfile> result = repository.findByAccountId(1001L);
@@ -40,6 +40,8 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals("carry-user", result.orElseThrow().nickname());
         assertEquals("", result.orElseThrow().avatarUrl());
         assertEquals("", result.orElseThrow().bio());
+        assertEquals(1L, result.orElseThrow().sex());
+        assertEquals(20260420L, result.orElseThrow().birthday());
     }
 
     /**
@@ -50,7 +52,7 @@ class DatabaseBackedUserProfileRepositoryTests {
     void save_domainModel_writesDatabaseRecord() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
         DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
-        UserProfile userProfile = new UserProfile(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
+        UserProfile userProfile = new UserProfile(1001L, "carry-user", "", "", 1L, 20260420L, BASE_TIME, BASE_TIME);
 
         UserProfile result = repository.save(userProfile);
 
@@ -59,6 +61,8 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals("carry-user", databaseService.insertedRecord.nickname());
         assertEquals("", databaseService.insertedRecord.avatarUrl());
         assertEquals("", databaseService.insertedRecord.bio());
+        assertEquals(1L, databaseService.insertedRecord.sex());
+        assertEquals(20260420L, databaseService.insertedRecord.birthday());
     }
 
     /**
@@ -69,7 +73,7 @@ class DatabaseBackedUserProfileRepositoryTests {
     void update_domainModel_writesDatabaseRecord() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
         DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
-        UserProfile userProfile = new UserProfile(1001L, "new-name", "", "new bio", BASE_TIME, BASE_TIME);
+        UserProfile userProfile = new UserProfile(1001L, "new-name", "", "new bio", 2L, 20260421L, BASE_TIME, BASE_TIME);
 
         UserProfile result = repository.update(userProfile);
 
@@ -77,6 +81,8 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals(1001L, databaseService.updatedRecord.accountId());
         assertEquals("new-name", databaseService.updatedRecord.nickname());
         assertEquals("new bio", databaseService.updatedRecord.bio());
+        assertEquals(2L, databaseService.updatedRecord.sex());
+        assertEquals(20260421L, databaseService.updatedRecord.birthday());
     }
 
     /**
@@ -86,7 +92,7 @@ class DatabaseBackedUserProfileRepositoryTests {
     @DisplayName("find by account id before maps domain models")
     void findByAccountIdBefore_mapsDomainModels() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", BASE_TIME, BASE_TIME);
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", 0L, 0L, BASE_TIME, BASE_TIME);
         DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
 
         java.util.List<UserProfile> result = repository.findByAccountIdBefore(1002L, 20);
@@ -96,13 +102,31 @@ class DatabaseBackedUserProfileRepositoryTests {
     }
 
     /**
+     * 验证按账户 ID 集合查询时会调用 database-api 批量查询契约。
+     */
+    @Test
+    @DisplayName("find by account ids uses database batch query")
+    void findByAccountIds_usesDatabaseBatchQuery() {
+        FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", 0L, 0L, BASE_TIME, BASE_TIME);
+        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
+
+        java.util.List<UserProfile> result = repository.findByAccountIds(List.of(1001L, 1002L));
+
+        assertEquals(1, result.size());
+        assertEquals(1001L, result.get(0).accountId());
+        assertEquals(List.of(1001L, 1002L), databaseService.batchAccountIds);
+        assertEquals(0, databaseService.findAllCalls);
+    }
+
+    /**
      * 验证关键字搜索会转换并返回领域模型列表。
      */
     @Test
     @DisplayName("search by keyword maps domain models")
     void searchByKeyword_mapsDomainModels() {
         FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "hello carry", BASE_TIME, BASE_TIME);
+        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "hello carry", 0L, 0L, BASE_TIME, BASE_TIME);
         DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
 
         java.util.List<UserProfile> result = repository.searchByKeyword("carry", null, 20);
@@ -120,6 +144,8 @@ class DatabaseBackedUserProfileRepositoryTests {
         private UserProfileRecord record;
         private UserProfileRecord insertedRecord;
         private UserProfileRecord updatedRecord;
+        private List<Long> batchAccountIds = List.of();
+        private int findAllCalls;
 
         @Override
         public Optional<UserProfileRecord> findByAccountId(long accountId) {
@@ -128,7 +154,14 @@ class DatabaseBackedUserProfileRepositoryTests {
 
         @Override
         public List<UserProfileRecord> findAll() {
+            findAllCalls++;
             return record == null ? List.of() : List.of(record);
+        }
+
+        @Override
+        public List<UserProfileRecord> findByAccountIds(List<Long> accountIds) {
+            this.batchAccountIds = accountIds;
+            return record == null || !accountIds.contains(record.accountId()) ? List.of() : List.of(record);
         }
 
         @Override

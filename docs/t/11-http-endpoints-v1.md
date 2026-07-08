@@ -7,10 +7,10 @@
 
 - Base：`/api`
 - 鉴权：除非标注“公开”，否则必须 `Authorization: Bearer <access_token>`
-- 版本（推荐）：`Accept: application/vnd.carrypigeon+json; version=1`（详见 `docs/api/10-http-ws-protocol-v1.md`）
+- 版本（推荐）：`Accept: application/vnd.carrypigeon+json; version=1`（详见 `docs/t/10-http-ws-protocol-v1.md`）
 - ID（重要）：除 `server_id/plugin_id/share_key` 等少数标识外，本协议的实体 ID（`uid/cid/mid/...`）均为服务端生成的雪花 ID，且在 JSON 中以**十进制字符串**编码（示例中的数字仅为可读性占位）。
-- 响应错误：统一结构见 `docs/api/13-error-model-and-reasons-v1.md`
-- 分页与 cursor：见 `docs/api/14-pagination-and-cursor-v1.md`
+- 响应错误：统一结构见 `docs/t/13-error-model-and-reasons-v1.md`
+- 分页与 cursor：见 `docs/t/14-pagination-and-cursor-v1.md`
 
 ## 2. Server（公开）
 
@@ -25,10 +25,10 @@
   "server_id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "CarryPigeon Server",
   "brief": "A self-hosted chat server",
-  "avatar": "api/files/download/server_avatar",
+  "avatar": "/api/files/download/server_avatar",
   "api_version": "1.0",
   "min_supported_api_version": "1.0",
-  "ws_url": "wss://example.com/api/ws",
+  "ws_url": "ws://127.0.0.1:18080/api/ws",
   "required_plugins": ["mc-bind"],
   "capabilities": {
     "message_domains": true,
@@ -369,7 +369,7 @@
 - 成功响应（示例）：
 
 ```json
-{ "backgroundUrl": "api/files/download/profile_bg_123" }
+{ "backgroundUrl": "/api/files/download/profile_bg_123" }
 ```
 
 ## 6. Channels（需登录）
@@ -407,7 +407,7 @@
 
 语义（建议）：
 - 删除频道后，该频道不应再出现在任何用户的 `GET /api/channels` 列表中。
-- 服务端应推送 `channels.changed` 或 `channel.changed`（hint=refresh），提示客户端刷新频道列表（见 `docs/api/12-ws-events-v1.md`）。
+- 服务端应推送 `channels.changed` 或 `channel.changed`（hint=refresh），提示客户端刷新频道列表（见 `docs/t/12-ws-events-v1.md`）。
 
 ### 6.4 获取频道资料
 
@@ -620,7 +620,16 @@
 
 约定（必须）：
 - 删除成功后，任何历史拉取接口不得再返回该消息。
-- 服务端必须推送 `message.deleted` 事件（见 `docs/api/12-ws-events-v1.md`）。
+- 服务端必须推送 `message.deleted` 事件（见 `docs/t/12-ws-events-v1.md`）。
+
+### 7.5 撤回消息（保留消息身份）
+
+- 方法：`POST /api/channels/{cid}/messages/{mid}/recall`
+- 成功：返回撤回后的 v1 消息对象
+
+约定（必须）：
+- 撤回成功后，历史拉取接口仍可返回该消息，但正文和预览应按撤回语义脱敏。
+- 服务端必须推送 `message.recalled` 事件（见 `docs/t/12-ws-events-v1.md`）。
 
 ## 8. Read State（需登录）
 

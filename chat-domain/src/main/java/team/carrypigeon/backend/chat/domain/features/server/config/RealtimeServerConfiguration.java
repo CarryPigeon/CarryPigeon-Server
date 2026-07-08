@@ -10,11 +10,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.port.Channel
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
+import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings;
 import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeChannelInitializer;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyChannelRealtimePublisher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.NettyMessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -57,6 +59,23 @@ public class RealtimeServerConfiguration {
         );
     }
 
+    /**
+     * 创建 realtime 通知偏好过滤器。
+     * 输入：已有通知偏好仓储端口和统一时间提供器。
+     * 输出：发布器写入事件缓存前使用的接收人过滤组件。
+     *
+     * @param notificationPreferenceRepository 通知偏好仓储端口
+     * @param timeProvider 项目统一时间提供器
+     * @return realtime 通知偏好过滤器
+     */
+    @Bean
+    public RealtimeNotificationPreferenceFilter realtimeNotificationPreferenceFilter(
+            NotificationPreferenceRepository notificationPreferenceRepository,
+            TimeProvider timeProvider
+    ) {
+        return new RealtimeNotificationPreferenceFilter(notificationPreferenceRepository, timeProvider);
+    }
+
     @Bean
     @Primary
     public MessageRealtimePublisher messageRealtimePublisher(
@@ -64,14 +83,16 @@ public class RealtimeServerConfiguration {
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
             IdGenerator idGenerator,
-            MessagePayloadResolver messagePayloadResolver
+            MessagePayloadResolver messagePayloadResolver,
+            RealtimeNotificationPreferenceFilter realtimeNotificationPreferenceFilter
     ) {
         return new NettyMessageRealtimePublisher(
                 realtimeSessionRegistry,
                 jsonProvider,
                 timeProvider,
                 idGenerator,
-                messagePayloadResolver
+                messagePayloadResolver,
+                realtimeNotificationPreferenceFilter
         );
     }
 
@@ -90,13 +111,15 @@ public class RealtimeServerConfiguration {
             RealtimeSessionRegistry realtimeSessionRegistry,
             JsonProvider jsonProvider,
             TimeProvider timeProvider,
-            IdGenerator idGenerator
+            IdGenerator idGenerator,
+            RealtimeNotificationPreferenceFilter realtimeNotificationPreferenceFilter
     ) {
         return new NettyChannelRealtimePublisher(
                 realtimeSessionRegistry,
                 jsonProvider,
                 timeProvider,
-                idGenerator
+                idGenerator,
+                realtimeNotificationPreferenceFilter
         );
     }
 

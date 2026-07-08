@@ -154,7 +154,7 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw new IllegalArgumentException(fieldName + " must be greater than 0");
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
         }
     }
 

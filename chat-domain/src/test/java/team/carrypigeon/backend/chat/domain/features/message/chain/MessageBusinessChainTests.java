@@ -240,8 +240,9 @@ class MessageBusinessChainTests {
                 .andExpect(status().isNoContent());
 
         assertFalse(fixture.messageRepository.messagesById.containsKey(messageId));
-        assertEquals(2, fixture.publisher.updatedMessages.size());
-        assertEquals("recalled", fixture.publisher.updatedMessages.get(1).status());
+        assertEquals(1, fixture.publisher.updatedMessages.size());
+        assertEquals(1, fixture.publisher.deletedMessages.size());
+        assertEquals(messageId, fixture.publisher.deletedMessages.getFirst().messageId());
     }
 
     /**
@@ -283,7 +284,7 @@ class MessageBusinessChainTests {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.domain").value("Core:File"))
                 .andExpect(jsonPath("$.data.share_key").value(shareKey))
-                .andExpect(jsonPath("$.data.download_path").value("api/files/download/" + shareKey))
+                .andExpect(jsonPath("$.data.download_path").value("/api/files/download/" + shareKey))
                 .andExpect(jsonPath("$.data.object_key").doesNotExist());
 
         assertEquals(objectKey, fixture.storageService.lastPutCommand.objectKey());
@@ -552,6 +553,33 @@ class MessageBusinessChainTests {
     }
 
     /**
+     * 验证被禁言成员也不能通过转发绕过目标频道发送治理。
+     */
+    @Test
+    @DisplayName("muted member cannot forward message")
+    void forwardMessage_mutedMember_returnsForbidden() throws Exception {
+        Fixture fixture = new Fixture();
+        long sourceMessageId = fixture.sendText(1001L, "source for muted forward");
+        fixture.channelMemberRepository.update(new ChannelMember(
+                1L,
+                1002L,
+                ChannelMemberRole.MEMBER,
+                BASE_TIME,
+                BASE_TIME.plusSeconds(60)
+        ));
+
+        fixture.mvc(1002L).perform(post("/api/messages/{messageId}/forward", sourceMessageId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"target_cid":"1","comment":"muted forward"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.reason").value("user_muted"));
+
+        assertEquals(1, fixture.messageRepository.messagesById.size());
+    }
+
+    /**
      * 验证普通成员不能删除他人消息，而 owner 可以删除成员消息。
      */
     @Test
@@ -569,8 +597,27 @@ class MessageBusinessChainTests {
                 .andExpect(status().isNoContent());
 
         assertFalse(fixture.messageRepository.messagesById.containsKey(memberMessageId));
-        assertTrue(fixture.publisher.updatedMessages.stream()
+        assertTrue(fixture.publisher.deletedMessages.stream()
                 .anyMatch(message -> message.messageId() == memberMessageId && "recalled".equals(message.status())));
+    }
+
+    /**
+     * 验证频道消息撤回 HTTP 入口会复用生命周期领域规则并发布更新事件。
+     */
+    @Test
+    @DisplayName("recall message endpoint redacts message and publishes update")
+    void recallChannelMessage_ownedMessage_redactsMessageAndPublishesUpdate() throws Exception {
+        Fixture fixture = new Fixture();
+        long messageId = fixture.sendText(1002L, "recall via http");
+
+        fixture.mvc(1002L).perform(post("/api/channels/1/messages/{messageId}/recall", messageId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mid").value(String.valueOf(messageId)))
+                .andExpect(jsonPath("$.data.text").value("[消息已撤回]"));
+
+        assertEquals("recalled", fixture.messageRepository.messagesById.get(messageId).status());
+        assertTrue(fixture.publisher.updatedMessages.stream()
+                .anyMatch(message -> message.messageId() == messageId && "recalled".equals(message.status())));
     }
 
     /**
@@ -940,6 +987,7 @@ class MessageBusinessChainTests {
                     publishingApi,
                     timelineApi,
                     attachmentApi,
+                    lifecycleApi,
                     authRequestContext,
                     responseMapper
             );
@@ -1367,6 +1415,8 @@ class MessageBusinessChainTests {
                     "carry-user-" + accountId,
                     "avatars/u/" + accountId + ".png",
                     "",
+                    0L,
+                    0L,
                     BASE_TIME,
                     BASE_TIME
             );
@@ -1432,6 +1482,8 @@ class MessageBusinessChainTests {
                     profile.nickname(),
                     profile.avatarUrl(),
                     profile.bio(),
+                    profile.sex(),
+                    profile.birthday(),
                     profile.createdAt(),
                     profile.updatedAt()
             );
@@ -1442,6 +1494,7 @@ class MessageBusinessChainTests {
 
         final List<ChannelMessage> publishedMessages = new ArrayList<>();
         final List<ChannelMessage> updatedMessages = new ArrayList<>();
+        final List<ChannelMessage> deletedMessages = new ArrayList<>();
         final List<List<Long>> recipientAccountIds = new ArrayList<>();
         final List<MessageChannelBoundary.MessageChannelPin> pinnedMessages = new ArrayList<>();
         final List<MessageChannelBoundary.MessageChannelPin> unpinnedMessages = new ArrayList<>();
@@ -1456,6 +1509,11 @@ class MessageBusinessChainTests {
         @Override
         public void publishUpdate(ChannelMessage message, MessageSenderSnapshot senderSnapshot, java.util.Collection<Long> recipientAccountIds) {
             updatedMessages.add(message);
+        }
+
+        @Override
+        public void publishDelete(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
+            deletedMessages.add(message);
         }
 
         @Override

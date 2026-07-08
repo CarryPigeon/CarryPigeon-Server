@@ -1,6 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,6 +39,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @Validated
 @RestController
 @RequestMapping("/api/messages")
+@Tag(name = "消息资源", description = "按消息 ID 执行编辑、删除与转发操作。")
 public class MessageController {
 
     private final ChannelMessagePublishingApi channelMessagePublishingApi;
@@ -94,7 +98,7 @@ public class MessageController {
     @PostMapping("/{messageId}/forward")
     public ChannelMessageV1Response forwardMessage(
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            @RequestBody ForwardChannelMessageRequest body,
+            @Valid @NotNull(message = "request body must not be null") @RequestBody ForwardChannelMessageRequest body,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
@@ -120,7 +124,7 @@ public class MessageController {
     @PatchMapping("/{messageId}")
     public ChannelMessageV1Response editMessage(
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            @RequestBody EditChannelMessageRequest body,
+            @Valid @NotNull(message = "request body must not be null") @RequestBody EditChannelMessageRequest body,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);

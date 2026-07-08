@@ -130,7 +130,7 @@ public class AuthController {
      */
     @PostMapping("/tokens")
     @Operation(summary = "创建会话并签发 token", description = "使用邮箱验证码创建会话；首次邮箱登录时视为注册。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "会话创建请求体。当前仅支持 `email_code` 授权类型，并要求提供客户端设备与插件安装态。", required = true,
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "会话创建请求体。当前仅支持 `email_code` 授权类型，并要求提供客户端上下文；device_id 为可选字段。", required = true,
             content = @Content(schema = @Schema(implementation = CreateTokenSessionRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
@@ -162,7 +162,7 @@ public class AuthController {
      */
     @PostMapping("/refresh")
     @Operation(summary = "刷新访问令牌", description = "使用 refresh token 刷新 access token，可同时轮换 refresh token。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "刷新请求体。包含 refresh token 与最小客户端设备信息。", required = true,
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "刷新请求体。包含 refresh token 与可选客户端上下文。", required = true,
             content = @Content(schema = @Schema(implementation = RefreshAccessTokenRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
@@ -180,7 +180,7 @@ public class AuthController {
      */
     @PostMapping("/revoke")
     @Operation(summary = "撤销 refresh token", description = "撤销指定 refresh token 对应的 refresh session。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "撤销请求体。当前仅要求 refresh token 与设备信息。", required = true,
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "撤销请求体。当前仅要求 refresh token；client 为兼容上下文。", required = true,
             content = @Content(schema = @Schema(implementation = RevokeRefreshTokenRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "撤销成功")

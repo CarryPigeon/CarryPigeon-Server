@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  */
 @RestController
 @RequestMapping("/api/audit_logs")
+@Tag(name = "审计日志", description = "频道治理与消息操作审计日志查询能力。")
 public class AuditLogController {
 
     private static final String AUDIT_CURSOR_SCOPE = "audit_logs";

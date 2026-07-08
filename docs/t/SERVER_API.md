@@ -4,15 +4,15 @@
 
 ## 协议约定
 
-所有接口遵循 `docs/api/` 目录下的 v1 协议规范：
+所有接口遵循 `docs/t/` 目录下的 v1 协议规范：
 
 | 规范 | 文档 |
 |------|------|
-| 通用协议 | `docs/api/10-http-ws-protocol-v1.md` |
-| 端点清单 | `docs/api/11-http-endpoints-v1.md` |
-| WS 事件 | `docs/api/12-ws-events-v1.md` |
-| 错误模型 | `docs/api/13-error-model-and-reasons-v1.md` |
-| 分页游标 | `docs/api/14-pagination-and-cursor-v1.md` |
+| 通用协议 | `docs/t/10-http-ws-protocol-v1.md` |
+| 端点清单 | `docs/t/11-http-endpoints-v1.md` |
+| WS 事件 | `docs/t/12-ws-events-v1.md` |
+| 错误模型 | `docs/t/13-error-model-and-reasons-v1.md` |
+| 分页游标 | `docs/t/14-pagination-and-cursor-v1.md` |
 
 ### 全局约束
 
@@ -23,7 +23,7 @@
 - 雪花 ID: JSON 中编码为十进制字符串
 - 分页响应统一结构: `{ items[], next_cursor: string|null, has_more: boolean }`
 - 错误响应统一结构: `{ error: { status, reason, message, details? } }`
-- 错误 `reason` 枚举: 见 `docs/api/13-error-model-and-reasons-v1.md`
+- 错误 `reason` 枚举: 见 `docs/t/13-error-model-and-reasons-v1.md`
 
 ---
 
@@ -86,7 +86,7 @@ GET /api/channels/{cid}/messages/search
 | 非频道成员 | 403 | `not_channel_member` |
 
 - 客户端参考: `ChatMessageSearchQueryWire` → `httpSearchChannelMessages` → `searchChannelMessages`
-- 分页规范: 遵循 `docs/api/14-pagination-and-cursor-v1.md`
+- 分页规范: 遵循 `docs/t/14-pagination-and-cursor-v1.md`
 
 ---
 

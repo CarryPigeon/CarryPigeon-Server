@@ -17,17 +17,27 @@ DELETE FROM chat_notification_server_preference
 WHERE account_id IN (1001, 1002, 1003);
 
 DELETE FROM chat_mention
-WHERE mention_id IN (9001);
+WHERE mention_id IN (9001)
+   OR message_id IN (5001, 5002, 5003, 5004, 5005)
+   OR from_account_id IN (1001, 1002, 1003)
+   OR target_account_id IN (1001, 1002, 1003)
+   OR channel_id IN (100, 101);
 
 DELETE FROM chat_channel_pin
-WHERE pin_id IN (8001);
+WHERE pin_id IN (8001)
+   OR message_id IN (5001, 5002, 5003, 5004, 5005)
+   OR pinned_by_account_id IN (1001, 1002, 1003)
+   OR channel_id IN (100, 101);
 
 DELETE FROM chat_channel_read_state
 WHERE account_id IN (1001, 1002, 1003)
    OR channel_id IN (100, 101);
 
 DELETE FROM chat_channel_audit_log
-WHERE audit_id IN (7001, 7002);
+WHERE audit_id IN (7001, 7002)
+   OR actor_account_id IN (1001, 1002, 1003)
+   OR target_account_id IN (1001, 1002, 1003)
+   OR channel_id IN (100, 101);
 
 DELETE FROM chat_channel_ban
 WHERE channel_id IN (100, 101)
@@ -41,7 +51,9 @@ WHERE channel_id IN (100, 101)
    OR application_id IN (3001, 3002);
 
 DELETE FROM chat_message
-WHERE message_id IN (5001, 5002, 5003, 5004, 5005);
+WHERE message_id IN (5001, 5002, 5003, 5004, 5005)
+   OR sender_id IN (1001, 1002, 1003)
+   OR channel_id IN (100, 101);
 
 DELETE FROM chat_channel_member
 WHERE account_id IN (1001, 1002, 1003)
@@ -133,6 +145,8 @@ INSERT INTO user_profile (
     nickname,
     avatar_url,
     bio,
+    sex,
+    birthday,
     created_at,
     updated_at
 )
@@ -142,6 +156,8 @@ VALUES
         'Carry Owner',
         'https://example.invalid/avatar/carry-owner.png',
         'Project owner account for local development.',
+        0,
+        0,
         '2026-05-01 10:10:00.000000',
         '2026-05-01 10:10:00.000000'
     ),
@@ -150,6 +166,8 @@ VALUES
         'Carry Admin',
         'https://example.invalid/avatar/carry-admin.png',
         'Admin account used for governance and moderation scenarios.',
+        0,
+        0,
         '2026-05-01 10:11:00.000000',
         '2026-05-01 10:11:00.000000'
     ),
@@ -158,6 +176,8 @@ VALUES
         'Carry Member',
         'https://example.invalid/avatar/carry-member.png',
         'Member account used for mention, unread and notification tests.',
+        0,
+        0,
         '2026-05-01 10:12:00.000000',
         '2026-05-01 10:12:00.000000'
     );
@@ -219,6 +239,7 @@ INSERT INTO chat_channel_invite (
     channel_id,
     invitee_account_id,
     inviter_account_id,
+    reason,
     status,
     created_at,
     responded_at,
@@ -229,6 +250,7 @@ VALUES
         101,
         1003,
         1001,
+        '想加入项目协作频道',
         'PENDING',
         '2026-05-01 11:30:00',
         NULL,
@@ -238,6 +260,7 @@ VALUES
         100,
         1003,
         1001,
+        NULL,
         'ACCEPTED',
         '2026-05-01 11:31:00',
         '2026-05-01 11:32:00',

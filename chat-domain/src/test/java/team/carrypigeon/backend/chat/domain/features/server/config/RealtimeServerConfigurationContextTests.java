@@ -21,7 +21,9 @@ import team.carrypigeon.backend.chat.domain.features.message.support.plugin.File
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
@@ -116,11 +118,36 @@ class RealtimeServerConfigurationContextTests {
         }
 
         @Bean
+        NotificationPreferenceRepository notificationPreferenceRepository() {
+            return new NotificationPreferenceRepository() {
+                @Override
+                public java.util.Optional<NotificationServerPreference> findServerPreferenceByAccountId(long accountId) {
+                    return java.util.Optional.empty();
+                }
+
+                @Override
+                public java.util.List<NotificationChannelPreference> listChannelPreferencesByAccountId(long accountId) {
+                    return java.util.List.of();
+                }
+
+                @Override
+                public NotificationServerPreference upsertServerPreference(NotificationServerPreference preference) {
+                    return preference;
+                }
+
+                @Override
+                public NotificationChannelPreference upsertChannelPreference(NotificationChannelPreference preference) {
+                    return preference;
+                }
+            };
+        }
+
+        @Bean
         UserProfileRepository userProfileRepository() {
             return new UserProfileRepository() {
                 @Override
                 public java.util.Optional<UserProfile> findByAccountId(long accountId) {
-                    return java.util.Optional.of(new UserProfile(accountId, "carry-user", "avatars/u/1001.png", "", java.time.Instant.parse("2026-04-20T12:00:00Z"), java.time.Instant.parse("2026-04-20T12:00:00Z")));
+                    return java.util.Optional.of(new UserProfile(accountId, "carry-user", "avatars/u/1001.png", "", 0L, 0L, java.time.Instant.parse("2026-04-20T12:00:00Z"), java.time.Instant.parse("2026-04-20T12:00:00Z")));
                 }
 
                 @Override

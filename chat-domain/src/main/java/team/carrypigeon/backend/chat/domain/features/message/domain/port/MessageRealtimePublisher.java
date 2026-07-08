@@ -31,6 +31,9 @@ public interface MessageRealtimePublisher {
         publish(message, senderSnapshot, recipientAccountIds);
     }
 
+    default void publishDelete(ChannelMessage message, Collection<Long> recipientAccountIds) {
+    }
+
     default void publishPin(MessageChannelBoundary.MessageChannelPin pin, Collection<Long> recipientAccountIds) {
     }
 

@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.ObjectProvider;
@@ -241,10 +242,15 @@ final class RealtimeChannelHandlerTestSupport {
                             java.util.Collection<Long> recipientAccountIds
                     ) {
                         String payload = jsonProvider().toJson(new RealtimeServerMessage(
-                                "channel_message",
+                                "event",
                                 null,
-                                Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
-                                message
+                                Map.of(
+                                        "event_id", "9001",
+                                        "event_type", "message.created",
+                                        "server_time", Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
+                                        "payload", Map.of("message", message)
+                                ),
+                                null
                         ));
                         for (Long recipientAccountId : recipientAccountIds) {
                             registry.getChannels(recipientAccountId).forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(payload)));
@@ -420,10 +426,15 @@ final class RealtimeChannelHandlerTestSupport {
                             java.util.Collection<Long> recipientAccountIds
                     ) {
                         String payload = jsonProvider().toJson(new RealtimeServerMessage(
-                                "channel_message",
+                                "event",
                                 null,
-                                Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
-                                message
+                                Map.of(
+                                        "event_id", "9001",
+                                        "event_type", "message.created",
+                                        "server_time", Instant.parse("2026-04-22T00:00:00Z").toEpochMilli(),
+                                        "payload", Map.of("message", message)
+                                ),
+                                null
                         ));
                         for (Long recipientAccountId : recipientAccountIds) {
                             registry.getChannels(recipientAccountId).forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(payload)));
@@ -614,6 +625,8 @@ final class RealtimeChannelHandlerTestSupport {
                         "carry-user-" + accountId,
                         "avatars/u/" + accountId + ".png",
                         "",
+                        0L,
+                        0L,
                         Instant.parse("2026-04-20T12:00:00Z"),
                         Instant.parse("2026-04-20T12:00:00Z")
                 ));

@@ -45,7 +45,7 @@ public final class MessageTypePluginRegistrationSupport {
                         publicPluginKey,
                         description,
                         publicVisible,
-                        List.of("message.sent", "message.recalled"),
+                        List.of("message.sent", "message.updated", "message.recalled", "message.deleted"),
                         declaredPermissions,
                         availabilityCondition
                 ),

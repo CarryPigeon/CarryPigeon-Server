@@ -701,6 +701,8 @@ final class MessageDomainApiTestSupport {
                         "carry-user-" + accountId,
                         "avatars/u/" + accountId + ".png",
                         "",
+                        0L,
+                        0L,
                         BASE_TIME,
                         BASE_TIME
                 ));

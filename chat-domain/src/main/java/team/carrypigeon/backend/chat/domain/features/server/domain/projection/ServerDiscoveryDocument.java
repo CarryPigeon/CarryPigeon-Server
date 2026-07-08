@@ -15,13 +15,13 @@ public record ServerDiscoveryDocument(
         String name,
         @Schema(description = "服务端公开简介", example = "A self-hosted chat server")
         String brief,
-        @Schema(description = "服务端头像相对路径", example = "api/files/download/server_avatar")
+        @Schema(description = "服务端头像路径", example = "/api/files/download/server_avatar")
         String avatar,
         @Schema(description = "当前 API 版本", example = "1.0")
         String apiVersion,
         @Schema(description = "最小支持 API 版本", example = "1.0")
         String minSupportedApiVersion,
-        @Schema(description = "实时通道地址", example = "wss://example.com/api/ws")
+        @Schema(description = "实时通道地址", example = "ws://127.0.0.1:18080/api/ws")
         String wsUrl,
         @Schema(description = "required gate 插件列表")
         List<String> requiredPlugins,

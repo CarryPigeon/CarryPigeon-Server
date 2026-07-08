@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import java.util.Map;
+import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**
  * 实时通道客户端消息。
@@ -19,14 +20,12 @@ public record RealtimeClientMessage(
         Map<String, Object> data
 ) {
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> payload() {
-        return data == null ? null : (Map<String, Object>) data.get("payload");
+        return objectValue("payload");
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> metadata() {
-        return data == null ? null : (Map<String, Object>) data.get("metadata");
+        return objectValue("metadata");
     }
 
     public Long channelId() {
@@ -49,9 +48,8 @@ public record RealtimeClientMessage(
         return textValue("device_id");
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> resume() {
-        return data == null ? null : (Map<String, Object>) data.get("resume");
+        return objectValue("resume");
     }
 
     public String lastEventId() {
@@ -74,7 +72,11 @@ public record RealtimeClientMessage(
         if (value instanceof Number number) {
             return number.longValue();
         }
-        return Long.parseLong(String.valueOf(value));
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            throw ProblemException.validationFailed("validation_failed", key + " must be decimal number");
+        }
     }
 
     private String textValue(String key) {
@@ -83,5 +85,20 @@ public record RealtimeClientMessage(
         }
         Object value = data.get(key);
         return value == null ? null : String.valueOf(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectValue(String key) {
+        if (data == null) {
+            return null;
+        }
+        Object value = data.get(key);
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof Map<?, ?>)) {
+            throw ProblemException.validationFailed("validation_failed", key + " must be object");
+        }
+        return (Map<String, Object>) value;
     }
 }

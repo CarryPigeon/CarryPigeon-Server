@@ -125,7 +125,33 @@ class RealtimeChannelHandlerMessageDispatchTests {
 
         TextWebSocketFrame frame = sender.readOutbound();
         assertNotNull(frame);
-        assertTrue(frame.text().contains("\"type\":\"channel_message\""), frame.text());
+        assertTrue(frame.text().contains("\"type\":\"event\""), frame.text());
+        assertTrue(frame.text().contains("\"event_type\":\"message.created\""), frame.text());
         assertTrue(frame.text().contains("hello world"), frame.text());
+    }
+
+    /**
+     * 验证 malformed 入站命令会返回可修正的校验错误，而不是 internal_error。
+     */
+    @Test
+    @DisplayName("send channel message malformed numeric field returns validation error")
+    void channelRead_sendChannelMessageMalformedNumericField_returnsValidationError() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"auth","id":"1","data":{"access_token":"access-token","device_id":"device-1"}}
+                """));
+        sender.readOutbound();
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"send_channel_message","id":"2","data":{"channel_id":"abc","message_type":"text","body":"hello world"}}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+        assertTrue(frame.text().contains("\"type\":\"send_channel_message.err\""), frame.text());
+        assertTrue(frame.text().contains("\"reason\":\"validation_failed\""), frame.text());
+        assertTrue(frame.text().contains("channel_id must be decimal number"), frame.text());
     }
 }

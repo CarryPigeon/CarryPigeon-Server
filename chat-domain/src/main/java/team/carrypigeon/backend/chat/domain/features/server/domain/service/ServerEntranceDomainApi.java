@@ -21,7 +21,7 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 public class ServerEntranceDomainApi implements ServerEntranceApi {
 
     private static final String DEFAULT_BRIEF = "A self-hosted chat server";
-    private static final String DEFAULT_AVATAR = "api/files/download/server_avatar";
+    private static final String DEFAULT_AVATAR = "/api/files/download/server_avatar";
     private static final String API_VERSION = "1.0";
 
     private final ServerIdentityProvider serverIdentityProvider;

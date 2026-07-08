@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * 用户背景图上传响应。
  */
 public record UserBackgroundUploadResponse(
-        @Schema(description = "背景图下载地址", example = "api/files/download/profile_bg_1001")
+        @Schema(description = "背景图下载地址", example = "/api/files/download/profile_bg_1001")
         String backgroundUrl
 ) {
 }

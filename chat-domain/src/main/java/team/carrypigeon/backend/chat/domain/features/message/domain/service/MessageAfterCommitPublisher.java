@@ -46,6 +46,16 @@ class MessageAfterCommitPublisher {
         });
     }
 
+    void publishMessageDeletedAfterCommit(
+            AfterCommitExecutor afterCommit,
+            AbstractMessageDomainSupport.PersistedMessage persistedMessage
+    ) {
+        afterCommit.execute(() -> messageRealtimePublisher.publishDelete(
+                persistedMessage.message(),
+                persistedMessage.recipientAccountIds()
+        ));
+    }
+
     void publishMessagePinnedAfterCommit(
             AfterCommitExecutor afterCommit,
             AbstractMessageDomainSupport.PinnedChannelMessage pinnedChannelMessage

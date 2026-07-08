@@ -1,6 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.http;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -20,6 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Updat
  */
 @RestController
 @RequestMapping("/api/notification_preferences")
+@Tag(name = "通知偏好", description = "服务级与频道级通知偏好查询和更新能力。")
 public class NotificationPreferenceController {
 
     private final NotificationPreferenceApi notificationPreferenceDomainApi;
@@ -69,7 +73,7 @@ public class NotificationPreferenceController {
      */
     @PutMapping("/server")
     public ResponseEntity<Void> updateServerNotificationPreference(
-            @RequestBody UpdateNotificationPreferenceRequest body,
+            @Valid @NotNull(message = "request body must not be null") @RequestBody UpdateNotificationPreferenceRequest body,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);

@@ -6,6 +6,8 @@ CREATE TABLE user_profile (
     nickname VARCHAR(64) NOT NULL,
     avatar_url VARCHAR(512) NOT NULL,
     bio VARCHAR(1024) NOT NULL,
+    sex BIGINT NOT NULL DEFAULT 0,
+    birthday BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     CONSTRAINT pk_user_profile PRIMARY KEY (account_id),

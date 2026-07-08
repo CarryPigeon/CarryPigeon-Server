@@ -15,6 +15,10 @@ public interface ChannelPinDatabaseService {
 
     void delete(long channelId, long messageId);
 
+    default void deleteByMessageId(long messageId) {
+        throw new UnsupportedOperationException("channel pin delete by message is not supported");
+    }
+
     List<ChannelPinRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
 
     long countByChannelId(long channelId);

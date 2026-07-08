@@ -1,12 +1,14 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.redis;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 import team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.config.CacheServiceProperties;
 
@@ -17,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -156,6 +159,68 @@ class RedisCacheServiceTests {
         );
 
         assertEquals("failed to delete cache entry", exception.getMessage());
+        assertSame(cause, exception.getCause());
+    }
+
+    /**
+     * 验证原子消费命中时会通过 Lua 脚本完成比较删除，并返回成功。
+     */
+    @Test
+    @DisplayName("consume if equals matching value executes script and returns true")
+    void consumeIfEquals_matchingValue_executesScriptAndReturnsTrue() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        when(redisTemplate.execute(
+                org.mockito.ArgumentMatchers.<RedisScript<Boolean>>any(),
+                eq(List.of("chat:code:1")),
+                eq("123456")
+        )).thenReturn(Boolean.TRUE);
+        RedisCacheService service = new RedisCacheService(redisTemplate, PROPERTIES);
+
+        boolean result = service.consumeIfEquals("chat:code:1", "123456");
+
+        assertTrue(result);
+    }
+
+    /**
+     * 验证原子消费未命中或值不匹配时会返回 false。
+     */
+    @Test
+    @DisplayName("consume if equals mismatch returns false")
+    void consumeIfEquals_mismatch_returnsFalse() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        when(redisTemplate.execute(
+                org.mockito.ArgumentMatchers.<RedisScript<Boolean>>any(),
+                eq(List.of("chat:code:1")),
+                eq("654321")
+        )).thenReturn(Boolean.FALSE);
+        RedisCacheService service = new RedisCacheService(redisTemplate, PROPERTIES);
+
+        boolean result = service.consumeIfEquals("chat:code:1", "654321");
+
+        assertFalse(result);
+    }
+
+    /**
+     * 验证原子消费失败时会包装成稳定缓存异常。
+     */
+    @Test
+    @DisplayName("consume if equals client failure wraps cache service exception")
+    void consumeIfEquals_clientFailure_wrapsCacheServiceException() {
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        RuntimeException cause = new RuntimeException("redis script failed");
+        when(redisTemplate.execute(
+                org.mockito.ArgumentMatchers.<RedisScript<Boolean>>any(),
+                eq(List.of("chat:code:1")),
+                eq("123456")
+        )).thenThrow(cause);
+        RedisCacheService service = new RedisCacheService(redisTemplate, PROPERTIES);
+
+        CacheServiceException exception = assertThrows(
+                CacheServiceException.class,
+                () -> service.consumeIfEquals("chat:code:1", "123456")
+        );
+
+        assertEquals("failed to consume cache entry", exception.getMessage());
         assertSame(cause, exception.getCause());
     }
 

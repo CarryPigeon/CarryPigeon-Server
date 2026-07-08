@@ -11,6 +11,8 @@ import java.time.Instant;
  * @param nickname 用户昵称
  * @param avatarUrl 用户头像地址
  * @param bio 用户简介
+ * @param sex 用户性别协议值
+ * @param birthday 用户生日协议值
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -19,6 +21,8 @@ public record UserProfile(
         String nickname,
         String avatarUrl,
         String bio,
+        long sex,
+        long birthday,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -33,7 +37,7 @@ public record UserProfile(
      * @return 默认资料模型
      */
     public static UserProfile initial(long accountId, String nickname, Instant createdAt, Instant updatedAt) {
-        return new UserProfile(accountId, nickname, "", "", createdAt, updatedAt);
+        return new UserProfile(accountId, nickname, "", "", 0L, 0L, createdAt, updatedAt);
     }
 
     /**
@@ -42,10 +46,12 @@ public record UserProfile(
      * @param nickname 新昵称
      * @param avatarUrl 新头像地址
      * @param bio 新简介
+     * @param sex 新性别协议值
+     * @param birthday 新生日协议值
      * @param updatedAt 更新时间
      * @return 更新后的资料模型
      */
-    public UserProfile updateProfile(String nickname, String avatarUrl, String bio, Instant updatedAt) {
-        return new UserProfile(accountId, nickname, avatarUrl, bio, createdAt, updatedAt);
+    public UserProfile updateProfile(String nickname, String avatarUrl, String bio, long sex, long birthday, Instant updatedAt) {
+        return new UserProfile(accountId, nickname, avatarUrl, bio, sex, birthday, createdAt, updatedAt);
     }
 }

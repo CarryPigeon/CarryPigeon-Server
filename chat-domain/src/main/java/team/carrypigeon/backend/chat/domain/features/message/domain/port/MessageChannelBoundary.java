@@ -34,6 +34,8 @@ public interface MessageChannelBoundary {
 
     void deletePin(long channelId, long messageId);
 
+    void deletePinsByMessageId(long messageId);
+
     List<MessageChannelPin> findPinsBefore(long channelId, Long cursorMessageId, int limit);
 
     void appendMessageRecalledAudit(long auditLogId, long channelId, long actorAccountId, long messageId, long senderAccountId, Instant occurredAt);

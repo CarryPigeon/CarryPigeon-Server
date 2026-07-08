@@ -4,6 +4,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
@@ -23,6 +24,7 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
     private final JsonProvider jsonProvider;
     private final TimeProvider timeProvider;
     private final IdGenerator idGenerator;
+    private final RealtimeNotificationPreferenceFilter notificationPreferenceFilter;
 
     public NettyChannelRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
@@ -30,10 +32,27 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
             TimeProvider timeProvider,
             IdGenerator idGenerator
     ) {
+        this(
+                realtimeSessionRegistry,
+                jsonProvider,
+                timeProvider,
+                idGenerator,
+                RealtimeNotificationPreferenceFilter.allowAll()
+        );
+    }
+
+    public NettyChannelRealtimePublisher(
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            IdGenerator idGenerator,
+            RealtimeNotificationPreferenceFilter notificationPreferenceFilter
+    ) {
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.jsonProvider = jsonProvider;
         this.timeProvider = timeProvider;
         this.idGenerator = idGenerator;
+        this.notificationPreferenceFilter = Objects.requireNonNull(notificationPreferenceFilter, "notificationPreferenceFilter");
     }
 
     /**
@@ -42,7 +61,7 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
      */
     @Override
     public void publishReadStateUpdated(ChannelReadState readState) {
-        publishEvent("read_state.updated", Map.of(
+        publishEvent(readState.channelId(), "read_state.updated", Map.of(
                 "cid", Long.toString(readState.channelId()),
                 "uid", Long.toString(readState.accountId()),
                 "last_read_mid", Long.toString(readState.lastReadMessageId()),
@@ -57,7 +76,7 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
      */
     @Override
     public void publishChannelChanged(Channel channel, String scope, Collection<Long> recipientAccountIds) {
-        publishEvent("channel.changed", Map.of(
+        publishEvent(channel.id(), "channel.changed", Map.of(
                 "cid", Long.toString(channel.id()),
                 "scope", scope == null || scope.isBlank() ? "profile" : scope,
                 "hint", "refresh"
@@ -69,10 +88,18 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
      */
     @Override
     public void publishChannelsChanged(long accountId) {
-        publishEvent("channels.changed", Map.of("hint", "refresh"), List.of(accountId));
+        publishEventWithoutPreferenceFilter("channels.changed", Map.of("hint", "refresh"), List.of(accountId));
     }
 
-    private void publishEvent(String eventType, Object payload, Collection<Long> recipientAccountIds) {
+    private void publishEvent(long channelId, String eventType, Object payload, Collection<Long> recipientAccountIds) {
+        Collection<Long> filteredRecipientAccountIds = notificationPreferenceFilter.filterRecipients(channelId, eventType, recipientAccountIds);
+        if (filteredRecipientAccountIds.isEmpty()) {
+            return;
+        }
+        publishEventWithoutPreferenceFilter(eventType, payload, filteredRecipientAccountIds);
+    }
+
+    private void publishEventWithoutPreferenceFilter(String eventType, Object payload, Collection<Long> recipientAccountIds) {
         String eventId = idGenerator.nextStringId();
         long serverTime = timeProvider.nowMillis();
         realtimeSessionRegistry.appendEvent(RealtimeSessionRegistry.event(

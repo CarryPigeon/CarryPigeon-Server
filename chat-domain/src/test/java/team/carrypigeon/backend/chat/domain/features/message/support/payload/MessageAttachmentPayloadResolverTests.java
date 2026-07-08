@@ -49,7 +49,7 @@ class MessageAttachmentPayloadResolverTests {
 
         assertTrue(jsonProvider.readTree(resolved).path("object_key").isMissingNode());
         assertEquals("shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", jsonProvider.readTree(resolved).path("share_key").asText());
-        assertEquals("api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", jsonProvider.readTree(resolved).path("download_path").asText());
+        assertEquals("/api/files/download/shr_att_Y2hhbm5lbHMvMS9tZXNzYWdlcy9maWxlL2FjY291bnRzLzEwMDEvNTAwMS1kZW1vLnBkZg", jsonProvider.readTree(resolved).path("download_path").asText());
     }
 
     /**
@@ -96,7 +96,7 @@ class MessageAttachmentPayloadResolverTests {
         String resolved = resolver.resolve("file", payload);
 
         assertEquals("shr_7001", jsonProvider.readTree(resolved).path("share_key").asText());
-        assertEquals("api/files/download/shr_7001", jsonProvider.readTree(resolved).path("download_path").asText());
+        assertEquals("/api/files/download/shr_7001", jsonProvider.readTree(resolved).path("download_path").asText());
     }
 
     private static JsonProvider jsonProvider() {

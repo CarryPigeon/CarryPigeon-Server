@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 /**
  * 刷新 access token 请求。
  * 职责：承载 `POST /api/auth/refresh` 的 v1 最小输入。
- * 边界：当前仅消费 refresh token 与设备标识，不承载其它登录态字段。
+ * 边界：当前仅消费 refresh token；设备标识保留为可选客户端上下文字段。
  */
 public record RefreshAccessTokenRequest(
         @Schema(description = "refresh token", example = "eyJhbGciOiJIUzI1NiJ9.refresh.token")
@@ -21,11 +21,10 @@ public record RefreshAccessTokenRequest(
 
     /**
      * 刷新令牌请求中的客户端上下文。
-     * 职责：携带稳定设备标识，用于校验 refresh token 归属。
+     * 职责：携带可选稳定设备标识；当前版本不参与 refresh token 归属校验。
      */
     public record ClientRequest(
-            @Schema(description = "稳定设备标识", example = "a-stable-device-id")
-            @NotBlank(message = "device_id must not be blank")
+            @Schema(description = "可选稳定设备标识；当前版本不参与 refresh session 归属校验", example = "a-stable-device-id")
             String deviceId
     ) {
     }

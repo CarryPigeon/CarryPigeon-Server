@@ -11,8 +11,10 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.ForwardChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * `ChannelMessagePublishingDomainApiForward` 契约测试。
@@ -44,5 +46,24 @@ class ChannelMessagePublishingDomainApiForwardTests {
         assertTrue(result.forwardedFrom().contains("\"mid\":\"5001\""));
         assertTrue(result.forwardedFrom().contains("\"cid\":\"1\""));
         assertTrue(result.forwardedFrom().contains("\"uid\":\"1002\""));
+    }
+
+    /**
+     * 验证转发消息时必须先具备源频道可见性，避免通过已知消息 ID 泄露私有频道摘要。
+     */
+    @Test
+    @DisplayName("forward channel message source non member throws forbidden problem")
+    void forwardChannelMessage_sourceNonMember_throwsForbiddenProblem() {
+        MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(null);
+        fixture.channelRepository.channels.put(3L, new Channel(3L, 3L, "source-private", "", "", "", "private", false, MessageDomainApiTestSupport.BASE_TIME, MessageDomainApiTestSupport.BASE_TIME));
+        fixture.messageRepository.messagesById.put(5001L, new ChannelMessage(5001L, MessageDomainApiTestSupport.SERVER_ID, 3L, 3L, 1002L, "text", "secret", "secret", "secret", null, null, "sent", MessageDomainApiTestSupport.BASE_TIME));
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> fixture.publishingApi.forwardChannelMessage(new ForwardChannelMessageCommand(1001L, 5001L, 1L, null))
+        );
+
+        assertEquals("not_channel_member", exception.reason());
+        assertEquals(0, fixture.messageRepository.savedMessages.size());
     }
 }

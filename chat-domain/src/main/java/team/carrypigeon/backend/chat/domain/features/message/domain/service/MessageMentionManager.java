@@ -59,6 +59,10 @@ class MessageMentionManager {
         return mentions;
     }
 
+    void deleteByMessageId(long messageId) {
+        mentionRepository.deleteByMessageId(messageId);
+    }
+
     private List<Mention> buildMentions(
             ChannelMessage message,
             List<Long> recipientAccountIds,

@@ -487,7 +487,7 @@ class AuthUserBusinessChainTests {
                             return request;
                         }))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.background_url").value("api/files/download/profile_bg_1001"));
+                .andExpect(jsonPath("$.background_url").value("/api/files/download/profile_bg_1001"));
 
         assertEquals(1001L, fixture.fileTransferApi.lastAccountId);
         assertEquals("profile_bg_1001", fixture.fileTransferApi.lastShareKey);

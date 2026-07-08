@@ -77,7 +77,7 @@ Content-Type: application/json; charset=utf-8
 约定：
 - 所有图片字段（例如 `avatar`）返回：`relative_path: string`
   - ✅ `avatars/u/123.png`
-  - ✅ `api/files/download/server_avatar`
+  - ✅ `/api/files/download/server_avatar`
   - ❌ `https://example.com/avatars/u/123.png`
 - 客户端拼接方式（示例）：`https://{server_host}/{relative_path}`
   - `server_host` 由客户端当前连接的 `server_socket`（或其解析后的 host:port）确定
@@ -88,7 +88,7 @@ Content-Type: application/json; charset=utf-8
 
 客户端必须在任何插件相关动作前获取 `server_id`（用于本地隔离与缓存命名空间），并拉取 required gate 信息：
 
-- `GET /api/server`（见 `docs/api/11-http-endpoints-v1.md`）
+- `GET /api/server`（见 `docs/t/11-http-endpoints-v1.md`）
 
 ### 4.2 required gate 的核心规则（P0）
 
@@ -144,7 +144,7 @@ Authorization: Bearer <access_token>
 - `error.reason = "required_plugin_missing"`
 - `error.details.missing_plugins = ["mc-bind"]`
 
-详见 `docs/api/13-error-model-and-reasons-v1.md`。
+详见 `docs/t/13-error-model-and-reasons-v1.md`。
 
 ## 6. WebSocket：连接、鉴权与订阅
 
@@ -232,4 +232,4 @@ v1 约定：
 - 客户端重连时通过 `resume.last_event_id` 请求服务端补发丢失事件。
 - 若服务端无法回放（例如事件已过期），服务端返回 `resume.failed`，客户端必须执行一次“全量/增量补拉”。
 
-事件细节见 `docs/api/12-ws-events-v1.md`。
+事件细节见 `docs/t/12-ws-events-v1.md`。

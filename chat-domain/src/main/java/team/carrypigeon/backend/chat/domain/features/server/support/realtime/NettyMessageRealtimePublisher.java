@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.context.annotation.Primary;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
@@ -33,6 +33,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
     private final TimeProvider timeProvider;
     private final IdGenerator idGenerator;
     private final MessagePayloadResolver messageAttachmentPayloadResolver;
+    private final RealtimeNotificationPreferenceFilter notificationPreferenceFilter;
 
     public NettyMessageRealtimePublisher(
             RealtimeSessionRegistry realtimeSessionRegistry,
@@ -41,11 +42,30 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
             IdGenerator idGenerator,
             MessagePayloadResolver messageAttachmentPayloadResolver
     ) {
+        this(
+                realtimeSessionRegistry,
+                jsonProvider,
+                timeProvider,
+                idGenerator,
+                messageAttachmentPayloadResolver,
+                RealtimeNotificationPreferenceFilter.allowAll()
+        );
+    }
+
+    public NettyMessageRealtimePublisher(
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            JsonProvider jsonProvider,
+            TimeProvider timeProvider,
+            IdGenerator idGenerator,
+            MessagePayloadResolver messageAttachmentPayloadResolver,
+            RealtimeNotificationPreferenceFilter notificationPreferenceFilter
+    ) {
         this.realtimeSessionRegistry = realtimeSessionRegistry;
         this.jsonProvider = jsonProvider;
         this.timeProvider = timeProvider;
         this.idGenerator = idGenerator;
         this.messageAttachmentPayloadResolver = messageAttachmentPayloadResolver;
+        this.notificationPreferenceFilter = Objects.requireNonNull(notificationPreferenceFilter, "notificationPreferenceFilter");
     }
 
     /**
@@ -55,24 +75,37 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      */
     @Override
     public void publish(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds) {
-        publishEvent("message.created", createdPayload(message, senderSnapshot), recipientAccountIds);
+        publishEvent(message.channelId(), "message.created", createdPayload(message, senderSnapshot), recipientAccountIds);
     }
 
     /**
      * 广播消息更新事件。
-     * 约束：当消息状态已经变为 `recalled` 时，转换为 `message.deleted` 事件下发。
+     * 约束：当消息状态已经变为 `recalled` 时，转换为 `message.recalled` 事件下发。
      */
     @Override
     public void publishUpdate(ChannelMessage message, MessageSenderSnapshot senderSnapshot, Collection<Long> recipientAccountIds) {
         if ("recalled".equals(message.status())) {
-            publishEvent("message.deleted", Map.of(
+            publishEvent(message.channelId(), "message.recalled", Map.of(
                     "cid", Long.toString(message.channelId()),
                     "mid", Long.toString(message.messageId()),
-                    "delete_time", timeProvider.nowMillis()
+                    "recall_time", timeProvider.nowMillis()
             ), recipientAccountIds);
             return;
         }
-        publishEvent("message.updated", createdPayload(message, senderSnapshot), recipientAccountIds);
+        publishEvent(message.channelId(), "message.updated", createdPayload(message, senderSnapshot), recipientAccountIds);
+    }
+
+    /**
+     * 广播消息硬删除事件。
+     * 输出：下发 `message.deleted`，仅表达消息从频道中消失。
+     */
+    @Override
+    public void publishDelete(ChannelMessage message, Collection<Long> recipientAccountIds) {
+        publishEvent(message.channelId(), "message.deleted", Map.of(
+                "cid", Long.toString(message.channelId()),
+                "mid", Long.toString(message.messageId()),
+                "delete_time", timeProvider.nowMillis()
+        ), recipientAccountIds);
     }
 
     /**
@@ -81,7 +114,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      */
     @Override
     public void publishPin(MessageChannelBoundary.MessageChannelPin pin, Collection<Long> recipientAccountIds) {
-        publishEvent("message.pinned", Map.of(
+        publishEvent(pin.channelId(), "message.pinned", Map.of(
                 "cid", Long.toString(pin.channelId()),
                 "mid", Long.toString(pin.messageId()),
                 "pin_id", Long.toString(pin.pinId()),
@@ -97,7 +130,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      */
     @Override
     public void publishUnpin(MessageChannelBoundary.MessageChannelPin pin, long unpinnedByAccountId, long unpinnedAt, Collection<Long> recipientAccountIds) {
-        publishEvent("message.unpinned", Map.of(
+        publishEvent(pin.channelId(), "message.unpinned", Map.of(
                 "cid", Long.toString(pin.channelId()),
                 "mid", Long.toString(pin.messageId()),
                 "pin_id", Long.toString(pin.pinId()),
@@ -112,7 +145,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
      */
     @Override
     public void publishMentionCreated(Mention mention, Collection<Long> recipientAccountIds) {
-        publishEvent("mention.created", Map.of(
+        publishEvent(mention.channelId(), "mention.created", Map.of(
                 "mention_id", Long.toString(mention.mentionId()),
                 "cid", Long.toString(mention.channelId()),
                 "mid", Long.toString(mention.messageId()),
@@ -125,7 +158,11 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         ), recipientAccountIds);
     }
 
-    private void publishEvent(String eventType, Object payload, Collection<Long> recipientAccountIds) {
+    private void publishEvent(long channelId, String eventType, Object payload, Collection<Long> recipientAccountIds) {
+        Collection<Long> filteredRecipientAccountIds = notificationPreferenceFilter.filterRecipients(channelId, eventType, recipientAccountIds);
+        if (filteredRecipientAccountIds.isEmpty()) {
+            return;
+        }
         String eventId = idGenerator.nextStringId();
         long serverTime = timeProvider.nowMillis();
         realtimeSessionRegistry.appendEvent(RealtimeSessionRegistry.event(
@@ -133,7 +170,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
                 eventType,
                 serverTime,
                 payload,
-                recipientAccountIds
+                filteredRecipientAccountIds
         ));
         String frameText = jsonProvider.toJson(new RealtimeServerMessage(
                 "event",
@@ -146,7 +183,7 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
                 ),
                 null
         ));
-        for (Long recipientAccountId : recipientAccountIds) {
+        for (Long recipientAccountId : filteredRecipientAccountIds) {
             realtimeSessionRegistry.getChannels(recipientAccountId)
                     .forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(frameText)));
         }
