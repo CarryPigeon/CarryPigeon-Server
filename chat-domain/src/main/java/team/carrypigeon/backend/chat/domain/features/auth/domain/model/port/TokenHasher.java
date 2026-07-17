@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.auth.domain.port;
+package team.carrypigeon.backend.chat.domain.features.auth.domain.model.port;
 
 /**
  * 令牌摘要服务。

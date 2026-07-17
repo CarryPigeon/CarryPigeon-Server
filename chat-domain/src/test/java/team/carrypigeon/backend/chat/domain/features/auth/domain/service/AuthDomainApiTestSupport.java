@@ -13,9 +13,9 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefre
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;

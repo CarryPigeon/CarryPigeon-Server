@@ -12,10 +12,10 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;

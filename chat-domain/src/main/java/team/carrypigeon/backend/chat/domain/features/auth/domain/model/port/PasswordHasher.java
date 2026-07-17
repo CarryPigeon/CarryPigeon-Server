@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.auth.domain.port;
+package team.carrypigeon.backend.chat.domain.features.auth.domain.model.port;
 
 /**
  * 密码哈希服务抽象。

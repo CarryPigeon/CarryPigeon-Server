@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.support.verification;
 
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;

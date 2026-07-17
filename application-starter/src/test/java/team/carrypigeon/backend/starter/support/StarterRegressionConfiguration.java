@@ -17,10 +17,10 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthCo
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
@@ -78,9 +78,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
-import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
