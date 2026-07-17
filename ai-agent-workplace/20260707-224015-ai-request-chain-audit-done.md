@@ -33,14 +33,14 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/依赖引入规范.md`
-- `docs/异常与错误码规范.md`
-- `docs/测试规范.md`
-- `docs/API.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/architecture/依赖引入规范.md`
+- `docs/standards/异常与错误码规范.md`
+- `docs/standards/测试规范.md`
+- `docs/api/API.md`
 - `docs/api/*.md`
 - `docs/t/*.md`
 
@@ -105,7 +105,7 @@
 #### 中：文档声明撤回 HTTP 接口，但当前没有 Controller 映射
 
 - 链路：文档 `/api/channels/{cid}/messages/{mid}/recall` -> 实际 HTTP Controller。
-- 证据：`docs/API.md` 第 650-656 行声明 `POST /api/channels/{cid}/messages/{mid}/recall`；源码搜索 `recall|/recall|RecallChannelMessage` 仅发现领域服务 `ChannelMessageLifecycleDomainApi.recallChannelMessage(...)` 和领域测试，没有任何 `@PostMapping` / Controller 映射。
+- 证据：`docs/api/API.md` 第 650-656 行声明 `POST /api/channels/{cid}/messages/{mid}/recall`；源码搜索 `recall|/recall|RecallChannelMessage` 仅发现领域服务 `ChannelMessageLifecycleDomainApi.recallChannelMessage(...)` 和领域测试，没有任何 `@PostMapping` / Controller 映射。
 - 影响：按文档或 Apifox 导入测试会认为撤回接口存在，但实际调用会 404；业务层能力无法经 HTTP 暴露。
 - 建议：二选一：补 HTTP 入口并走 `RecallChannelMessageCommand`，或从公开 API 文档移除过渡接口说明。
 

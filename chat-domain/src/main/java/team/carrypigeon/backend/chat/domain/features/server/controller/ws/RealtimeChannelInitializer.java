@@ -34,6 +34,31 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final RealtimeSessionRegistry realtimeSessionRegistry;
     private final Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier;
     private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
+    private final boolean requestLogEnabled;
+
+    public RealtimeChannelInitializer(
+            RealtimeServerProperties properties,
+            JsonProvider jsonProvider,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            AuthTokenService authTokenService,
+            ServerIdentityProperties serverIdentityProperties,
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
+            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider,
+            boolean requestLogEnabled
+    ) {
+        this.properties = properties;
+        this.jsonProvider = jsonProvider;
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.authTokenService = authTokenService;
+        this.serverIdentityProperties = serverIdentityProperties;
+        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiProvider::getIfAvailable;
+        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
+        this.requestLogEnabled = requestLogEnabled;
+    }
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
@@ -46,15 +71,18 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
             ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
     ) {
-        this.properties = properties;
-        this.jsonProvider = jsonProvider;
-        this.idGenerator = idGenerator;
-        this.timeProvider = timeProvider;
-        this.authTokenService = authTokenService;
-        this.serverIdentityProperties = serverIdentityProperties;
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiProvider::getIfAvailable;
-        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
+        this(
+                properties,
+                jsonProvider,
+                idGenerator,
+                timeProvider,
+                authTokenService,
+                serverIdentityProperties,
+                realtimeSessionRegistry,
+                channelMessagePublishingApiProvider,
+                realtimeInboundMessageDispatcherProvider,
+                false
+        );
     }
 
     public RealtimeChannelInitializer(
@@ -124,7 +152,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         ChannelPipeline pipeline = channel.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
-        pipeline.addLast(new RealtimeAccessTokenHandshakeHandler(properties.path(), authTokenService));
+        pipeline.addLast(new RealtimeAccessTokenHandshakeHandler(properties.path(), requestLogEnabled));
         pipeline.addLast(RealtimeChannelHandler.idleStateHandler());
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
         pipeline.addLast(new RealtimeChannelHandler(
@@ -135,7 +163,8 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 serverIdentityProperties,
                 realtimeSessionRegistry,
                 channelMessagePublishingApiSupplier,
-                realtimeInboundMessageDispatcherSupplier
+                realtimeInboundMessageDispatcherSupplier,
+                requestLogEnabled
         ));
     }
 }

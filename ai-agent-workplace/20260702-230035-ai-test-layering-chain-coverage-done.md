@@ -8,21 +8,21 @@
 
 - 区分 mock 协议测试与真实业务链路测试的测试包结构。
 - 补足一批能够验证真实业务链路的测试，不只停留在 controller mock 映射断言。
-- 将对应测试分类、标签和 Maven 执行命令写入 `docs/测试规范.md`。
+- 将对应测试分类、标签和 Maven 执行命令写入 `docs/standards/测试规范.md`。
 - 保持生产代码、模块职责、依赖方向和对外协议不变。
 
 ## 受影响模块
 
 - `chat-domain`
 - 必要时只读查看 `application-starter`、`infrastructure-service/*`
-- `docs/测试规范.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/` 当前任务单
 
 ## 允许修改范围
 
 - `chat-domain/src/test/java`
 - 必要时各模块 `src/test/java`
-- `docs/测试规范.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/` 当前任务单
 
 ## 禁止边界
@@ -36,13 +36,13 @@
 
 ## 依据文档
 
-- `docs/测试规范.md`
-- `docs/注释规范.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/依赖引入规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
+- `docs/standards/测试规范.md`
+- `docs/standards/注释规范.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/architecture/依赖引入规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
 
 ## 执行计划
 
@@ -50,7 +50,7 @@
 2. 定义并落地保守分包方式：mock 协议测试放在 `controller/http/mock`，真实业务链路测试放在 `features/*/chain`。
 3. 迁移已 mock 的 controller 测试类到 mock 包，保持类名、方法名和标签稳定。
 4. 补充真实业务链路测试，优先覆盖认证注册/登录/刷新和用户资料更新等不依赖真实外部服务的领域链路。
-5. 更新 `docs/测试规范.md`，写明分包规则、标签含义和常用 Maven 命令。
+5. 更新 `docs/standards/测试规范.md`，写明分包规则、标签含义和常用 Maven 命令。
 6. 运行与改动匹配的 Maven 测试，记录结果。
 7. 自检并关闭任务单为 `done`。
 
@@ -69,7 +69,7 @@
 
 - 完成测试分包。
 - 补足至少一组真实业务链路测试。
-- `docs/测试规范.md` 包含后续开发者可使用的分类说明和命令。
+- `docs/standards/测试规范.md` 包含后续开发者可使用的分类说明和命令。
 - 验证命令通过，或明确记录无法通过的原因。
 - 任务单关闭为 `done`。
 
@@ -81,7 +81,7 @@
   - 将 `AuthControllerTests` 移入 `features/auth/controller/http/mock` 包，并标记为 `@Tag("mock")`。
   - 将 `UserProfileControllerTests` 移入 `features/user/controller/http/mock` 包，并标记为 `@Tag("mock")`。
   - 新增 `features/auth/chain/AuthUserBusinessChainTests`，标记为 `@Tag("business")`。
-- `docs/测试规范.md`
+- `docs/standards/测试规范.md`
   - 补充 mock 测试与真实业务链路测试分包规则。
   - 补充 `mock`、`business` 标签定义。
   - 补充后续开发者可直接执行的 Maven 命令。

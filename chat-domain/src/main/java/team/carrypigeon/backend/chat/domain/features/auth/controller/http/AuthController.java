@@ -24,7 +24,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.AuthSessionTokenResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.CreateTokenSessionRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.LoginRequest;
@@ -34,7 +33,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
 /**
@@ -50,7 +48,6 @@ public class AuthController {
     private final AuthAccountApi authAccountDomainApi;
     private final AuthSessionApi authSessionDomainApi;
     private final ServerEntranceApi serverEntranceDomainApi;
-    private final AuthTokenSettings authTokenSettings;
 
     /**
      * 创建鉴权 HTTP 入口。
@@ -58,18 +55,15 @@ public class AuthController {
      * @param authAccountDomainApi 鉴权账号领域 API
      * @param authSessionDomainApi 鉴权会话领域 API
      * @param serverEntranceDomainApi 服务入口领域 API
-     * @param authTokenSettings token 展示用配置
      */
     public AuthController(
             AuthAccountApi authAccountDomainApi,
             AuthSessionApi authSessionDomainApi,
-            ServerEntranceApi serverEntranceDomainApi,
-            AuthTokenSettings authTokenSettings
+            ServerEntranceApi serverEntranceDomainApi
     ) {
         this.authAccountDomainApi = authAccountDomainApi;
         this.authSessionDomainApi = authSessionDomainApi;
         this.serverEntranceDomainApi = serverEntranceDomainApi;
-        this.authTokenSettings = authTokenSettings;
     }
 
     /**
@@ -136,18 +130,11 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
     })
     public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
-        List<String> missingPlugins = serverEntranceDomainApi.findMissingRequiredPlugins(
+        serverEntranceDomainApi.requireRequiredPluginsSatisfied(
                 request.client().installedPlugins() == null
                         ? List.of()
                         : request.client().installedPlugins().stream().map(CreateTokenSessionRequest.InstalledPluginRequest::pluginId).toList()
         );
-        if (!missingPlugins.isEmpty()) {
-            throw ProblemException.validationFailed(
-                    "required_plugin_missing",
-                    "required plugins are missing",
-                    java.util.Map.of("missing_plugins", missingPlugins)
-            );
-        }
         AuthSessionTokenResult result = authSessionDomainApi.createTokenSession(
                 new CreateTokenSessionCommand(request.grantType(), request.email(), request.code())
         );
@@ -205,7 +192,7 @@ public class AuthController {
         return new AuthSessionTokenResponse(
                 "Bearer",
                 result.accessToken(),
-                authTokenSettings.accessTokenTtl().toSeconds(),
+                result.expiresIn(),
                 result.refreshToken(),
                 Ids.toString(result.accountId()),
                 false

@@ -8,6 +8,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelReadStateEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelUnreadProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
 
 /**
@@ -45,7 +46,7 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
     @Override
     public List<ChannelUnreadRecord> listUnreadsByAccountId(long accountId) {
         return execute(() -> channelReadStateMapper.listUnreadsByAccountId(accountId).stream()
-                .map(p -> new ChannelUnreadRecord(p.getChannelId(), p.getUnreadCount(), p.getLastReadTime()))
+                .map(this::toUnreadRecord)
                 .toList(), "failed to query channel unread counts");
     }
 
@@ -86,6 +87,14 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
+    }
+
+    private ChannelUnreadRecord toUnreadRecord(ChannelUnreadProjection projection) {
+        return new ChannelUnreadRecord(
+                projection.getChannelId() == null ? 0L : projection.getChannelId(),
+                projection.getUnreadCount() == null ? 0L : projection.getUnreadCount(),
+                projection.getLastReadTime()
+        );
     }
 
     /**

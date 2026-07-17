@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * NettyChannelRealtimePublisher 契约测试。
- * 职责：验证频道读状态与频道视图刷新提示会转换为 docs/t 定义的 realtime 事件。
+ * 职责：验证频道读状态与频道视图刷新提示会转换为 docs/api/API.md 定义的 realtime 事件。
  * 边界：不验证完整 Netty 握手与鉴权链，只验证发布器出站载荷语义。
  */
 @Tag("contract")

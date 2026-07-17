@@ -4,7 +4,7 @@ domain api/port 结构规则跨 feature 落地
 
 任务目标：
 
-按已更新的 `docs/包结构规范.md`，将 auth 之外的 feature 也落地 `domain/api` 与 `domain/port`：
+按已更新的 `docs/architecture/包结构规范.md`，将 auth 之外的 feature 也落地 `domain/api` 与 `domain/port`：
 
 - `domain/api`：向 controller、server、其他 feature 暴露 domain 能力的入口接口。
 - `domain/port`：domain service 依赖的非持久化能力端口。
@@ -126,7 +126,7 @@ domain api/port 结构规则跨 feature 落地
 
 知识沉淀 / 是否回写 docs：
 
-- 不回写 docs。本任务按上一轮已确认并写入的 `docs/包结构规范.md` 执行，没有新增长期规则。
+- 不回写 docs。本任务按上一轮已确认并写入的 `docs/architecture/包结构规范.md` 执行，没有新增长期规则。
 
 产物清理与保留说明：
 

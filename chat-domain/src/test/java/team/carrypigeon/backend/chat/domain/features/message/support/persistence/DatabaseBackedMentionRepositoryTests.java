@@ -72,6 +72,20 @@ class DatabaseBackedMentionRepositoryTests {
     }
 
     /**
+     * 验证 `deleteByMessageId` 在 `delegatesToDatabaseService` 场景下的测试契约。
+     */
+    @Test
+    @DisplayName("delete by message id delegates to database service")
+    void deleteByMessageId_delegatesToDatabaseService() {
+        RecordingMentionDatabaseService databaseService = new RecordingMentionDatabaseService();
+        DatabaseBackedMentionRepository repository = new DatabaseBackedMentionRepository(databaseService);
+
+        repository.deleteByMessageId(5002L);
+
+        assertEquals(5002L, databaseService.deletedMessageId);
+    }
+
+    /**
      * 验证 `markAllAsRead` 在 `delegatesToDatabaseService` 场景下的测试契约。
      */
     @Test
@@ -101,6 +115,7 @@ class DatabaseBackedMentionRepositoryTests {
         private Long channelId;
         private List<MentionRecord> records = List.of();
         private MentionRecord insertedRecord;
+        private long deletedMessageId;
         private boolean markAsReadResult;
         private long markAsReadAccountId;
         private long markAsReadMentionId;
@@ -112,6 +127,11 @@ class DatabaseBackedMentionRepositoryTests {
         @Override
         public void insert(MentionRecord record) {
             this.insertedRecord = record;
+        }
+
+        @Override
+        public void deleteByMessageId(long messageId) {
+            this.deletedMessageId = messageId;
         }
 
         @Override

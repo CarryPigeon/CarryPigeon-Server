@@ -11,8 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSession
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LoginCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthenticatedPrincipal;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UpdateChannelReadStateRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
@@ -23,6 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextCh
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
+import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
 import team.carrypigeon.backend.starter.config.InitializationCheckConfiguration;
 import team.carrypigeon.backend.starter.support.StarterRegressionConfiguration;
 import team.carrypigeon.backend.starter.support.StarterTestRuntimeConfiguration;
@@ -40,7 +41,8 @@ class MessageAttachmentRegressionTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     BasicInfrastructureAutoConfiguration.class,
-                    JacksonAutoConfiguration.class
+                    JacksonAutoConfiguration.class,
+                    PluginAutoConfiguration.class
             ))
             .withUserConfiguration(
                     StarterTestRuntimeConfiguration.class,
@@ -57,14 +59,14 @@ class MessageAttachmentRegressionTests {
             AuthAccountApi authAccountApi = context.getBean(AuthAccountApi.class);
             AuthSessionApi authSessionApi = context.getBean(AuthSessionApi.class);
             FileController fileController = context.getBean(FileController.class);
-            AuthRequestContext authRequestContext = context.getBean(AuthRequestContext.class);
+            RequestAuthenticationContext authRequestContext = context.getBean(RequestAuthenticationContext.class);
 
             authAccountApi.register(new RegisterCommand("carry-storage-user", "strong-pass-9911"));
             AuthTokenResult loginResult = authSessionApi.login(new LoginCommand("carry-storage-user", "strong-pass-9911"));
             long accountId = loginResult.accountId();
 
             MockHttpServletRequest request = new MockHttpServletRequest();
-            authRequestContext.bind(request, new AuthenticatedPrincipal(accountId, "carry-storage-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(accountId, "carry-storage-user"));
 
             var uploadResponse = fileController.createUpload(new CreateFileUploadRequest("image.png", "image/png", 12L, null), request);
             assertThat(uploadResponse.upload().url()).isEqualTo("/api/files/uploads/" + uploadResponse.shareKey());
@@ -72,7 +74,7 @@ class MessageAttachmentRegressionTests {
             MockHttpServletRequest uploadRequest = new MockHttpServletRequest();
             uploadRequest.setContentType("image/png");
             uploadRequest.setContent("hello-image!".getBytes());
-            authRequestContext.bind(uploadRequest, new AuthenticatedPrincipal(accountId, "carry-storage-user"));
+            authRequestContext.bind(uploadRequest, new AuthenticatedAccount(accountId, "carry-storage-user"));
             fileController.uploadFile(uploadResponse.shareKey(), uploadRequest);
 
             var downloadResponse = fileController.download(uploadResponse.shareKey(), request);
@@ -94,7 +96,7 @@ class MessageAttachmentRegressionTests {
             ChannelMessageController channelMessageController = context.getBean(ChannelMessageController.class);
             ChannelReadStateController channelReadStateController = context.getBean(ChannelReadStateController.class);
             ChannelMessagePublishingApi channelMessagePublishingApi = context.getBean(ChannelMessagePublishingApi.class);
-            AuthRequestContext authRequestContext = context.getBean(AuthRequestContext.class);
+            RequestAuthenticationContext authRequestContext = context.getBean(RequestAuthenticationContext.class);
 
             authAccountApi.register(new RegisterCommand("carry-read-user", "strong-pass-3322"));
             AuthTokenResult loginResult = authSessionApi.login(new LoginCommand("carry-read-user", "strong-pass-3322"));
@@ -103,7 +105,7 @@ class MessageAttachmentRegressionTests {
             AuthTokenResult peerLoginResult = authSessionApi.login(new LoginCommand("carry-read-peer", "strong-pass-4411"));
 
             MockHttpServletRequest request = new MockHttpServletRequest();
-            authRequestContext.bind(request, new AuthenticatedPrincipal(accountId, "carry-read-user"));
+            authRequestContext.bind(request, new AuthenticatedAccount(accountId, "carry-read-user"));
 
             channelMessagePublishingApi.sendChannelMessage(new SendChannelMessageCommand(
                     peerLoginResult.accountId(),

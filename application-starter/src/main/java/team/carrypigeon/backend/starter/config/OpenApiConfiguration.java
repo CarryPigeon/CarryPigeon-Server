@@ -292,7 +292,7 @@ public class OpenApiConfiguration {
                         .description("面向前端、测试与集成方的 CarryPigeon Backend HTTP API 门户。\n\n"
                                 + "使用说明：\n"
                                 + "1. 大多数受保护接口需要在 Swagger Authorize 中填写 `Bearer <access-token>`。\n"
-                                + "2. 当前对外协议以 `docs/t` 下的 v1 HTTP/WS 规范为基准，HTTP 成功响应直接返回资源对象，不使用 `CPResponse` 统一成功包装。\n"
+                                + "2. 当前对外协议以 `docs/api/API.md` 为基准，HTTP 成功响应直接返回资源对象，不使用 `CPResponse` 统一成功包装。\n"
                                 + "3. JSON 字段统一为 `snake_case`，雪花 ID 统一编码为十进制字符串。\n"
                                 + "4. 失败响应统一为 `{ \"error\": { status, reason, message, details? } }`，请以 `error.reason` 作为分支条件。\n"
                                 + "5. Apifox 导入建议使用 `/v3/api-docs`；导入后创建 `local` 环境，并配置 `token`、`refreshToken`、`channelId=100` 等变量。"))
@@ -309,7 +309,7 @@ public class OpenApiConfiguration {
         openAPI.addExtension("x-apifox-import-note", Map.ofEntries(
                 Map.entry("base_url", "http://127.0.0.1:8080"),
                 Map.entry("websocket_url", "ws://127.0.0.1:18080/api/ws"),
-                Map.entry("websocket_enabled_config", "CP_CHAT_REALTIME_ENABLED=true (default); set false to disable"),
+                Map.entry("websocket_enabled_config", "cp.chat.server.realtime.enabled=true in config/application.yaml; set false to disable"),
                 Map.entry("login_username", "carry-owner"),
                 Map.entry("login_password", "carrypigeon123"),
                 Map.entry("default_channel_id", "100"),

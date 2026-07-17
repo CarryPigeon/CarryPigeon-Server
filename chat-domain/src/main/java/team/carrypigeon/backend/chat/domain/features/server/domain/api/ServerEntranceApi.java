@@ -33,4 +33,14 @@ public interface ServerEntranceApi {
      * @return 缺失的 required plugin ID 列表
      */
     List<String> findMissingRequiredPlugins(List<String> installedPluginIds);
+
+    /**
+     * 要求客户端满足 required plugin gate。
+     * 输入：客户端已安装插件 ID 列表。
+     * 副作用：无。
+     * 失败语义：存在缺失 required 插件时抛出领域问题异常。
+     *
+     * @param installedPluginIds 客户端已安装插件 ID 列表
+     */
+    void requireRequiredPluginsSatisfied(List<String> installedPluginIds);
 }

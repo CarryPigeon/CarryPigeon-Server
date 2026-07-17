@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -146,7 +147,8 @@ public class RealtimeServerConfiguration {
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
             ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
-            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
+            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider,
+            @Value("${cp.local-dev.http.request-log.enabled:false}") boolean requestLogEnabled
     ) {
         return new RealtimeChannelInitializer(
                 properties,
@@ -157,7 +159,8 @@ public class RealtimeServerConfiguration {
                 serverIdentityProperties,
                 realtimeSessionRegistry,
                 channelMessagePublishingApiProvider,
-                realtimeInboundMessageDispatcherProvider
+                realtimeInboundMessageDispatcherProvider,
+                requestLogEnabled
         );
     }
 

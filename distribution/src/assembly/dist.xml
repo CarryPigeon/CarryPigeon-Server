@@ -33,7 +33,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>${project.basedir}/../application-starter/src/main/resources</directory>
+            <directory>${project.basedir}/src/config</directory>
             <outputDirectory>config</outputDirectory>
             <includes>
                 <include>application.yaml</include>
@@ -75,13 +75,6 @@
             <outputDirectory>.</outputDirectory>
             <includes>
                 <include>README.md</include>
-            </includes>
-        </fileSet>
-        <fileSet>
-            <directory>${project.basedir}/..</directory>
-            <outputDirectory>.</outputDirectory>
-            <includes>
-                <include>.env.example</include>
             </includes>
         </fileSet>
     </fileSets>

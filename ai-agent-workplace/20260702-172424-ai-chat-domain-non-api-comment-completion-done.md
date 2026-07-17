@@ -42,11 +42,11 @@ chat-domain 非 API 主源码注释依次补全
 文档依据：
 
 - `AGENTS.md`
-- `docs/注释规范.md`
-- `docs/包结构规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/任务单模板.md`
+- `docs/standards/注释规范.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/任务单模板.md`
 
 任务分解 / 执行计划：
 
@@ -55,7 +55,7 @@ chat-domain 非 API 主源码注释依次补全
 3. 第二批补齐 controller 公开入口方法注释。
 4. 第三批补齐 `domain/service/*DomainApi` 实现类公开方法注释。
 5. 第四批补齐重要抽象支撑类、领域端口实现、support 适配类公开或受保护方法注释。
-6. 对简单 getter/setter、record 访问器、常量字段等按 `docs/注释规范.md` 允许豁免，不机械补无信息注释；但关键字段或状态语义需补充字段级注释。
+6. 对简单 getter/setter、record 访问器、常量字段等按 `docs/standards/注释规范.md` 允许豁免，不机械补无信息注释；但关键字段或状态语义需补充字段级注释。
 7. 运行注释扫描，确认必须补齐的缺口已收敛。
 8. 运行 `mvn -pl chat-domain -am test-compile`。
 9. 更新任务单实际结果、验证记录、残留风险并归档。
@@ -116,7 +116,7 @@ chat-domain 非 API 主源码注释依次补全
 
 知识沉淀 / 是否回写 docs：
 
-- 本次没有新增长期规范，仅按既有 `docs/注释规范.md` 执行，不需要回写 `docs/`。
+- 本次没有新增长期规范，仅按既有 `docs/standards/注释规范.md` 执行，不需要回写 `docs/`。
 
 产物清理与保留说明：
 

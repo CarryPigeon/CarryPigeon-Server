@@ -26,10 +26,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
@@ -54,7 +54,6 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 public class UserProfileController {
 
     private final UserProfileApi userProfileDomainApi;
-    private final EmailVerificationCodeService emailVerificationCodeService;
     private final RequestAuthenticationContext authRequestContext;
     private final FileTransferApi fileTransferDomainApi;
 
@@ -62,18 +61,15 @@ public class UserProfileController {
      * 创建用户资料 HTTP 入口。
      *
      * @param userProfileDomainApi 用户资料领域 API
-     * @param emailVerificationCodeService 邮箱验证码能力端口
      * @param authRequestContext 请求认证上下文
      * @param fileTransferDomainApi 文件传输领域 API
      */
     public UserProfileController(
             UserProfileApi userProfileDomainApi,
-            EmailVerificationCodeService emailVerificationCodeService,
             RequestAuthenticationContext authRequestContext,
             FileTransferApi fileTransferDomainApi
     ) {
         this.userProfileDomainApi = userProfileDomainApi;
-        this.emailVerificationCodeService = emailVerificationCodeService;
         this.authRequestContext = authRequestContext;
         this.fileTransferDomainApi = fileTransferDomainApi;
     }
@@ -169,8 +165,11 @@ public class UserProfileController {
             @Valid @RequestBody UpdateCurrentUserEmailRequest body
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        emailVerificationCodeService.verifyCode(body.email(), body.code());
-        userProfileDomainApi.updateCurrentUserEmail(principal.accountId(), body.email().trim().toLowerCase());
+        userProfileDomainApi.updateCurrentUserEmail(new UpdateCurrentUserEmailCommand(
+                principal.accountId(),
+                body.email(),
+                body.code()
+        ));
         return ResponseEntity.noContent().build();
     }
 
@@ -222,19 +221,17 @@ public class UserProfileController {
             @RequestPart("background") MultipartFile background
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        String shareKey = "profile_bg_" + principal.accountId();
         try {
-            fileTransferDomainApi.uploadFile(
+            String shareKey = fileTransferDomainApi.uploadProfileBackground(
                     principal.accountId(),
-                    shareKey,
                     background.getContentType(),
                     background.getSize(),
                     background.getInputStream()
             );
+            return new UserBackgroundUploadResponse("/api/files/download/" + shareKey);
         } catch (IOException exception) {
             throw ProblemException.fail("background_upload_read_failed", "failed to read background upload content");
         }
-        return new UserBackgroundUploadResponse("/api/files/download/" + shareKey);
     }
 
     private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {
@@ -245,15 +242,26 @@ public class UserProfileController {
         );
     }
 
+    /**
+     * 解析用户资料批量查询的账号 ID 列表。
+     * 失败语义：缺失或任一 ID 不是十进制雪花 ID 时返回统一校验问题。
+     *
+     * @param ids 逗号分隔的账号 ID 字符串
+     * @return 账号 ID 列表
+     */
     private List<Long> parseIds(String ids) {
         if (ids == null || ids.isBlank()) {
             throw ProblemException.validationFailed("ids must not be blank");
         }
         try {
-            return Arrays.stream(ids.split(","))
+            return Arrays.stream(ids.split(",", -1))
                     .map(String::trim)
-                    .filter(value -> !value.isBlank())
-                    .map(Ids::parse)
+                    .map(value -> {
+                        if (value.isBlank()) {
+                            throw new IllegalArgumentException("blank id segment");
+                        }
+                        return Ids.parse(value);
+                    })
                     .toList();
         } catch (IllegalArgumentException exception) {
             throw ProblemException.validationFailed("ids must be decimal snowflake strings");

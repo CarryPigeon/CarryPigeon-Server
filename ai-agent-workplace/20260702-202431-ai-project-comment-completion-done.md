@@ -4,7 +4,7 @@
 
 任务目标：
 
-在 `chat-domain` 主源码注释已达标的基础上，继续补齐项目范围内仍未满足注释规范的源码与测试注释缺口，使关键生产类、边界类、测试类和测试方法达到 `docs/注释规范.md` 与 `AGENTS.md` 的要求。
+在 `chat-domain` 主源码注释已达标的基础上，继续补齐项目范围内仍未满足注释规范的源码与测试注释缺口，使关键生产类、边界类、测试类和测试方法达到 `docs/standards/注释规范.md` 与 `AGENTS.md` 的要求。
 
 任务背景：
 
@@ -47,11 +47,11 @@
 文档依据：
 
 - `AGENTS.md`
-- `docs/注释规范.md`
-- `docs/测试规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/任务单模板.md`
+- `docs/standards/注释规范.md`
+- `docs/standards/测试规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/任务单模板.md`
 
 任务分解 / 执行计划：
 
@@ -126,7 +126,7 @@
 
 知识沉淀 / 是否回写 docs：
 
-- 本次没有新增长期规范，仅按既有 `docs/注释规范.md` 与 `docs/测试规范.md` 执行，不需要回写 `docs/`。
+- 本次没有新增长期规范，仅按既有 `docs/standards/注释规范.md` 与 `docs/standards/测试规范.md` 执行，不需要回写 `docs/`。
 
 产物清理与保留说明：
 

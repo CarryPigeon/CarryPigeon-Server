@@ -61,6 +61,13 @@ public class MessageAttachmentObjectKeyPolicy {
         return "channels/" + channelId + "/messages/" + messageType + "/accounts/" + accountId + "/";
     }
 
+    /**
+     * 清洗进入 objectKey 的文件名片段。
+     * 约束：只保留字母、数字、点、下划线和短横线，避免路径分隔符或特殊字符污染对象键。
+     *
+     * @param filename 原始文件名
+     * @return 可放入 objectKey 的文件名片段
+     */
     private String sanitizeFilename(String filename) {
         String sanitized = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
         return sanitized.isBlank() ? "attachment" : sanitized;

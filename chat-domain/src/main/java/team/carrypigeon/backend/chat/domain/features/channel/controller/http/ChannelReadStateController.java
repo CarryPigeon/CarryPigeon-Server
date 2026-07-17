@@ -90,6 +90,13 @@ public class ChannelReadStateController {
         return new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime());
     }
 
+    /**
+     * 解析更新已读状态使用的消息 ID。
+     * 失败语义：不是十进制雪花 ID 时返回字段级校验问题。
+     *
+     * @param rawValue 原始消息 ID
+     * @return 最后已读消息 ID
+     */
     private long parseLastReadMid(String rawValue) {
         try {
             return Long.parseLong(rawValue);

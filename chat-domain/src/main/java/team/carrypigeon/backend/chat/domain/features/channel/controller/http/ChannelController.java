@@ -284,7 +284,7 @@ public class ChannelController {
     }
 
     @PutMapping("/{channelId}/bans/{targetAccountId}")
-    @Operation(summary = "禁言频道成员", description = "按 docs/t v1 契约禁言指定成员。")
+    @Operation(summary = "禁言频道成员", description = "按 docs/api/API.md 契约禁言指定成员。")
     public ResponseEntity<ChannelBanV1Response> banChannelMemberV1(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
@@ -388,6 +388,14 @@ public class ChannelController {
         );
     }
 
+    /**
+     * 解析频道 HTTP 查询中的可选雪花 ID。
+     * 失败语义：cursor 字段固定返回 `cursor_invalid`，其它字段返回通用雪花 ID 错误。
+     *
+     * @param rawValue 原始查询参数
+     * @param cursorField 是否为 cursor 字段
+     * @return 解析后的雪花 ID，缺失时为 null
+     */
     private Long parseOptionalSnowflake(String rawValue, boolean cursorField) {
         if (rawValue == null || rawValue.isBlank()) {
             return null;

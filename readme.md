@@ -7,15 +7,15 @@ CarryPigeon Backend 是一个基于 **Java 21 + Spring Boot + Maven 多模块** 
 ## 当前状态
 
 - 当前阶段：重写式重构中
-- 主要目标：稳定聊天内核、HTTP API、统一响应模型、基础鉴权与可替换基础设施边界
+- 主要目标：稳定聊天内核、HTTP API、标准错误模型、基础鉴权与可替换基础设施边界
 - 当前交付方式：`thin jar + libs` 分发
 - 当前外部依赖：MySQL、Redis、MinIO
-- 当前文档入口：`docs/API.md` 与运行时 Swagger / OpenAPI 门户
+- 当前文档入口：`docs/api/API.md` 与运行时 Swagger / OpenAPI 门户
 
 ## 主要特性
 
 - Maven 多模块后端结构，模块职责边界清晰
-- 统一 HTTP 响应模型 `CPResponse<T>`
+- 直接资源成功响应与统一错误响应模型
 - 基于 Bearer Token 的受保护接口访问
 - Swagger / OpenAPI 门户，包含分组、字段说明、成功/失败示例
 - thin-jar + libs 分发模式
@@ -47,8 +47,8 @@ bash bin/linux/docker-up.sh
 
 更多环境准备请参考：
 
-- `docs/部署手册.md`
-- `docs/数据库部署手册.md`
+- `docs/operations/部署手册.md`
+- `docs/operations/数据库部署手册.md`
 - `docs/sql/README.md`
 
 ### 2. 运行测试
@@ -61,8 +61,8 @@ mvn test -DskipTests=false
 
 请参考：
 
-- `docs/启动脚本索引.md`
-- `docs/部署手册.md`
+- `docs/operations/启动脚本索引.md`
+- `docs/operations/部署手册.md`
 
 ## Swagger / OpenAPI
 
@@ -79,25 +79,25 @@ mvn test -DskipTests=false
 2. 打开 Swagger UI 查看接口分组、请求/响应示例与错误示例
 3. 若接口需要认证，先调用登录接口获取 `accessToken`
 4. 在 Swagger UI 的 `Authorize` 中填写 `Bearer <access-token>`
-5. 调用受保护接口时，结合 `HTTP 200` 与 `CPResponse.code` 判断真实业务结果
+5. 调用受保护接口时，按 HTTP 状态码判断成功或失败；失败响应读取 `error.reason` 和 `error.message`
 
-更多接口细节请参考 `docs/API.md`。
+更多接口细节请参考 `docs/api/API.md`。
 
 ## 文档索引
 
 推荐优先阅读：
 
-- `docs/API.md`：当前 HTTP API 文档与使用说明
-- `docs/架构文档.md`：模块职责与依赖边界
-- `docs/部署手册.md`：运行方式、分发与部署边界
-- `docs/数据库部署手册.md`：MySQL、Flyway 与数据库初始化说明
+- `docs/api/API.md`：当前 HTTP API 文档与使用说明
+- `docs/architecture/架构文档.md`：模块职责与依赖边界
+- `docs/operations/部署手册.md`：运行方式、分发与部署边界
+- `docs/operations/数据库部署手册.md`：MySQL、Flyway 与数据库初始化说明
 - `docs/sql/README.md`：按领域划分的数据库聚合 SQL
-- `docs/测试规范.md`：测试分层与质量门禁
-- `docs/AI协作开发规范.md`：AI / 协作开发规则
+- `docs/standards/测试规范.md`：测试分层与质量门禁
+- `docs/standards/AI协作开发规范.md`：AI / 协作开发规则
 
 脚本与平台相关说明：
 
-- `docs/启动脚本索引.md`
+- `docs/operations/启动脚本索引.md`
 - `bin/linux/README.md`
 - `bin/windows/README.md`
 
@@ -116,6 +116,6 @@ mvn test -DskipTests=false
 
 如果你的目标是：
 
-- **前端联调**：优先打开 Swagger UI 与 `docs/API.md`
-- **后端开发**：优先阅读 `docs/架构文档.md` 与 `docs/测试规范.md`
-- **部署运行**：优先阅读 `docs/部署手册.md` 与 `docs/数据库部署手册.md`
+- **前端联调**：优先打开 Swagger UI 与 `docs/api/API.md`
+- **后端开发**：优先阅读 `docs/architecture/架构文档.md` 与 `docs/standards/测试规范.md`
+- **部署运行**：优先阅读 `docs/operations/部署手册.md` 与 `docs/operations/数据库部署手册.md`

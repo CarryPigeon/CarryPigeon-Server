@@ -63,6 +63,12 @@ public final class OpaqueCursorCodec {
         }
     }
 
+    /**
+     * 构造统一的游标校验失败问题。
+     * 约束：编码非法、作用域不匹配和 ID 非法都收敛为同一个 cursor 错误。
+     *
+     * @return 游标无效问题异常
+     */
     private static ProblemException invalidCursor() {
         return ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
     }

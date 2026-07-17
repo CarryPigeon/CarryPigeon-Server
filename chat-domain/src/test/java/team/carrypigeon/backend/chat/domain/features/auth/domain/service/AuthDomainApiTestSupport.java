@@ -13,6 +13,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefre
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.port.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -85,10 +86,27 @@ final class AuthDomainApiTestSupport {
                         Duration.ofMinutes(30),
                         Duration.ofDays(14)
                 ),
+                new AuthPasswordLoginPolicy(true),
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                transactionRunner
+                transactionRunner,
+                new NoopEmailVerificationCodeService()
         );
+    }
+
+    /**
+     * `NoopEmailVerificationCodeService` 验证码端口替身。
+     * 职责：让会话领域 API 测试显式装配验证码边界，不验证发送和校验实现。
+     */
+    private static final class NoopEmailVerificationCodeService implements EmailVerificationCodeService {
+
+        @Override
+        public void issueCode(String email) {
+        }
+
+        @Override
+        public void verifyCode(String email, String code) {
+        }
     }
 
     /**

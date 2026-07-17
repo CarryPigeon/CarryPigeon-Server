@@ -204,6 +204,13 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
         return toResult(persistedMessage.message());
     }
 
+    /**
+     * 处理 HTTP 文本消息发送分支。
+     * 副作用：在事务内保存消息、持久化 mention，并登记事务提交后的实时发布动作。
+     *
+     * @param command HTTP 消息发送命令
+     * @return 创建后的消息投影
+     */
     private ChannelMessageResult sendHttpTextMessage(SendChannelMessageHttpCommand command) {
         String normalizedText = messageHttpPayloadParser.requiredString(command.data(), "text", "text must not be blank");
         PersistedMessage persistedMessage = transactionRunner.runInTransaction(afterCommit -> {
@@ -241,6 +248,13 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
         return toResult(persistedMessage.message());
     }
 
+    /**
+     * 处理 HTTP 文件消息发送分支。
+     * 约束：协议 data 必须提供文件名，并通过 share_key 或 object_key 解析附件对象。
+     *
+     * @param command HTTP 消息发送命令
+     * @return 创建后的消息投影
+     */
     private ChannelMessageResult sendHttpFileMessage(SendChannelMessageHttpCommand command) {
         String filename = messageHttpPayloadParser.requiredString(command.data(), "filename", "filename must not be blank");
         String body = messageHttpPayloadParser.optionalString(command.data(), "text");
@@ -256,6 +270,13 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
         ));
     }
 
+    /**
+     * 处理 HTTP 语音消息发送分支。
+     * 约束：协议 data 必须提供文件名和正数语音时长，并解析为 voice 草稿。
+     *
+     * @param command HTTP 消息发送命令
+     * @return 创建后的消息投影
+     */
     private ChannelMessageResult sendHttpVoiceMessage(SendChannelMessageHttpCommand command) {
         String filename = messageHttpPayloadParser.requiredString(command.data(), "filename", "filename must not be blank");
         Long durationMillis = messageHttpPayloadParser.requiredLong(command.data(), "duration_millis", "duration_millis must be greater than 0");
@@ -275,6 +296,14 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
         ));
     }
 
+    /**
+     * 发送由 HTTP data 转换出的附件消息草稿。
+     * 副作用：在事务内校验频道发送权限、通过消息插件构建领域消息、保存消息并登记实时发布。
+     *
+     * @param command HTTP 消息发送命令
+     * @param draft 已按消息类型解析出的附件消息草稿
+     * @return 创建后的消息投影
+     */
     private ChannelMessageResult sendAttachmentHttpMessage(
             SendChannelMessageHttpCommand command,
             ChannelMessageDraft draft

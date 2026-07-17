@@ -88,6 +88,13 @@ public class GlobalExceptionHandler {
         ));
     }
 
+    /**
+     * 从常见请求校验异常中提取客户端可读消息。
+     * 语义：优先返回字段级校验消息，无法定位字段时使用稳定兜底消息。
+     *
+     * @param exception 请求绑定或校验异常
+     * @return 客户端可读校验失败消息
+     */
     private String resolveValidationMessage(Exception exception) {
         if (exception instanceof MethodArgumentNotValidException methodArgumentNotValidException
                 && methodArgumentNotValidException.getBindingResult().getFieldError() != null) {
@@ -106,6 +113,13 @@ public class GlobalExceptionHandler {
         return "validation failed";
     }
 
+    /**
+     * 从请求校验异常中提取字段错误明细。
+     * 输出：仅字段级异常返回 `field_errors`，无法稳定表达字段时返回 null。
+     *
+     * @param exception 请求绑定或校验异常
+     * @return 错误明细，缺失时为 null
+     */
     private Map<String, Object> resolveValidationDetails(Exception exception) {
         if (exception instanceof MethodArgumentNotValidException methodArgumentNotValidException) {
             return Map.of("field_errors", methodArgumentNotValidException.getBindingResult().getFieldErrors().stream()
@@ -138,6 +152,13 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 映射鉴权与权限类领域问题到 HTTP 错误描述。
+     * 约束：token 与登录态问题统一映射为 401，领域权限不足映射为 403。
+     *
+     * @param exception 领域问题异常
+     * @return HTTP 错误描述
+     */
     private ErrorDescriptor forbiddenDescriptor(ProblemException exception) {
         return switch (exception.reason()) {
             case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token" ->
@@ -163,6 +184,13 @@ public class GlobalExceptionHandler {
         };
     }
 
+    /**
+     * 映射校验类领域问题到 HTTP 错误描述。
+     * 约束：少量具有业务状态语义的校验问题会提升为 409 或 412，其余保持 422。
+     *
+     * @param exception 领域问题异常
+     * @return HTTP 错误描述
+     */
     private ErrorDescriptor validationDescriptor(ProblemException exception) {
         if ("required_plugin_missing".equals(exception.reason())) {
             return new ErrorDescriptor(
@@ -188,6 +216,13 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * 映射内部类领域问题到 HTTP 错误描述。
+     * 约束：可被调用方理解的外部服务不可用返回 503，其余内部问题统一隐藏为 500。
+     *
+     * @param exception 领域问题异常
+     * @return HTTP 错误描述
+     */
     private ErrorDescriptor internalDescriptor(ProblemException exception) {
         return switch (exception.reason()) {
             case "mail_service_unavailable", "email_delivery_failed" ->
@@ -196,6 +231,13 @@ public class GlobalExceptionHandler {
         };
     }
 
+    /**
+     * 构造统一 HTTP 错误响应。
+     * 约束：响应体必须带 requestId，便于客户端错误和服务端日志关联。
+     *
+     * @param descriptor HTTP 错误描述
+     * @return 可直接返回给客户端的响应实体
+     */
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(ErrorDescriptor descriptor) {
         ApiErrorResponse response = new ApiErrorResponse(new ApiError(
                 descriptor.status().value(),

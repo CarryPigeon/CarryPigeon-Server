@@ -140,6 +140,15 @@ public class MentionController {
         );
     }
 
+    /**
+     * 解析 mention HTTP 查询中的可选雪花 ID。
+     * 失败语义：cursor 字段固定返回 `cursor_invalid`，其它字段返回字段级十进制雪花 ID 错误。
+     *
+     * @param rawValue 原始查询参数
+     * @param fieldName 字段显示名
+     * @param cursorField 是否为 cursor 字段
+     * @return 解析后的雪花 ID，缺失时为 null
+     */
     private Long parseOptionalSnowflake(String rawValue, String fieldName, boolean cursorField) {
         if (rawValue == null || rawValue.isBlank()) {
             return null;
@@ -165,6 +174,14 @@ public class MentionController {
         return limit;
     }
 
+    /**
+     * 解析 mention HTTP 路径或查询中的必填雪花 ID。
+     * 失败语义：缺失或非十进制数字时返回字段级校验问题。
+     *
+     * @param rawValue 原始参数
+     * @param fieldName 字段显示名
+     * @return 解析后的雪花 ID
+     */
     private long parseRequiredSnowflake(String rawValue, String fieldName) {
         Long parsed = parseOptionalSnowflake(rawValue, fieldName, false);
         if (parsed == null) {

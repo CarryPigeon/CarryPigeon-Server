@@ -525,6 +525,10 @@ final class RealtimeChannelHandlerTestSupport {
             }
 
             @Override
+            public void deleteByMessageId(long messageId) {
+            }
+
+            @Override
             public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
                 return List.of();
             }
@@ -555,6 +559,9 @@ final class RealtimeChannelHandlerTestSupport {
 
             @Override
             public AuthTokenClaims parseAccessToken(String accessToken) {
+                if ("bad-subject-token".equals(accessToken)) {
+                    return new AuthTokenClaims("not-a-number", "carry-user@example.com", "access", 0L, Instant.parse("2026-04-22T00:30:00Z"));
+                }
                 if ("access-token-2".equals(accessToken)) {
                     return new AuthTokenClaims("1002", "carry-ops@example.com", "access", 0L, Instant.parse("2026-04-22T00:30:00Z"));
                 }

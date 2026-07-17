@@ -86,6 +86,27 @@ class ServerEntranceDomainApiTests {
         assertEquals(java.util.List.of("math-formula"), result);
     }
 
+    /**
+     * 验证 required plugin 配置会忽略空条目并裁剪空白，避免空配置误触发 required gate。
+     */
+    @Test
+    @DisplayName("required plugins blank entries are ignored")
+    void requiredPlugins_blankEntries_areIgnored() {
+        ServerEntranceDomainApi service = new ServerEntranceDomainApi(
+                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
+                "CarryPigeonBackend",
+                realtimeProperties(true),
+                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
+                java.util.List.of("", "  mc-bind  ", " ")
+        );
+
+        var discovery = service.getServerDiscoveryDocument();
+        var missingPlugins = service.findMissingRequiredPlugins(java.util.List.of("mc-bind"));
+
+        assertEquals(java.util.List.of("mc-bind"), discovery.requiredPlugins());
+        assertEquals(java.util.List.of(), missingPlugins);
+    }
+
     private RealtimeDiscoverySettings realtimeProperties(boolean enabled) {
         return new RealtimeDiscoverySettings(enabled, "127.0.0.1", 28080, "/api/ws");
     }

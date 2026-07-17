@@ -28,11 +28,11 @@
 ## governing docs
 
 - `AGENTS.md`
-- `docs/架构文档.md`
-- `docs/API.md`
-- `docs/配置规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
+- `docs/architecture/架构文档.md`
+- `docs/api/API.md`
+- `docs/standards/配置规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
 
 ## acceptance criteria
 
@@ -47,7 +47,7 @@
 - 已将 `.env.example` 中 `CP_CHAT_REALTIME_ENABLED=false` 改为 `CP_CHAT_REALTIME_ENABLED=true`。
 - 已更新 OpenAPI Apifox 导入提示，说明 WS 开关默认开启，设置为 `false` 才关闭。
 - 已新增 `ApplicationYamlDefaultsTests` 锁定 application.yaml 中 realtime 默认开启表达式。
-- 已更新 `docs/API.md` 与 `docs/架构文档.md`，同步默认开启语义，并说明当前内置 Netty realtime 未装配 TLS handler。
+- 已更新 `docs/api/API.md` 与 `docs/architecture/架构文档.md`，同步默认开启语义，并说明当前内置 Netty realtime 未装配 TLS handler。
 
 ## TLS / WSS 核查结论
 

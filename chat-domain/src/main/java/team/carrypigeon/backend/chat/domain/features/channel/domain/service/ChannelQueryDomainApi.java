@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
@@ -16,6 +17,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListAu
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelBansQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelMembersQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
@@ -124,11 +126,6 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         if (query.limit() <= 0 || query.limit() > 100) {
             throw ProblemException.validationFailed("limit must be between 1 and 100");
         }
-        if (query.channelId() == null) {
-            throw ProblemException.validationFailed("channelId must not be null");
-        }
-        requirePositive(query.channelId(), "channelId");
-        requireMember(query.channelId(), query.accountId());
         if (query.actorAccountId() != null) {
             requirePositive(query.actorAccountId(), "actorAccountId");
         }
@@ -138,23 +135,18 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         if (query.toTime() != null && query.toTime() < 0) {
             throw ProblemException.validationFailed("to_time must be greater than or equal to 0");
         }
-        return channelAuditLogRepository.list(
-                        query.cursorAuditId(),
-                        query.limit() + 1,
-                        query.channelId(),
-                        query.actorAccountId(),
-                        channelAuditActionMapper.normalizeFilterAction(query.action()),
-                        query.fromTime() == null ? null : Instant.ofEpochMilli(query.fromTime()),
-                        query.toTime() == null ? null : Instant.ofEpochMilli(query.toTime())
-                ).stream()
-                .map(log -> new AuditLogResult(
-                        Ids.toString(log.auditId()),
-                        Ids.toString(log.channelId()),
-                        log.actorAccountId() == null ? null : Ids.toString(log.actorAccountId()),
-                        channelAuditActionMapper.toClientAction(log.actionType()),
-                        log.metadata(),
-                        log.createdAt().toEpochMilli()
-                ))
+        String actionType = channelAuditActionMapper.normalizeFilterAction(query.action());
+        Instant fromTime = query.fromTime() == null ? null : Instant.ofEpochMilli(query.fromTime());
+        Instant toTime = query.toTime() == null ? null : Instant.ofEpochMilli(query.toTime());
+        if (query.channelId() != null) {
+            requirePositive(query.channelId(), "channelId");
+            requireMember(query.channelId(), query.accountId());
+            return listAuditLogsByChannel(query, query.channelId(), actionType, fromTime, toTime);
+        }
+        return channelMemberRepository.findChannelIdsByAccountId(query.accountId()).stream()
+                .flatMap(channelId -> listAuditLogsByChannel(query, channelId, actionType, fromTime, toTime).stream())
+                .sorted(Comparator.comparingLong((AuditLogResult result) -> Long.parseLong(result.auditId())).reversed())
+                .limit(query.limit() + 1L)
                 .toList();
     }
 
@@ -267,16 +259,85 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         );
     }
 
+    /**
+     * 查询单个频道内当前账号可见的审计日志。
+     * 约束：调用方负责完成频道成员校验或限定频道来自当前账号成员列表。
+     *
+     * @param query 原始审计日志查询
+     * @param channelId 待查询频道 ID
+     * @param actionType 已规范化的动作过滤条件
+     * @param fromTime 已转换的起始时间过滤
+     * @param toTime 已转换的结束时间过滤
+     * @return 单频道审计日志投影列表
+     */
+    private List<AuditLogResult> listAuditLogsByChannel(
+            ListAuditLogsQuery query,
+            long channelId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        return channelAuditLogRepository.list(
+                        query.cursorAuditId(),
+                        query.limit() + 1,
+                        channelId,
+                        query.actorAccountId(),
+                        actionType,
+                        fromTime,
+                        toTime
+                ).stream()
+                .map(this::toAuditLogResult)
+                .toList();
+    }
+
+    /**
+     * 将审计日志领域对象转换为客户端查询投影。
+     *
+     * @param log 审计日志领域对象
+     * @return 客户端审计日志投影
+     */
+    private AuditLogResult toAuditLogResult(ChannelAuditLog log) {
+        return new AuditLogResult(
+                Ids.toString(log.auditId()),
+                Ids.toString(log.channelId()),
+                log.actorAccountId() == null ? null : Ids.toString(log.actorAccountId()),
+                channelAuditActionMapper.toClientAction(log.actionType()),
+                log.metadata(),
+                log.createdAt().toEpochMilli()
+        );
+    }
+
+    /**
+     * 校验频道成员列表查询的基础入参。
+     * 约束：当前查询只接受已认证账号和有效频道 ID，分页参数由仓储默认策略处理。
+     *
+     * @param query 频道成员列表查询
+     */
     private void validateListChannelMembersQuery(ListChannelMembersQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
     }
 
+    /**
+     * 加载并要求频道存在。
+     * 失败语义：频道不存在时按领域资源不存在处理。
+     *
+     * @param channelId 频道 ID
+     * @return 频道领域对象
+     */
     private Channel requireChannel(long channelId) {
         return channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
     }
 
+    /**
+     * 加载并要求账号是频道成员。
+     * 失败语义：成员关系不存在时按频道成员权限不足处理。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账号 ID
+     * @return 频道成员关系
+     */
     private ChannelMember requireMember(long channelId, long accountId) {
         return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
@@ -288,6 +349,13 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         }
     }
 
+    /**
+     * 规范化频道类型过滤条件。
+     * 约束：仅允许 public、private、system 三类领域频道类型，空白表示不过滤。
+     *
+     * @param type 客户端提交的频道类型过滤值
+     * @return 规范化后的频道类型，缺失时为 null
+     */
     private String normalizeChannelTypeFilter(String type) {
         if (type == null || type.isBlank()) {
             return null;

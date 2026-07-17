@@ -22,7 +22,7 @@
 
 - 修复 `chat-domain` 中已确认的请求链问题。
 - 补充或调整相关测试。
-- 同步修正 `docs/API.md` 和 `docs/t/*` 中与本次问题直接相关的 API / WS 文档。
+- 同步修正 `docs/api/API.md` 和 `docs/t/*` 中与本次问题直接相关的 API / WS 文档。
 - 更新本任务单。
 
 ## 禁止修改范围
@@ -46,13 +46,13 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/任务单模板.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/异常与错误码规范.md`
-- `docs/测试规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/任务单模板.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/异常与错误码规范.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/20260707-224015-ai-request-chain-audit-done.md`
 
 ## 任务分解 / 执行计划
@@ -143,7 +143,7 @@
 ## 知识沉淀 / 是否回写 docs
 
 - 本次未新增长期架构规则。
-- 对外 API / WS 协议变化已回写到 `docs/API.md`、`docs/t/11-http-endpoints-v1.md`、`docs/t/12-ws-events-v1.md` 和相关 `docs/t` 链接。
+- 对外 API / WS 协议变化已回写到 `docs/api/API.md`、`docs/t/11-http-endpoints-v1.md`、`docs/t/12-ws-events-v1.md` 和相关 `docs/t` 链接。
 
 ## 产物清理与保留说明
 

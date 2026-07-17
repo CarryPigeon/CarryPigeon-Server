@@ -1,0 +1,112 @@
+# CarryPigeon external runtime configuration.
+# 职责：承载分发包部署时可编辑的结构化运行配置。
+# 边界：本文件承载应用运行配置；Docker Compose / Nginx 仍使用各自文件中的默认值或调用方环境变量。
+
+spring:
+  datasource:
+    # 职责：定义 MySQL JDBC 连接地址。
+    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # 职责：定义 MySQL 连接用户名。
+    username: carrypigeon
+    # 职责：定义 MySQL 连接密码。
+    password: carrypigeon123
+  data:
+    redis:
+      # 职责：定义 Redis 主机地址。
+      host: 127.0.0.1
+      # 职责：定义 Redis 服务端口。
+      port: 6379
+      # 职责：定义 Redis 访问密码。
+      password: carrypigeon123
+  mail:
+    # 职责：定义 SMTP 主机地址；默认不启用邮件服务，保持为空。
+    host: ""
+    # 职责：定义 SMTP 服务端口。
+    port: 587
+    # 职责：定义 SMTP 认证用户名。
+    username: ""
+    # 职责：定义 SMTP 认证密码。
+    password: ""
+
+cp:
+  local-dev:
+    http:
+      cors:
+        # 职责：控制本地客户端联调 CORS；生产环境建议关闭或收窄来源。
+        enabled: false
+        # 职责：限定 WebView / Tauri / 浏览器调试来源。
+        allowed-origin-patterns: http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*,http://tauri.localhost,https://tauri.localhost,tauri://localhost
+        # 职责：控制 CORS 预检缓存秒数。
+        max-age: 3600
+      request-log:
+        # 职责：控制 HTTP / WS 请求摘要日志。
+        enabled: false
+  plugin:
+    # 职责：统一承载插件级启停与自定义选项。
+    # 边界：部署时只在对应插件实现已经读取配置后添加具体插件项。
+    configs: {}
+  chat:
+    auth:
+      password-login:
+        # 职责：控制用户名密码登录入口是否允许签发 token。
+        # 边界：只影响 /api/auth/login，不影响邮箱验证码、refresh 或 Bearer 鉴权。
+        enabled: true
+      jwt:
+        # 职责：定义本服务端 JWT issuer。
+        issuer: carrypigeon-local
+        # 职责：定义 HS256 签名密钥。
+        # 约束：部署前必须填写长度至少 32 字符的强随机值。
+        secret: ""
+        # 职责：定义 access token 的有效期。
+        access-token-ttl: 30m
+        # 职责：定义 refresh token 的有效期。
+        refresh-token-ttl: 14d
+    server:
+      # 职责：定义当前服务实例在消息模型中实际使用的稳定 serverId。
+      id: 550e8400-e29b-41d4-a716-446655440000
+      realtime:
+        # 职责：控制 Netty 实时通道是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义 Netty 实时通道监听地址。
+        host: 127.0.0.1
+        # 职责：定义 Netty WebSocket 服务监听端口。
+        port: 18080
+        # 职责：定义 Netty WebSocket 握手路径。
+        path: /api/ws
+        # 职责：定义 Netty boss 线程数。
+        boss-threads: 1
+        # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
+        worker-threads: 0
+  infrastructure:
+    id:
+      # 职责：配置当前节点的雪花 ID workerId。
+      worker-id: 1
+      # 职责：配置当前节点的雪花 ID datacenterId。
+      datacenter-id: 1
+    service:
+      database:
+        # 职责：控制数据库服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义数据库健康检查使用的最小 SQL。
+        health-query: SELECT 1
+      cache:
+        # 职责：控制缓存服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义字符串缓存默认 TTL。
+        default-ttl: 5m
+      storage:
+        # 职责：控制对象存储服务实现是否参与当前运行时装配。
+        enabled: true
+        # 职责：定义 MinIO 连接地址。
+        endpoint: http://127.0.0.1:9000
+        # 职责：定义 MinIO 访问身份。
+        access-key: carrypigeon
+        # 职责：定义 MinIO 访问密钥。
+        secret-key: carrypigeon123
+        # 职责：定义当前对象存储默认 bucket。
+        bucket: carrypigeon
+      mail:
+        # 职责：控制邮件服务实现是否参与当前运行时装配。
+        enabled: false
+        # 职责：定义邮件默认发件地址。
+        from-address: ""

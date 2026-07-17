@@ -40,6 +40,15 @@ class AuthTokenIssuer {
         this.timeProvider = timeProvider;
     }
 
+    /**
+     * 为账号签发 access/refresh token pair。
+     * 输入：已完成认证或建号流程的账号。
+     * 输出：明文 token、过期时间和 refresh session 标识。
+     * 副作用：持久化 refresh token 哈希值，后续刷新流程只校验哈希后的 refresh token。
+     *
+     * @param account 需要签发会话令牌的账号
+     * @return 新签发的 token pair 与 refresh session 信息
+     */
     AuthTokenPair issueTokenPair(AuthAccount account) {
         long refreshSessionId = idGenerator.nextLongId();
         Instant accessTokenExpiresAt = timeProvider.nowInstant().plus(authTokenSettings.accessTokenTtl());

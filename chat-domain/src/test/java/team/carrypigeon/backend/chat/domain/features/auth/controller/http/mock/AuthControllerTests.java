@@ -2,8 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.controller.http.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -25,7 +25,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.command.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.SendEmailCodeCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -34,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -62,8 +62,7 @@ class AuthControllerTests {
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                         authAccountApi,
                         authSessionApi,
-                        serverEntranceApi,
-                        new AuthTokenSettings(Duration.ofMinutes(30), Duration.ofDays(14))
+                        serverEntranceApi
                 ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -100,6 +99,19 @@ class AuthControllerTests {
                         .content("""
                                 {"email":""}
                                 """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证邮箱验证码协议会拒绝超过持久化容量的邮箱。
+     */
+    @Test
+    @DisplayName("send email code too long email returns 422")
+    void sendEmailCode_tooLongEmail_returns422() throws Exception {
+        mockMvc.perform(post("/api/auth/email_codes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + tooLongEmail() + "\"}"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
@@ -150,7 +162,7 @@ class AuthControllerTests {
     @Test
     @DisplayName("create token session success returns token response")
     void createTokenSession_success_returnsTokenResponse() throws Exception {
-        when(serverEntranceApi.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of());
+        doNothing().when(serverEntranceApi).requireRequiredPluginsSatisfied(any());
         when(authSessionApi.createTokenSession(any())).thenReturn(tokenResult(true));
 
         mockMvc.perform(post("/api/auth/tokens")
@@ -171,7 +183,7 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.is_new_user").value(true));
         @SuppressWarnings("unchecked")
         ArgumentCaptor<java.util.List<String>> pluginsCaptor = ArgumentCaptor.forClass((Class) java.util.List.class);
-        verify(serverEntranceApi).findMissingRequiredPlugins(pluginsCaptor.capture());
+        verify(serverEntranceApi).requireRequiredPluginsSatisfied(pluginsCaptor.capture());
         assertEquals(java.util.List.of("mc-bind"), pluginsCaptor.getValue());
         ArgumentCaptor<CreateTokenSessionCommand> commandCaptor = ArgumentCaptor.forClass(CreateTokenSessionCommand.class);
         verify(authSessionApi).createTokenSession(commandCaptor.capture());
@@ -186,7 +198,11 @@ class AuthControllerTests {
     @Test
     @DisplayName("create token session required plugin missing returns 412")
     void createTokenSession_requiredPluginMissing_returns412() throws Exception {
-        when(serverEntranceApi.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of("mc-bind"));
+        doThrow(ProblemException.validationFailed(
+                "required_plugin_missing",
+                "required plugins are missing",
+                Map.of("missing_plugins", java.util.List.of("mc-bind"))
+        )).when(serverEntranceApi).requireRequiredPluginsSatisfied(any());
 
         mockMvc.perform(post("/api/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -201,6 +217,7 @@ class AuthControllerTests {
                 .andExpect(status().isPreconditionFailed())
                 .andExpect(jsonPath("$.error.reason").value("required_plugin_missing"))
                 .andExpect(jsonPath("$.error.details.missing_plugins[0]").value("mc-bind"));
+        verify(authSessionApi, never()).createTokenSession(any());
     }
 
     /**
@@ -214,6 +231,26 @@ class AuthControllerTests {
                         .content("""
                                 {"grant_type":"","email":"bad","code":"","client":null}
                                 """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证会话创建协议会拒绝超过持久化容量的邮箱。
+     */
+    @Test
+    @DisplayName("create token session too long email returns 422")
+    void createTokenSession_tooLongEmail_returns422() throws Exception {
+        mockMvc.perform(post("/api/auth/tokens")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "grant_type":"email_code",
+                                  "email":"%s",
+                                  "code":"123456",
+                                  "client":{"device_id":"device-1","installed_plugins":[]}
+                                }
+                                """.formatted(tooLongEmail())))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
@@ -274,6 +311,7 @@ class AuthControllerTests {
                 "carry-user",
                 "access-token",
                 Instant.parse("2026-06-02T13:30:00Z"),
+                1800,
                 "refresh-token",
                 Instant.parse("2026-06-16T13:00:00Z")
         ));
@@ -294,6 +332,35 @@ class AuthControllerTests {
         verify(authSessionApi).login(commandCaptor.capture());
         assertEquals("carry-user", commandCaptor.getValue().username());
         assertEquals("password123", commandCaptor.getValue().password());
+    }
+
+    /**
+     * 验证关闭用户名密码登录开关时，登录入口透传领域禁止访问语义。
+     */
+    @Test
+    @DisplayName("login disabled returns 403 and skips domain login")
+    void login_disabled_returns403AndSkipsDomainLogin() throws Exception {
+        doThrow(ProblemException.forbidden("password_login_disabled", "password login is disabled"))
+                .when(authSessionApi)
+                .login(any());
+        MockMvc disabledLoginMvc = MockMvcBuilders.standaloneSetup(new AuthController(
+                        authAccountApi,
+                        authSessionApi,
+                        serverEntranceApi
+                ))
+                .setMessageConverters(snakeCaseConverter())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        disabledLoginMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.reason").value("password_login_disabled"))
+                .andExpect(jsonPath("$.error.message").value("password login is disabled"));
+        verify(authSessionApi).login(any());
     }
 
     /**
@@ -395,5 +462,9 @@ class AuthControllerTests {
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         return new MappingJackson2HttpMessageConverter(objectMapper);
+    }
+
+    private String tooLongEmail() {
+        return "a".repeat(309) + "@example.com";
     }
 }

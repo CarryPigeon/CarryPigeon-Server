@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.user.domain.api;
 import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfilePageResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
@@ -110,12 +111,11 @@ public interface UserProfileApi {
 
     /**
      * 更新当前账号邮箱。
-     * 输入：当前账号 ID 和新邮箱地址。
+     * 输入：当前账号 ID、新邮箱地址和验证码。
      * 副作用：持久化账号资料中的邮箱信息。
-     * 约束：邮箱格式和唯一性由领域实现校验。
+     * 约束：邮箱格式、验证码和唯一性由领域实现校验。
      *
-     * @param accountId 当前账号 ID
-     * @param email 新邮箱地址
+     * @param command 当前用户邮箱更新命令
      */
-    void updateCurrentUserEmail(long accountId, String email);
+    void updateCurrentUserEmail(UpdateCurrentUserEmailCommand command);
 }

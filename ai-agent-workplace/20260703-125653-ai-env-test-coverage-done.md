@@ -20,7 +20,7 @@
 - `application-starter/src/test/java`（修复旧测试引用，并补齐可显式运行的最小 `env-app` 入口）
 - `infrastructure-service/cache-impl/src/main/java`（仅限修复阻断全量验证的既有缓存契约缺陷）
 - `infrastructure-service/storage-impl/src/main/java`（仅限修复阻断全量验证的既有对象存储契约缺陷）
-- `docs/测试规范.md`（如命令或环境变量约定需要补充）
+- `docs/standards/测试规范.md`（如命令或环境变量约定需要补充）
 - `ai-agent-workplace/` 当前任务单
 
 ## 允许修改范围
@@ -42,11 +42,11 @@
 
 ## 依据文档
 
-- `docs/测试规范.md`
-- `docs/Docker配置.md`
-- `docs/数据库部署手册.md`
+- `docs/standards/测试规范.md`
+- `docs/operations/Docker配置.md`
+- `docs/operations/数据库部署手册.md`
 - `docs/sql/README.md`
-- `docs/变更审核清单.md`
+- `docs/standards/变更审核清单.md`
 
 ## 执行计划
 
@@ -74,7 +74,7 @@
 - 已补齐 `application-starter` 的 `env-app` 测试入口，默认跳过，显式开关后验证真实 Spring Boot 装配与数据库、缓存、对象存储健康 Bean。
 - 已为真实数据库测试补充 `EnvTestDataScope`，用于唯一命名空间和反向清理动作管理。
 - 已修复 `application-starter` 旧测试对已删除 application 层包的引用，改为当前 domain API 装配。
-- 已更新 `docs/测试规范.md`，补充三层测试模型、真实环境标签、环境变量开关和推荐命令。
+- 已更新 `docs/standards/测试规范.md`，补充三层测试模型、真实环境标签、环境变量开关和推荐命令。
 - 已在阻断全量验证时做最小生产契约修复：
   - `RedisCacheService.exists` 将 Redis `hasKey` 的 `null` 返回映射为 `false`。
   - `MinioObjectStorageService.get` 明确返回元数据视图，不隐式拉取对象内容。

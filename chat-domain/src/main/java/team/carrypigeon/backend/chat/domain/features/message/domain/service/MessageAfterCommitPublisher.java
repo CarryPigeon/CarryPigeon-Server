@@ -78,6 +78,12 @@ class MessageAfterCommitPublisher {
         ));
     }
 
+    /**
+     * 发布本次新增 mention 的实时事件。
+     * 约束：mention 事件只投递给被提及目标账号，避免向频道全员广播。
+     *
+     * @param mentions 本次新增 mention 列表
+     */
     private void publishMentions(List<Mention> mentions) {
         for (Mention mention : mentions) {
             messageRealtimePublisher.publishMentionCreated(mention, List.of(mention.targetAccountId()));

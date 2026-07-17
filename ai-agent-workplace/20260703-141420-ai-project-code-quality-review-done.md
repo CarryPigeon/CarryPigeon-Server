@@ -31,15 +31,15 @@
 
 ## 治理文档
 
-- docs/架构文档.md
-- docs/包结构规范.md
-- docs/依赖引入规范.md
-- docs/配置规范.md
-- docs/异常与错误码规范.md
-- docs/测试规范.md
-- docs/注释规范.md
-- docs/AI协作开发规范.md
-- docs/变更审核清单.md
+- docs/architecture/架构文档.md
+- docs/architecture/包结构规范.md
+- docs/architecture/依赖引入规范.md
+- docs/standards/配置规范.md
+- docs/standards/异常与错误码规范.md
+- docs/standards/测试规范.md
+- docs/standards/注释规范.md
+- docs/standards/AI协作开发规范.md
+- docs/standards/变更审核清单.md
 
 ## 审核证据
 

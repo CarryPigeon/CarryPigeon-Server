@@ -8,6 +8,8 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealt
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * MailInitializationCheck 契约测试。
@@ -27,7 +29,7 @@ class MailInitializationCheckTests {
 
         InitializationCheckResult result = check.check();
 
-        assertEquals(true, result.passed());
+        assertTrue(result.passed());
         assertEquals("ok", result.message());
     }
 
@@ -42,7 +44,7 @@ class MailInitializationCheckTests {
 
         InitializationCheckResult result = check.check();
 
-        assertEquals(false, result.passed());
+        assertFalse(result.passed());
         assertEquals("smtp down", result.message());
     }
 }

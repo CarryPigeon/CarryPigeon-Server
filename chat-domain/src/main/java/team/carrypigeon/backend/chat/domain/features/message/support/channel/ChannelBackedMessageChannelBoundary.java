@@ -157,11 +157,26 @@ public class ChannelBackedMessageChannelBoundary implements MessageChannelBounda
         ));
     }
 
+    /**
+     * 加载并要求频道存在。
+     * 失败语义：频道不存在时按消息领域依赖的频道资源不存在处理。
+     *
+     * @param channelId 频道 ID
+     * @return 频道领域对象
+     */
     private Channel loadChannel(long channelId) {
         return channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_NOT_FOUND_MESSAGE));
     }
 
+    /**
+     * 要求账号是频道成员。
+     * 失败语义：成员关系不存在时按频道成员权限不足处理。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账号 ID
+     * @return 频道成员关系
+     */
     private ChannelMember requireMembership(long channelId, long accountId) {
         return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));

@@ -29,6 +29,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.repository.User
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
+import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
@@ -47,6 +48,7 @@ class RealtimeServerConfigurationContextTests {
                     BasicInfrastructureAutoConfiguration.class,
                     JacksonAutoConfiguration.class,
                     IdAutoConfiguration.class,
+                    PluginAutoConfiguration.class,
                     TimeAutoConfiguration.class,
                     RealtimeServerConfiguration.class
             ))

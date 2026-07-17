@@ -4,9 +4,11 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfilePageResult;
@@ -30,17 +32,20 @@ public class UserProfileDomainApi implements UserProfileApi {
 
     private final AuthAccountRepository authAccountRepository;
     private final UserProfileRepository userProfileRepository;
+    private final EmailVerificationCodeService emailVerificationCodeService;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileDomainApi(
             AuthAccountRepository authAccountRepository,
             UserProfileRepository userProfileRepository,
+            EmailVerificationCodeService emailVerificationCodeService,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.authAccountRepository = authAccountRepository;
         this.userProfileRepository = userProfileRepository;
+        this.emailVerificationCodeService = emailVerificationCodeService;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
     }
@@ -172,24 +177,30 @@ public class UserProfileDomainApi implements UserProfileApi {
      * @param accountId 当前账户 ID
      * @param email 新邮箱
      */
-    public void updateCurrentUserEmail(long accountId, String email) {
+    public void updateCurrentUserEmail(UpdateCurrentUserEmailCommand command) {
+        String normalizedEmail = normalizeEmail(command.email());
+        emailVerificationCodeService.verifyCode(normalizedEmail, command.code());
         transactionRunner.runInTransaction(() -> {
-            AuthAccount existingAccount = authAccountRepository.findById(accountId)
+            AuthAccount existingAccount = authAccountRepository.findById(command.accountId())
                     .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
-            authAccountRepository.findByUsername(email)
-                    .filter(account -> account.id() != accountId)
+            authAccountRepository.findByUsername(normalizedEmail)
+                    .filter(account -> account.id() != command.accountId())
                     .ifPresent(account -> {
                         throw ProblemException.validationFailed("email already exists");
                     });
             authAccountRepository.update(new AuthAccount(
                     existingAccount.id(),
-                    email,
+                    normalizedEmail,
                     existingAccount.passwordHash(),
                     existingAccount.createdAt(),
                     timeProvider.nowInstant()
             ));
             return null;
         });
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? "" : email.trim().toLowerCase();
     }
 
     private UserProfileResult toResult(UserProfile userProfile) {
@@ -205,6 +216,14 @@ public class UserProfileDomainApi implements UserProfileApi {
         );
     }
 
+    /**
+     * 校验用户资料分页查询参数。
+     * 约束：查询账号和 cursor 必须为正数，单页数量限制在 100 以内。
+     *
+     * @param accountId 当前查询账号 ID
+     * @param cursorAccountId 分页游标账号 ID
+     * @param limit 查询数量
+     */
     private void validatePageQuery(long accountId, Long cursorAccountId, int limit) {
         if (accountId <= 0) {
             throw ProblemException.validationFailed("accountId must be greater than 0");

@@ -8,6 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.EditChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -138,6 +139,129 @@ class ChannelMessageLifecycleDomainApiTests {
         assertEquals(1, fixture.mentionRepository.mentions.size());
         assertEquals(1, fixture.publisher.createdMentions.size());
         assertEquals(1002L, fixture.publisher.createdMentions.getFirst().targetAccountId());
+    }
+
+    /**
+     * 验证编辑消息会同步 mention 记录，删除被移除目标并保留仍存在目标的已读状态。
+     */
+    @Test
+    @DisplayName("edit channel message changed mentions synchronizes mention records")
+    void editChannelMessage_changedMentions_synchronizesMentionRecords() {
+        MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(null);
+        fixture.channelMemberRepository.save(new ChannelMember(
+                1L,
+                1004L,
+                ChannelMemberRole.MEMBER,
+                MessageDomainApiTestSupport.BASE_TIME.plusSeconds(2),
+                null
+        ));
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageDomainApiTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "text",
+                "hello world",
+                "hello world",
+                "hello world",
+                null,
+                null,
+                """
+                        [{"type":"user","uid":"1002"},{"type":"user","uid":"1003"}]
+                        """,
+                null,
+                "sent",
+                MessageDomainApiTestSupport.BASE_TIME,
+                null,
+                1L
+        ));
+        fixture.mentionRepository.mentions.add(new Mention(
+                7001L,
+                1L,
+                5001L,
+                1001L,
+                "user",
+                1002L,
+                MessageDomainApiTestSupport.BASE_TIME,
+                true
+        ));
+        fixture.mentionRepository.mentions.add(new Mention(
+                7002L,
+                1L,
+                5001L,
+                1001L,
+                "user",
+                1003L,
+                MessageDomainApiTestSupport.BASE_TIME,
+                false
+        ));
+
+        ChannelMessageResult result = fixture.lifecycleApi.editChannelMessage(new EditChannelMessageCommand(
+                1001L,
+                5001L,
+                "Core:Text",
+                "1.0.0",
+                "edited content",
+                List.of(
+                        new EditChannelMessageCommand.MentionTargetCommand("user", 1002L),
+                        new EditChannelMessageCommand.MentionTargetCommand("user", 1004L)
+                ),
+                1L
+        ));
+
+        assertEquals(true, result.mentions().contains("1002"));
+        assertEquals(true, result.mentions().contains("1004"));
+        assertEquals(2, fixture.mentionRepository.mentions.size());
+        assertEquals(true, fixture.mentionRepository.mentions.stream()
+                .anyMatch(mention -> mention.targetAccountId() == 1002L && mention.mentionId() == 7001L && mention.read()));
+        assertEquals(false, fixture.mentionRepository.mentions.stream()
+                .anyMatch(mention -> mention.targetAccountId() == 1003L));
+        assertEquals(1, fixture.publisher.createdMentions.size());
+        assertEquals(1004L, fixture.publisher.createdMentions.getFirst().targetAccountId());
+    }
+
+    /**
+     * 验证文本编辑接口不能编辑附件消息，避免正文与旧附件 payload 形成混合状态。
+     */
+    @Test
+    @DisplayName("edit channel message file message throws not editable")
+    void editChannelMessage_fileMessage_throwsNotEditable() {
+        MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(null);
+        fixture.messageRepository.messagesById.put(5001L, new team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage(
+                5001L,
+                MessageDomainApiTestSupport.SERVER_ID,
+                1L,
+                1L,
+                1001L,
+                "file",
+                "file body",
+                "[文件消息] a.txt",
+                "file body a.txt",
+                """
+                        {"object_key":"channels/1/messages/file/accounts/1001/5001-a.txt","filename":"a.txt","mime_type":"text/plain","size":10}
+                        """,
+                null,
+                null,
+                null,
+                "sent",
+                MessageDomainApiTestSupport.BASE_TIME,
+                null,
+                1L
+        ));
+
+        ProblemException exception = assertThrows(ProblemException.class, () -> fixture.lifecycleApi.editChannelMessage(new EditChannelMessageCommand(
+                1001L,
+                5001L,
+                "Core:Text",
+                "1.0.0",
+                "edited content",
+                List.of(),
+                1L
+        )));
+
+        assertEquals("message_not_editable", exception.reason());
+        assertEquals(0, fixture.messageRepository.updatedMessages.size());
     }
 
     /**

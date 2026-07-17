@@ -74,6 +74,13 @@ public class SystemChannelMessagePlugin implements ChannelMessagePlugin {
         return body.trim();
     }
 
+    /**
+     * 规范化 system 消息 payload。
+     * 约束：payload 为空时不写入；存在时必须是 JSON object，并重新序列化为 canonical JSON。
+     *
+     * @param payload 客户端或服务端提交的 payload JSON
+     * @return 可持久化的 payload JSON，缺失时为 null
+     */
     private String normalizePayload(String payload) {
         if (payload == null || payload.isBlank()) {
             return null;
@@ -81,6 +88,13 @@ public class SystemChannelMessagePlugin implements ChannelMessagePlugin {
         return jsonProvider.toJson(requireJsonObject(payload, "payload is invalid"));
     }
 
+    /**
+     * 规范化 system 消息 metadata。
+     * 约束：metadata 为空时不写入；存在时必须是 JSON object，并重新序列化为 canonical JSON。
+     *
+     * @param metadata 客户端或服务端提交的 metadata JSON
+     * @return 可持久化的 metadata JSON，缺失时为 null
+     */
     private String normalizeMetadata(String metadata) {
         if (metadata == null || metadata.isBlank()) {
             return null;
@@ -88,6 +102,14 @@ public class SystemChannelMessagePlugin implements ChannelMessagePlugin {
         return jsonProvider.toJson(requireJsonObject(metadata, "metadata is invalid"));
     }
 
+    /**
+     * 要求指定 JSON 文本是对象结构。
+     * 失败语义：非法 JSON 或非对象 JSON 都映射为调用方传入的校验失败提示。
+     *
+     * @param json 待校验 JSON 文本
+     * @param message 校验失败提示
+     * @return JSON 对象节点
+     */
     private JsonNode requireJsonObject(String json, String message) {
         JsonNode jsonNode = jsonProvider.readTree(json);
         if (!jsonNode.isObject()) {

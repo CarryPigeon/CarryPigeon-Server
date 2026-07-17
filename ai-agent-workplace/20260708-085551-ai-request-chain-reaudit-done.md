@@ -33,13 +33,13 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/异常与错误码规范.md`
-- `docs/测试规范.md`
-- `docs/API.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/异常与错误码规范.md`
+- `docs/standards/测试规范.md`
+- `docs/api/API.md`
 - `docs/t/*.md`
 - `ai-agent-workplace/20260707-224015-ai-request-chain-audit-done.md`
 - `ai-agent-workplace/20260707-231748-ai-request-chain-fixes-done.md`
@@ -188,7 +188,7 @@
 - 严重级别：中
 - 证据：
   - `RealtimeDiscoverySettings.wsUrl()` 当前返回 `"ws://" + host + ":" + port + path`。
-  - `docs/API.md` 仍写示例 `wss://127.0.0.1:18080/api/ws`，并说明“当前固定使用 `wss://` scheme”。
+  - `docs/api/API.md` 仍写示例 `wss://127.0.0.1:18080/api/ws`，并说明“当前固定使用 `wss://` scheme”。
   - 代码侧未搜索到 Netty TLS / SSL handler 装配。
 - 影响：导入文档或按 discovery 预期测试时，客户端可能尝试 WSS 连接内置明文端口失败；也会混淆“默认开启”和“默认 TLS”的边界。
 - 建议：文档改为 `ws://` 或在 discovery 增加可配置外部公开 URL；若要求内置 TLS，需要新增明确 TLS 配置和 Netty `SslHandler` 装配。

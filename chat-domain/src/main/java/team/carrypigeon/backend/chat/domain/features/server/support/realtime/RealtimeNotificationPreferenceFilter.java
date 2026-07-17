@@ -50,9 +50,10 @@ public class RealtimeNotificationPreferenceFilter {
     }
 
     /**
-     * 创建不过滤接收人的测试 / 兼容实例。
+     * 创建不过滤接收人的实例。
+     * 用途：测试或显式跳过通知偏好过滤的发布器装配。
      *
-     * @return 保留旧发布器构造契约的允许全部实例
+     * @return 允许全部接收人的过滤器实例
      */
     public static RealtimeNotificationPreferenceFilter allowAll() {
         return ALLOW_ALL;
@@ -87,6 +88,15 @@ public class RealtimeNotificationPreferenceFilter {
         return List.copyOf(allowedRecipients);
     }
 
+    /**
+     * 判断单个账号是否允许接收指定事件。
+     * 规则：频道偏好优先；频道为 inherit 或不存在时回落到账户级偏好。
+     *
+     * @param accountId 接收账号 ID
+     * @param channelId 事件所属频道 ID，可为空
+     * @param eventType realtime event 类型
+     * @return 允许接收时返回 true
+     */
     private boolean allows(long accountId, Long channelId, String eventType) {
         Optional<NotificationChannelPreference> channelPreference = findChannelPreference(accountId, channelId);
         if (channelPreference.isPresent() && !"inherit".equals(channelPreference.get().mode())) {
@@ -99,6 +109,14 @@ public class RealtimeNotificationPreferenceFilter {
         return allowsMode(serverPreference.mode(), serverPreference.mutedUntil(), eventType);
     }
 
+    /**
+     * 查找账号在指定频道上的通知偏好。
+     * 约束：无频道上下文的事件不能使用频道级偏好。
+     *
+     * @param accountId 接收账号 ID
+     * @param channelId 事件所属频道 ID
+     * @return 频道级通知偏好
+     */
     private Optional<NotificationChannelPreference> findChannelPreference(long accountId, Long channelId) {
         if (channelId == null) {
             return Optional.empty();
@@ -108,6 +126,15 @@ public class RealtimeNotificationPreferenceFilter {
                 .findFirst();
     }
 
+    /**
+     * 按通知模式判断事件是否可投递。
+     * 语义：`mentions_only` 只允许 mention 事件，`muted` 在静音有效期内阻断事件。
+     *
+     * @param mode 通知模式
+     * @param mutedUntil 静音截止毫秒时间戳，0 表示长期静音
+     * @param eventType realtime event 类型
+     * @return 当前模式允许投递时返回 true
+     */
     private boolean allowsMode(String mode, long mutedUntil, String eventType) {
         if ("all".equals(mode)) {
             return true;
@@ -121,6 +148,13 @@ public class RealtimeNotificationPreferenceFilter {
         return true;
     }
 
+    /**
+     * 判断静音设置当前是否生效。
+     * 语义：0 表示长期静音；大于当前时间表示临时静音仍在有效期内。
+     *
+     * @param mutedUntil 静音截止毫秒时间戳
+     * @return 静音仍生效时返回 true
+     */
     private boolean isMuteActive(long mutedUntil) {
         return mutedUntil == 0L || mutedUntil > timeProvider.nowMillis();
     }

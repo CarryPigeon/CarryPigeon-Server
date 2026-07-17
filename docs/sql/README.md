@@ -60,5 +60,5 @@
 
 当前仓库已经不再保留 `db/migration` 版本迁移目录。完整部署说明请同时阅读：
 
-- `docs/数据库部署手册.md`
-- `docs/部署手册.md`
+- `docs/operations/数据库部署手册.md`
+- `docs/operations/部署手册.md`

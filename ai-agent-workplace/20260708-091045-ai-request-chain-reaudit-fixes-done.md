@@ -34,11 +34,11 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/测试规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/20260708-085551-ai-request-chain-reaudit-done.md`
 
 ## 验收标准
@@ -71,12 +71,12 @@
 - `UserProfileController.uploadCurrentUserBackground(...)` 返回 `/api/files/download/...`。
 - `ServerEntranceDomainApi.DEFAULT_AVATAR` 改为 `/api/files/download/server_avatar`。
 - `FileShareKeyCodec.downloadPath(...)` 改为 `/api/files/download/...`。
-- 更新 schema 示例、测试断言和 `docs/API.md` / `docs/t` 示例。
+- 更新 schema 示例、测试断言和 `docs/api/API.md` / `docs/t` 示例。
 
 ### R-004 discovery ws_url 文档与代码口径不一致
 
 - `ServerDiscoveryDocument` schema 示例改为 `ws://127.0.0.1:18080/api/ws`。
-- `docs/API.md` 与 `docs/t/11-http-endpoints-v1.md` discovery 示例改为当前代码返回的 `ws://` 口径。
+- `docs/api/API.md` 与 `docs/t/11-http-endpoints-v1.md` discovery 示例改为当前代码返回的 `ws://` 口径。
 - 保留文档说明：内置 Netty 未装配 TLS，生产 WSS 需由前置网关/反向代理/负载均衡完成 TLS 终止。
 
 ### R-005 通知偏好过滤状态同步事件
@@ -109,7 +109,7 @@
   - 结果：生产 `UserProfileDomainApi` 已走 `findByAccountIds(...)`，全表扫描只保留在仓储默认 fallback。
 - `rg '"api/files/download/|`api/files/download/|value\\("api/files/download/|assertEquals\\("api/files/download/' ...`
   - 结果：无旧无前导 `/` 的返回路径断言或示例。
-- `rg 'wss://127|wss://example|固定使用' docs/API.md docs/t/11-http-endpoints-v1.md ...`
+- `rg 'wss://127|wss://example|固定使用' docs/api/API.md docs/t/11-http-endpoints-v1.md ...`
   - 结果：无旧 discovery `wss://` 示例或“固定 wss”说明。
 - `rg "infrastructure\\.service\\..*\\.impl|backend\\.starter|application\\.starter|team\\.carrypigeon\\.backend\\.starter" chat-domain/src/main/java chat-domain/src/test/java infrastructure-basic/src/main/java infrastructure-service/*-api/src/main/java -n`
   - 结果：无命中。
@@ -137,5 +137,5 @@ mvn -pl application-starter -am -DskipTests compile
 ## 未完成项 / 风险
 
 - 未运行全仓库 `mvn test`。
-- `docs/t/10-http-ws-protocol-v1.md` 和 `docs/t/12-ws-events-v1.md` 仍保留生产/客户端协议视角的 `wss://{host}` 示例；本次只修正当前代码 discovery 示例和 `docs/API.md` 当前代码口径说明。
+- `docs/t/10-http-ws-protocol-v1.md` 和 `docs/t/12-ws-events-v1.md` 仍保留生产/客户端协议视角的 `wss://{host}` 示例；本次只修正当前代码 discovery 示例和 `docs/api/API.md` 当前代码口径说明。
 - `UserProfileRepository.findByAccountIds(...)` 保留默认 `findAll()` fallback，目的是避免大量测试替身被迫实现新方法；生产 `DatabaseBackedUserProfileRepository` 已覆盖为 database-api 批量查询。

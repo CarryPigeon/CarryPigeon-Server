@@ -1,29 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$EnvFile = Join-Path $BaseDir '.env'
-$EnvTemplateFile = Join-Path $BaseDir '.env.example'
-
-function Import-EnvFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-
-    Get-Content -LiteralPath $Path | ForEach-Object {
-        $line = $_.Trim()
-        if (-not $line -or $line.StartsWith('#')) {
-            return
-        }
-
-        if ($line -match '^(?<name>[^=]+)=(?<value>.*)$') {
-            $name = $Matches.name.Trim()
-            $value = $Matches.value
-            Set-Item -Path "Env:$name" -Value $value
-        }
-    }
-}
+$ConfigDir = Join-Path $BaseDir 'config'
 
 function Test-TcpPort {
     param(
@@ -50,21 +28,6 @@ function Test-TcpPort {
     }
 }
 
-if (Test-Path -LiteralPath $EnvFile) {
-    Import-EnvFile -Path $EnvFile
-}
-elseif (Test-Path -LiteralPath $EnvTemplateFile) {
-    Import-EnvFile -Path $EnvTemplateFile
-}
-
-if ([string]::IsNullOrWhiteSpace($env:CP_CHAT_AUTH_JWT_SECRET)) {
-    throw 'Missing required configuration: CP_CHAT_AUTH_JWT_SECRET. Set it in .env or export it before running bin\\windows\\app-start.ps1.'
-}
-
-if ($env:CP_CHAT_AUTH_JWT_SECRET.Length -lt 32) {
-    throw 'CP_CHAT_AUTH_JWT_SECRET must be at least 32 characters.'
-}
-
 $mysqlPort = if ([string]::IsNullOrWhiteSpace($env:MYSQL_PORT)) { 3306 } else { [int]$env:MYSQL_PORT }
 $redisPort = if ([string]::IsNullOrWhiteSpace($env:REDIS_PORT)) { 6379 } else { [int]$env:REDIS_PORT }
 $minioPort = if ([string]::IsNullOrWhiteSpace($env:MINIO_API_PORT)) { 9000 } else { [int]$env:MINIO_API_PORT }
@@ -78,5 +41,6 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-& mvn -f (Join-Path $BaseDir 'application-starter/pom.xml') -DskipTests spring-boot:run @args
+$springRunArguments = '--spring.config.additional-location=file:{0}/' -f ($ConfigDir -replace '\\', '/')
+& mvn -f (Join-Path $BaseDir 'application-starter/pom.xml') -DskipTests "-Dspring-boot.run.arguments=$springRunArguments" spring-boot:run @args
 exit $LASTEXITCODE

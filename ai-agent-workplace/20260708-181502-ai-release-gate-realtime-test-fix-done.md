@@ -25,8 +25,8 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/变更审核清单.md`
-- `docs/测试规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/20260708-123653-ai-release-chain-readiness-check-done.md`
 
 ## 验收标准

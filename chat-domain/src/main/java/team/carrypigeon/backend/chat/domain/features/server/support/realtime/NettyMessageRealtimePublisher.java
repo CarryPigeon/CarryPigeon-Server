@@ -158,6 +158,15 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         ), recipientAccountIds);
     }
 
+    /**
+     * 按通知偏好过滤后写入并推送消息实时事件。
+     * 副作用：写入实时事件缓存，并向过滤后仍允许接收的在线会话推送 WebSocket frame。
+     *
+     * @param channelId 事件所属频道 ID
+     * @param eventType realtime event 类型
+     * @param payload 事件载荷
+     * @param recipientAccountIds 候选接收账号集合
+     */
     private void publishEvent(long channelId, String eventType, Object payload, Collection<Long> recipientAccountIds) {
         Collection<Long> filteredRecipientAccountIds = notificationPreferenceFilter.filterRecipients(channelId, eventType, recipientAccountIds);
         if (filteredRecipientAccountIds.isEmpty()) {
@@ -189,6 +198,14 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         }
     }
 
+    /**
+     * 构造 `message.created` / `message.updated` 共用的 v1 消息载荷。
+     * 约束：领域消息类型会转换为客户端稳定 domain，附件 payload 会先经过出站解析器收口。
+     *
+     * @param message 已持久化消息
+     * @param senderSnapshot 发送者公开快照
+     * @return v1 realtime 消息载荷
+     */
     private Map<String, Object> createdPayload(ChannelMessage message, MessageSenderSnapshot senderSnapshot) {
         Map<String, Object> sender = new java.util.LinkedHashMap<>();
         sender.put("uid", Long.toString(senderSnapshot.accountId()));
@@ -216,6 +233,13 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         return payload;
     }
 
+    /**
+     * 解析 realtime 下发所需的消息 data 字段。
+     * 语义：文本消息直接由正文生成 data，附件和扩展消息从 canonical payload 转为结构化对象。
+     *
+     * @param message 已持久化消息
+     * @return 可序列化到 realtime payload 的 data 对象
+     */
     private Object payloadData(ChannelMessage message) {
         if ("text".equals(message.messageType())) {
             return Map.of("text", message.body() == null ? "" : message.body());
@@ -238,6 +262,13 @@ public class NettyMessageRealtimePublisher implements MessageRealtimePublisher {
         };
     }
 
+    /**
+     * 解析可选 JSON 字段供 realtime 载荷透出。
+     * 约束：空白字段保持为 null，非空字段必须是已持久化的合法 JSON。
+     *
+     * @param rawJson 已持久化 JSON 文本
+     * @return JSON 节点或 null
+     */
     private Object jsonField(String rawJson) {
         if (rawJson == null || rawJson.isBlank()) {
             return null;

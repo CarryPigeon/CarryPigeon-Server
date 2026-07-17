@@ -25,7 +25,7 @@ domain 能力端口包结构规则改进
 
 允许修改范围：
 
-- `docs/包结构规范.md`
+- `docs/architecture/包结构规范.md`
 - `chat-domain/src/main/java/team/carrypigeon/backend/chat/domain/features/auth/domain/api/**`
 - `chat-domain/src/main/java/team/carrypigeon/backend/chat/domain/features/auth/domain/service/**`
 - `chat-domain/src/main/java/team/carrypigeon/backend/chat/domain/features/auth/domain/port/**`
@@ -54,7 +54,7 @@ domain 能力端口包结构规则改进
 
 实施步骤：
 
-1. 更新 `docs/包结构规范.md`，加入 `domain/api`、`domain/port` 目录与约束。
+1. 更新 `docs/architecture/包结构规范.md`，加入 `domain/api`、`domain/port` 目录与约束。
 2. 将 auth 下非持久化能力端口从 `domain/service` 移到 `domain/port`。
 3. 为 auth 对外能力新增 `domain/api` 接口，并让具体 domain service 实现该接口。
 4. 更新 auth controller/config/tests 的注入类型，使外部调用优先依赖 `domain/api`，不是具体 `domain/service` 实现。
@@ -67,7 +67,7 @@ domain 能力端口包结构规则改进
 - `domain/service` 下不再保留 auth 非持久化能力端口接口。
 - auth 对外入口接口位于 `domain/api`，外部调用方不直接依赖具体 `AuthDomainService`。
 - `support` 实现依赖 `domain/port` 端口。
-- `docs/包结构规范.md` 清楚说明 `domain/api`、`domain/port`、`domain/repository`、`domain/service` 的边界。
+- `docs/architecture/包结构规范.md` 清楚说明 `domain/api`、`domain/port`、`domain/repository`、`domain/service` 的边界。
 - 受影响测试通过。
 - 任务单记录实际结果、验证命令、残留风险，并关闭为 `done`。
 
@@ -77,7 +77,7 @@ domain 能力端口包结构规则改进
 
 实际结果：
 
-- 更新 `docs/包结构规范.md`：
+- 更新 `docs/architecture/包结构规范.md`：
   - 新增 `domain/api`：对外暴露 domain 能力的入口接口。
   - 新增 `domain/port`：领域服务依赖的非持久化能力端口。
   - 收紧 `domain/service`：只放领域服务、业务用例实现、业务策略与协作对象。
@@ -110,7 +110,7 @@ domain 能力端口包结构规则改进
 
 知识沉淀 / 是否回写 docs：
 
-- 已回写 `docs/包结构规范.md`，新增 `domain/api` 与 `domain/port` 长期规则。
+- 已回写 `docs/architecture/包结构规范.md`，新增 `domain/api` 与 `domain/port` 长期规则。
 
 产物清理与保留说明：
 

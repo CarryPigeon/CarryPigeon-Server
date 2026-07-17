@@ -22,15 +22,15 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
- * `NotificationPreferenceDomainApi` 契约测试。
- * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ * NotificationPreferenceDomainApi 契约测试。
+ * 职责：验证服务端与频道级通知偏好的默认值、持久化归一化和成员权限边界。
+ * 边界：仓储使用测试替身，不验证数据库适配器。
  */
-
 @Tag("contract")
 class NotificationPreferenceDomainApiTests {
 
     /**
-     * 验证 `getNotificationPreferences` 在 `missingPreferences` 条件下满足 `returnsDefaults` 的测试契约。
+     * 验证缺失偏好记录时会返回服务端默认配置和空频道列表。
      */
     @Test
     @DisplayName("get notification preferences returns defaults when missing")
@@ -46,7 +46,7 @@ class NotificationPreferenceDomainApiTests {
     }
 
     /**
-     * 验证 `updateServerPreference` 在 `storesNormalizedPreference` 场景下的测试契约。
+     * 验证更新服务端偏好时会持久化归一化后的模式和静音时间。
      */
     @Test
     @DisplayName("update server preference stores normalized preference")
@@ -61,7 +61,7 @@ class NotificationPreferenceDomainApiTests {
     }
 
     /**
-     * 验证 `updateChannelPreference` 在 `nonMember` 条件下满足 `throwsForbidden` 的测试契约。
+     * 验证非频道成员不能更新该频道的通知偏好。
      */
     @Test
     @DisplayName("update channel preference non member throws forbidden")

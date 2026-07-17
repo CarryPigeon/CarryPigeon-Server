@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.basic;
 
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.plugin.PluginConfigurationProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -14,11 +15,18 @@ public class InfrastructureBasics {
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final JsonProvider jsonProvider;
+    private final PluginConfigurationProvider pluginConfigurationProvider;
 
-    public InfrastructureBasics(IdGenerator idGenerator, TimeProvider timeProvider, JsonProvider jsonProvider) {
+    public InfrastructureBasics(
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            JsonProvider jsonProvider,
+            PluginConfigurationProvider pluginConfigurationProvider
+    ) {
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.jsonProvider = jsonProvider;
+        this.pluginConfigurationProvider = pluginConfigurationProvider;
     }
 
     public IdGenerator ids() {
@@ -31,5 +39,9 @@ public class InfrastructureBasics {
 
     public JsonProvider json() {
         return jsonProvider;
+    }
+
+    public PluginConfigurationProvider plugins() {
+        return pluginConfigurationProvider;
     }
 }

@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ComposeFile = Join-Path $BaseDir 'docker-compose.yaml'
+$env:COMPOSE_DISABLE_ENV_FILE = '1'
 
-& docker compose --env-file (Join-Path $BaseDir '.env') -f $ComposeFile down -v @args
+& docker compose -f $ComposeFile down -v @args
 exit $LASTEXITCODE

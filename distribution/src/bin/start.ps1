@@ -1,72 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent $PSScriptRoot
-$EnvFile = Join-Path $BaseDir '.env'
-$EnvTemplateFile = Join-Path $BaseDir '.env.example'
 $ConfigDir = Join-Path $BaseDir 'config'
 $AppDir = Join-Path $BaseDir 'app'
 $LibDir = Join-Path $BaseDir 'libs'
-
-function Import-EnvFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-
-    Get-Content -LiteralPath $Path | ForEach-Object {
-        $line = $_.Trim()
-        if (-not $line -or $line.StartsWith('#')) {
-            return
-        }
-
-        if ($line -match '^(?<name>[^=]+)=(?<value>.*)$') {
-            Set-Item -Path "Env:$($Matches.name.Trim())" -Value $Matches.value
-        }
-    }
-}
-
-function Test-TcpPort {
-    param(
-        [Parameter(Mandatory = $true)][string]$TargetHost,
-        [Parameter(Mandatory = $true)][int]$Port,
-        [Parameter(Mandatory = $true)][string]$ServiceName
-    )
-
-    $client = [System.Net.Sockets.TcpClient]::new()
-    try {
-        $task = $client.ConnectAsync($TargetHost, $Port)
-        if (-not $task.Wait(1000)) {
-            throw 'timeout'
-        }
-        if (-not $client.Connected) {
-            throw 'not connected'
-        }
-    }
-    catch {
-        throw "$ServiceName is not reachable at $TargetHost`:$Port."
-    }
-    finally {
-        $client.Dispose()
-    }
-}
-
-function Test-Enabled {
-    param([string]$Value, [bool]$Default = $true)
-
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        return $Default
-    }
-
-    return $Value -notin @('false', 'FALSE', 'False', '0', 'off', 'OFF', 'Off', 'no', 'NO', 'No')
-}
-
-if (Test-Path -LiteralPath $EnvFile) {
-    Import-EnvFile -Path $EnvFile
-}
-elseif (Test-Path -LiteralPath $EnvTemplateFile) {
-    Import-EnvFile -Path $EnvTemplateFile
-}
 
 $DefaultLogHome = if ([string]::IsNullOrWhiteSpace($env:CP_LOG_HOME)) {
     Join-Path $BaseDir 'service-logs'
@@ -92,33 +29,6 @@ $appJar = Get-ChildItem -LiteralPath $AppDir -Filter 'application-starter-*.jar'
 
 if ($null -eq $appJar) {
     throw "application-starter thin jar not found under $AppDir"
-}
-
-if ([string]::IsNullOrWhiteSpace($env:CP_CHAT_AUTH_JWT_SECRET)) {
-    throw 'Missing required configuration: CP_CHAT_AUTH_JWT_SECRET. Set it in .env or export it before running the distribution package.'
-}
-
-if ($env:CP_CHAT_AUTH_JWT_SECRET.Length -lt 32) {
-    throw 'CP_CHAT_AUTH_JWT_SECRET must be at least 32 characters.'
-}
-
-$mysqlHost = if ([string]::IsNullOrWhiteSpace($env:MYSQL_HOST)) { '127.0.0.1' } else { $env:MYSQL_HOST }
-$mysqlPort = if ([string]::IsNullOrWhiteSpace($env:MYSQL_PORT)) { 3306 } else { [int]$env:MYSQL_PORT }
-$redisHost = if ([string]::IsNullOrWhiteSpace($env:REDIS_HOST)) { '127.0.0.1' } else { $env:REDIS_HOST }
-$redisPort = if ([string]::IsNullOrWhiteSpace($env:REDIS_PORT)) { 6379 } else { [int]$env:REDIS_PORT }
-$minioHost = if ([string]::IsNullOrWhiteSpace($env:MINIO_HOST)) { '127.0.0.1' } else { $env:MINIO_HOST }
-$minioPort = if ([string]::IsNullOrWhiteSpace($env:MINIO_API_PORT)) { 9000 } else { [int]$env:MINIO_API_PORT }
-
-if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_DATABASE_ENABLED -Default $true) {
-    Test-TcpPort -TargetHost $mysqlHost -Port $mysqlPort -ServiceName 'MySQL'
-}
-
-if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_CACHE_ENABLED -Default $true) {
-    Test-TcpPort -TargetHost $redisHost -Port $redisPort -ServiceName 'Redis'
-}
-
-if (Test-Enabled -Value $env:CP_INFRASTRUCTURE_SERVICE_STORAGE_ENABLED -Default $true) {
-    Test-TcpPort -TargetHost $minioHost -Port $minioPort -ServiceName 'MinIO'
 }
 
 New-Item -ItemType Directory -Force -Path $DefaultLogHome | Out-Null

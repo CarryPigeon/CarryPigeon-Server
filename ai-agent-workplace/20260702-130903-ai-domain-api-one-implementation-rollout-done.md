@@ -4,7 +4,7 @@ domain api 一接口一实现类代码落地
 
 任务目标：
 
-按 `docs/包结构规范.md` 中已确认的规则，将 `chat-domain` 的正式 Java 实现调整为一个 `domain/api` 接口对应一个明确命名的 `*DomainApi` 实现类，避免 `domain/service` 直接实现对外 API，避免一个类实现多个 API。
+按 `docs/architecture/包结构规范.md` 中已确认的规则，将 `chat-domain` 的正式 Java 实现调整为一个 `domain/api` 接口对应一个明确命名的 `*DomainApi` 实现类，避免 `domain/service` 直接实现对外 API，避免一个类实现多个 API。
 
 任务背景：
 
@@ -111,7 +111,7 @@ domain api 一接口一实现类代码落地
 知识沉淀 / 是否回写 docs：
 
 - 未回写正式 docs。
-- 本次是对既有 `docs/包结构规范.md` 一接口一实现类规则的代码落地。
+- 本次是对既有 `docs/architecture/包结构规范.md` 一接口一实现类规则的代码落地。
 
 产物清理与保留说明：
 

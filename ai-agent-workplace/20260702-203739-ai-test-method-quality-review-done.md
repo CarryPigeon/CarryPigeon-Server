@@ -39,13 +39,13 @@
 
 ## 依据文档
 
-- `docs/测试规范.md`
-- `docs/注释规范.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/依赖引入规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
+- `docs/standards/测试规范.md`
+- `docs/standards/注释规范.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/architecture/依赖引入规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
 
 ## 审查计划
 
@@ -71,7 +71,7 @@
 
 ## 实际阅读与统计
 
-- 已阅读 `docs/测试规范.md`、`docs/注释规范.md`、`docs/架构文档.md`、`docs/包结构规范.md`、`docs/依赖引入规范.md`、`docs/AI协作开发规范.md`、`docs/变更审核清单.md`。
+- 已阅读 `docs/standards/测试规范.md`、`docs/standards/注释规范.md`、`docs/architecture/架构文档.md`、`docs/architecture/包结构规范.md`、`docs/architecture/依赖引入规范.md`、`docs/standards/AI协作开发规范.md`、`docs/standards/变更审核清单.md`。
 - 当前工作区共有 139 个 `*Tests.java`：
   - `application-starter`: 6
   - `chat-domain`: 70
@@ -94,8 +94,8 @@
 
 ## 主要证据
 
-- 测试规范要求测试回答契约、断言直接对应测试目标，失败断言验证失败语义：`docs/测试规范.md`。
-- 注释规范要求注释补充设计意图、业务语义、边界条件，避免泛泛说明：`docs/注释规范.md`。
+- 测试规范要求测试回答契约、断言直接对应测试目标，失败断言验证失败语义：`docs/standards/测试规范.md`。
+- 注释规范要求注释补充设计意图、业务语义、边界条件，避免泛泛说明：`docs/standards/注释规范.md`。
 - `ChannelReadStateDatabaseServiceContractTests` 手写 `MinimalChannelReadStateDatabaseService` 抛出 `UnsupportedOperationException`，而生产接口没有默认方法；测试无法证明接口默认契约。
 - `NotificationPreferenceDatabaseServiceContractTests` 仅匿名实现接口并返回测试数据，主要验证测试替身自身返回值，契约价值偏低。
 - `mail-api` 有正式接口但无 `src/test` 文件。

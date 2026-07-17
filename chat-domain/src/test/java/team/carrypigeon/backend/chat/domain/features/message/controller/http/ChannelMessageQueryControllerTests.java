@@ -270,11 +270,11 @@ class ChannelMessageQueryControllerTests {
     }
 
     /**
-     * 验证 `uploadMessageAttachment` 在 `returnsTransitionalSuccessEnvelope` 场景下的测试契约。
+     * 验证 `uploadMessageAttachment` 在 `returnsResourceResponse` 场景下的测试契约。
      */
     @Test
-    @DisplayName("upload message attachment returns transitional success envelope")
-    void uploadMessageAttachment_returnsTransitionalSuccessEnvelope() throws Exception {
+    @DisplayName("upload message attachment returns resource response")
+    void uploadMessageAttachment_returnsResourceResponse() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(channelMessageAttachmentDomainApi.uploadMessageAttachment(anyLong(), anyLong(), any(), any(), any(), anyLong(), any()))
                 .thenReturn(new MessageAttachmentUploadResult(
@@ -289,10 +289,11 @@ class ChannelMessageQueryControllerTests {
                         .file(new MockMultipartFile("file", "demo.pdf", "application/pdf", "demo".getBytes()))
                         .param("message_type", "file"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.object_key").value("channels/1/messages/file/accounts/1001/5001-demo.pdf"))
-                .andExpect(jsonPath("$.data.share_key").value("shr_att_demo"));
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.object_key").value("channels/1/messages/file/accounts/1001/5001-demo.pdf"))
+                .andExpect(jsonPath("$.share_key").value("shr_att_demo"));
     }
 
     /**

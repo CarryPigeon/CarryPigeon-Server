@@ -14,7 +14,7 @@
 
 配置限制：不新增配置项。
 
-文档依据：`AGENTS.md`、`docs/变更审核清单.md`、`docs/部署手册.md`。
+文档依据：`AGENTS.md`、`docs/standards/变更审核清单.md`、`docs/operations/部署手册.md`。
 
 任务分解 / 执行计划：
 1. 检索 Windows 脚本中 `Host` 参数使用点。

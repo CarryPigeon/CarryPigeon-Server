@@ -77,6 +77,9 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
             ChannelMessage existingMessage = requireMessage(command.messageId());
             MessageChannelBoundary.MessageChannel channel = requireMemberChannel(existingMessage.channelId(), command.accountId());
             requireEditable(existingMessage, command.accountId());
+            if (!TEXT_MESSAGE_TYPE.equals(existingMessage.messageType())) {
+                throw ProblemException.forbidden("message_not_editable", "message is not editable");
+            }
             if (command.expectedEditVersion() != null && command.expectedEditVersion() != existingMessage.editVersion()) {
                 throw ProblemException.conflict("conflict", "message edit version conflict");
             }
@@ -101,7 +104,7 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
             );
             ChannelMessage savedMessage = messageRepository.update(updatedMessage);
             List<Long> recipientAccountIds = messageChannelBoundary.recipientAccountIds(channel.id());
-            List<Mention> mentions = messageMentionManager.persistMentions(savedMessage, recipientAccountIds, existingMessage.mentions());
+            List<Mention> mentions = messageMentionManager.replaceMentions(savedMessage, recipientAccountIds);
             PersistedMessage updatedResult = new PersistedMessage(
                     savedMessage,
                     snapshotSender(savedMessage.senderId()),
@@ -166,6 +169,12 @@ public class ChannelMessageLifecycleDomainApi extends AbstractMessageDomainSuppo
         });
     }
 
+    /**
+     * 校验消息撤回命令的基础入参。
+     * 约束：撤回权限和消息状态在后续领域流程中校验，这里只保证 ID 形态有效。
+     *
+     * @param command 消息撤回命令
+     */
     private void validateRecallCommand(RecallChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");

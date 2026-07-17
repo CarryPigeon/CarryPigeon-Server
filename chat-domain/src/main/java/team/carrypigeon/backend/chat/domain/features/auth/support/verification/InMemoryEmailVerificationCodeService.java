@@ -86,6 +86,13 @@ public class InMemoryEmailVerificationCodeService implements EmailVerificationCo
         return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
     }
 
+    /**
+     * 投递验证码邮件。
+     * 副作用：调用邮件服务发送验证码；邮件服务缺失或发送失败时抛出统一领域问题。
+     *
+     * @param email 已规范化目标邮箱
+     * @param code 六位验证码
+     */
     private void deliverCode(String email, String code) {
         if (mailSenderService == null) {
             throw ProblemException.fail("mail_service_unavailable", "mail service is unavailable");

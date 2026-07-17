@@ -2,6 +2,8 @@ package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
+import io.minio.errors.ErrorResponseException;
+import io.minio.messages.ErrorResponse;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealth;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
@@ -37,7 +39,38 @@ public class MinioStorageHealthService implements StorageHealthService {
             );
             return new StorageHealth(exists, "storage bucket check completed");
         } catch (Exception ex) {
-            return new StorageHealth(false, "storage bucket check failed: " + ex.getClass().getSimpleName());
+            return new StorageHealth(false, "storage bucket check failed: " + diagnosticMessage(ex));
         }
+    }
+
+    private String diagnosticMessage(Exception ex) {
+        if (ex instanceof ErrorResponseException errorResponseException) {
+            return minioErrorDiagnostic(errorResponseException);
+        }
+        return ex.getClass().getSimpleName()
+                + ": " + safeValue(ex.getMessage(), "no message")
+                + ", endpoint=" + properties.endpoint()
+                + ", bucket=" + properties.bucket();
+    }
+
+    private String minioErrorDiagnostic(ErrorResponseException ex) {
+        ErrorResponse errorResponse = ex.errorResponse();
+        String code = errorResponse == null ? "unknown" : safeValue(errorResponse.code(), "unknown");
+        String message = errorResponse == null ? "no message" : safeValue(errorResponse.message(), "no message");
+        String requestId = errorResponse == null ? "unknown" : safeValue(errorResponse.requestId(), "unknown");
+        String resource = errorResponse == null ? "unknown" : safeValue(errorResponse.resource(), "unknown");
+        int httpStatus = ex.response() == null ? 0 : ex.response().code();
+        return "MinIO "
+                + "code=" + code
+                + ", message=" + message
+                + ", httpStatus=" + httpStatus
+                + ", endpoint=" + properties.endpoint()
+                + ", bucket=" + properties.bucket()
+                + ", resource=" + resource
+                + ", requestId=" + requestId;
+    }
+
+    private static String safeValue(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 }

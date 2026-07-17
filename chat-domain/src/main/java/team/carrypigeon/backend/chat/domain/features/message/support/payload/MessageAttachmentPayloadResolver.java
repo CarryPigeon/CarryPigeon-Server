@@ -38,6 +38,9 @@ public class MessageAttachmentPayloadResolver implements MessagePayloadResolver 
 
     /**
      * 解析出站消息载荷。
+     * 输入：消息类型和已持久化的 canonical payload。
+     * 输出：附件消息会收口为 `share_key` 与下载路径，其它消息或无法解析的 payload 保持原值。
+     * 失败语义：解析失败时不阻断消息读取，直接返回原始 payload。
      *
      * @param messageType 消息类型
      * @param payload 已持久化的 canonical payload

@@ -1,4 +1,5 @@
 team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration
 team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration
 team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration
+team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration
 team.carrypigeon.backend.infrastructure.basic.time.TimeAutoConfiguration

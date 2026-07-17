@@ -106,6 +106,28 @@ class AuthAccessTokenInterceptorTests {
     }
 
     /**
+     * 验证 access token claims subject 不是账号 ID 时仍返回稳定鉴权失败，而不是未分类运行时异常。
+     */
+    @Test
+    @DisplayName("preHandle non numeric subject throws invalid access token problem")
+    void preHandle_nonNumericSubject_throwsInvalidAccessTokenProblem() {
+        AuthAccessTokenInterceptor interceptor = new AuthAccessTokenInterceptor(
+                new NonNumericSubjectAccessTokenService(),
+                new RequestAuthenticationContext()
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer access-token");
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object())
+        );
+
+        assertEquals("invalid_access_token", exception.reason());
+        assertEquals("access token is invalid", exception.getMessage());
+    }
+
+    /**
      * `FakeAuthTokenService` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -141,6 +163,18 @@ class AuthAccessTokenInterceptorTests {
         @Override
         public AuthTokenClaims parseAccessToken(String accessToken) {
             throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
+        }
+    }
+
+    /**
+     * `NonNumericSubjectAccessTokenService` 测试替身。
+     * 职责：模拟 token port 返回无法作为账号 ID 使用的 subject。
+     */
+    private static class NonNumericSubjectAccessTokenService extends FakeAuthTokenService {
+
+        @Override
+        public AuthTokenClaims parseAccessToken(String accessToken) {
+            return new AuthTokenClaims("not-a-number", "carry-user", "access", 0L, Instant.parse("2026-04-20T12:30:00Z"));
         }
     }
 }

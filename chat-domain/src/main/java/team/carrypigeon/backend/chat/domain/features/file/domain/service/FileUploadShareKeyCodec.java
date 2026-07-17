@@ -83,6 +83,13 @@ public class FileUploadShareKeyCodec {
         return "files/accounts/" + shareKey.ownerAccountId() + "/" + shareKey.fileId();
     }
 
+    /**
+     * 为上传 share_key payload 生成 HMAC 签名。
+     * 原因：客户端持有的 share_key 不能被伪造或篡改文件归属、文件 ID 与声明大小。
+     *
+     * @param payload 待签名的上传授权 payload
+     * @return URL 安全的签名文本
+     */
     private String sign(String payload) {
         try {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
@@ -97,6 +104,13 @@ public class FileUploadShareKeyCodec {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * 解码 share_key 中的 payload 段。
+     * 失败语义：Base64 非法时统一映射为 share_key 无效，避免泄漏内部编码细节。
+     *
+     * @param encodedPayload share_key 中的 payload 段
+     * @return 解码后的 payload
+     */
     private String decodeBase64(String encodedPayload) {
         try {
             return new String(Base64.getUrlDecoder().decode(encodedPayload), StandardCharsets.UTF_8);
@@ -105,10 +119,24 @@ public class FileUploadShareKeyCodec {
         }
     }
 
+    /**
+     * 构造统一的 share_key 校验失败问题。
+     * 约束：格式、签名、字段数量和字段取值错误都收敛到同一个对外失败语义。
+     *
+     * @return share_key 无效问题异常
+     */
     private ProblemException invalidShareKey() {
         return ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
     }
 
+    /**
+     * 固定时间比较签名文本。
+     * 原因：签名校验不应通过短路比较暴露差异位置。
+     *
+     * @param left 期望签名
+     * @param right 实际签名
+     * @return 两个签名完全一致时返回 true
+     */
     private boolean constantTimeEquals(String left, String right) {
         byte[] leftBytes = left.getBytes(StandardCharsets.UTF_8);
         byte[] rightBytes = right.getBytes(StandardCharsets.UTF_8);

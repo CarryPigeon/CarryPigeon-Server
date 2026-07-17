@@ -84,11 +84,25 @@ public class FileChannelMessagePlugin implements ChannelMessagePlugin {
         );
     }
 
+    /**
+     * 读取并要求附件对象已存在。
+     * 失败语义：对象存储中缺少该 objectKey 时，文件消息不能创建。
+     *
+     * @param objectKey 附件对象存储 key
+     * @return 对象存储元信息
+     */
     private StorageObject requireStorageObject(String objectKey) {
         return objectStorageService.get(new GetObjectCommand(objectKey))
                 .orElseThrow(() -> ProblemException.notFound("storage object does not exist"));
     }
 
+    /**
+     * 校验附件 objectKey 属于当前频道、消息类型和发送者范围。
+     * 原因：文件消息只能引用由当前发送者在当前频道上传的 file 附件对象。
+     *
+     * @param context 消息构建上下文
+     * @param objectKey 附件对象存储 key
+     */
     private void requireScopedObjectKey(ChannelMessageBuildContext context, String objectKey) {
         if (!messageAttachmentObjectKeyPolicy.isWithinSenderScope(
                 context.channelId(),

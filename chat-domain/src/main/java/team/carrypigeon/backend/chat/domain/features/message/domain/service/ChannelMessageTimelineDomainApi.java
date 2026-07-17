@@ -117,6 +117,12 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
         return new ChannelMessageSearchResult(messages);
     }
 
+    /**
+     * 校验频道消息历史查询参数。
+     * 约束：cursor 与 around_mid 不能同时使用，前后窗口和 limit 都限制在 50 以内。
+     *
+     * @param query 历史消息查询
+     */
     private void validateHistoryQuery(GetChannelMessageHistoryQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
@@ -140,6 +146,12 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
         }
     }
 
+    /**
+     * 校验频道消息搜索查询参数。
+     * 约束：关键词必填且不超过 100 字符，消息边界、发送者和 cursor 必须为正数。
+     *
+     * @param query 消息搜索查询
+     */
     private void validateSearchQuery(SearchChannelMessagesQuery query) {
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
@@ -166,6 +178,13 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
         }
     }
 
+    /**
+     * 规范化客户端 domain 过滤值为领域消息类型。
+     * 语义：v1 Core domain 会映射回内部消息类型，扩展 domain 保持原值。
+     *
+     * @param domain 客户端提交的 domain 过滤值
+     * @return 领域消息类型过滤值，缺失时为 null
+     */
     private String normalizeDomain(String domain) {
         if (domain == null || domain.isBlank()) {
             return null;

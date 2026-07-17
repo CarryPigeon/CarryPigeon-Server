@@ -8,7 +8,7 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 
 任务背景：
 
-当前 `chat-domain` 已完成领域 API 拆分与语义提纯，API 接口成为 feature 对外暴露领域能力的稳定边界。为了让 API 边界具备成熟开源项目级别的可读性、可维护性与 AI 协作可理解性，需要对接口注释做全量补强，并将“领域 API 接口必须有规范完整注释”的要求沉淀到 `docs/注释规范.md`。
+当前 `chat-domain` 已完成领域 API 拆分与语义提纯，API 接口成为 feature 对外暴露领域能力的稳定边界。为了让 API 边界具备成熟开源项目级别的可读性、可维护性与 AI 协作可理解性，需要对接口注释做全量补强，并将“领域 API 接口必须有规范完整注释”的要求沉淀到 `docs/standards/注释规范.md`。
 
 影响模块：
 
@@ -19,8 +19,8 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 允许修改范围：
 
 - `chat-domain/src/main/java/team/carrypigeon/backend/chat/domain/features/**/domain/api/*.java`
-- `docs/注释规范.md`
-- 必要时可补充 `docs/包结构规范.md` 中关于 `domain/api` 的注释要求引用，但仅限规则补充，不做架构变更。
+- `docs/standards/注释规范.md`
+- 必要时可补充 `docs/architecture/包结构规范.md` 中关于 `domain/api` 的注释要求引用，但仅限规则补充，不做架构变更。
 - 当前任务单。
 
 禁止修改范围：
@@ -45,11 +45,11 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 文档依据：
 
 - `AGENTS.md`
-- `docs/注释规范.md`
-- `docs/包结构规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/任务单模板.md`
+- `docs/standards/注释规范.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/任务单模板.md`
 
 任务分解 / 执行计划：
 
@@ -66,11 +66,11 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
    - `@param` 参数业务含义
    - `@return` 返回结果业务含义；`void` 方法说明副作用
    - 失败语义或权限/校验约束
-5. 完善 `docs/注释规范.md`，新增或强化 `domain/api` 接口注释强制规则。
-6. 如 `docs/包结构规范.md` 已描述 `domain/api` 包职责，则仅补充对 `docs/注释规范.md` 的引用或简短规则，不重复长篇说明。
+5. 完善 `docs/standards/注释规范.md`，新增或强化 `domain/api` 接口注释强制规则。
+6. 如 `docs/architecture/包结构规范.md` 已描述 `domain/api` 包职责，则仅补充对 `docs/standards/注释规范.md` 的引用或简短规则，不重复长篇说明。
 7. 运行编译检查，确认注释补充不影响源码编译。
 8. 运行结构扫描，确认没有业务代码改动范围外的残留。
-9. 根据 `docs/变更审核清单.md` 自检并归档任务单。
+9. 根据 `docs/standards/变更审核清单.md` 自检并归档任务单。
 
 关键假设与依赖：
 
@@ -120,7 +120,7 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 
 - 所有 `domain/api/*.java` 文件具备类级 JavaDoc。
 - 所有领域 API 公开方法具备方法级 JavaDoc。
-- `docs/注释规范.md` 明确写入 `domain/api` 接口强制注释规则。
+- `docs/standards/注释规范.md` 明确写入 `domain/api` 接口强制注释规则。
 - `mvn -pl chat-domain -am test-compile` 通过。
 - 结构扫描确认 API 文件范围无遗漏。
 - 变更审查确认没有业务行为改动。
@@ -133,8 +133,8 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 
 文档要求：
 
-- 必须更新 `docs/注释规范.md`。
-- 仅当 `docs/包结构规范.md` 中缺少 `domain/api` 注释边界引用时，才做最小补充。
+- 必须更新 `docs/standards/注释规范.md`。
+- 仅当 `docs/architecture/包结构规范.md` 中缺少 `domain/api` 注释边界引用时，才做最小补充。
 - 不修改其它文档。
 
 验收标准：
@@ -158,8 +158,8 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 - 已为 `chat-domain` 下 18 个 `domain/api` 接口补充规范类级 JavaDoc。
 - 已为 18 个接口中的 72 个公开 API 方法补充方法级 JavaDoc。
 - 注释覆盖内容包括职责、边界、输入、输出、副作用、约束、失败语义和调用方边界。
-- 已更新 `docs/注释规范.md`，新增“领域 API 接口注释”强制规则。
-- 已更新 `docs/包结构规范.md`，在 `domain/api` 包规则中引用领域 API 注释强制要求。
+- 已更新 `docs/standards/注释规范.md`，新增“领域 API 接口注释”强制规则。
+- 已更新 `docs/architecture/包结构规范.md`，在 `domain/api` 包规则中引用领域 API 注释强制要求。
 - 未修改 API 方法签名、返回类型、业务行为、配置或依赖。
 
 验证记录：
@@ -179,8 +179,8 @@ chat-domain 领域 API 接口注释全量补充与注释规范完善
 
 知识沉淀 / 是否回写 docs：
 
-- 已回写 `docs/注释规范.md`，形成长期强制规则。
-- 已最小补充 `docs/包结构规范.md`，避免 API 包结构规则与注释规则割裂。
+- 已回写 `docs/standards/注释规范.md`，形成长期强制规则。
+- 已最小补充 `docs/architecture/包结构规范.md`，避免 API 包结构规则与注释规则割裂。
 
 产物清理与保留说明：
 

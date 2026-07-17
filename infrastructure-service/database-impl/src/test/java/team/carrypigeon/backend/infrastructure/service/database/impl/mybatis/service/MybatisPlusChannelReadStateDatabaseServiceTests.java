@@ -11,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.exception.Da
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelReadStateEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelUnreadProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,10 +74,10 @@ class MybatisPlusChannelReadStateDatabaseServiceTests {
     @DisplayName("list unreads maps projections")
     void listUnreads_mapsProjections() {
         ChannelReadStateMapper mapper = mock(ChannelReadStateMapper.class);
-        ChannelReadStateMapper.UnreadProjection projection = mock(ChannelReadStateMapper.UnreadProjection.class);
-        when(projection.getChannelId()).thenReturn(9L);
-        when(projection.getUnreadCount()).thenReturn(3L);
-        when(projection.getLastReadTime()).thenReturn(Instant.parse("2026-04-22T00:00:00Z"));
+        ChannelUnreadProjection projection = new ChannelUnreadProjection();
+        projection.setChannelId(9L);
+        projection.setUnreadCount(3L);
+        projection.setLastReadTime(Instant.parse("2026-04-22T00:00:00Z"));
         when(mapper.listUnreadsByAccountId(1001L)).thenReturn(List.of(projection));
         MybatisPlusChannelReadStateDatabaseService service = new MybatisPlusChannelReadStateDatabaseService(mapper);
 

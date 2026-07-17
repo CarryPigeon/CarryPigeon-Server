@@ -15,9 +15,7 @@ public interface MentionRepository {
      *
      * @param messageId 消息 ID
      */
-    default void deleteByMessageId(long messageId) {
-        // Optional capability for persistence-backed repositories.
-    }
+    void deleteByMessageId(long messageId);
 
     List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId);
 

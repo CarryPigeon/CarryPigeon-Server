@@ -14,7 +14,7 @@
 
 配置限制：仅补充当前已被容器健康检查实际读取的环境变量。
 
-文档依据：`AGENTS.md`、`docs/Docker配置.md`、`docs/变更审核清单.md`。
+文档依据：`AGENTS.md`、`docs/operations/Docker配置.md`、`docs/standards/变更审核清单.md`。
 
 任务分解 / 执行计划：
 1. 检查 Redis 容器健康日志和容器内环境变量。

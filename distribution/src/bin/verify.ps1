@@ -1,15 +1,15 @@
 $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent $PSScriptRoot
-$StrictEnv = $false
+$StrictConfig = $false
 
 foreach ($arg in $args) {
-    if ($arg -eq '--strict-env') {
-        $StrictEnv = $true
+    if ($arg -eq '--strict-config') {
+        $StrictConfig = $true
         continue
     }
 
-    throw "Unsupported argument: $arg. Usage: verify.ps1 [--strict-env]"
+    throw "Unsupported argument: $arg. Usage: verify.ps1 [--strict-config]"
 }
 
 function Require-Path {
@@ -34,34 +34,55 @@ function Require-File {
     }
 }
 
-function Require-EnvValue {
+function Require-ConfigValue {
     param(
         [string]$Value,
         [Parameter(Mandatory = $true)][string]$Name
     )
 
     if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Missing required env value in .env: $Name"
+        throw "Missing required config value in config/application.yaml: $Name"
     }
 }
 
-function Import-EnvFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
+function Get-YamlScalar {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$PropertyPath
+    )
 
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
+    $target = $PropertyPath.Split('.')
+    $stack = New-Object System.Collections.Generic.List[object]
 
-    Get-Content -LiteralPath $Path | ForEach-Object {
-        $line = $_.Trim()
-        if (-not $line -or $line.StartsWith('#')) {
-            return
+    foreach ($rawLine in Get-Content -LiteralPath $Path -Encoding UTF8) {
+        if ([string]::IsNullOrWhiteSpace($rawLine) -or $rawLine.TrimStart().StartsWith('#')) {
+            continue
+        }
+        if ($rawLine -notmatch ':') {
+            continue
         }
 
-        if ($line -match '^(?<name>[^=]+)=(?<value>.*)$') {
-            Set-Item -Path "Env:$($Matches.name.Trim())" -Value $Matches.value
+        $indent = $rawLine.Length - $rawLine.TrimStart(' ').Length
+        $parts = $rawLine.Trim().Split(':', 2)
+        $key = $parts[0].Trim()
+        $value = $parts[1].Trim()
+
+        while ($stack.Count -gt 0 -and $stack[$stack.Count - 1].Indent -ge $indent) {
+            $stack.RemoveAt($stack.Count - 1)
+        }
+        $stack.Add([pscustomobject]@{ Indent = $indent; Key = $key })
+
+        $current = @($stack | ForEach-Object { $_.Key })
+        if (($current -join '.') -eq ($target -join '.')) {
+            $value = ($value -replace '\s+#.*$', '').Trim()
+            if ($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))) {
+                $value = $value.Substring(1, $value.Length - 2)
+            }
+            return $value
         }
     }
+
+    return ''
 }
 
 $AppDir = Join-Path $BaseDir 'app'
@@ -74,7 +95,6 @@ Require-Path -Path (Join-Path $BaseDir 'bin') -Description 'bin directory'
 Require-Path -Path $SystemdDir -Description 'systemd example directory'
 
 Require-File -Path (Join-Path $BaseDir 'README.md') -Description 'distribution README'
-Require-File -Path (Join-Path $BaseDir '.env.example') -Description 'environment template'
 Require-File -Path (Join-Path $BaseDir 'config/application.yaml') -Description 'application configuration'
 Require-File -Path (Join-Path $BaseDir 'config/log4j2-spring.xml') -Description 'logging configuration'
 Require-File -Path (Join-Path $SystemdDir 'carrypigeon.service') -Description 'systemd unit example'
@@ -92,27 +112,25 @@ if ($null -eq $appJar) {
     throw "application-starter thin jar not found under $AppDir"
 }
 
-if ($StrictEnv) {
-    $envFile = Join-Path $BaseDir '.env'
-    if (-not (Test-Path -LiteralPath $envFile)) {
-        throw "Strict env verification requested, but $envFile is missing."
-    }
+if ($StrictConfig) {
+    $configFile = Join-Path $BaseDir 'config/application.yaml'
+    $jwtSecret = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.auth.jwt.secret'
+    $serverId = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.server.id'
 
-    Import-EnvFile -Path $envFile
-    Require-EnvValue -Value $env:CP_CHAT_AUTH_JWT_SECRET -Name 'CP_CHAT_AUTH_JWT_SECRET'
-    Require-EnvValue -Value $env:CP_CHAT_SERVER_ID -Name 'CP_CHAT_SERVER_ID'
+    Require-ConfigValue -Value $jwtSecret -Name 'cp.chat.auth.jwt.secret'
+    Require-ConfigValue -Value $serverId -Name 'cp.chat.server.id'
 
-    if ($env:CP_CHAT_AUTH_JWT_SECRET.Length -lt 32) {
-        throw 'CP_CHAT_AUTH_JWT_SECRET must be at least 32 characters.'
+    if ($jwtSecret.Length -lt 32) {
+        throw 'cp.chat.auth.jwt.secret must be at least 32 characters.'
     }
 }
 
 Write-Host 'Distribution package verification passed.'
 Write-Host "Base directory: $BaseDir"
 Write-Host "Thin jar: $($appJar.FullName)"
-if ($StrictEnv) {
-    Write-Host 'Environment readiness: strict verification passed'
+if ($StrictConfig) {
+    Write-Host 'Configuration readiness: strict verification passed'
 }
 else {
-    Write-Host 'Environment readiness: skipped (.env not required without --strict-env)'
+    Write-Host 'Configuration readiness: skipped (use --strict-config to validate required YAML values)'
 }

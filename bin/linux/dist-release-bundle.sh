@@ -81,7 +81,7 @@ cat > "$MANIFEST_FILE" <<EOF
   },
   "verification": {
     "package_verify_command": "bash distribution/target/full-distribution/full-distribution/bin/verify.sh",
-    "strict_env_verify_command": "bash distribution/target/full-distribution/full-distribution/bin/verify.sh --strict-env"
+    "strict_config_verify_command": "bash distribution/target/full-distribution/full-distribution/bin/verify.sh --strict-config"
   }
 }
 EOF

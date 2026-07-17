@@ -60,7 +60,7 @@ services:
     environment:
       # 职责：定义 MinIO 管理账号，供后续对象存储 impl 接入。
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-carrypigeon}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-carrypigeon123}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-carrypigeon}
       TZ: Asia/Shanghai
     command: server /data --console-address ":9001"
     ports:
@@ -90,6 +90,45 @@ services:
       - >-
         mc alias set carrypigeon http://minio:9000 "${MINIO_ROOT_USER:-carrypigeon}" "${MINIO_ROOT_PASSWORD:-carrypigeon123}" &&
         mc mb --ignore-existing carrypigeon/"${MINIO_BUCKET:-carrypigeon}"
+    networks:
+      - carrypigeon-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: carrypigeon-nginx
+    profiles:
+      - edge
+    restart: unless-stopped
+    environment:
+      # 职责：定义本地反代入口的 server_name，默认用于本机开发证书。
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:-localhost}
+      # 职责：定义宿主机上 jar 应用的 Spring MVC HTTP 端口。
+      NGINX_BACKEND_HTTP_HOST: ${NGINX_BACKEND_HTTP_HOST:-host.docker.internal}
+      NGINX_BACKEND_HTTP_PORT: ${NGINX_BACKEND_HTTP_PORT:-8080}
+      # 职责：定义宿主机上 jar 应用的 Netty WebSocket 端口。
+      NGINX_BACKEND_WS_HOST: ${NGINX_BACKEND_WS_HOST:-host.docker.internal}
+      NGINX_BACKEND_WS_PORT: ${NGINX_BACKEND_WS_PORT:-18080}
+      # 职责：限制经反代上传到服务端的请求体大小。
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-100m}
+      # 职责：将服务发现中的内部 ws_url 替换为客户端可访问的 WSS 入口。
+      NGINX_BACKEND_WS_DISCOVERY_URL: ${NGINX_BACKEND_WS_DISCOVERY_URL:-ws://127.0.0.1:18080/api/ws}
+      NGINX_PUBLIC_WS_URL: ${NGINX_PUBLIC_WS_URL:-wss://localhost/api/ws}
+      # 职责：限制官方 Nginx entrypoint 只替换本服务定义的变量，避免误替换 Nginx 内置变量。
+      NGINX_ENVSUBST_FILTER: "^NGINX_"
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./deploy/nginx/templates/carrypigeon.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -q -O /dev/null https://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     networks:
       - carrypigeon-network
 

@@ -1,0 +1,87 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+upstream carrypigeon_http_backend {
+    server ${NGINX_BACKEND_HTTP_HOST}:${NGINX_BACKEND_HTTP_PORT};
+}
+
+upstream carrypigeon_ws_backend {
+    server ${NGINX_BACKEND_WS_HOST}:${NGINX_BACKEND_WS_PORT};
+}
+
+server {
+    listen 80;
+    server_name ${NGINX_SERVER_NAME};
+
+    location = /healthz {
+        access_log off;
+        return 204;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${NGINX_SERVER_NAME};
+
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
+
+    location = /healthz {
+        access_log off;
+        return 204;
+    }
+
+    location = /api/ws {
+        proxy_pass http://carrypigeon_ws_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    location = /api/server {
+        proxy_pass http://carrypigeon_http_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header Accept-Encoding "";
+        sub_filter_types application/json application/vnd.carrypigeon+json;
+        sub_filter_once off;
+        sub_filter '${NGINX_BACKEND_WS_DISCOVERY_URL}' '${NGINX_PUBLIC_WS_URL}';
+    }
+
+    location /api/ {
+        proxy_pass http://carrypigeon_http_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    location / {
+        return 404;
+    }
+}

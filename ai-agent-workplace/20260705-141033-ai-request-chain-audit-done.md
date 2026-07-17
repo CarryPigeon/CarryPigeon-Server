@@ -32,13 +32,13 @@
 ## governing docs
 
 - `AGENTS.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/依赖引入规范.md`
-- `docs/异常与错误码规范.md`
-- `docs/测试规范.md`
-- `docs/变更审核清单.md`
-- `docs/AI协作开发规范.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/architecture/依赖引入规范.md`
+- `docs/standards/异常与错误码规范.md`
+- `docs/standards/测试规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/AI协作开发规范.md`
 
 ## 审计方法
 
@@ -117,7 +117,7 @@
 9. `GET /api/users/{accountId}` 的 OpenAPI 注释与实际公开资料语义不一致。
    - Controller 注释：`UserProfileController.getByAccountId` 的 `@Operation` 描述为“当前实现仅允许访问当前登录账户自己的资料”。
    - 实现：方法只调用 `authRequestContext.requirePrincipal(request)`，没有比较当前账号与 path `accountId`，随后直接查询任意账号公开资料。
-   - 文档 / 测试：`docs/t/11-http-endpoints-v1.md` 和 `docs/API.md` 都描述为获取用户公开资料；`UserProfileControllerTests.getByAccountId_authenticatedRequest_returnsPublicProfile` 也按公开资料查询验证。
+   - 文档 / 测试：`docs/t/11-http-endpoints-v1.md` 和 `docs/api/API.md` 都描述为获取用户公开资料；`UserProfileControllerTests.getByAccountId_authenticatedRequest_returnsPublicProfile` 也按公开资料查询验证。
    - 影响：导入 OpenAPI 后会误导客户端和测试人员；若产品语义是“只能查自己”，当前实现存在隐私越权；若产品语义是“公开资料”，则 OpenAPI 描述错误。
    - 建议修复方向：先确认产品语义；若是公开资料，修正文档和 OpenAPI 注释；若是私有资料，补权限校验和反向测试。
 
@@ -139,7 +139,7 @@
 12. 未读统计 SQL 会把已撤回消息继续计为未读，语义与“撤回后内容不可见/不再搜索”边界不清。
    - SQL：`ChannelReadStateMapper.listUnreadsByAccountId` 只按 `message_id > last_read_message_id` 和 `sender_id != account_id` 计数，没有排除 `status = 'recalled'`。
    - 领域：`ChannelMessageLifecycleDomainApi.recallChannelMessage` 会把消息更新为 `recalled`，`AbstractMessageDomainSupport.toRecalledMessage` 清空可搜索内容并保留原 `message_id`。
-   - 文档：`docs/产品需求文档.md` 明确撤回采用软撤回、保留 `message_id`、使用占位文案、不再参与搜索；`GET /api/unreads` 文档只给出未读数量示例，未定义撤回消息是否继续计未读。
+   - 文档：`docs/product/产品需求文档.md` 明确撤回采用软撤回、保留 `message_id`、使用占位文案、不再参与搜索；`GET /api/unreads` 文档只给出未读数量示例，未定义撤回消息是否继续计未读。
    - 影响：如果业务语义是“撤回后不应制造未读”，当前 SQL 会让被撤回但未读的消息仍出现在未读数中；如果语义是“撤回占位也需要同步给用户”，则文档和测试需要明确。
    - 建议修复方向：先确认产品语义；若撤回不计未读，SQL 增加 `m.status != 'recalled'` 并补充 MySQL/Mapper 集成测试；若继续计未读，在协议文档写明。
 
@@ -166,7 +166,7 @@
    - 仓储能力：`UserProfileRepository` 已定义 `findByAccountIdBefore` 和 `searchByKeyword`；`DatabaseBackedUserProfileRepository` 也已接入 `UserProfileDatabaseService.findByAccountIdBefore` / `searchByKeyword`。
    - 测试现状：`UserProfileDomainApiTests.getUserProfiles_withCursor_returnsPageResult` 和 `searchUserProfiles_keyword_returnsPageResult` 构造了多个用户资料，但断言只返回当前账号，测试固化了当前错误行为。
    - HTTP 暴露：当前 `UserProfileController` 只暴露 `/api/users/me`、`/api/users/{accountId}`、`GET /api/users?ids=...`、邮箱/资料/背景更新；没有 `GET /api/users/page` 和 `GET /api/users/search`。
-   - 文档不一致：`docs/API.md` 仍写“以下旧接口当前仍保留”：`GET /api/users/page`、`GET /api/users/search`、`PUT /api/users/me`，其中分页和搜索端点在当前 Controller 中不存在。
+   - 文档不一致：`docs/api/API.md` 仍写“以下旧接口当前仍保留”：`GET /api/users/page`、`GET /api/users/search`、`PUT /api/users/me`，其中分页和搜索端点在当前 Controller 中不存在。
    - 影响：如果后续重新挂载分页 / 搜索 HTTP 入口，会直接得到只返回当前用户的错误分页 / 搜索结果；当前文档也会误导 Apifox / 客户端按不存在接口测试。
    - 建议修复方向：先确认是否保留用户列表 / 搜索能力；若保留，领域层改用仓储分页 / 搜索方法并恢复 HTTP/OpenAPI 契约；若不保留，删除领域 API 和文档中的过渡接口说明，避免形成假能力。
 
@@ -194,7 +194,7 @@
 ### 再次补扫新增记录（20260705-163440）
 
 - 已补扫认证会话与验证码实现：`AuthSessionDomainApi.createTokenSession`、`UserProfileController.updateCurrentUserEmail`、`CacheBackedEmailVerificationCodeService`、`InMemoryEmailVerificationCodeService`、`CacheService`。新增记录验证码消费非原子导致并发重复使用窗口。
-- 已补扫用户资料领域 API、仓储端口、database-api 适配器、Controller 暴露面和 `docs/API.md`。新增记录用户资料分页 / 搜索领域实现绕过已有分页搜索仓储能力，且文档保留未暴露旧接口。
+- 已补扫用户资料领域 API、仓储端口、database-api 适配器、Controller 暴露面和 `docs/api/API.md`。新增记录用户资料分页 / 搜索领域实现绕过已有分页搜索仓储能力，且文档保留未暴露旧接口。
 - 已补扫 realtime registry / publisher / inbound dispatcher：`RealtimeChannelHandler`、`RealtimeSessionRegistry`、`NettyMessageRealtimePublisher`、`NettyChannelRealtimePublisher`、`ChannelMessageRealtimeInboundHandler`。除已记录 malformed frame 映射、TLS discovery 和删除 / 撤回事件语义问题外，本轮未发现新的确定性 realtime 调用链缺陷。
 - 已补扫事务后置发布相关入口：消息发送 / 更新 / 删除和频道读状态发布均通过 `TransactionRunner` after-commit 触发，未发现新的“事务回滚后仍推送”确定性问题。
 
@@ -252,4 +252,4 @@
 - 未运行全量 `mvn test`。
 - 未对真实 MySQL / Redis / MinIO 环境执行端到端请求。
 - 本轮为只读审计，未修复业务代码。
-- 未证明所有第三方客户端协议文档均与当前 OpenAPI 一致；只抽查了与本轮问题相关的 `docs/t/11-http-endpoints-v1.md`、`docs/t/SERVER_API.md`、`docs/API.md`。
+- 未证明所有第三方客户端协议文档均与当前 OpenAPI 一致；只抽查了与本轮问题相关的 `docs/t/11-http-endpoints-v1.md`、`docs/t/SERVER_API.md`、`docs/api/API.md`。

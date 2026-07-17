@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * v1 消息响应映射器。
- * 职责：统一把消息应用层结果转换为 docs/t 对齐的公共消息响应。
+ * 职责：统一把消息应用层结果转换为 docs/api/API.md 对齐的公共消息响应。
  * 边界：只负责 HTTP 出站映射，不承载消息业务校验。
  */
 @Component
@@ -38,7 +38,7 @@ public class ChannelMessageV1ResponseMapper {
     }
 
     /**
-     * 将消息应用层结果映射为 docs/t 对齐的 v1 响应。
+     * 将消息应用层结果映射为 docs/api/API.md 对齐的 v1 响应。
      * 输入：应用层消息结果快照。
      * 输出：带发送者、mentions、转发来源与 data 结构的稳定协议响应。
      *
@@ -74,6 +74,13 @@ public class ChannelMessageV1ResponseMapper {
         };
     }
 
+    /**
+     * 构造 v1 HTTP 消息响应的 data 字段。
+     * 语义：文本消息用正文生成稳定 data，非文本消息使用领域已解析后的 canonical payload。
+     *
+     * @param result 领域消息投影
+     * @return v1 响应 data
+     */
     private Map<String, Object> toData(ChannelMessageResult result) {
         if ("text".equals(result.messageType())) {
             return Map.of("text", result.body() == null ? "" : result.body());
@@ -84,6 +91,13 @@ public class ChannelMessageV1ResponseMapper {
         return jsonProvider.fromJson(result.payload(), MAP_TYPE);
     }
 
+    /**
+     * 把领域 mention JSON 转换为 v1 响应 mention 列表。
+     * 约束：空白或非数组 mention 数据对外按空列表处理。
+     *
+     * @param mentionsJson 已持久化 mention JSON
+     * @return v1 mention 响应列表
+     */
     private List<ChannelMessageV1Response.MentionTargetResponse> toMentionResponses(String mentionsJson) {
         if (mentionsJson == null || mentionsJson.isBlank()) {
             return List.of();
@@ -100,6 +114,13 @@ public class ChannelMessageV1ResponseMapper {
         return items;
     }
 
+    /**
+     * 把领域转发来源 JSON 转换为 v1 响应对象。
+     * 输出：无转发来源时返回 null，存在时只透出客户端展示所需字段。
+     *
+     * @param forwardedFromJson 已持久化转发来源 JSON
+     * @return v1 转发来源响应
+     */
     private ChannelMessageV1Response.ForwardedFromResponse toForwardedFromResponse(String forwardedFromJson) {
         if (forwardedFromJson == null || forwardedFromJson.isBlank()) {
             return null;

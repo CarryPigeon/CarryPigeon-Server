@@ -7,6 +7,8 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealth;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * SmtpMailHealthService 契约测试。
@@ -26,7 +28,7 @@ class SmtpMailHealthServiceTests {
 
         MailHealth health = service.check();
 
-        assertEquals(true, health.available());
+        assertTrue(health.available());
         assertEquals("mail service is available", health.message());
     }
 
@@ -40,7 +42,7 @@ class SmtpMailHealthServiceTests {
 
         MailHealth health = service.check();
 
-        assertEquals(false, health.available());
+        assertFalse(health.available());
         assertEquals("mail service is unavailable: smtp down", health.message());
     }
 

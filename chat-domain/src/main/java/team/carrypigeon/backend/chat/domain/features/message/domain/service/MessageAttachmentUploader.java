@@ -33,6 +33,21 @@ class MessageAttachmentUploader {
         this.objectStorageServiceProvider = objectStorageServiceProvider;
     }
 
+    /**
+     * 上传频道消息附件并生成可被消息 payload 引用的结果。
+     * 输入：上传账号、目标频道、附件消息类型、文件元信息和文件内容流。
+     * 输出：对象存储 key、share_key、规范化文件名、内容类型和大小。
+     * 副作用：向对象存储写入附件内容；对象存储服务不可用或输入非法时抛出领域问题异常。
+     *
+     * @param accountId 上传账号 ID
+     * @param channelId 附件所属频道 ID
+     * @param messageType 附件消息类型，仅支持 file 或 voice
+     * @param filename 客户端提交的文件名
+     * @param contentType 客户端提交的内容类型，可为空并按消息类型补默认值
+     * @param size 文件内容长度
+     * @param content 文件内容输入流
+     * @return 附件上传结果
+     */
     MessageAttachmentUploadResult upload(
             long accountId,
             long channelId,
@@ -68,6 +83,13 @@ class MessageAttachmentUploader {
         );
     }
 
+    /**
+     * 规范化附件上传对应的消息类型。
+     * 约束：空值默认按 file 处理，非 file/voice 类型不能上传附件。
+     *
+     * @param messageType 客户端提交的消息类型
+     * @return 规范化后的附件消息类型
+     */
     private String normalizeAttachmentMessageType(String messageType) {
         String normalized = messageType == null || messageType.isBlank() ? FILE_MESSAGE_TYPE : messageType.trim().toLowerCase();
         if (!FILE_MESSAGE_TYPE.equals(normalized) && !VOICE_MESSAGE_TYPE.equals(normalized)) {
@@ -76,6 +98,12 @@ class MessageAttachmentUploader {
         return normalized;
     }
 
+    /**
+     * 获取对象存储服务实例。
+     * 失败语义：运行时未装配对象存储实现时抛出服务不可用问题。
+     *
+     * @return 可用的对象存储服务
+     */
     private ObjectStorageService requireObjectStorageService() {
         ObjectStorageService objectStorageService = objectStorageServiceProvider.getIfAvailable();
         if (objectStorageService == null) {
@@ -84,6 +112,14 @@ class MessageAttachmentUploader {
         return objectStorageService;
     }
 
+    /**
+     * 解析附件上传内容类型。
+     * 语义：客户端未声明时，voice 使用音频默认类型，其它附件使用通用二进制类型。
+     *
+     * @param messageType 已规范化消息类型
+     * @param contentType 客户端提交的内容类型
+     * @return 最终写入对象存储的内容类型
+     */
     private String resolveContentType(String messageType, String contentType) {
         if (contentType != null && !contentType.isBlank()) {
             return contentType.trim();

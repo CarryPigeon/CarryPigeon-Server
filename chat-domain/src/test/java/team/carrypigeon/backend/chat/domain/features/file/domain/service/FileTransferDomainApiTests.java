@@ -137,6 +137,23 @@ class FileTransferDomainApiTests {
     }
 
     /**
+     * 验证空白下载 share_key 会收口为领域校验问题，而不是泄漏为未分类运行时异常。
+     */
+    @Test
+    @DisplayName("download file blank share key throws validation problem")
+    void downloadFile_blankShareKey_throwsValidationProblem() {
+        FileTransferDomainApi service = createService(new RecordingObjectStorageService());
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.downloadFile(1001L, " ")
+        );
+
+        assertEquals("invalid_share_key", exception.reason());
+        assertEquals("share_key is invalid", exception.getMessage());
+    }
+
+    /**
      * 验证上传写入仍使用授权 share_key 派生的对象 key，并规范化空 content-type。
      */
     @Test
@@ -150,6 +167,22 @@ class FileTransferDomainApiTests {
 
         assertEquals("files/accounts/1001/7001", storageService.lastPutObjectKey);
         assertEquals("application/octet-stream", storageService.lastPutContentType);
+    }
+
+    /**
+     * 验证资料背景图上传由文件领域生成固定 share key 并写入固定对象位置。
+     */
+    @Test
+    @DisplayName("upload profile background returns domain share key")
+    void uploadProfileBackground_returnsDomainShareKey() {
+        RecordingObjectStorageService storageService = new RecordingObjectStorageService();
+        FileTransferDomainApi service = createService(storageService);
+
+        String shareKey = service.uploadProfileBackground(1001L, "image/png", 123L, new ByteArrayInputStream(new byte[] {1}));
+
+        assertEquals("profile_bg_1001", shareKey);
+        assertEquals("files/profile-background/1001", storageService.lastPutObjectKey);
+        assertEquals("image/png", storageService.lastPutContentType);
     }
 
     private FileTransferDomainApi createService(RecordingObjectStorageService storageService) {

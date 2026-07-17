@@ -82,6 +82,27 @@ class RealtimeChannelHandlerMessageDispatchTests {
     }
 
     /**
+     * 验证 auth token subject 不是账号 ID 时返回 auth.err unauthorized，而不是 internal_error。
+     */
+    @Test
+    @DisplayName("auth non numeric subject returns unauthorized error")
+    void channelRead_authNonNumericSubject_returnsUnauthorizedError() {
+        RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
+
+        sender.writeInbound(new TextWebSocketFrame("""
+                {"type":"auth","id":"1","data":{"access_token":"bad-subject-token","device_id":"device-1"}}
+                """));
+
+        TextWebSocketFrame frame = sender.readOutbound();
+        assertNotNull(frame);
+        assertTrue(frame.text().contains("\"type\":\"auth.err\""), frame.text());
+        assertTrue(frame.text().contains("\"reason\":\"unauthorized\""), frame.text());
+        assertTrue(frame.text().contains("access token is invalid"), frame.text());
+    }
+
+    /**
      * 验证 `channelRead` 在 `unsupportedCommandAfterAuth` 条件下满足 `returnsValidationError` 的测试契约。
      */
     @Test

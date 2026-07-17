@@ -19,10 +19,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.UserProfileController;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
@@ -52,7 +52,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserProfileControllerTests {
 
     private UserProfileApi userProfileDomainApi;
-    private EmailVerificationCodeService emailVerificationCodeService;
     private FileTransferApi fileTransferDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
@@ -60,10 +59,9 @@ class UserProfileControllerTests {
     @BeforeEach
     void setUp() {
         userProfileDomainApi = mock(UserProfileApi.class);
-        emailVerificationCodeService = mock(EmailVerificationCodeService.class);
         fileTransferDomainApi = mock(FileTransferApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, emailVerificationCodeService, authRequestContext, fileTransferDomainApi))
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, authRequestContext, fileTransferDomainApi))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -144,22 +142,55 @@ class UserProfileControllerTests {
     }
 
     /**
-     * 验证邮箱更新协议会先校验验证码，再使用规范化邮箱更新当前账号。
+     * 验证批量查询协议会拒绝包含空片段的 ID 列表，避免静默丢弃客户端参数错误。
+     */
+    @Test
+    @DisplayName("list users blank segment ids returns 422")
+    void listUsers_blankSegmentIds_returns422() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(get("/api/users").param("ids", "1001,,1002"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证邮箱更新协议会把新邮箱和验证码交给领域 API。
      */
     @Test
     @DisplayName("put current user email success returns 204")
     void updateCurrentUserEmail_success_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(emailVerificationCodeService).verifyCode(any(), any());
+        doNothing().when(userProfileDomainApi).updateCurrentUserEmail(any());
 
         mockMvc.perform(put("/api/users/me/email")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"email":"new@example.com","code":"123456"}
-                                """))
+                """))
                 .andExpect(status().isNoContent());
-        verify(emailVerificationCodeService).verifyCode("new@example.com", "123456");
-        verify(userProfileDomainApi).updateCurrentUserEmail(1001L, "new@example.com");
+        ArgumentCaptor<UpdateCurrentUserEmailCommand> commandCaptor = ArgumentCaptor.forClass(UpdateCurrentUserEmailCommand.class);
+        verify(userProfileDomainApi).updateCurrentUserEmail(commandCaptor.capture());
+        assertEquals(1001L, commandCaptor.getValue().accountId());
+        assertEquals("new@example.com", commandCaptor.getValue().email());
+        assertEquals("123456", commandCaptor.getValue().code());
+    }
+
+    /**
+     * 验证邮箱更新协议会拒绝超过持久化容量的邮箱。
+     */
+    @Test
+    @DisplayName("put current user email too long email returns 422")
+    void updateCurrentUserEmail_tooLongEmail_returns422() throws Exception {
+        mockMvc = authenticatedMockMvc();
+
+        mockMvc.perform(put("/api/users/me/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","code":"123456"}
+                                """.formatted(tooLongEmail())))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
     }
 
     /**
@@ -208,7 +239,8 @@ class UserProfileControllerTests {
     @DisplayName("upload current user background returns background url")
     void uploadCurrentUserBackground_returnsBackgroundUrl() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(fileTransferDomainApi).uploadFile(eq(1001L), eq("profile_bg_1001"), any(), anyLong(), any());
+        when(fileTransferDomainApi.uploadProfileBackground(eq(1001L), any(), anyLong(), any()))
+                .thenReturn("profile_bg_1001");
 
         mockMvc.perform(multipart("/api/users/me/background")
                         .file(new MockMultipartFile("background", "bg.png", "image/png", "img".getBytes()))
@@ -218,10 +250,11 @@ class UserProfileControllerTests {
                         }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.background_url").value("/api/files/download/profile_bg_1001"));
+        verify(fileTransferDomainApi).uploadProfileBackground(eq(1001L), eq("image/png"), eq(3L), any());
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, emailVerificationCodeService, authRequestContext, fileTransferDomainApi))
+        return MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, authRequestContext, fileTransferDomainApi))
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -245,6 +278,10 @@ class UserProfileControllerTests {
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         return new MappingJackson2HttpMessageConverter(objectMapper);
+    }
+
+    private String tooLongEmail() {
+        return "a".repeat(309) + "@example.com";
     }
 
     /**

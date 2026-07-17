@@ -147,6 +147,10 @@ public class RealtimeServerRuntime implements SmartLifecycle {
         stop();
     }
 
+    /**
+     * 关闭 Netty 运行时资源。
+     * 副作用：清理 server channel 引用，并同步关闭 boss/worker event loop group，避免后台线程泄漏。
+     */
     private void shutdownGroups() {
         if (serverChannel != null) {
             serverChannel = null;

@@ -239,15 +239,11 @@ public class ChannelMessageController {
                     file.getInputStream()
             );
             return new MessageAttachmentUploadResponse(
-                    100,
-                    "success",
-                    new MessageAttachmentUploadResponse.Data(
-                            result.objectKey(),
-                            result.shareKey(),
-                            result.filename(),
-                            result.mimeType(),
-                            result.size()
-                    )
+                    result.objectKey(),
+                    result.shareKey(),
+                    result.filename(),
+                    result.mimeType(),
+                    result.size()
             );
         } catch (IOException exception) {
             throw ProblemException.fail("attachment_upload_read_failed", "failed to read attachment upload content");
@@ -297,6 +293,15 @@ public class ChannelMessageController {
         return commands;
     }
 
+    /**
+     * 解析 HTTP 查询中的可选雪花 ID。
+     * 失败语义：cursor 字段固定返回 `cursor_invalid`，其它字段返回字段级十进制雪花 ID 错误。
+     *
+     * @param rawValue 原始查询参数
+     * @param fieldName 字段显示名
+     * @param cursorField 是否为 cursor 字段
+     * @return 解析后的雪花 ID，缺失时为 null
+     */
     private Long parseOptionalSnowflake(String rawValue, String fieldName, boolean cursorField) {
         if (rawValue == null || rawValue.isBlank()) {
             return null;

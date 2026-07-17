@@ -104,6 +104,10 @@ class MentionDatabaseServiceContractTests {
         }
 
         @Override
+        public void deleteByMessageId(long messageId) {
+        }
+
+        @Override
         public List<MentionRecord> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
             this.lastListAccountId = accountId;
             this.lastCursorMentionId = cursorMentionId;

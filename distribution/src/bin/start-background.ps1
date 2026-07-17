@@ -1,37 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent $PSScriptRoot
-$EnvFile = Join-Path $BaseDir '.env'
-$EnvTemplateFile = Join-Path $BaseDir '.env.example'
 $RunDir = Join-Path $BaseDir 'run'
 $PidFile = Join-Path $RunDir 'application.pid'
 $StartScript = Join-Path $PSScriptRoot 'start.ps1'
-
-function Import-EnvFile {
-    param([Parameter(Mandatory = $true)][string]$Path)
-
-    if (-not (Test-Path -LiteralPath $Path)) {
-        return
-    }
-
-    Get-Content -LiteralPath $Path | ForEach-Object {
-        $line = $_.Trim()
-        if (-not $line -or $line.StartsWith('#')) {
-            return
-        }
-
-        if ($line -match '^(?<name>[^=]+)=(?<value>.*)$') {
-            Set-Item -Path "Env:$($Matches.name.Trim())" -Value $Matches.value
-        }
-    }
-}
-
-if (Test-Path -LiteralPath $EnvFile) {
-    Import-EnvFile -Path $EnvFile
-}
-elseif (Test-Path -LiteralPath $EnvTemplateFile) {
-    Import-EnvFile -Path $EnvTemplateFile
-}
 
 $LogDir = if ([string]::IsNullOrWhiteSpace($env:CP_LOG_HOME)) {
     Join-Path $BaseDir 'service-logs'

@@ -6,7 +6,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 /**
  * 实时通道客户端消息。
  * 职责：定义 v1 WebSocket 客户端命令帧结构。
- * 边界：只承载 v1 统一 envelope，不再保留旧入站命令兼容构造。
+ * 边界：只承载 v1 统一 envelope，不保留旧入站命令构造。
  *
  * @param type 命令类型
  * @param id 客户端请求 ID
@@ -61,6 +61,13 @@ public record RealtimeClientMessage(
         return value == null ? null : String.valueOf(value);
     }
 
+    /**
+     * 从统一 data envelope 中读取可选数字字段。
+     * 约束：兼容 JSON number 与数字字符串；无法解析时返回 v1 协议校验错误。
+     *
+     * @param key data 字段名
+     * @return long 值，缺失时为 null
+     */
     private Long longValue(String key) {
         if (data == null) {
             return null;
@@ -88,6 +95,13 @@ public record RealtimeClientMessage(
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * 从统一 data envelope 中读取可选对象字段。
+     * 失败语义：字段存在但不是 JSON object 时返回 v1 协议校验错误。
+     *
+     * @param key data 字段名
+     * @return 对象字段，缺失时为 null
+     */
     private Map<String, Object> objectValue(String key) {
         if (data == null) {
             return null;

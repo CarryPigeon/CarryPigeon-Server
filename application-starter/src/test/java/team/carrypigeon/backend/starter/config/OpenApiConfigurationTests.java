@@ -56,7 +56,7 @@ class OpenApiConfigurationTests {
             Map<String, Object> apifoxNote = (Map<String, Object>) openAPI.getExtensions().get("x-apifox-import-note");
             assertThat(apifoxNote)
                     .containsEntry("websocket_url", "ws://127.0.0.1:18080/api/ws")
-                    .containsEntry("websocket_enabled_config", "CP_CHAT_REALTIME_ENABLED=true (default); set false to disable")
+                    .containsEntry("websocket_enabled_config", "cp.chat.server.realtime.enabled=true in config/application.yaml; set false to disable")
                     .containsEntry("token_variable", "token")
                     .containsEntry("channel_id_variable", "channelId")
                     .containsEntry("message_id_variable", "messageId")

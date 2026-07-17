@@ -14,7 +14,7 @@
 
 配置限制：不新增配置项。
 
-文档依据：`AGENTS.md`、`docs/架构文档.md`、`docs/包结构规范.md`、`docs/注释规范.md`、`docs/测试规范.md`、`docs/变更审核清单.md`。
+文档依据：`AGENTS.md`、`docs/architecture/架构文档.md`、`docs/architecture/包结构规范.md`、`docs/standards/注释规范.md`、`docs/standards/测试规范.md`、`docs/standards/变更审核清单.md`。
 
 任务分解 / 执行计划：
 1. 核对 `ChannelController` 构造器和现有测试调用。

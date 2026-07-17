@@ -10,9 +10,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfilePageResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
@@ -301,9 +303,25 @@ class UserProfileDomainApiTests {
         private final UserProfileDomainApi service = new UserProfileDomainApi(
                 authAccountRepository,
                 repository,
+                new NoopEmailVerificationCodeService(),
                 new TimeProvider(Clock.fixed(UPDATED_TIME, ZoneOffset.UTC)),
                 new NoopTransactionRunner()
         );
+    }
+
+    /**
+     * `NoopEmailVerificationCodeService` 测试替身。
+     * 职责：隔离验证码外部能力，使资料领域测试只关注邮箱更新编排。
+     */
+    private static class NoopEmailVerificationCodeService implements EmailVerificationCodeService {
+
+        @Override
+        public void issueCode(String email) {
+        }
+
+        @Override
+        public void verifyCode(String email, String code) {
+        }
     }
 
     /**

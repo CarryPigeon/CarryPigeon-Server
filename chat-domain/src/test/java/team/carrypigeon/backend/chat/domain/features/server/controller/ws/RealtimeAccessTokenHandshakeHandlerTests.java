@@ -5,13 +5,9 @@ import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpVersion;
-import java.time.Instant;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -26,12 +22,12 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class RealtimeAccessTokenHandshakeHandlerTests {
 
     /**
-     * 验证 `channelRead` 在 `wsPath` 条件下满足 `storesRequestContextAndForwardsRequest` 的测试契约。
+     * 验证 WS 路径上的 HTTP 请求会补齐 request/trace/route 上下文并继续传递给后续升级处理器。
      */
     @Test
     @DisplayName("channel read ws path stores request context and forwards request")
     void channelRead_wsPath_storesRequestContextAndForwardsRequest() {
-        EmbeddedChannel channel = new EmbeddedChannel(new RealtimeAccessTokenHandshakeHandler("/api/ws", authTokenService()));
+        EmbeddedChannel channel = new EmbeddedChannel(new RealtimeAccessTokenHandshakeHandler("/api/ws"));
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/api/ws");
 
         channel.writeInbound(request);
@@ -40,29 +36,5 @@ class RealtimeAccessTokenHandshakeHandlerTests {
         assertNotNull(channel.attr(RealtimeChannelSession.TRACE_ID_KEY).get());
         assertEquals("/api/ws", channel.attr(RealtimeChannelSession.ROUTE_KEY).get());
         assertSame(request, channel.readInbound());
-    }
-
-    private AuthTokenService authTokenService() {
-        return new AuthTokenService() {
-            @Override
-            public String issueAccessToken(AuthAccount account, Instant expiresAt) {
-                return "access-token";
-            }
-
-            @Override
-            public String issueRefreshToken(AuthAccount account, long refreshSessionId, Instant expiresAt) {
-                return "refresh-token";
-            }
-
-            @Override
-            public AuthTokenClaims parseAccessToken(String accessToken) {
-                return new AuthTokenClaims("1001", "carry-user@example.com", "access", 0L, Instant.parse("2026-04-22T00:30:00Z"));
-            }
-
-            @Override
-            public AuthTokenClaims parseRefreshToken(String refreshToken) {
-                return new AuthTokenClaims("1001", "carry-user@example.com", "refresh", 2001L, Instant.parse("2026-05-04T12:00:00Z"));
-            }
-        };
     }
 }

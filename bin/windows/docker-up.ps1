@@ -1,16 +1,10 @@
 $ErrorActionPreference = 'Stop'
 
 $BaseDir = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$EnvFile = Join-Path $BaseDir '.env'
-$EnvTemplateFile = Join-Path $BaseDir '.env.example'
 $ComposeFile = Join-Path $BaseDir 'docker-compose.yaml'
+$env:COMPOSE_DISABLE_ENV_FILE = '1'
 
-if (-not (Test-Path -LiteralPath $EnvFile) -and (Test-Path -LiteralPath $EnvTemplateFile)) {
-    Copy-Item -LiteralPath $EnvTemplateFile -Destination $EnvFile -Force
-    Write-Host 'Created .env from .env.example'
-}
-
-& docker compose --env-file $EnvFile -f $ComposeFile up -d --remove-orphans
+& docker compose -f $ComposeFile up -d --remove-orphans
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

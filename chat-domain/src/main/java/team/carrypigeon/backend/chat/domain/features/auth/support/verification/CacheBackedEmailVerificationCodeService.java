@@ -31,6 +31,14 @@ public class CacheBackedEmailVerificationCodeService implements EmailVerificatio
         this.mailSenderService = mailSenderService;
     }
 
+    /**
+     * 为目标邮箱签发新的验证码。
+     * 输入：邮箱地址。
+     * 副作用：覆盖共享缓存中该邮箱先前签发的验证码，并投递验证码邮件。
+     * 失败语义：邮件服务不可用或投递失败时删除本次缓存验证码后抛出领域问题异常。
+     *
+     * @param email 目标邮箱
+     */
     @Override
     public void issueCode(String email) {
         String normalizedEmail = normalize(email);
@@ -45,6 +53,14 @@ public class CacheBackedEmailVerificationCodeService implements EmailVerificatio
         }
     }
 
+    /**
+     * 校验邮箱验证码是否有效。
+     * 输入：邮箱地址与用户提交的验证码。
+     * 副作用：校验成功后通过缓存原子消费验证码，避免重复使用。
+     *
+     * @param email 目标邮箱
+     * @param code 用户提交的验证码
+     */
     @Override
     public void verifyCode(String email, String code) {
         if (code == null || code.isBlank()) {
@@ -67,6 +83,13 @@ public class CacheBackedEmailVerificationCodeService implements EmailVerificatio
         return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
     }
 
+    /**
+     * 投递验证码邮件。
+     * 副作用：调用邮件服务发送验证码；邮件服务缺失或发送失败时抛出统一领域问题。
+     *
+     * @param email 已规范化目标邮箱
+     * @param code 六位验证码
+     */
     private void deliverCode(String email, String code) {
         if (mailSenderService == null) {
             throw ProblemException.fail("mail_service_unavailable", "mail service is unavailable");

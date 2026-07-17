@@ -246,18 +246,42 @@ public class ChannelGovernancePolicy {
         }
     }
 
+    /**
+     * 要求操作者是频道所有者。
+     * 用途：频道所有权转移、管理员任免等只允许 owner 执行的治理动作。
+     *
+     * @param operator 操作者成员关系
+     * @param errorCode 权限失败错误码
+     * @param message 权限失败提示
+     */
     private void requireOwner(ChannelMember operator, String errorCode, String message) {
         if (operator.role() != ChannelMemberRole.OWNER) {
             throw ProblemException.forbidden(errorCode, message);
         }
     }
 
+    /**
+     * 要求操作者具备 owner 或 admin 治理权限。
+     * 用途：踢人、封禁、撤回等允许管理员执行但仍受目标角色限制的动作。
+     *
+     * @param operator 操作者成员关系
+     * @param errorCode 权限失败错误码
+     * @param message 权限失败提示
+     */
     private void requireOwnerOrAdmin(ChannelMember operator, String errorCode, String message) {
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
             throw ProblemException.forbidden(errorCode, message);
         }
     }
 
+    /**
+     * 要求目标成员处于指定角色。
+     * 语义：角色状态不满足动作前置条件时属于请求状态校验失败，而不是操作者权限失败。
+     *
+     * @param target 目标成员关系
+     * @param expectedRole 动作要求的目标角色
+     * @param message 校验失败提示
+     */
     private void requireTargetRole(ChannelMember target, ChannelMemberRole expectedRole, String message) {
         if (target.role() != expectedRole) {
             throw ProblemException.validationFailed(message);

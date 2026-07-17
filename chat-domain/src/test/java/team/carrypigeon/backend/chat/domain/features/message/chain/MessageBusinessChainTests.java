@@ -66,6 +66,7 @@ import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentit
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfilePageResult;
@@ -258,13 +259,15 @@ class MessageBusinessChainTests {
                         .file(file)
                         .param("message_type", "file"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(100))
-                .andExpect(jsonPath("$.data.filename").value("demo.pdf"))
-                .andExpect(jsonPath("$.data.mime_type").value("application/pdf"))
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.filename").value("demo.pdf"))
+                .andExpect(jsonPath("$.mime_type").value("application/pdf"))
                 .andReturn();
         JsonNode uploadJson = fixture.readJson(uploadResult);
-        String objectKey = uploadJson.path("data").path("object_key").asText();
-        String shareKey = uploadJson.path("data").path("share_key").asText();
+        String objectKey = uploadJson.path("object_key").asText();
+        String shareKey = uploadJson.path("share_key").asText();
 
         fixture.mvc(1001L).perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -450,12 +453,15 @@ class MessageBusinessChainTests {
                         .file(voice)
                         .param("message_type", "voice"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.filename").value("voice.mp3"))
-                .andExpect(jsonPath("$.data.mime_type").value("audio/mpeg"))
+                .andExpect(jsonPath("$.code").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.filename").value("voice.mp3"))
+                .andExpect(jsonPath("$.mime_type").value("audio/mpeg"))
                 .andReturn();
         JsonNode uploadJson = fixture.readJson(uploadResult);
-        String objectKey = uploadJson.path("data").path("object_key").asText();
-        String shareKey = uploadJson.path("data").path("share_key").asText();
+        String objectKey = uploadJson.path("object_key").asText();
+        String shareKey = uploadJson.path("share_key").asText();
 
         fixture.mvc(1001L).perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -633,7 +639,7 @@ class MessageBusinessChainTests {
                         .param("message_type", "file"))
                 .andExpect(status().isOk())
                 .andReturn();
-        String ownerObjectKey = fixture.readJson(uploadResult).path("data").path("object_key").asText();
+        String ownerObjectKey = fixture.readJson(uploadResult).path("object_key").asText();
 
         fixture.mvc(1002L).perform(post("/api/channels/1/messages")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -1319,6 +1325,11 @@ class MessageBusinessChainTests {
         }
 
         @Override
+        public void deleteByMessageId(long messageId) {
+            mentions.removeIf(mention -> mention.messageId() == messageId);
+        }
+
+        @Override
         public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
             return mentions.stream()
                     .filter(mention -> mention.targetAccountId() == accountId)
@@ -1472,7 +1483,7 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public void updateCurrentUserEmail(long accountId, String email) {
+        public void updateCurrentUserEmail(UpdateCurrentUserEmailCommand command) {
         }
 
         private UserProfileResult result(long accountId) {

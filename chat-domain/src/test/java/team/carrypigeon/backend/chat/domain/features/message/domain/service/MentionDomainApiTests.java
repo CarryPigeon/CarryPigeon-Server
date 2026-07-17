@@ -108,6 +108,10 @@ class MentionDomainApiTests {
         }
 
         @Override
+        public void deleteByMessageId(long messageId) {
+        }
+
+        @Override
         public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
             this.accountId = accountId;
             this.cursorMentionId = cursorMentionId;

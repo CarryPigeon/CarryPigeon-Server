@@ -105,7 +105,6 @@
   - MinIO
 - Docker files:
   - `docker-compose.yaml`
-  - `.env.example`
 - Do not containerize the application by default unless explicitly requested.
 
 ## Coding Style & Naming
@@ -116,7 +115,7 @@
 - Do not create vague utility buckets.
 
 ## Comment Rules
-- Follow `docs/注释规范.md`.
+- Follow `docs/standards/注释规范.md`.
 - Important classes and boundary methods should explain responsibility, boundary, inputs, outputs, or constraints.
 - Test classes and test methods also require comments describing what contract is being validated.
 
@@ -130,9 +129,9 @@
 
 ## AI Collaboration Rules
 - AI must follow the rules in:
-  - `docs/AI协作开发规范.md`
-  - `docs/变更审核清单.md`
-  - `docs/任务单模板.md`
+  - `docs/standards/AI协作开发规范.md`
+  - `docs/standards/变更审核清单.md`
+  - `docs/standards/任务单模板.md`
 - AI temporary materials must go to:
   - `ai-agent-workplace/`
 - Use `ai-agent-workplace/` for:
@@ -153,7 +152,7 @@
   - acceptance criteria
 - For tasks involving module structure, dependency changes, new external-service integrations, configuration expansion, or architecture-sensitive refactors, AI must obtain explicit user confirmation before coding.
 - AI must keep implementation within the confirmed task sheet boundary. If the actual impact expands, update the task sheet first and regain confirmation when needed.
-- After implementation, AI must self-check against `docs/变更审核清单.md` and clearly state:
+- After implementation, AI must self-check against `docs/standards/变更审核清单.md` and clearly state:
   - what changed
   - why it changed
   - affected modules/files
@@ -181,15 +180,15 @@
 - Review against architecture, dependency, configuration, exception, comment, and test rules before considering work complete.
 
 ## Recommended Reference Docs
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/依赖引入规范.md`
-- `docs/注释规范.md`
-- `docs/基建文档.md`
-- `docs/配置规范.md`
-- `docs/异常与错误码规范.md`
-- `docs/测试规范.md`
-- `docs/Docker配置.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/任务单模板.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/architecture/依赖引入规范.md`
+- `docs/standards/注释规范.md`
+- `docs/architecture/基建文档.md`
+- `docs/standards/配置规范.md`
+- `docs/standards/异常与错误码规范.md`
+- `docs/standards/测试规范.md`
+- `docs/operations/Docker配置.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/任务单模板.md`

@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelReadStateEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelUnreadProjection;
 
 /**
  * 频道已读状态 Mapper。
@@ -67,15 +68,5 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             ORDER BY cm.channel_id ASC
             </script>
             """)
-    List<UnreadProjection> listUnreadsByAccountId(@Param("accountId") long accountId);
-
-    /**
-     * 未读统计查询投影。
-     * 职责：承接 MyBatis 聚合查询结果，避免把 SQL 聚合字段泄漏到数据库 API 契约。
-     */
-    interface UnreadProjection {
-        long getChannelId();
-        long getUnreadCount();
-        java.time.Instant getLastReadTime();
-    }
+    List<ChannelUnreadProjection> listUnreadsByAccountId(@Param("accountId") long accountId);
 }

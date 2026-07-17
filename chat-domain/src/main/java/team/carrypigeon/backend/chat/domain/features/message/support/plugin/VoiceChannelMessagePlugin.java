@@ -99,6 +99,13 @@ public class VoiceChannelMessagePlugin implements ChannelMessagePlugin {
         return "[语音消息] " + filename + " " + Math.max(1, durationMillis / 1000) + "s";
     }
 
+    /**
+     * 校验语音 objectKey 属于当前频道、消息类型和发送者范围。
+     * 原因：语音消息只能引用由当前发送者在当前频道上传的 voice 附件对象。
+     *
+     * @param context 消息构建上下文
+     * @param objectKey 语音对象存储 key
+     */
     private void requireScopedObjectKey(ChannelMessageBuildContext context, String objectKey) {
         if (!messageAttachmentObjectKeyPolicy.isWithinSenderScope(
                 context.channelId(),

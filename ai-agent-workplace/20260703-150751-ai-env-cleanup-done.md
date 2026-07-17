@@ -14,7 +14,7 @@
 
 配置限制：只保留当前已被脚本、Compose 或应用真实读取的配置，不增加未来占位配置。
 
-文档依据：`AGENTS.md`、`docs/配置规范.md`、`docs/Docker配置.md`、`docs/变更审核清单.md`。
+文档依据：`AGENTS.md`、`docs/standards/配置规范.md`、`docs/operations/Docker配置.md`、`docs/standards/变更审核清单.md`。
 
 任务分解 / 执行计划：
 1. 对比 `.env` 与 `.env.example`。

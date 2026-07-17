@@ -5,30 +5,30 @@ spring:
     name: CarryPigeonBackend
   datasource:
     # 职责：定义数据库连接地址，供 database-impl 使用。
-    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:carrypigeon}?useUnicode=true&characterEncoding=utf8&serverTimezone=${MYSQL_SERVER_TIMEZONE:Asia/Shanghai}
+    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     # 职责：定义数据库连接用户名。
-    username: ${MYSQL_USERNAME:}
+    username: carrypigeon
     # 职责：定义数据库连接密码。
-    password: ${MYSQL_PASSWORD:}
+    password: carrypigeon123
     # 职责：显式指定 MySQL 驱动，避免启动阶段歧义。
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
       # 职责：定义 Redis 主机地址，供 cache-impl 使用。
-      host: ${REDIS_HOST:127.0.0.1}
+      host: 127.0.0.1
       # 职责：定义 Redis 服务端口。
-      port: ${REDIS_PORT:6379}
+      port: 6379
       # 职责：定义 Redis 访问密码。
-      password: ${REDIS_PASSWORD:}
+      password: carrypigeon123
   mail:
     # 职责：定义 SMTP 主机地址，供 mail-impl 使用。
-    host: ${MAIL_HOST:}
+    host: ""
     # 职责：定义 SMTP 服务端口。
-    port: ${MAIL_PORT:587}
+    port: 587
     # 职责：定义 SMTP 认证用户名。
-    username: ${MAIL_USERNAME:}
+    username: ""
     # 职责：定义 SMTP 认证密码。
-    password: ${MAIL_PASSWORD:}
+    password: ""
     properties:
       mail:
         smtp:
@@ -39,14 +39,34 @@ spring:
             enable: true
 
 cp:
+  local-dev:
+    http:
+      cors:
+        # 职责：控制本地客户端联调 CORS；默认关闭，避免 jar 部署时默认放开跨域。
+        enabled: false
+        # 职责：限定本地 WebView / Tauri / 浏览器调试来源；只在 cors.enabled=true 时生效。
+        allowed-origin-patterns: http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*,http://tauri.localhost,https://tauri.localhost,tauri://localhost
+        # 职责：控制 CORS 预检缓存秒数；仅用于减少本地调试 OPTIONS 噪声。
+        max-age: 3600
+      request-log:
+        # 职责：控制本地 HTTP 请求摘要日志；默认关闭，需要排查请求链路时再开启。
+        enabled: false
+  plugin:
+    # 职责：统一承载插件级启停与自定义选项。
+    # 边界：这里只保留实际读取的空入口；具体插件配置应在插件接入后按需添加。
+    configs: {}
   chat:
     auth:
+      password-login:
+        # 职责：控制用户名密码登录入口是否允许签发 token。
+        # 边界：项目内置配置用于开发默认；分发包外部覆盖请修改 config/application.yaml。
+        enabled: true
       jwt:
         # 职责：定义本服务端 JWT issuer，用于校验 token 来源。
         issuer: carrypigeon-local
         # 职责：定义本地开发默认 HS256 签名密钥。
         # 约束：生产环境必须通过外部配置覆盖，避免多环境共享默认密钥。
-        secret: ${CP_CHAT_AUTH_JWT_SECRET:}
+        secret: carrypigeon-local-dev-jwt-secret-change-me-32
         # 职责：定义 access token 的有效期。
         access-token-ttl: 30m
         # 职责：定义 refresh token 的有效期。
@@ -54,18 +74,18 @@ cp:
     server:
       # 职责：定义当前服务实例在消息模型中实际使用的稳定 serverId。
       # 约束：多服务端部署时必须按实例明确区分，避免跨实例消息来源混淆。
-      id: ${CP_CHAT_SERVER_ID:550e8400-e29b-41d4-a716-446655440000}
+      id: 550e8400-e29b-41d4-a716-446655440000
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
         # 约束：默认开启，生产环境外放前仍应通过防火墙或网关限制监听边界。
-        enabled: ${CP_CHAT_REALTIME_ENABLED:true}
+        enabled: true
         # 职责：定义 Netty 实时通道监听地址。
         # 约束：默认仅绑定本机回环地址，需在明确部署场景下再外放。
-        host: ${CP_CHAT_REALTIME_HOST:127.0.0.1}
+        host: 127.0.0.1
         # 职责：定义 Netty WebSocket 服务监听端口。
-        port: ${CP_CHAT_REALTIME_PORT:18080}
+        port: 18080
         # 职责：定义 Netty WebSocket 握手路径。
-        path: ${CP_CHAT_REALTIME_PATH:/api/ws}
+        path: /api/ws
         # 职责：定义 Netty boss 线程数。
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
@@ -74,35 +94,35 @@ cp:
     id:
       # 职责：配置当前节点的雪花 ID workerId。
       # 约束：取值范围为 0..31，多节点部署时必须按节点区分。
-      worker-id: ${CP_INFRASTRUCTURE_ID_WORKER_ID:1}
+      worker-id: 1
       # 职责：配置当前节点的雪花 ID datacenterId。
       # 约束：取值范围为 0..31，多数据中心或多环境部署时应区分。
-      datacenter-id: ${CP_INFRASTRUCTURE_ID_DATACENTER_ID:1}
+      datacenter-id: 1
     service:
       database:
         # 职责：控制数据库服务实现是否参与当前运行时装配。
-        enabled: ${CP_INFRASTRUCTURE_SERVICE_DATABASE_ENABLED:true}
+        enabled: true
         # 职责：定义数据库健康检查使用的最小 SQL。
         health-query: SELECT 1
       cache:
         # 职责：控制缓存服务实现是否参与当前运行时装配。
-        enabled: ${CP_INFRASTRUCTURE_SERVICE_CACHE_ENABLED:true}
+        enabled: true
         # 职责：定义字符串缓存默认 TTL。
         default-ttl: 5m
       storage:
         # 职责：控制对象存储服务实现是否参与当前运行时装配。
-        enabled: ${CP_INFRASTRUCTURE_SERVICE_STORAGE_ENABLED:true}
+        enabled: true
         # 职责：定义 MinIO 连接地址。
-        endpoint: ${MINIO_ENDPOINT:http://${MINIO_HOST:127.0.0.1}:${MINIO_API_PORT:9000}}
+        endpoint: http://127.0.0.1:9000
         # 职责：定义 MinIO 访问身份。
-        access-key: ${MINIO_ROOT_USER:}
+        access-key: carrypigeon
         # 职责：定义 MinIO 访问密钥。
-        secret-key: ${MINIO_ROOT_PASSWORD:}
+        secret-key: carrypigeon123
         # 职责：定义当前对象存储默认 bucket。
-        bucket: ${MINIO_BUCKET:carrypigeon}
+        bucket: carrypigeon
       mail:
         # 职责：控制邮件服务实现是否参与当前运行时装配。
         # 约束：默认关闭，只有在提供 SMTP 配置后才启用。
-        enabled: ${CP_INFRASTRUCTURE_SERVICE_MAIL_ENABLED:false}
+        enabled: false
         # 职责：定义邮件默认发件地址。
-        from-address: ${MAIL_FROM_ADDRESS:}
+        from-address: ""

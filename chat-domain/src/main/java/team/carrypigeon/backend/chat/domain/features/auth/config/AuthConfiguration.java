@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthPasswordLoginPolicy;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.port.EmailVerificationCodeService;
 import team.carrypigeon.backend.chat.domain.features.auth.support.verification.CacheBackedEmailVerificationCodeService;
@@ -18,7 +19,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
  * 边界：不创建外部服务实现 Bean，不承载鉴权业务规则。
  */
 @Configuration
-@EnableConfigurationProperties(AuthJwtProperties.class)
+@EnableConfigurationProperties({AuthJwtProperties.class, AuthPasswordLoginProperties.class})
 public class AuthConfiguration {
 
     /**
@@ -31,6 +32,18 @@ public class AuthConfiguration {
     @Bean
     public AuthTokenSettings authTokenSettings(AuthJwtProperties properties) {
         return new AuthTokenSettings(properties.accessTokenTtl(), properties.refreshTokenTtl());
+    }
+
+    /**
+     * 创建用户名密码登录策略。
+     * 职责：把配置绑定对象转换为领域会话服务使用的登录策略。
+     *
+     * @param properties 用户名密码登录配置
+     * @return 用户名密码登录策略
+     */
+    @Bean
+    public AuthPasswordLoginPolicy authPasswordLoginPolicy(AuthPasswordLoginProperties properties) {
+        return new AuthPasswordLoginPolicy(properties.isEnabled());
     }
 
     /**

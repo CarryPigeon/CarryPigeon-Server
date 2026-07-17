@@ -17,7 +17,7 @@ import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
  * 频道消息 realtime 入站处理器。
- * 职责：承接当前保留的 WebSocket 发消息兼容命令，并转换为 message 领域服务命令。
+ * 职责：承接 v1 WebSocket 发消息命令，并转换为 message 领域服务命令。
  * 边界：这里只做协议字段校验与草稿映射，不承担频道鉴权、持久化或广播规则。
  */
 @Component
@@ -50,6 +50,14 @@ public class ChannelMessageRealtimeInboundHandler implements RealtimeInboundMess
         ));
     }
 
+    /**
+     * 把 v1 WebSocket 发消息命令转换为领域消息草稿。
+     * 约束：这里只做协议字段解析和草稿类型选择，不做频道权限或消息持久化。
+     *
+     * @param messageType 客户端提交的消息类型
+     * @param request realtime 客户端命令
+     * @return 对应消息类型的领域草稿
+     */
     private ChannelMessageDraft toDraft(String messageType, RealtimeClientMessage request) {
         Map<String, Object> payload = request.payload();
         String metadata = toJson(request.metadata());
@@ -99,6 +107,14 @@ public class ChannelMessageRealtimeInboundHandler implements RealtimeInboundMess
         return jsonProvider.toJson(value);
     }
 
+    /**
+     * 从 realtime payload 中读取必填文本字段。
+     * 失败语义：字段缺失或空白时抛出协议校验问题。
+     *
+     * @param payload realtime payload
+     * @param fieldName 字段名
+     * @return 非空文本
+     */
     private String requiredText(Map<String, Object> payload, String fieldName) {
         String value = optionalText(payload, fieldName);
         if (value == null || value.isBlank()) {
@@ -119,6 +135,14 @@ public class ChannelMessageRealtimeInboundHandler implements RealtimeInboundMess
         return normalized.isEmpty() ? null : normalized;
     }
 
+    /**
+     * 从 realtime payload 中读取可选数字字段。
+     * 约束：数字对象和数字字符串都可接受；不可解析时按协议校验失败处理。
+     *
+     * @param payload realtime payload
+     * @param fieldName 字段名
+     * @return 解析出的 long 值，缺失时为 null
+     */
     private Long optionalLong(Map<String, Object> payload, String fieldName) {
         if (payload == null) {
             return null;

@@ -140,6 +140,13 @@ public class MessageController {
         return responseMapper.toResponse(result);
     }
 
+    /**
+     * 解析消息转发目标频道 ID。
+     * 失败语义：目标频道 ID 不是十进制雪花 ID 时返回协议校验问题。
+     *
+     * @param rawValue 原始目标频道 ID
+     * @return 目标频道 ID
+     */
     private long parseTargetChannelId(String rawValue) {
         try {
             return Long.parseLong(rawValue.trim());
@@ -148,6 +155,13 @@ public class MessageController {
         }
     }
 
+    /**
+     * 从 v1 编辑消息 data 中提取文本正文。
+     * 失败语义：data 缺失或 text 不是字符串时返回协议校验问题。
+     *
+     * @param data v1 编辑消息 data
+     * @return 文本正文
+     */
     private String extractText(Map<String, Object> data) {
         if (data == null) {
             throw ProblemException.validationFailed("data must not be null");
@@ -178,6 +192,14 @@ public class MessageController {
         return commands;
     }
 
+    /**
+     * 解析 HTTP 入参中的必填雪花 ID。
+     * 失败语义：不能解析为十进制数字时返回字段级校验问题。
+     *
+     * @param rawValue 原始参数
+     * @param fieldName 字段显示名
+     * @return 雪花 ID
+     */
     private long parseSnowflake(String rawValue, String fieldName) {
         try {
             return Long.parseLong(rawValue.trim());

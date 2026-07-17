@@ -12,8 +12,9 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
+import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPasswordLoginProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthRequestContext;
+import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.port.AuthTokenService;
@@ -23,6 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHashe
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthPasswordLoginPolicy;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthSessionDomainApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.auth.support.security.Argon2PasswordHasher;
@@ -155,6 +157,24 @@ public class StarterRegressionConfiguration {
     }
 
     /**
+     * 创建用户名密码登录开关配置。
+     */
+    @Bean
+    @Primary
+    public AuthPasswordLoginProperties authPasswordLoginProperties() {
+        return new AuthPasswordLoginProperties(true);
+    }
+
+    /**
+     * 创建用户名密码登录策略。
+     */
+    @Bean
+    @Primary
+    public AuthPasswordLoginPolicy authPasswordLoginPolicy(AuthPasswordLoginProperties properties) {
+        return new AuthPasswordLoginPolicy(properties.isEnabled());
+    }
+
+    /**
      * 创建服务端身份属性。
      */
     @Bean
@@ -167,8 +187,8 @@ public class StarterRegressionConfiguration {
      * 创建 HTTP 鉴权请求上下文。
      */
     @Bean
-    public AuthRequestContext authRequestContext() {
-        return new AuthRequestContext();
+    public RequestAuthenticationContext authRequestContext() {
+        return new RequestAuthenticationContext();
     }
 
     /**
@@ -260,6 +280,10 @@ public class StarterRegressionConfiguration {
         return new MentionRepository() {
             @Override
             public void save(Mention mention) {
+            }
+
+            @Override
+            public void deleteByMessageId(long messageId) {
             }
 
             @Override
@@ -374,6 +398,7 @@ public class StarterRegressionConfiguration {
             TokenHasher tokenHasher,
             AuthTokenService authTokenService,
             AuthTokenSettings authTokenSettings,
+            AuthPasswordLoginPolicy authPasswordLoginPolicy,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
@@ -389,6 +414,7 @@ public class StarterRegressionConfiguration {
                 tokenHasher,
                 authTokenService,
                 authTokenSettings,
+                authPasswordLoginPolicy,
                 idGenerator,
                 timeProvider,
                 transactionRunner,
@@ -403,10 +429,17 @@ public class StarterRegressionConfiguration {
     public UserProfileApi userProfileDomainApi(
             AuthAccountRepository authAccountRepository,
             UserProfileRepository userProfileRepository,
+            EmailVerificationCodeService emailVerificationCodeService,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        return new UserProfileDomainApi(authAccountRepository, userProfileRepository, timeProvider, transactionRunner);
+        return new UserProfileDomainApi(
+                authAccountRepository,
+                userProfileRepository,
+                emailVerificationCodeService,
+                timeProvider,
+                transactionRunner
+        );
     }
 
     /**
@@ -610,10 +643,13 @@ public class StarterRegressionConfiguration {
     public AuthController authController(
             AuthAccountApi authAccountDomainApi,
             AuthSessionApi authSessionDomainApi,
-            ServerEntranceApi serverEntranceDomainApi,
-            AuthTokenSettings authTokenSettings
+            ServerEntranceApi serverEntranceDomainApi
     ) {
-        return new AuthController(authAccountDomainApi, authSessionDomainApi, serverEntranceDomainApi, authTokenSettings);
+        return new AuthController(
+                authAccountDomainApi,
+                authSessionDomainApi,
+                serverEntranceDomainApi
+        );
     }
 
     /**
@@ -642,7 +678,7 @@ public class StarterRegressionConfiguration {
             ChannelMessageTimelineApi channelMessageTimelineDomainApi,
             ChannelMessageAttachmentDomainApi channelMessageAttachmentDomainApi,
             team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi channelMessageLifecycleDomainApi,
-            AuthRequestContext authRequestContext,
+            RequestAuthenticationContext authRequestContext,
             ChannelMessageV1ResponseMapper responseMapper
     ) {
         return new ChannelMessageController(
@@ -691,7 +727,7 @@ public class StarterRegressionConfiguration {
     }
 
     @Bean
-    public FileController fileController(FileTransferApi fileTransferDomainApi, AuthRequestContext authRequestContext) {
+    public FileController fileController(FileTransferApi fileTransferDomainApi, RequestAuthenticationContext authRequestContext) {
         return new FileController(fileTransferDomainApi, authRequestContext);
     }
 
@@ -699,7 +735,7 @@ public class StarterRegressionConfiguration {
     public ChannelReadStateController channelReadStateController(
             ChannelAccessDomainApi channelAccessDomainApi,
             ChannelQueryDomainApi channelQueryDomainApi,
-            AuthRequestContext authRequestContext
+            RequestAuthenticationContext authRequestContext
     ) {
         return new ChannelReadStateController(channelAccessDomainApi, channelQueryDomainApi, authRequestContext);
     }

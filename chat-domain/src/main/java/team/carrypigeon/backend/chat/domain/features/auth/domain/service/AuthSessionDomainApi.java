@@ -44,6 +44,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     private final AuthTokenService authTokenService;
     private final AuthTokenIssuer authTokenIssuer;
     private final AuthTokenSettings authTokenSettings;
+    private final AuthPasswordLoginPolicy passwordLoginPolicy;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
@@ -60,6 +61,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
             TokenHasher tokenHasher,
             AuthTokenService authTokenService,
             AuthTokenSettings authTokenSettings,
+            AuthPasswordLoginPolicy passwordLoginPolicy,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
@@ -85,6 +87,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
                 timeProvider
         );
         this.authTokenSettings = authTokenSettings;
+        this.passwordLoginPolicy = passwordLoginPolicy;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -115,6 +118,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
                 tokenHasher,
                 authTokenService,
                 authTokenSettings,
+                new AuthPasswordLoginPolicy(true),
                 idGenerator,
                 timeProvider,
                 transactionRunner,
@@ -165,6 +169,9 @@ public class AuthSessionDomainApi implements AuthSessionApi {
 
     @Override
     public AuthTokenResult login(LoginCommand command) {
+        if (!passwordLoginPolicy.enabled()) {
+            throw ProblemException.forbidden("password_login_disabled", "password login is disabled");
+        }
         AuthAccount account = authAccountRepository.findByUsername(command.username())
                 .orElseThrow(() -> ProblemException.forbidden("invalid_credentials", "username or password is invalid"));
 
@@ -190,35 +197,56 @@ public class AuthSessionDomainApi implements AuthSessionApi {
 
     @Override
     public void logout(LogoutCommand command) {
-        AuthTokenClaims claims = authTokenService.parseRefreshToken(command.refreshToken());
-        authRefreshSessionRepository.revoke(claims.sessionId());
+        transactionRunner.runInTransaction(() -> {
+            ValidRefreshSession validSession = requireValidRefreshSession(command.refreshToken());
+            authRefreshSessionRepository.revoke(validSession.session().id());
+            return null;
+        });
     }
 
     AuthTokenResult refresh(RefreshTokenCommand command) {
         return transactionRunner.runInTransaction(() -> {
-            AuthTokenClaims claims = authTokenService.parseRefreshToken(command.refreshToken());
-            long accountId = Long.parseLong(claims.subject());
-            AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
+            ValidRefreshSession validSession = requireValidRefreshSession(command.refreshToken());
+            authRefreshSessionRepository.revoke(validSession.session().id());
+            AuthAccount account = authAccountRepository.findById(validSession.accountId())
                     .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
-
-            if (session.revoked()
-                    || session.expiresAt().isBefore(timeProvider.nowInstant())
-                    || session.accountId() != accountId
-                    || !tokenHasher.hash(command.refreshToken()).equals(session.refreshTokenHash())) {
-                throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
-            }
-
-            authRefreshSessionRepository.revoke(session.id());
-            AuthAccount account = new AuthAccount(
-                    accountId,
-                    claims.username(),
-                    "",
-                    timeProvider.nowInstant(),
-                    timeProvider.nowInstant()
-            );
             AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
             return toTokenResult(account, tokenPair);
         });
+    }
+
+    private ValidRefreshSession requireValidRefreshSession(String refreshToken) {
+        AuthTokenClaims claims = authTokenService.parseRefreshToken(refreshToken);
+        long accountId = parseRefreshSubjectAccountId(claims);
+        AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
+                .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
+
+        if (session.revoked()
+                || !session.expiresAt().isAfter(timeProvider.nowInstant())
+                || session.accountId() != accountId
+                || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
+            throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
+        }
+        return new ValidRefreshSession(accountId, session);
+    }
+
+    /**
+     * 从 refresh token claims 中解析账号 ID。
+     * 失败语义：token subject 不是正数账号 ID 时返回非法 refresh token。
+     *
+     * @param claims 已校验的 refresh token claims
+     * @return refresh token 归属账号 ID
+     */
+    private long parseRefreshSubjectAccountId(AuthTokenClaims claims) {
+        try {
+            long accountId = Long.parseLong(claims.subject());
+            if (accountId <= 0L) {
+                throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
+            }
+            return accountId;
+        } catch (NumberFormatException exception) {
+            throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
+        }
     }
 
     private String normalizeEmail(String email) {
@@ -236,8 +264,12 @@ public class AuthSessionDomainApi implements AuthSessionApi {
                 account.username(),
                 tokenPair.accessToken(),
                 tokenPair.accessTokenExpiresAt(),
+                authTokenSettings.accessTokenTtl().toSeconds(),
                 tokenPair.refreshToken(),
                 tokenPair.refreshTokenExpiresAt()
         );
+    }
+
+    private record ValidRefreshSession(long accountId, AuthRefreshSession session) {
     }
 }

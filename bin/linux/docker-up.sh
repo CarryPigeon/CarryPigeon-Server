@@ -4,12 +4,11 @@ set -eu
 
 BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
-if [ ! -f "$BASE_DIR/.env" ] && [ -f "$BASE_DIR/.env.example" ]; then
-  cp "$BASE_DIR/.env.example" "$BASE_DIR/.env"
-  echo "Created .env from .env.example"
-fi
+compose() {
+  COMPOSE_DISABLE_ENV_FILE=1 docker compose -f "$BASE_DIR/docker-compose.yaml" "$@"
+}
 
-docker compose --env-file "$BASE_DIR/.env" -f "$BASE_DIR/docker-compose.yaml" up -d --remove-orphans
+compose up -d --remove-orphans
 
 wait_for_health() {
   container_name="$1"

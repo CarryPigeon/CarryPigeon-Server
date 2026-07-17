@@ -39,11 +39,26 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * 解析或生成请求 ID。
+     * 语义：客户端未提供 `X-Request-Id` 时生成服务端请求 ID，保证每次请求都可关联日志。
+     *
+     * @param request HTTP 请求
+     * @return 请求 ID
+     */
     private String resolveRequestId(HttpServletRequest request) {
         String requestId = request.getHeader(REQUEST_ID_HEADER);
         return requestId == null || requestId.isBlank() ? UUID.randomUUID().toString() : requestId;
     }
 
+    /**
+     * 解析链路追踪 ID。
+     * 语义：客户端未提供 `X-Trace-Id` 时复用 requestId，保证单请求链路至少有稳定 trace 标识。
+     *
+     * @param request HTTP 请求
+     * @param requestId 已解析的请求 ID
+     * @return trace ID
+     */
     private String resolveTraceId(HttpServletRequest request, String requestId) {
         String traceId = request.getHeader(TRACE_ID_HEADER);
         return traceId == null || traceId.isBlank() ? requestId : traceId;

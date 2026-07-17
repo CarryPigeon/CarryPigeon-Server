@@ -473,6 +473,11 @@ public class StarterTestRuntimeConfiguration {
             }
 
             @Override
+            public void deleteByMessageId(long messageId) {
+                state.mentions.removeIf(mention -> mention.messageId() == messageId);
+            }
+
+            @Override
             public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
                 return state.mentions.stream()
                         .filter(mention -> mention.targetAccountId() == accountId)

@@ -32,10 +32,10 @@
 ## 文档依据
 
 - `AGENTS.md`
-- `docs/变更审核清单.md`
-- `docs/架构文档.md`
-- `docs/包结构规范.md`
-- `docs/测试规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/architecture/架构文档.md`
+- `docs/architecture/包结构规范.md`
+- `docs/standards/测试规范.md`
 - `ai-agent-workplace/20260708-085551-ai-request-chain-reaudit-done.md`
 - `ai-agent-workplace/20260708-091045-ai-request-chain-reaudit-fixes-done.md`
 

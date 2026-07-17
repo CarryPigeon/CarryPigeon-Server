@@ -27,9 +27,9 @@
 
 ## 治理文档
 
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/数据库部署手册.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/operations/数据库部署手册.md`
 
 ## 执行计划
 

@@ -4,4 +4,4 @@ set -eu
 
 BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
-exec docker compose --env-file "$BASE_DIR/.env" -f "$BASE_DIR/docker-compose.yaml" logs -f "$@"
+exec env COMPOSE_DISABLE_ENV_FILE=1 docker compose -f "$BASE_DIR/docker-compose.yaml" logs -f "$@"

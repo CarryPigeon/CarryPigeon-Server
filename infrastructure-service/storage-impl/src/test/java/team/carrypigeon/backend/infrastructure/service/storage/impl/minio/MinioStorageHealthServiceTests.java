@@ -2,6 +2,11 @@ package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
+import io.minio.errors.ErrorResponseException;
+import io.minio.messages.ErrorResponse;
+import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -9,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealth;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -81,6 +87,57 @@ class MinioStorageHealthServiceTests {
         StorageHealth result = service.check();
 
         assertFalse(result.available());
-        assertEquals("storage bucket check failed: IllegalStateException", result.message());
+        assertEquals(
+                "storage bucket check failed: IllegalStateException: bucket check failed, endpoint=http://127.0.0.1:9000, bucket=carrypigeon",
+                result.message()
+        );
+    }
+
+    /**
+     * 验证 MinIO 错误响应会保留错误码、请求标识和连接目标，便于启动失败日志直接定位配置问题。
+     */
+    @Test
+    @DisplayName("check minio error response returns actionable diagnostic")
+    void check_minioErrorResponse_returnsActionableDiagnostic() throws Exception {
+        MinioClient minioClient = mock(MinioClient.class);
+        when(minioClient.bucketExists(any(BucketExistsArgs.class))).thenThrow(minioError(
+                "InvalidAccessKeyId",
+                "The Access Key Id you provided does not exist in our records.",
+                403,
+                "request-123"
+        ));
+        MinioStorageHealthService service = new MinioStorageHealthService(minioClient, PROPERTIES);
+
+        StorageHealth result = service.check();
+
+        assertFalse(result.available());
+        assertAll(
+                () -> assertTrue(result.message().contains("storage bucket check failed: MinIO code=InvalidAccessKeyId")),
+                () -> assertTrue(result.message().contains("message=The Access Key Id you provided does not exist in our records.")),
+                () -> assertTrue(result.message().contains("httpStatus=403")),
+                () -> assertTrue(result.message().contains("endpoint=http://127.0.0.1:9000")),
+                () -> assertTrue(result.message().contains("bucket=carrypigeon")),
+                () -> assertTrue(result.message().contains("resource=/carrypigeon")),
+                () -> assertTrue(result.message().contains("requestId=request-123"))
+        );
+    }
+
+    private static ErrorResponseException minioError(String code, String message, int status, String requestId) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                code,
+                message,
+                "carrypigeon",
+                "",
+                "/carrypigeon",
+                requestId,
+                "host-123"
+        );
+        Response response = new Response.Builder()
+                .request(new Request.Builder().url("http://127.0.0.1:9000/carrypigeon").build())
+                .protocol(Protocol.HTTP_1_1)
+                .code(status)
+                .message("Forbidden")
+                .build();
+        return new ErrorResponseException(errorResponse, response, "minio error");
     }
 }

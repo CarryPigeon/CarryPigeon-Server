@@ -35,6 +35,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.port.TokenHashe
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthPasswordLoginPolicy;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthSessionDomainApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -362,6 +363,50 @@ class AuthUserBusinessChainTests {
     }
 
     /**
+     * 验证 refresh 轮换后，旧 refresh token 不能再通过撤销接口被当作有效会话处理。
+     */
+    @Test
+    @DisplayName("revoke rotated refresh token returns unauthorized")
+    void revoke_rotatedRefreshToken_returnsUnauthorized() throws Exception {
+        Fixture fixture = new Fixture();
+        fixture.authMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isCreated());
+        MvcResult tokenResult = fixture.authMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"carry-user","password":"password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String firstRefreshToken = fixture.readJson(tokenResult).get("refresh_token").asText();
+        long firstSessionId = fixture.tokenService.refreshSessionId(firstRefreshToken);
+        MvcResult refreshResult = fixture.authMvc.perform(post("/api/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refresh_token":"%s","client":{"device_id":"device-1"}}
+                                """.formatted(firstRefreshToken)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String secondRefreshToken = fixture.readJson(refreshResult).get("refresh_token").asText();
+        long secondSessionId = fixture.tokenService.refreshSessionId(secondRefreshToken);
+
+        fixture.authMvc.perform(post("/api/auth/revoke")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"refresh_token":"%s","client":{"device_id":"device-1"}}
+                                """.formatted(firstRefreshToken)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.reason").value("unauthorized"));
+
+        assertTrue(fixture.refreshSessionRepository.findById(firstSessionId).orElseThrow().revoked());
+        assertFalse(fixture.refreshSessionRepository.findById(secondSessionId).orElseThrow().revoked());
+    }
+
+    /**
      * 验证受保护用户资料接口会拒绝缺失或非法 access token。
      */
     @Test
@@ -490,7 +535,6 @@ class AuthUserBusinessChainTests {
                 .andExpect(jsonPath("$.background_url").value("/api/files/download/profile_bg_1001"));
 
         assertEquals(1001L, fixture.fileTransferApi.lastAccountId);
-        assertEquals("profile_bg_1001", fixture.fileTransferApi.lastShareKey);
         assertEquals("image/png", fixture.fileTransferApi.lastContentType);
     }
 
@@ -542,6 +586,7 @@ class AuthUserBusinessChainTests {
                     tokenHasher,
                     tokenService,
                     tokenSettings,
+                    new AuthPasswordLoginPolicy(true),
                     idGenerator,
                     timeProvider,
                     transactionRunner,
@@ -551,6 +596,7 @@ class AuthUserBusinessChainTests {
             UserProfileDomainApi userProfileApi = new UserProfileDomainApi(
                     accountRepository,
                     userProfileRepository,
+                    emailVerificationCodeService,
                     timeProvider,
                     transactionRunner
             );
@@ -558,15 +604,13 @@ class AuthUserBusinessChainTests {
             this.authMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                             accountApi,
                             sessionApi,
-                            serverEntranceApi,
-                            tokenSettings
+                            serverEntranceApi
                     ))
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
                     .build();
             this.userMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(
                             userProfileApi,
-                            emailVerificationCodeService,
                             authRequestContext,
                             fileTransferApi
                     ))
@@ -890,6 +934,17 @@ class AuthUserBusinessChainTests {
         public List<String> findMissingRequiredPlugins(List<String> installedPluginIds) {
             return missingPlugins;
         }
+
+        @Override
+        public void requireRequiredPluginsSatisfied(List<String> installedPluginIds) {
+            if (!missingPlugins.isEmpty()) {
+                throw ProblemException.validationFailed(
+                        "required_plugin_missing",
+                        "required plugins are missing",
+                        Map.of("missing_plugins", missingPlugins)
+                );
+            }
+        }
     }
 
     /**
@@ -914,6 +969,15 @@ class AuthUserBusinessChainTests {
             this.lastShareKey = shareKey;
             this.lastContentType = contentType;
             this.lastSizeBytes = sizeBytes;
+        }
+
+        @Override
+        public String uploadProfileBackground(long accountId, String contentType, long sizeBytes, InputStream content) {
+            this.lastAccountId = accountId;
+            this.lastShareKey = "profile_bg_" + accountId;
+            this.lastContentType = contentType;
+            this.lastSizeBytes = sizeBytes;
+            return lastShareKey;
         }
 
         @Override

@@ -91,6 +91,15 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
         publishEventWithoutPreferenceFilter("channels.changed", Map.of("hint", "refresh"), List.of(accountId));
     }
 
+    /**
+     * 按通知偏好过滤后发布频道事件。
+     * 约束：频道相关事件可能被静音或仅提及模式过滤，过滤为空时不写入事件缓存。
+     *
+     * @param channelId 事件所属频道 ID
+     * @param eventType realtime event 类型
+     * @param payload 事件载荷
+     * @param recipientAccountIds 候选接收账号集合
+     */
     private void publishEvent(long channelId, String eventType, Object payload, Collection<Long> recipientAccountIds) {
         Collection<Long> filteredRecipientAccountIds = notificationPreferenceFilter.filterRecipients(channelId, eventType, recipientAccountIds);
         if (filteredRecipientAccountIds.isEmpty()) {
@@ -99,6 +108,14 @@ public class NettyChannelRealtimePublisher implements ChannelRealtimePublisher {
         publishEventWithoutPreferenceFilter(eventType, payload, filteredRecipientAccountIds);
     }
 
+    /**
+     * 直接写入并推送 realtime event。
+     * 用途：用于已完成偏好过滤或不应受偏好影响的频道集合变化事件。
+     *
+     * @param eventType realtime event 类型
+     * @param payload 事件载荷
+     * @param recipientAccountIds 最终接收账号集合
+     */
     private void publishEventWithoutPreferenceFilter(String eventType, Object payload, Collection<Long> recipientAccountIds) {
         String eventId = idGenerator.nextStringId();
         long serverTime = timeProvider.nowMillis();

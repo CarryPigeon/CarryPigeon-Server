@@ -18,4 +18,4 @@ This directory contains the Linux / macOS startup and dependency scripts.
 ## Notes
 
 - These scripts expect to be executed from the repository.
-- Runtime startup requires `CP_CHAT_AUTH_JWT_SECRET` and reachable MySQL / Redis / MinIO.
+- Runtime startup reads application settings from `config/application.yaml`; MySQL / Redis / MinIO should be reachable for the default local profile.

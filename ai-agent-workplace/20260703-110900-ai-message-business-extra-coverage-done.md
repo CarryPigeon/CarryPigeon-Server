@@ -31,10 +31,10 @@
 
 ## 依据文档
 
-- `docs/测试规范.md`
-- `docs/注释规范.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
+- `docs/standards/测试规范.md`
+- `docs/standards/注释规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
 
 ## 拟补充场景
 

@@ -3,23 +3,9 @@
 set -eu
 
 BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-ENV_FILE="$BASE_DIR/.env"
-ENV_TEMPLATE_FILE="$BASE_DIR/.env.example"
 RUN_DIR="$BASE_DIR/run"
 PID_FILE="$RUN_DIR/application.pid"
 READY_MARKER="Started ApplicationStarter"
-
-if [ -f "$ENV_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_FILE"
-  set +a
-elif [ -f "$ENV_TEMPLATE_FILE" ]; then
-  set -a
-  # shellcheck disable=SC1090
-  . "$ENV_TEMPLATE_FILE"
-  set +a
-fi
 
 LOG_DIR="${CP_LOG_HOME:-$BASE_DIR/service-logs}"
 OUT_FILE="$LOG_DIR/application-stdout.log"

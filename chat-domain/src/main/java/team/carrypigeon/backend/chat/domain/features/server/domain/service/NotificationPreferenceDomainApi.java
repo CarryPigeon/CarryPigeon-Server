@@ -112,6 +112,15 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
         ));
     }
 
+    /**
+     * 规范化通知模式。
+     * 约束：不同入口传入各自允许的模式集合，非法模式统一返回字段校验失败。
+     *
+     * @param rawMode 客户端提交的通知模式
+     * @param allowedModes 当前入口允许的模式集合
+     * @param fieldName 字段名
+     * @return 规范化后的通知模式
+     */
     private String normalizeMode(String rawMode, List<String> allowedModes, String fieldName) {
         if (rawMode == null || rawMode.isBlank()) {
             throw ProblemException.validationFailed(fieldName + " must not be blank");
@@ -123,6 +132,13 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
         return mode;
     }
 
+    /**
+     * 规范化静音截止时间。
+     * 语义：缺失值转换为 0，表示长期静音或无单独截止时间，由通知模式决定实际含义。
+     *
+     * @param mutedUntil 客户端提交的静音截止毫秒时间戳
+     * @return 规范化后的静音截止毫秒时间戳
+     */
     private long normalizeMutedUntil(Long mutedUntil) {
         if (mutedUntil == null) {
             return 0L;

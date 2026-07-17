@@ -11,6 +11,7 @@ import java.time.Instant;
  * @param username 用户名
  * @param accessToken access token
  * @param accessTokenExpiresAt access token 过期时间
+ * @param expiresIn access token 有效秒数
  * @param refreshToken refresh token
  * @param refreshTokenExpiresAt refresh token 过期时间
  */
@@ -19,6 +20,7 @@ public record AuthTokenResult(
         String username,
         String accessToken,
         Instant accessTokenExpiresAt,
+        long expiresIn,
         String refreshToken,
         Instant refreshTokenExpiresAt
 ) {

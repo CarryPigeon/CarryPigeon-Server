@@ -35,9 +35,9 @@
 - `docs/t/11-http-endpoints-v1.md`
 - `docs/t/12-ws-events-v1.md`
 - `docs/t/SERVER_API.md`
-- `docs/AI协作开发规范.md`
-- `docs/变更审核清单.md`
-- `docs/测试规范.md`
+- `docs/standards/AI协作开发规范.md`
+- `docs/standards/变更审核清单.md`
+- `docs/standards/测试规范.md`
 
 ## 验收标准
 

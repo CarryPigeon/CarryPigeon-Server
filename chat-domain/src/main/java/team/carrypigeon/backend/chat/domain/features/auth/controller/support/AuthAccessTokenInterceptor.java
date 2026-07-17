@@ -46,10 +46,29 @@ public class AuthAccessTokenInterceptor implements HandlerInterceptor {
         }
 
         AuthTokenClaims claims = authTokenService.parseAccessToken(authorization.substring(BEARER_PREFIX.length()));
-        AuthenticatedAccount authenticatedAccount = new AuthenticatedAccount(Long.parseLong(claims.subject()), claims.username());
+        AuthenticatedAccount authenticatedAccount = new AuthenticatedAccount(parseAccountId(claims), claims.username());
         authRequestContext.bind(request, authenticatedAccount);
         LogContexts.uid(Long.toString(authenticatedAccount.accountId()));
         return true;
+    }
+
+    /**
+     * 从 access token claims 中解析当前账号 ID。
+     * 失败语义：token subject 不是正数账号 ID 时返回非法 access token。
+     *
+     * @param claims 已校验的 access token claims
+     * @return 当前账号 ID
+     */
+    private long parseAccountId(AuthTokenClaims claims) {
+        try {
+            long accountId = Long.parseLong(claims.subject());
+            if (accountId <= 0L) {
+                throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
+            }
+            return accountId;
+        } catch (NumberFormatException exception) {
+            throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
+        }
     }
 
     /**

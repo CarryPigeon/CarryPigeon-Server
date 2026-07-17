@@ -69,6 +69,28 @@ class AuditLogDomainApiTests {
     }
 
     /**
+     * 验证未指定频道时只查询当前账号已加入频道，并按审计 ID 倒序合并结果。
+     */
+    @Test
+    @DisplayName("list audit logs without channel id merges member channels")
+    void listAuditLogs_withoutChannelId_mergesMemberChannels() {
+        StubChannelAuditLogRepository auditLogRepository = new StubChannelAuditLogRepository();
+        auditLogRepository.logs = List.of(
+                new ChannelAuditLog(7001L, 9L, 1001L, "MEMBER_BANNED", 1002L, "{}", Instant.parse("2026-04-24T12:00:00Z")),
+                new ChannelAuditLog(7003L, 10L, 1001L, "MEMBER_MUTED", 1003L, "{}", Instant.parse("2026-04-24T12:01:00Z")),
+                new ChannelAuditLog(7004L, 11L, 1001L, "MEMBER_MUTED", 1004L, "{}", Instant.parse("2026-04-24T12:02:00Z"))
+        );
+        ChannelQueryDomainApi service = createService(auditLogRepository);
+
+        var result = service.listAuditLogs(new ListAuditLogsQuery(1001L, null, 50, null, null, null, null, null));
+
+        assertEquals(2, result.size());
+        assertEquals("7003", result.get(0).auditId());
+        assertEquals("7001", result.get(1).auditId());
+        assertEquals(List.of(9L, 10L), auditLogRepository.queriedChannelIds);
+    }
+
+    /**
      * 验证 `listAuditLogs` 在 `invalidCursor` 条件下满足 `throwsCursorInvalid` 的测试契约。
      */
     @Test
@@ -118,6 +140,7 @@ class AuditLogDomainApiTests {
         @Override public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) { return Optional.of(new ChannelMember(channelId, accountId, ChannelMemberRole.OWNER, Instant.parse("2026-04-24T12:00:00Z"), null)); }
         @Override public List<ChannelMember> findByChannelId(long channelId) { return List.of(); }
         @Override public List<Long> findAccountIdsByChannelId(long channelId) { return List.of(); }
+        @Override public List<Long> findChannelIdsByAccountId(long accountId) { return List.of(9L, 10L); }
     }
 
     /**
@@ -184,11 +207,16 @@ class AuditLogDomainApiTests {
      */
     private static final class StubChannelAuditLogRepository implements ChannelAuditLogRepository {
         private List<ChannelAuditLog> logs = List.of();
+        private List<Long> queriedChannelIds = new java.util.ArrayList<>();
         private String lastActionType;
         @Override public void append(ChannelAuditLog channelAuditLog) { }
         @Override public List<ChannelAuditLog> list(Long cursorAuditId, int limit, Long channelId, Long actorAccountId, String actionType, Instant fromTime, Instant toTime) {
+            queriedChannelIds.add(channelId);
             this.lastActionType = actionType;
-            return logs;
+            return logs.stream()
+                    .filter(log -> channelId == null || log.channelId() == channelId)
+                    .limit(limit)
+                    .toList();
         }
     }
 

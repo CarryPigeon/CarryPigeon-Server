@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 
 /**
@@ -19,6 +20,7 @@ public record CreateTokenSessionRequest(
         @Schema(description = "目标邮箱", example = "user@example.com")
         @Email(message = "email must be a valid email address")
         @NotBlank(message = "email must not be blank")
+        @Size(max = 320, message = "email length must be less than or equal to 320")
         String email,
         @Schema(description = "邮箱验证码", example = "123456")
         @NotBlank(message = "code must not be blank")

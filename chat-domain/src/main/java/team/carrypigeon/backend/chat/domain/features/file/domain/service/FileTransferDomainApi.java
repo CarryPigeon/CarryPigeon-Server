@@ -90,6 +90,16 @@ public class FileTransferDomainApi implements FileTransferApi {
     }
 
     /**
+     * 上传当前用户资料背景图。
+     * 输出：返回文件领域生成的固定背景图 `share_key`，调用方不关心内部命名规则。
+     */
+    public String uploadProfileBackground(long accountId, String contentType, long sizeBytes, java.io.InputStream content) {
+        String shareKey = fileObjectKeyResolver.profileBackgroundShareKey(accountId);
+        uploadFile(accountId, shareKey, contentType, sizeBytes, content);
+        return shareKey;
+    }
+
+    /**
      * 按 `share_key` 解析并读取文件下载结果。
      * 输出：文件存在时返回领域下载结果，缺失时返回空。
      * 边界：对象存储模型只在领域服务内部使用，不泄漏给协议入口。
@@ -129,6 +139,14 @@ public class FileTransferDomainApi implements FileTransferApi {
         return Map.of();
     }
 
+    /**
+     * 校验创建上传授权的文件元信息。
+     * 约束：授权阶段只接受明确文件名、MIME 类型和 100MB 以内的正数大小。
+     *
+     * @param filename 客户端声明文件名
+     * @param mimeType 客户端声明 MIME 类型
+     * @param sizeBytes 客户端声明大小
+     */
     private void validateUploadGrant(String filename, String mimeType, long sizeBytes) {
         if (filename == null || filename.isBlank()) {
             throw ProblemException.validationFailed("filename must not be blank");
@@ -144,6 +162,12 @@ public class FileTransferDomainApi implements FileTransferApi {
         }
     }
 
+    /**
+     * 获取对象存储服务实例。
+     * 失败语义：运行时未装配对象存储实现时抛出服务不可用问题。
+     *
+     * @return 可用的对象存储服务
+     */
     private ObjectStorageService requireObjectStorageService() {
         ObjectStorageService objectStorageService = objectStorageServiceProvider.getIfAvailable();
         if (objectStorageService == null) {

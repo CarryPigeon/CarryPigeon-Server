@@ -73,6 +73,14 @@ public class AuditLogController {
         )).toList(), nextCursor, hasMore);
     }
 
+    /**
+     * 解析审计日志 HTTP 查询中的可选雪花 ID。
+     * 失败语义：cursor 字段固定返回 `cursor_invalid`，其它字段返回通用雪花 ID 错误。
+     *
+     * @param rawValue 原始查询参数
+     * @param cursorField 是否为 cursor 字段
+     * @return 解析后的雪花 ID，缺失时为 null
+     */
     private Long parseOptionalSnowflake(String rawValue, boolean cursorField) {
         if (rawValue == null || rawValue.isBlank()) {
             return null;

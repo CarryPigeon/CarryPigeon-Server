@@ -5,7 +5,7 @@
 -- Auth domain
 CREATE TABLE auth_account (
     id BIGINT NOT NULL,
-    username VARCHAR(32) NOT NULL,
+    username VARCHAR(320) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,

@@ -15,6 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.Mess
 import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
+import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
 import team.carrypigeon.backend.starter.config.InitializationCheckConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
 import team.carrypigeon.backend.starter.support.StarterRegressionConfiguration;
@@ -33,7 +34,8 @@ class ApplicationStarterSmokeTests {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
                     BasicInfrastructureAutoConfiguration.class,
-                    JacksonAutoConfiguration.class
+                    JacksonAutoConfiguration.class,
+                    PluginAutoConfiguration.class
             ))
             .withUserConfiguration(
                     StarterTestRuntimeConfiguration.class,
@@ -66,6 +68,7 @@ class ApplicationStarterSmokeTests {
         try (ConfigurableApplicationContext context = new SpringApplicationBuilder(
                 BasicInfrastructureAutoConfiguration.class,
                 JacksonAutoConfiguration.class,
+                PluginAutoConfiguration.class,
                 StarterTestRuntimeConfiguration.class,
                 StarterRegressionConfiguration.class,
                 InitializationCheckConfiguration.class

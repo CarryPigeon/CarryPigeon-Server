@@ -14,7 +14,7 @@
 
 配置限制：不新增运行时配置项；OpenAPI server 示例使用当前本地默认地址。
 
-文档依据：`AGENTS.md`、`docs/架构文档.md`、`docs/配置规范.md`、`docs/注释规范.md`、`docs/测试规范.md`、`docs/变更审核清单.md`。
+文档依据：`AGENTS.md`、`docs/architecture/架构文档.md`、`docs/standards/配置规范.md`、`docs/standards/注释规范.md`、`docs/standards/测试规范.md`、`docs/standards/变更审核清单.md`。
 
 任务分解 / 执行计划：
 1. 阅读现有 `OpenApiConfiguration` 和测试，确认已有 Bearer 鉴权与错误响应逻辑。

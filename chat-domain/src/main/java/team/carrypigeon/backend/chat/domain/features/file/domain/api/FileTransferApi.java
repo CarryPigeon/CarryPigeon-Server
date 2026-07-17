@@ -46,6 +46,20 @@ public interface FileTransferApi {
     void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content);
 
     /**
+     * 上传当前用户资料背景图。
+     * 输入：上传账号、内容类型、大小和文件内容流。
+     * 输出：可用于下载接口的背景图 share key。
+     * 约束：背景图固定对象位置与容量限制由文件领域维护，调用方不拼接 share key。
+     *
+     * @param accountId 上传账号 ID
+     * @param contentType 实际上传内容类型
+     * @param sizeBytes 实际上传大小，单位字节
+     * @param content 文件内容输入流，由调用方负责提供可读取流
+     * @return 背景图下载 share key
+     */
+    String uploadProfileBackground(long accountId, String contentType, long sizeBytes, InputStream content);
+
+    /**
      * 根据 share key 创建文件下载结果。
      * 输入：可选访问账号和下载 share key。
      * 输出：存在且允许访问时返回下载投影，否则返回空。

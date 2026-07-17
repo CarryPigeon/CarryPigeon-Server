@@ -439,6 +439,11 @@ final class MessageDomainApiTestSupport {
         }
 
         @Override
+        public void deleteByMessageId(long messageId) {
+            mentions.removeIf(mention -> mention.messageId() == messageId);
+        }
+
+        @Override
         public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
             return mentions.stream()
                     .filter(mention -> mention.targetAccountId() == accountId)
