@@ -27,7 +27,7 @@ class RealtimeChannelHandlerLifecycleTests {
     @DisplayName("handshake complete does not send welcome before auth")
     void userEvent_handshakeComplete_doesNotSendWelcomeBeforeAuth() {
         RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
-        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry);
 
         sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
 
@@ -41,7 +41,7 @@ class RealtimeChannelHandlerLifecycleTests {
     @DisplayName("auth frame registers principal and replies auth ok")
     void channelRead_authFrame_registersPrincipalAndRepliesAuthOk() {
         RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
-        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry);
         sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
 
         sender.writeInbound(new TextWebSocketFrame("""
@@ -61,7 +61,7 @@ class RealtimeChannelHandlerLifecycleTests {
     @DisplayName("reauth frame moves channel registration to new account")
     void channelRead_reauthFrame_movesChannelRegistrationToNewAccount() {
         RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
-        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry, RealtimeChannelHandlerTestSupport.service(registry));
+        EmbeddedChannel sender = RealtimeChannelHandlerTestSupport.channel(registry);
         sender.pipeline().fireUserEventTriggered(new WebSocketServerProtocolHandler.HandshakeComplete("/api/ws", null, null));
 
         sender.writeInbound(new TextWebSocketFrame("""

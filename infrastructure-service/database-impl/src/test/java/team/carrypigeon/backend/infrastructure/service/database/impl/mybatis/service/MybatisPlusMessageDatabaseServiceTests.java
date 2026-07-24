@@ -44,20 +44,15 @@ class MybatisPlusMessageDatabaseServiceTests {
         verify(messageMapper).insert(entityCaptor.capture());
         MessageEntity entity = entityCaptor.getValue();
         assertEquals(5001L, entity.getMessageId());
-        assertEquals("carrypigeon-local", entity.getServerId());
-        assertEquals(1L, entity.getConversationId());
         assertEquals(1L, entity.getChannelId());
         assertEquals(1001L, entity.getSenderId());
-        assertEquals("text", entity.getMessageType());
-        assertEquals("hello world", entity.getBody());
-        assertEquals("[文本消息] hello world", entity.getPreviewText());
-        assertEquals("hello world", entity.getSearchableText());
-        assertEquals(null, entity.getPayload());
-        assertEquals(null, entity.getMetadata());
+        assertEquals("Core:Text", entity.getDomain());
+        assertEquals("1.0.0", entity.getDomainVersion());
+        assertEquals("{\"text\":\"hello world\"}", entity.getData());
+        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getSendTime());
+        assertEquals("[\"1002\"]", entity.getMentions());
+        assertEquals("hello world", entity.getPreview());
         assertEquals("sent", entity.getStatus());
-        assertEquals(Instant.parse("2026-04-22T00:00:00Z"), entity.getCreatedAt());
-        assertEquals(Instant.parse("2026-04-22T00:05:00Z"), entity.getEditedAt());
-        assertEquals(2L, entity.getEditVersion());
     }
 
     /**
@@ -73,16 +68,17 @@ class MybatisPlusMessageDatabaseServiceTests {
         MessageRecord record = service.findById(5001L).orElseThrow();
 
         assertEquals(5001L, record.messageId());
-        assertEquals("carrypigeon-local", record.serverId());
-        assertEquals("hello world", record.body());
+        assertEquals("Core:Text", record.domain());
+        assertEquals("{\"text\":\"hello world\"}", record.data());
+        assertEquals("[\"1002\"]", record.mentions());
     }
 
     /**
-     * 验证带 payload / metadata 的消息记录会在读写路径中保持稳定映射。
+     * 验证扩展 domain 的 data 会在读写路径中保持稳定映射。
      */
     @Test
-    @DisplayName("find by id extension row keeps payload metadata and status")
-    void findById_extensionRow_keepsPayloadMetadataAndStatus() {
+    @DisplayName("find by id extension row keeps domain data and status")
+    void findById_extensionRow_keepsDomainDataAndStatus() {
         MessageMapper messageMapper = mock(MessageMapper.class);
         when(messageMapper.selectById(5002L)).thenReturn(extensionEntity());
         MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
@@ -90,9 +86,9 @@ class MybatisPlusMessageDatabaseServiceTests {
         MessageRecord record = service.findById(5002L).orElseThrow();
 
         assertEquals(5002L, record.messageId());
-        assertEquals("test-extension", record.messageType());
-        assertEquals("{\"plugin_key\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}", record.payload());
-        assertEquals("{\"trace\":true}", record.metadata());
+        assertEquals("Plugin:test-extension", record.domain());
+        assertEquals("2.1.0", record.domainVersion());
+        assertEquals("{\"event\":\"player_join\",\"trace\":true}", record.data());
         assertEquals("sent", record.status());
     }
 
@@ -112,26 +108,11 @@ class MybatisPlusMessageDatabaseServiceTests {
         verify(messageMapper).updateMessage(entityCaptor.capture());
         MessageEntity entity = entityCaptor.getValue();
         assertEquals(5001L, entity.getMessageId());
-        assertEquals("carrypigeon-local", entity.getServerId());
+        assertEquals("Core:Text", entity.getDomain());
+        assertEquals("{\"text\":\"hello world\"}", entity.getData());
+        assertEquals("[\"1002\"]", entity.getMentions());
         assertEquals("sent", entity.getStatus());
-        assertEquals("[文本消息] hello world", entity.getPreviewText());
-        assertEquals(Instant.parse("2026-04-22T00:05:00Z"), entity.getEditedAt());
-        assertEquals(2L, entity.getEditVersion());
-    }
-
-    /**
-     * 验证删除消息时会调用 mapper 删除入口。
-     */
-    @Test
-    @DisplayName("delete valid id delegates to mapper")
-    void delete_validId_delegatesToMapper() {
-        MessageMapper messageMapper = mock(MessageMapper.class);
-        when(messageMapper.deleteById(5001L)).thenReturn(1);
-        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
-
-        service.delete(5001L);
-
-        verify(messageMapper).deleteById(5001L);
+        assertEquals("hello world", entity.getPreview());
     }
 
     /**
@@ -147,8 +128,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         MessageRecord record = service.findByChannelIdBefore(1L, 4999L, 20).getFirst();
 
         assertEquals(5001L, record.messageId());
-        assertEquals("carrypigeon-local", record.serverId());
-        assertEquals("[文本消息] hello world", record.previewText());
+        assertEquals("Core:Text", record.domain());
+        assertEquals("hello world", record.preview());
     }
 
     /**
@@ -164,7 +145,8 @@ class MybatisPlusMessageDatabaseServiceTests {
         MessageRecord record = service.searchByChannelId(1L, "hello", 20).getFirst();
 
         assertEquals(5001L, record.messageId());
-        assertEquals("hello world", record.searchableText());
+        assertEquals("hello world", record.preview());
+        assertEquals("{\"text\":\"hello world\"}", record.data());
     }
 
     /**
@@ -250,62 +232,45 @@ class MybatisPlusMessageDatabaseServiceTests {
     private static MessageRecord record() {
         return new MessageRecord(
                 5001L,
-                "carrypigeon-local",
-                1L,
-                1L,
                 1001L,
-                "text",
-                "hello world",
-                "[文本消息] hello world",
-                "hello world",
-                null,
-                null,
-                null,
-                null,
-                "sent",
+                1L,
+                "Core:Text",
+                "1.0.0",
+                "{\"text\":\"hello world\"}",
                 Instant.parse("2026-04-22T00:00:00Z"),
-                Instant.parse("2026-04-22T00:05:00Z"),
-                2L
+                "[\"1002\"]",
+                "hello world",
+                "sent"
         );
     }
 
     private static MessageEntity entity() {
         MessageEntity entity = new MessageEntity();
         entity.setMessageId(5001L);
-        entity.setServerId("carrypigeon-local");
-        entity.setConversationId(1L);
-        entity.setChannelId(1L);
         entity.setSenderId(1001L);
-        entity.setMessageType("text");
-        entity.setBody("hello world");
-        entity.setPreviewText("[文本消息] hello world");
-        entity.setSearchableText("hello world");
-        entity.setPayload(null);
-        entity.setMetadata(null);
+        entity.setChannelId(1L);
+        entity.setDomain("Core:Text");
+        entity.setDomainVersion("1.0.0");
+        entity.setData("{\"text\":\"hello world\"}");
+        entity.setSendTime(Instant.parse("2026-04-22T00:00:00Z"));
+        entity.setMentions("[\"1002\"]");
+        entity.setPreview("hello world");
         entity.setStatus("sent");
-        entity.setCreatedAt(Instant.parse("2026-04-22T00:00:00Z"));
-        entity.setEditedAt(Instant.parse("2026-04-22T00:05:00Z"));
-        entity.setEditVersion(2L);
         return entity;
     }
 
     private static MessageEntity extensionEntity() {
         MessageEntity entity = new MessageEntity();
         entity.setMessageId(5002L);
-        entity.setServerId("carrypigeon-local");
-        entity.setConversationId(2L);
-        entity.setChannelId(3L);
         entity.setSenderId(1002L);
-        entity.setMessageType("test-extension");
-        entity.setBody("hello extension");
-        entity.setPreviewText("[插件消息] hello extension");
-        entity.setSearchableText("hello extension test-extension");
-        entity.setPayload("{\"plugin_key\":\"test-extension\",\"payload\":{\"event\":\"player_join\"}}");
-        entity.setMetadata("{\"trace\":true}");
+        entity.setChannelId(3L);
+        entity.setDomain("Plugin:test-extension");
+        entity.setDomainVersion("2.1.0");
+        entity.setData("{\"event\":\"player_join\",\"trace\":true}");
+        entity.setSendTime(Instant.parse("2026-04-23T00:00:00Z"));
+        entity.setMentions("[]");
+        entity.setPreview("hello extension");
         entity.setStatus("sent");
-        entity.setCreatedAt(Instant.parse("2026-04-23T00:00:00Z"));
-        entity.setEditedAt(null);
-        entity.setEditVersion(1L);
         return entity;
     }
 }

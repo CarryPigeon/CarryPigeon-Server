@@ -21,18 +21,22 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelMessageBoundary;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageReferenceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.support.message.MessageBackedChannelMessageBoundary;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 
 /**
  * 频道应用测试支撑。
@@ -79,9 +83,10 @@ final class ChannelDomainApiTestSupport {
         final InMemoryChannelAuditLogRepository channelAuditLogRepository = new InMemoryChannelAuditLogRepository();
         final InMemoryChannelReadStateRepository channelReadStateRepository = new InMemoryChannelReadStateRepository();
         final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
-        final ChannelMessageBoundary channelMessageBoundary = new MessageBackedChannelMessageBoundary(messageRepository);
+        final MessageReferenceApi messageReferenceApi = new MessageReferenceDomainApi(messageRepository);
         final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
-        final RecordingChannelRealtimePublisher channelRealtimePublisher = new RecordingChannelRealtimePublisher();
+        final UserProfileApi userProfileApi = TestFeatureApis.userProfiles(userProfileRepository);
+        final RecordingRealtimeEventApi realtimeEventApi = new RecordingRealtimeEventApi();
 
         private TestContext() {
             channelRepository.defaultChannel = publicChannel();
@@ -96,7 +101,7 @@ final class ChannelDomainApiTestSupport {
                     channelBanRepository,
                     channelAuditLogRepository,
                     channelReadStateRepository,
-                    userProfileRepository,
+                    userProfileApi,
                     governancePolicy()
             );
         }
@@ -113,10 +118,10 @@ final class ChannelDomainApiTestSupport {
                     channelBanRepository,
                     channelAuditLogRepository,
                     channelReadStateRepository,
-                    channelMessageBoundary,
-                    userProfileRepository,
+                    messageReferenceApi,
+                    userProfileApi,
                     governancePolicy(),
-                    channelRealtimePublisher,
+                    realtimeEventApi,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -135,10 +140,10 @@ final class ChannelDomainApiTestSupport {
                     channelBanRepository,
                     channelAuditLogRepository,
                     channelReadStateRepository,
-                    channelMessageBoundary,
-                    userProfileRepository,
+                    messageReferenceApi,
+                    userProfileApi,
                     governancePolicy(),
-                    channelRealtimePublisher,
+                    realtimeEventApi,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -157,10 +162,10 @@ final class ChannelDomainApiTestSupport {
                     channelBanRepository,
                     channelAuditLogRepository,
                     channelReadStateRepository,
-                    channelMessageBoundary,
-                    userProfileRepository,
+                    messageReferenceApi,
+                    userProfileApi,
                     governancePolicy(),
-                    channelRealtimePublisher,
+                    realtimeEventApi,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -179,10 +184,10 @@ final class ChannelDomainApiTestSupport {
                     channelBanRepository,
                     channelAuditLogRepository,
                     channelReadStateRepository,
-                    channelMessageBoundary,
-                    userProfileRepository,
+                    messageReferenceApi,
+                    userProfileApi,
                     governancePolicy(),
-                    channelRealtimePublisher,
+                    realtimeEventApi,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -269,28 +274,32 @@ final class ChannelDomainApiTestSupport {
     }
 
     /**
-     * `RecordingChannelRealtimePublisher` 测试替身。
+     * `RecordingRealtimeEventApi` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
-    static final class RecordingChannelRealtimePublisher implements ChannelRealtimePublisher {
+    static final class RecordingRealtimeEventApi implements RealtimeEventApi {
 
         final List<ChannelReadState> readStateUpdates = new ArrayList<>();
         final List<String> channelChangedScopes = new ArrayList<>();
         final List<Long> channelsChangedAccountIds = new ArrayList<>();
 
         @Override
-        public void publishReadStateUpdated(ChannelReadState readState) {
-            readStateUpdates.add(readState);
-        }
-
-        @Override
-        public void publishChannelChanged(Channel channel, String scope, java.util.Collection<Long> recipientAccountIds) {
-            channelChangedScopes.add(scope);
-        }
-
-        @Override
-        public void publishChannelsChanged(long accountId) {
-            channelsChangedAccountIds.add(accountId);
+        public void publish(PublishRealtimeEventCommand command) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) command.payload();
+            switch (command.eventType()) {
+                case "read_state.updated" -> readStateUpdates.add(new ChannelReadState(
+                        Long.parseLong(String.valueOf(payload.get("cid"))),
+                        Long.parseLong(String.valueOf(payload.get("uid"))),
+                        Long.parseLong(String.valueOf(payload.get("last_read_mid"))),
+                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue()),
+                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue()),
+                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue())
+                ));
+                case "channel.changed" -> channelChangedScopes.add(String.valueOf(payload.get("scope")));
+                case "channels.changed" -> channelsChangedAccountIds.add(command.recipientAccountIds().iterator().next());
+                default -> { }
+            }
         }
     }
 

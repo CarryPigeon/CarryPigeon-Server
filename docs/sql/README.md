@@ -20,6 +20,8 @@
   - 消息与 mention 相关表
 - `05-notification.sql`
   - 服务级与频道级通知偏好相关表
+- `06-plugin.sql`
+  - 启动期插件迁移历史表 `plugin_schema_history`
 - `10-test-data.sql`
   - 本地开发 / 接口联调用测试数据，假定结构已初始化
 - `99-reset-schema.sql`
@@ -30,7 +32,7 @@
 若你要初始化一个空的 MySQL schema，推荐以下两种方式之一：
 
 1. 最简单路径：直接执行 `00-all-in-one.sql`
-2. 按领域执行：依次执行 `01-auth.sql`、`02-user.sql`、`03-channel.sql`、`04-message.sql`、`05-notification.sql`
+2. 按领域执行：依次执行 `01-auth.sql`、`02-user.sql`、`03-channel.sql`、`04-message.sql`、`05-notification.sql`、`06-plugin.sql`
 
 若你还需要一组现成数据，再执行：
 

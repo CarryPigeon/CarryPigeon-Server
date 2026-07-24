@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -17,11 +16,11 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.service.Realt
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -40,8 +39,7 @@ class ServerControllerTests {
     void setUp() {
         serverEntranceDomainApi = createService(true, java.util.List.of("mc-bind"));
         mockMvc = MockMvcBuilders.standaloneSetup(
-                        new ServerController(serverEntranceDomainApi),
-                        new ServerGateController(serverEntranceDomainApi)
+                        new ServerController(serverEntranceDomainApi)
                 )
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -70,43 +68,15 @@ class ServerControllerTests {
                 .andExpect(jsonPath("$.server_time").value(1713614400000L));
     }
 
-    /**
-     * 验证 `requiredGateCheck` 在 `satisfied` 条件下满足 `returnsEmptyMissingPlugins` 的测试契约。
-     */
-    @Test
-    @DisplayName("required gate check returns empty missing plugins when satisfied")
-    void requiredGateCheck_satisfied_returnsEmptyMissingPlugins() throws Exception {
-        mockMvc.perform(post("/api/gates/required/check")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"client":{"device_id":"device-1","installed_plugins":[{"plugin_id":"mc-bind","version":"1.2.0"}]}}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.missing_plugins").isEmpty());
-    }
-
-    /**
-     * 验证 `requiredGateCheck` 在 `unsatisfied` 条件下满足 `returnsMissingPlugins` 的测试契约。
-     */
-    @Test
-    @DisplayName("required gate check returns missing plugins when unsatisfied")
-    void requiredGateCheck_unsatisfied_returnsMissingPlugins() throws Exception {
-        mockMvc.perform(post("/api/gates/required/check")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"client":{"device_id":"device-1","installed_plugins":[]}}
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.missing_plugins[0]").value("mc-bind"));
-    }
-
     private ServerEntranceApi createService(boolean realtimeEnabled, java.util.List<String> requiredPlugins) {
+        PluginCatalogApi pluginCatalogApi = org.mockito.Mockito.mock(PluginCatalogApi.class);
+        org.mockito.Mockito.when(pluginCatalogApi.requiredPluginIds()).thenReturn(requiredPlugins);
         return new ServerEntranceDomainApi(
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
                 realtimeProperties(realtimeEnabled),
                 new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
-                requiredPlugins
+                pluginCatalogApi
         );
     }
 

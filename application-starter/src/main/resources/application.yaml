@@ -56,6 +56,11 @@ cp:
     # 边界：这里只保留实际读取的空入口；具体插件配置应在插件接入后按需添加。
     configs: {}
   chat:
+    file:
+      share-key:
+        # 职责：定义本地开发文件上传 share_key 的 HMAC 签名密钥。
+        # 约束：生产环境必须独立覆盖，不能与 JWT 或其他用途共用密钥。
+        secret: carrypigeon-local-file-share-key-secret-32
     auth:
       password-login:
         # 职责：控制用户名密码登录入口是否允许签发 token。
@@ -72,7 +77,7 @@ cp:
         # 职责：定义 refresh token 的有效期。
         refresh-token-ttl: 14d
     server:
-      # 职责：定义当前服务实例在消息模型中实际使用的稳定 serverId。
+      # 职责：定义服务发现与 realtime 握手中使用的稳定 serverId。
       # 约束：多服务端部署时必须按实例明确区分，避免跨实例消息来源混淆。
       id: 550e8400-e29b-41d4-a716-446655440000
       realtime:

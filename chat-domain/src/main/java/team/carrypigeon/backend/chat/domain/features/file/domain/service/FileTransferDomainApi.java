@@ -5,8 +5,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.features.file.domain.port.FileAttachmentAccessAuthorizer;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -38,7 +38,7 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     public FileTransferDomainApi(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-            FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer,
+            ChannelMessagingApi channelMessagingApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec
@@ -47,7 +47,7 @@ public class FileTransferDomainApi implements FileTransferApi {
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
-        this.fileObjectKeyResolver = new FileObjectKeyResolver(fileAttachmentAccessAuthorizer, uploadShareKeyCodec);
+        this.fileObjectKeyResolver = new FileObjectKeyResolver(channelMessagingApi, uploadShareKeyCodec);
     }
 
     /**

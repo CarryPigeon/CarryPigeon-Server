@@ -1,16 +1,15 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.api;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.command.SendEmailCodeCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 
 /**
  * 鉴权账号领域 API。
- * 职责：暴露账号注册与邮箱验证码等账号入口能力。
+ * 职责：暴露账号注册与账号资料维护能力。
  * 边界：不暴露会话刷新、注销和 token 签发细节。
- * 输入：账号注册与验证码发送命令对象。
- * 输出：注册结果投影或验证码发送副作用。
- * 失败语义：参数校验、邮箱验证码、账号唯一性等问题由领域问题异常表达。
+ * 输入：账号注册与账号资料维护命令对象。
+ * 输出：注册结果投影或账号资料维护结果。
+ * 失败语义：参数校验和账号唯一性等问题由领域问题异常表达。
  * 调用方：controller 或其它 feature 只能依赖本接口，不直接依赖具体实现类。
  */
 public interface AuthAccountApi {
@@ -27,12 +26,20 @@ public interface AuthAccountApi {
     RegisterResult register(RegisterCommand command);
 
     /**
-     * 为账号注册或验证流程发送邮箱验证码。
-     * 输入：验证码发送命令包含目标邮箱与验证码使用场景。
-     * 副作用：生成验证码并交给验证码投递能力处理。
-     * 约束：调用方不应依赖验证码存储、过期和投递实现细节。
+     * 查询账号当前邮箱登录标识。
      *
-     * @param command 邮箱验证码发送业务命令
+     * @param accountId 账号 ID
+     * @return 当前邮箱登录标识
      */
-    void sendEmailCode(SendEmailCodeCommand command);
+    String getAccountEmail(long accountId);
+
+    /**
+     * 更新账号邮箱登录标识。
+     * 约束：调用方必须先完成邮箱验证码校验；本方法负责账号存在性和唯一性。
+     *
+     * @param accountId 账号 ID
+     * @param email 已验证的新邮箱
+     */
+    void updateAccountEmail(long accountId, String email);
+
 }

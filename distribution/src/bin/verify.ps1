@@ -86,10 +86,13 @@ function Get-YamlScalar {
 }
 
 $AppDir = Join-Path $BaseDir 'app'
+$LibDir = Join-Path $BaseDir 'lib'
+$PluginDir = Join-Path $BaseDir 'plugins'
 $SystemdDir = Join-Path (Join-Path $BaseDir 'service') 'systemd'
 
 Require-Path -Path $AppDir -Description 'app directory'
-Require-Path -Path (Join-Path $BaseDir 'libs') -Description 'libs directory'
+Require-Path -Path $LibDir -Description 'lib directory'
+Require-Path -Path $PluginDir -Description 'plugins directory'
 Require-Path -Path (Join-Path $BaseDir 'config') -Description 'config directory'
 Require-Path -Path (Join-Path $BaseDir 'bin') -Description 'bin directory'
 Require-Path -Path $SystemdDir -Description 'systemd example directory'
@@ -112,6 +115,22 @@ if ($null -eq $appJar) {
     throw "application-starter thin jar not found under $AppDir"
 }
 
+$appJarCandidates = @(Get-ChildItem -LiteralPath $AppDir -Filter 'application-starter-*.jar' |
+    Where-Object { $_.Name -notlike '*-exec.jar' -and $_.Name -notlike '*.original' })
+if ($appJarCandidates.Count -ne 1) {
+    throw "expected exactly one application-starter thin jar under $AppDir"
+}
+
+if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
+    throw 'java executable not found in PATH; plugin preflight cannot run.'
+}
+
+$classPath = '{0};{1}\*;{2}\*' -f $appJar.FullName, $LibDir, $PluginDir
+& java -cp $classPath team.carrypigeon.backend.starter.PluginPreflightCommand
+if ($LASTEXITCODE -ne 0) {
+    throw "plugin classpath preflight failed with exit code $LASTEXITCODE"
+}
+
 if ($StrictConfig) {
     $configFile = Join-Path $BaseDir 'config/application.yaml'
     $jwtSecret = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.auth.jwt.secret'
@@ -128,6 +147,7 @@ if ($StrictConfig) {
 Write-Host 'Distribution package verification passed.'
 Write-Host "Base directory: $BaseDir"
 Write-Host "Thin jar: $($appJar.FullName)"
+Write-Host 'Plugin classpath preflight: passed'
 if ($StrictConfig) {
     Write-Host 'Configuration readiness: strict verification passed'
 }

@@ -1,0 +1,35 @@
+plugin_id: com-example-mc-bridge
+name: MC Bridge
+version: 1.0.0
+publisher: example
+description: Minecraft bridge integration example
+
+trust_level: SYSTEM
+load_mode: STARTUP_CLASSPATH
+
+host:
+  version: 1.0.0
+  build_hash: development
+  java_version: 21
+  spring_boot_version: 3.5.3
+
+entrypoint:
+  auto_configuration:
+    - example.plugin.messageplugin.mcbridge.McBridgePluginAutoConfiguration
+
+dependencies:
+  required_plugins: []
+  optional_plugins: []
+  required_host_artifacts:
+    - CarryPigeon:chat-domain:1.0.0
+
+extensions:
+  message_domains:
+    - Example:McBridge
+  http: false
+  websocket: false
+  scheduled_jobs: false
+  database_migrations: false
+
+configuration:
+  prefix: cp.plugin.configs.com-example-mc-bridge

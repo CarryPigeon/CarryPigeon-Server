@@ -46,6 +46,11 @@ cp:
     # 边界：部署时只在对应插件实现已经读取配置后添加具体插件项。
     configs: {}
   chat:
+    file:
+      share-key:
+        # 职责：定义文件上传 share_key 的 HMAC 签名密钥。
+        # 约束：部署前必须填写长度至少 32 字符且不与 JWT 共用的强随机值。
+        secret: ""
     auth:
       password-login:
         # 职责：控制用户名密码登录入口是否允许签发 token。

@@ -13,7 +13,7 @@ Place the distribution package under a stable directory such as:
 Expected runtime files:
 
 - `/opt/carrypigeon/app/`
-- `/opt/carrypigeon/libs/`
+- `/opt/carrypigeon/lib/` and `/opt/carrypigeon/plugins/`
 - `/opt/carrypigeon/config/`
 - `/opt/carrypigeon/bin/`
 

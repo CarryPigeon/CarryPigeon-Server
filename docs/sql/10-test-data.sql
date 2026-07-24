@@ -1,6 +1,6 @@
 -- Test data for local development and integration verification.
 -- Assumption: schema has already been initialized by 00-all-in-one.sql
--- or by 01-auth.sql -> 05-notification.sql.
+-- or by 01-auth.sql -> 06-plugin.sql.
 --
 -- Accounts created by this script:
 --   carry-owner  / carrypigeon123
@@ -15,6 +15,10 @@ WHERE account_id IN (1001, 1002, 1003)
 
 DELETE FROM chat_notification_server_preference
 WHERE account_id IN (1001, 1002, 1003);
+
+DELETE FROM chat_message_idempotency
+WHERE account_id IN (1001, 1002, 1003)
+   OR message_id IN (5001, 5002, 5003, 5004, 5005);
 
 DELETE FROM chat_mention
 WHERE mention_id IN (9001)
@@ -318,118 +322,76 @@ VALUES
 
 INSERT INTO chat_message (
     message_id,
-    server_id,
-    conversation_id,
-    channel_id,
     sender_id,
-    message_type,
-    body,
-    preview_text,
-    searchable_text,
-    payload,
-    metadata,
+    channel_id,
+    domain,
+    domain_version,
+    data,
+    send_time,
     mentions,
-    forwarded_from,
-    status,
-    created_at,
-    edited_at,
-    edit_version
+    preview,
+    status
 )
 VALUES
     (
         5001,
-        '550e8400-e29b-41d4-a716-446655440000',
-        1,
-        1,
         1001,
-        'text',
-        'Hello public channel',
-        'Hello public channel',
-        'Hello public channel',
-        '{\"domain\":\"Core:Text\",\"domain_version\":\"1.0.0\",\"data\":{\"text\":\"Hello public channel\"}}',
-        '{\"reply_to_mid\":\"0\"}',
-        NULL,
-        NULL,
-        'sent',
+        1,
+        'Core:Text',
+        '1.0.0',
+        '{\"text\":\"Hello public channel\"}',
         '2026-05-01 12:00:00',
-        NULL,
-        1
+        '[]',
+        'Hello public channel',
+        'sent'
     ),
     (
         5002,
-        '550e8400-e29b-41d4-a716-446655440000',
-        2,
-        2,
         1001,
-        'system',
-        'System channel bootstrap completed.',
-        'System channel bootstrap completed.',
-        'System channel bootstrap completed.',
-        '{\"event\":\"bootstrap_completed\"}',
-        '{\"level\":\"info\"}',
-        NULL,
-        NULL,
-        'sent',
+        2,
+        'Core:System',
+        '1.0.0',
+        '{\"text\":\"System channel bootstrap completed.\",\"event\":\"bootstrap_completed\",\"level\":\"info\"}',
         '2026-05-01 12:01:00',
-        NULL,
-        1
+        '[]',
+        'System channel bootstrap completed.',
+        'sent'
     ),
     (
         5003,
-        '550e8400-e29b-41d4-a716-446655440000',
-        100,
-        100,
         1001,
-        'text',
-        '@carry-admin Please review the API draft.',
-        '@carry-admin Please review the API draft.',
-        '@carry-admin Please review the API draft.',
-        '{\"domain\":\"Core:Text\",\"domain_version\":\"1.0.0\",\"data\":{\"text\":\"@carry-admin Please review the API draft.\"}}',
-        '{\"reply_to_mid\":\"0\"}',
-        '[{\"type\":\"user\",\"uid\":\"1002\"}]',
-        NULL,
-        'sent',
+        100,
+        'Core:Text',
+        '1.0.0',
+        '{\"text\":\"@carry-admin Please review the API draft.\"}',
         '2026-05-01 12:02:00',
-        NULL,
-        1
+        '[\"1002\"]',
+        '@carry-admin Please review the API draft.',
+        'sent'
     ),
     (
         5004,
-        '550e8400-e29b-41d4-a716-446655440000',
-        100,
-        100,
         1002,
-        'text',
-        'Updated checklist is ready.',
-        'Updated checklist is ready.',
-        'Updated checklist is ready.',
-        '{\"domain\":\"Core:Text\",\"domain_version\":\"1.0.0\",\"data\":{\"text\":\"Updated checklist is ready.\"}}',
-        '{\"reply_to_mid\":\"5003\"}',
-        NULL,
-        NULL,
-        'sent',
+        100,
+        'Core:ReplyText',
+        '1.0.0',
+        '{\"content\":{\"text\":\"Updated checklist is ready.\"},\"reply_to_mid\":\"5003\",\"reply_to\":{\"mid\":\"5003\",\"sender_name\":\"Carry Owner\",\"preview\":\"@carry-admin Please review the API draft.\",\"created_at\":1777608120000,\"unavailable\":false}}',
         '2026-05-01 12:03:00',
-        '2026-05-01 12:05:00',
-        2
+        '[]',
+        'Updated checklist is ready.',
+        'sent'
     ),
     (
         5005,
-        '550e8400-e29b-41d4-a716-446655440000',
-        101,
-        101,
         1002,
-        'text',
-        'Forwarded summary from public channel.',
-        'Forwarded summary from public channel.',
-        'Forwarded summary from public channel.',
-        '{\"domain\":\"Core:Text\",\"domain_version\":\"1.0.0\",\"data\":{\"text\":\"Forwarded summary from public channel.\"}}',
-        '{\"reply_to_mid\":\"0\"}',
-        NULL,
-        '{\"message_id\":\"5001\",\"channel_id\":\"1\",\"sender_id\":\"1001\"}',
-        'sent',
+        101,
+        'Core:Forward',
+        '1.0.0',
+        '{\"domain\":\"Core:Text\",\"domain_version\":\"1.0.0\",\"content\":{\"text\":\"Forwarded summary from public channel.\"},\"forwarded_from\":{\"mid\":\"5001\",\"cid\":\"1\",\"uid\":\"1001\",\"preview\":\"Hello public channel\",\"send_time\":1777608000000}}',
         '2026-05-01 12:06:00',
-        NULL,
-        1
+        '[]',
+        'Forwarded summary from public channel.',
+        'sent'
     );
 
 INSERT INTO chat_channel_read_state (

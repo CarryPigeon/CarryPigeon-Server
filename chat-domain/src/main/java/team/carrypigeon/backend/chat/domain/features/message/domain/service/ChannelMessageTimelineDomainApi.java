@@ -6,9 +6,10 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
@@ -16,11 +17,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetCha
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -33,30 +31,20 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSupport implements ChannelMessageTimelineApi {
 
     public ChannelMessageTimelineDomainApi(
-            MessageChannelBoundary messageChannelBoundary,
+            ChannelMessagingApi channelMessagingApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            UserProfileRepository userProfileRepository,
-            MessageRealtimePublisher messageRealtimePublisher,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessagePayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProvider serverIdentityProvider,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
-            JsonProvider jsonProvider,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         super(
-                messageChannelBoundary,
+                channelMessagingApi,
                 messageRepository,
                 mentionRepository,
-                userProfileRepository,
-                messageRealtimePublisher,
-                channelMessagePluginRegistry,
-                messageAttachmentPayloadResolver,
-                serverIdentityProvider,
+                realtimeEventApi,
                 idGenerator,
-                jsonProvider,
                 timeProvider,
                 transactionRunner
         );
@@ -65,7 +53,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
     @Override
     public ChannelMessageHistoryResult getChannelMessageHistory(GetChannelMessageHistoryQuery query) {
         validateHistoryQuery(query);
-        MessageChannelBoundary.MessageChannel channel = messageChannelBoundary.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelMessagingContext channel = channelMessagingApi.requireMemberChannel(query.channelId(), query.accountId());
         if (query.aroundMessageId() != null) {
             ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
             if (targetMessage.channelId() != channel.id()) {
@@ -101,7 +89,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
     @Override
     public ChannelMessageSearchResult searchChannelMessages(SearchChannelMessagesQuery query) {
         validateSearchQuery(query);
-        MessageChannelBoundary.MessageChannel channel = messageChannelBoundary.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelMessagingContext channel = channelMessagingApi.requireMemberChannel(query.channelId(), query.accountId());
         List<ChannelMessageResult> messages = messageRepository.searchByChannelId(
                         channel.id(),
                         query.keyword().trim(),
@@ -179,8 +167,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
     }
 
     /**
-     * 规范化客户端 domain 过滤值为领域消息类型。
-     * 语义：v1 Core domain 会映射回内部消息类型，扩展 domain 保持原值。
+     * 规范化客户端 domain 过滤值。
      *
      * @param domain 客户端提交的 domain 过滤值
      * @return 领域消息类型过滤值，缺失时为 null
@@ -189,11 +176,6 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
         if (domain == null || domain.isBlank()) {
             return null;
         }
-        return switch (domain.trim()) {
-            case "Core:Text" -> TEXT_MESSAGE_TYPE;
-            case "Core:File" -> FILE_MESSAGE_TYPE;
-            case "Core:Voice" -> VOICE_MESSAGE_TYPE;
-            default -> domain.trim();
-        };
+        return domain.trim();
     }
 }

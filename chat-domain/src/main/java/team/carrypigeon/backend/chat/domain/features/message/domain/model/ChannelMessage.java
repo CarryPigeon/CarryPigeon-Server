@@ -1,83 +1,45 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.model;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * 频道消息领域模型。
- * 职责：表达 V0 群聊主链路中真实使用的通用消息字段。
- * 边界：当前阶段只内建 text 消息，但模型本身应支持未来消息类型的通用投影。
+ * 频道消息 canonical 领域模型。
+ * 职责：以统一字段表达任意 domain 消息，并把所有 domain 专属内容收口到 data。
+ * 边界：mentions 是通用提醒元数据；preview 是派生摘要；模型不承载编辑或旧载荷兼容字段。
  *
  * @param messageId 消息 ID
- * @param serverId 服务端 ID
- * @param conversationId 会话 ID
- * @param channelId 频道 ID
- * @param senderId 发送者账户 ID
- * @param messageType 消息类型
- * @param body 消息正文主体
- * @param previewText 面向列表或摘要展示的预览文本
- * @param searchableText 面向搜索索引的可检索文本
- * @param payload 结构化载荷
- * @param metadata 元数据
- * @param mentions 规范化提及列表 JSON
- * @param forwardedFrom 转发来源 JSON
+ * @param senderId 发送者账号 ID
+ * @param channelId 所属频道 ID
+ * @param domain 消息 domain
+ * @param domainVersion domain 版本
+ * @param data domain 专属 canonical 数据
+ * @param sendTime 服务端发送时间
+ * @param mentions 需要提醒的用户 ID 列表
+ * @param preview 服务端派生摘要
  * @param status 消息状态
- * @param createdAt 创建时间
- * @param editedAt 编辑时间
- * @param editVersion 编辑版本
  */
 public record ChannelMessage(
         long messageId,
-        String serverId,
-        long conversationId,
-        long channelId,
         long senderId,
-        String messageType,
-        String body,
-        String previewText,
-        String searchableText,
-        String payload,
-        String metadata,
-        String mentions,
-        String forwardedFrom,
-        String status,
-        Instant createdAt,
-        Instant editedAt,
-        long editVersion
+        long channelId,
+        String domain,
+        String domainVersion,
+        Map<String, Object> data,
+        Instant sendTime,
+        List<Long> mentions,
+        String preview,
+        MessageStatus status
 ) {
 
-    public ChannelMessage(
-            long messageId,
-            String serverId,
-            long conversationId,
-            long channelId,
-            long senderId,
-            String messageType,
-            String body,
-            String previewText,
-            String searchableText,
-            String payload,
-            String metadata,
-            String status,
-            Instant createdAt
-    ) {
-        this(
-                messageId,
-                serverId,
-                conversationId,
-                channelId,
-                senderId,
-                messageType,
-                body,
-                previewText,
-                searchableText,
-                payload,
-                metadata,
-                null,
-                null,
-                status,
-                createdAt,
-                null,
-                1L
-        );
+    public ChannelMessage {
+        data = data == null
+                ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(data));
+        mentions = mentions == null ? List.of() : List.copyOf(mentions);
+        preview = preview == null ? "" : preview;
     }
 }

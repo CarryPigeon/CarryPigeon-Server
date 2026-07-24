@@ -49,7 +49,7 @@ class ChannelDomainApiLifecycleTests {
         assertNotNull(context.channelRepository.savedChannel);
         ChannelMember ownerMember = context.channelMemberRepository.findByChannelIdAndAccountId(result.channelId(), 1001L).orElseThrow();
         assertEquals(ChannelMemberRole.OWNER, ownerMember.role());
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1001L));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1001L));
     }
 
     /**
@@ -67,7 +67,7 @@ class ChannelDomainApiLifecycleTests {
         );
 
         assertEquals("transaction rolled back", exception.getMessage());
-        assertEquals(0, context.channelRealtimePublisher.channelsChangedAccountIds.size());
+        assertEquals(0, context.realtimeEventApi.channelsChangedAccountIds.size());
     }
 
     /**
@@ -87,7 +87,7 @@ class ChannelDomainApiLifecycleTests {
         assertEquals("新的简介", result.brief());
         assertEquals("project-beta", context.channelRepository.channels.get(9L).name());
         assertEquals("新的简介", context.channelRepository.channels.get(9L).brief());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("profile"));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("profile"));
     }
 
     /**
@@ -169,18 +169,15 @@ class ChannelDomainApiLifecycleTests {
         context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
         context.messageRepository.save(new ChannelMessage(
                 5001L,
-                "550e8400-e29b-41d4-a716-446655440000",
-                9L,
-                9L,
                 1001L,
-                "text",
+                9L,
+                "Core:Text",
+                "1.0.0",
+                java.util.Map.of("text", "hello"),
+                BASE_TIME,
+                java.util.List.of(),
                 "hello",
-                "hello",
-                "hello",
-                null,
-                null,
-                "sent",
-                BASE_TIME
+                team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus.SENT
         ));
         ChannelLifecycleDomainApi service = context.createLifecycleService();
 

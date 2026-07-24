@@ -8,6 +8,8 @@
 - [包结构规范](architecture/包结构规范.md)
 - [依赖引入规范](architecture/依赖引入规范.md)
 - [基建文档](architecture/基建文档.md)
+- [消息数据模型设计](architecture/消息数据模型设计.md)
+- [插件系统设计](architecture/插件系统设计.md)
 
 ## 工程规范
 

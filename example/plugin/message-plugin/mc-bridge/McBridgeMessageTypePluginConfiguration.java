@@ -2,10 +2,9 @@ package example.plugin.messageplugin.mcbridge;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginGovernanceProperties;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.MessageTypePluginRegistrationSupport;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.chat.domain.features.plugin.config.PluginGovernanceProperties;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.MessageTypePluginRegistrationSupport;
 
 /**
  * Example configuration for the mc-bridge extension type.
@@ -17,13 +16,13 @@ public class McBridgeMessageTypePluginConfiguration {
     public static final String MESSAGE_TYPE = "mc-bridge";
 
     @Bean
-    public McBridgeMessagePlugin mcBridgeMessagePlugin(JsonProvider jsonProvider) {
-        return new McBridgeMessagePlugin(jsonProvider);
+    public McBridgeMessagePlugin mcBridgeMessagePlugin() {
+        return new McBridgeMessagePlugin();
     }
 
     @Bean
     public ChannelMessagePluginRegistration mcBridgeMessagePluginRegistration(
-            MessagePluginGovernanceProperties governanceProperties,
+            PluginGovernanceProperties governanceProperties,
             McBridgeMessagePlugin mcBridgeMessagePlugin
     ) {
         if (!governanceProperties.pluginEnabled()) {

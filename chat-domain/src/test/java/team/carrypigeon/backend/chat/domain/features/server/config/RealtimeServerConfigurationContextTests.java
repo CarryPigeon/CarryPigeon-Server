@@ -12,15 +12,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.LifecycleProcessor;
 import org.springframework.context.support.AbstractApplicationContext;
 import org.springframework.context.support.DefaultLifecycleProcessor;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.CustomMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.SystemMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.config.PluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.CustomMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.FileMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.SystemMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.ReplyTextMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.TextMessageTypePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.VoiceMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
@@ -32,6 +33,7 @@ import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfigurati
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,10 +56,11 @@ class RealtimeServerConfigurationContextTests {
             ))
             .withUserConfiguration(
                     TestSupportConfiguration.class,
-                    MessagePluginConfiguration.class,
+                    PluginConfiguration.class,
                     TextMessageTypePluginConfiguration.class,
                     CustomMessageTypePluginConfiguration.class,
                     SystemMessageTypePluginConfiguration.class,
+                    ReplyTextMessageTypePluginConfiguration.class,
                     FileMessageTypePluginConfiguration.class,
                     VoiceMessageTypePluginConfiguration.class
             );
@@ -79,6 +82,11 @@ class RealtimeServerConfigurationContextTests {
             return new ObjectMapper();
         }
 
+        @Bean
+        FileReferenceApi fileReferenceApi() {
+            return TestFeatureApis.fileReferences();
+        }
+
         @Bean(name = AbstractApplicationContext.LIFECYCLE_PROCESSOR_BEAN_NAME)
         LifecycleProcessor lifecycleProcessor() {
             return new DefaultLifecycleProcessor() {
@@ -90,28 +98,12 @@ class RealtimeServerConfigurationContextTests {
         }
 
         @Bean
-        AuthTokenService authTokenService() {
-            return new AuthTokenService() {
-                @Override
-                public String issueAccessToken(AuthAccount account, java.time.Instant expiresAt) {
-                    return "access-token";
-                }
-
-                @Override
-                public String issueRefreshToken(AuthAccount account, long refreshSessionId, java.time.Instant expiresAt) {
-                    return "refresh-token";
-                }
-
-                @Override
-                public AuthTokenClaims parseAccessToken(String accessToken) {
-                    return new AuthTokenClaims("1001", "carry-user", "access", 0L, java.time.Instant.parse("2026-04-20T12:30:00Z"));
-                }
-
-                @Override
-                public AuthTokenClaims parseRefreshToken(String refreshToken) {
-                    return new AuthTokenClaims("1001", "carry-user", "refresh", 2001L, java.time.Instant.parse("2026-05-04T12:00:00Z"));
-                }
-            };
+        AccessTokenAuthenticationApi accessTokenAuthenticationApi() {
+            return accessToken -> new AccessTokenAuthenticationResult(
+                    1001L,
+                    "carry-user",
+                    java.time.Instant.parse("2026-04-20T12:30:00Z")
+            );
         }
 
         @Bean

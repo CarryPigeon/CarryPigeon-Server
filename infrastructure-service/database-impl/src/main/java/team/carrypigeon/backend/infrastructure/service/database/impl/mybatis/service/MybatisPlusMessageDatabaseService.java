@@ -54,14 +54,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     /**
-     * 删除消息记录。
-     */
-    @Override
-    public void delete(long messageId) {
-        executeVoid(() -> messageMapper.deleteById(messageId), "failed to delete message");
-    }
-
-    /**
      * 查询频道内早于游标的消息记录。
      */
     @Override
@@ -153,44 +145,30 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     private MessageRecord toRecord(MessageEntity entity) {
         return new MessageRecord(
                 entity.getMessageId(),
-                entity.getServerId(),
-                entity.getConversationId(),
-                entity.getChannelId(),
                 entity.getSenderId(),
-                entity.getMessageType(),
-                entity.getBody(),
-                entity.getPreviewText(),
-                entity.getSearchableText(),
-                entity.getPayload(),
-                entity.getMetadata(),
+                entity.getChannelId(),
+                entity.getDomain(),
+                entity.getDomainVersion(),
+                entity.getData(),
+                entity.getSendTime(),
                 entity.getMentions(),
-                entity.getForwardedFrom(),
-                entity.getStatus(),
-                entity.getCreatedAt(),
-                entity.getEditedAt(),
-                entity.getEditVersion() == null ? 1L : entity.getEditVersion()
+                entity.getPreview(),
+                entity.getStatus()
         );
     }
 
     private MessageEntity toEntity(MessageRecord record) {
         MessageEntity entity = new MessageEntity();
         entity.setMessageId(record.messageId());
-        entity.setServerId(record.serverId());
-        entity.setConversationId(record.conversationId());
-        entity.setChannelId(record.channelId());
         entity.setSenderId(record.senderId());
-        entity.setMessageType(record.messageType());
-        entity.setBody(record.body());
-        entity.setPreviewText(record.previewText());
-        entity.setSearchableText(record.searchableText());
-        entity.setPayload(record.payload());
-        entity.setMetadata(record.metadata());
+        entity.setChannelId(record.channelId());
+        entity.setDomain(record.domain());
+        entity.setDomainVersion(record.domainVersion());
+        entity.setData(record.data());
+        entity.setSendTime(record.sendTime());
         entity.setMentions(record.mentions());
-        entity.setForwardedFrom(record.forwardedFrom());
+        entity.setPreview(record.preview());
         entity.setStatus(record.status());
-        entity.setCreatedAt(record.createdAt());
-        entity.setEditedAt(record.editedAt());
-        entity.setEditVersion(record.editVersion());
         return entity;
     }
 

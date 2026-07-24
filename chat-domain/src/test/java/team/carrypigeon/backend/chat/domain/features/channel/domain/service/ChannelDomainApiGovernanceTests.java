@@ -167,8 +167,8 @@ class ChannelDomainApiGovernanceTests {
 
         assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals("MEMBER_KICKED", context.channelAuditLogRepository.logs.getFirst().actionType());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("members"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -189,8 +189,8 @@ class ChannelDomainApiGovernanceTests {
         assertEquals(BASE_TIME.plusSeconds(600), result.expiresAt());
         assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals(1002L, context.channelBanRepository.channelBan.bannedAccountId());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("bans"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("bans"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**

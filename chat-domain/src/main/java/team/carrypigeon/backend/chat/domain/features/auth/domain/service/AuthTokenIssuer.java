@@ -4,8 +4,8 @@ import java.time.Instant;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -19,7 +19,7 @@ class AuthTokenIssuer {
 
     private final AuthRefreshSessionRepository authRefreshSessionRepository;
     private final TokenHasher tokenHasher;
-    private final AuthTokenService authTokenService;
+    private final AuthTokenCodec authTokenCodec;
     private final AuthTokenSettings authTokenSettings;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
@@ -27,14 +27,14 @@ class AuthTokenIssuer {
     AuthTokenIssuer(
             AuthRefreshSessionRepository authRefreshSessionRepository,
             TokenHasher tokenHasher,
-            AuthTokenService authTokenService,
+            AuthTokenCodec authTokenCodec,
             AuthTokenSettings authTokenSettings,
             IdGenerator idGenerator,
             TimeProvider timeProvider
     ) {
         this.authRefreshSessionRepository = authRefreshSessionRepository;
         this.tokenHasher = tokenHasher;
-        this.authTokenService = authTokenService;
+        this.authTokenCodec = authTokenCodec;
         this.authTokenSettings = authTokenSettings;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -53,8 +53,8 @@ class AuthTokenIssuer {
         long refreshSessionId = idGenerator.nextLongId();
         Instant accessTokenExpiresAt = timeProvider.nowInstant().plus(authTokenSettings.accessTokenTtl());
         Instant refreshTokenExpiresAt = timeProvider.nowInstant().plus(authTokenSettings.refreshTokenTtl());
-        String accessToken = authTokenService.issueAccessToken(account, accessTokenExpiresAt);
-        String refreshToken = authTokenService.issueRefreshToken(account, refreshSessionId, refreshTokenExpiresAt);
+        String accessToken = authTokenCodec.issueAccessToken(account, accessTokenExpiresAt);
+        String refreshToken = authTokenCodec.issueRefreshToken(account, refreshSessionId, refreshTokenExpiresAt);
 
         authRefreshSessionRepository.save(new AuthRefreshSession(
                 refreshSessionId,

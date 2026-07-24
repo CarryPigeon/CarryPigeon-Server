@@ -31,6 +31,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
@@ -407,7 +408,9 @@ public class StarterTestRuntimeConfiguration {
             public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
                 String normalizedKeyword = keyword == null ? "" : keyword.trim();
                 return state.messagesByChannelId.getOrDefault(channelId, List.of()).stream()
-                        .filter(message -> message.searchableText() != null && message.searchableText().contains(normalizedKeyword))
+                        .filter(message -> message.status() == MessageStatus.SENT)
+                        .filter(message -> message.preview().contains(normalizedKeyword)
+                                || String.valueOf(message.data()).contains(normalizedKeyword))
                         .sorted(Comparator.comparingLong(ChannelMessage::messageId).reversed())
                         .limit(limit)
                         .toList();

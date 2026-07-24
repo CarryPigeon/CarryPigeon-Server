@@ -10,15 +10,12 @@ import io.netty.handler.timeout.IdleStateHandler;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
@@ -29,8 +26,8 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * Netty 文本消息处理器。
- * 职责：承接 v1 WS 首帧 auth/reauth、ping/pong、事件回放与入站命令分发。
- * 边界：只负责协议解析与结果回写，不在处理器内承载消息业务规则。
+ * 职责：承接 v1 WS 首帧 auth/reauth、ping/pong 与事件回放。
+ * 边界：聊天写入只走 HTTP，本处理器不接受消息创建命令。
  */
 public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 
@@ -39,32 +36,26 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final JsonProvider jsonProvider;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
-    private final AuthTokenService authTokenService;
+    private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier;
-    private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
     private final RealtimeWebSocketDebugLogger debugLogger;
 
     public RealtimeChannelHandler(
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthTokenService authTokenService,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
-            Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier,
-            Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier
+            RealtimeSessionRegistry realtimeSessionRegistry
     ) {
         this(
                 jsonProvider,
                 idGenerator,
                 timeProvider,
-                authTokenService,
+                accessTokenAuthenticationApi,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                channelMessagePublishingApiSupplier,
-                realtimeInboundMessageDispatcherSupplier,
                 false
         );
     }
@@ -73,21 +64,17 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthTokenService authTokenService,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier,
-            Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier,
             boolean requestLogEnabled
     ) {
         this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.authTokenService = authTokenService;
+        this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiSupplier;
-        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherSupplier;
         this.debugLogger = requestLogEnabled
                 ? new RealtimeWebSocketDebugLogger(true)
                 : RealtimeWebSocketDebugLogger.disabled();
@@ -121,7 +108,9 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                     case "auth" -> handleAuth(context, request, false);
                     case "reauth" -> handleAuth(context, request, true);
                     case "ping" -> context.writeAndFlush(serverFrame("pong", null, null, null));
-                    default -> handleCommand(context, request);
+                    default -> context.writeAndFlush(commandError(
+                            request.id(), request.type() + ".err", "validation_failed", "unsupported realtime command"
+                    ));
                 }
             } catch (InfrastructureException exception) {
                 debugLogger.frameRejected(context, "request_body_invalid", exception);
@@ -191,8 +180,11 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             return;
         }
         try {
-            AuthTokenClaims claims = authTokenService.parseAccessToken(accessToken);
-            AuthenticatedAccount principal = new AuthenticatedAccount(parseAccessSubjectAccountId(claims), claims.username());
+            AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
+            AuthenticatedAccount principal = new AuthenticatedAccount(
+                    authentication.accountId(),
+                    authentication.username()
+            );
             AuthenticatedAccount previousPrincipal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
             if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {
                 realtimeSessionRegistry.unregister(previousPrincipal.accountId(), context.channel());
@@ -204,8 +196,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                     reauth ? "reauth.ok" : "auth.ok",
                     request.id(),
                     Map.of(
-                            "uid", claims.subject(),
-                            "expires_at", claims.expiresAt().toEpochMilli(),
+                            "uid", Long.toString(authentication.accountId()),
+                            "expires_at", authentication.expiresAt().toEpochMilli(),
                             "server_id", serverIdentityProperties.id()
                     ),
                     null
@@ -214,25 +206,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         } catch (ProblemException exception) {
             debugLogger.authResult(context, request, reauth, false, mapReason(exception));
             context.writeAndFlush(commandError(request.id(), reauth ? "reauth.err" : "auth.err", mapReason(exception), exception.getMessage()));
-        }
-    }
-
-    /**
-     * 从 access token claims 中解析实时连接账号 ID。
-     * 失败语义：token subject 不是正数账号 ID 时返回非法 access token，供 WS auth 映射为 unauthorized。
-     *
-     * @param claims 已校验的 access token claims
-     * @return 当前实时连接账号 ID
-     */
-    private long parseAccessSubjectAccountId(AuthTokenClaims claims) {
-        try {
-            long accountId = Long.parseLong(claims.subject());
-            if (accountId <= 0L) {
-                throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
-            }
-            return accountId;
-        } catch (NumberFormatException exception) {
-            throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
         }
     }
 
@@ -255,35 +228,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         }
         for (RealtimeSessionRegistry.StoredRealtimeEvent event : events) {
             context.writeAndFlush(eventFrame(event));
-        }
-    }
-
-    /**
-     * 分发已认证连接上的业务命令。
-     * 约束：命令必须在认证后执行，且只通过 realtime 入站分发器调用领域 API。
-     *
-     * @param context Netty 通道上下文
-     * @param request 客户端业务命令
-     */
-    private void handleCommand(ChannelHandlerContext context, RealtimeClientMessage request) {
-        AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
-        if (principal == null) {
-            debugLogger.frameRejected(context, "unauthorized", null);
-            context.writeAndFlush(commandError(request.id(), request.type() + ".err", "unauthorized", "authentication is required"));
-            return;
-        }
-        ChannelMessagePublishingApi channelMessagePublishingApi = channelMessagePublishingApiSupplier.get();
-        RealtimeInboundMessageDispatcher dispatcher = realtimeInboundMessageDispatcherSupplier.get();
-        if (channelMessagePublishingApi == null || dispatcher == null) {
-            debugLogger.frameRejected(context, "realtime_message_service_unavailable", null);
-            context.writeAndFlush(commandError(request.id(), request.type() + ".err", "internal_error", "realtime message service is unavailable"));
-            return;
-        }
-        try {
-            dispatcher.dispatch(principal, request, channelMessagePublishingApi);
-        } catch (ProblemException exception) {
-            debugLogger.frameRejected(context, mapReason(exception), exception);
-            context.writeAndFlush(commandError(request.id(), request.type() + ".err", mapReason(exception), exception.getMessage()));
         }
     }
 
@@ -311,9 +255,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                      "channel_message_recall_forbidden",
                      "system_channel_membership_required",
                      "system_channel_members_hidden",
-                     "system_channel_required",
-                     "message_not_editable",
-                     "message_edit_window_expired" -> "forbidden";
+                     "system_channel_required" -> "forbidden";
                 default -> exception.reason();
             };
             case VALIDATION -> switch (exception.reason()) {

@@ -1,9 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
 import java.util.List;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
@@ -13,14 +15,25 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 class ChannelAfterCommitPublisher {
 
-    private final ChannelRealtimePublisher channelRealtimePublisher;
+    private final RealtimeEventApi realtimeEventApi;
 
-    ChannelAfterCommitPublisher(ChannelRealtimePublisher channelRealtimePublisher) {
-        this.channelRealtimePublisher = channelRealtimePublisher;
+    ChannelAfterCommitPublisher(RealtimeEventApi realtimeEventApi) {
+        this.realtimeEventApi = realtimeEventApi;
     }
 
     void publishReadStateUpdatedAfterCommit(AfterCommitExecutor afterCommit, ChannelReadState readState) {
-        afterCommit.execute(() -> channelRealtimePublisher.publishReadStateUpdated(readState));
+        afterCommit.execute(() -> realtimeEventApi.publish(new PublishRealtimeEventCommand(
+                readState.channelId(),
+                "read_state.updated",
+                Map.of(
+                        "cid", Long.toString(readState.channelId()),
+                        "uid", Long.toString(readState.accountId()),
+                        "last_read_mid", Long.toString(readState.lastReadMessageId()),
+                        "last_read_time", readState.lastReadTime().toEpochMilli()
+                ),
+                List.of(readState.accountId()),
+                true
+        )));
     }
 
     void publishChannelChangedAfterCommit(
@@ -29,10 +42,26 @@ class ChannelAfterCommitPublisher {
             String scope,
             List<Long> recipientAccountIds
     ) {
-        afterCommit.execute(() -> channelRealtimePublisher.publishChannelChanged(channel, scope, recipientAccountIds));
+        afterCommit.execute(() -> realtimeEventApi.publish(new PublishRealtimeEventCommand(
+                channel.id(),
+                "channel.changed",
+                Map.of(
+                        "cid", Long.toString(channel.id()),
+                        "scope", scope == null || scope.isBlank() ? "profile" : scope,
+                        "hint", "refresh"
+                ),
+                recipientAccountIds,
+                true
+        )));
     }
 
     void publishChannelsChangedAfterCommit(AfterCommitExecutor afterCommit, long accountId) {
-        afterCommit.execute(() -> channelRealtimePublisher.publishChannelsChanged(accountId));
+        afterCommit.execute(() -> realtimeEventApi.publish(new PublishRealtimeEventCommand(
+                null,
+                "channels.changed",
+                Map.of("hint", "refresh"),
+                List.of(accountId),
+                false
+        )));
     }
 }

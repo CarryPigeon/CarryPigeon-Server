@@ -60,7 +60,12 @@
 - `chat-domain` must be organized by `features` first, then by layer.
 - Keep `shared`.
 - Keep feature-level `config`.
+- Use top-level `config/http` for HTTP policies that affect all features; do not place global `/api/**` authentication policy inside `auth` feature config.
 - Keep `repository` in the domain layer as business-semantic abstraction.
+- `domain/api` is the only cross-feature entry point. Cross-feature signatures may use the target feature's `command`, `query`, `projection`, and `draft` types.
+- Do not reference another feature's `model`, `repository`, `service`, `capability`, `extension`, `support`, `config`, or `controller` packages.
+- Use `domain/capability` for feature-internal required abilities and `domain/extension` for feature-internal extension points. Do not create generic `domain/port` packages.
+- Email verification belongs to the `verification` feature; SMTP transport remains in `infrastructure-service/mail-*`.
 - Database reads and writes must be implemented through `infrastructure-service`, not directly in `chat-domain`.
 
 ## Build, Test & Run

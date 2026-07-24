@@ -19,6 +19,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageIdempotencyDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.NotificationPreferenceDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -34,6 +35,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MentionMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageIdempotencyMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.NotificationPreferenceMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileMapper;
 
@@ -75,6 +77,7 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(ChannelReadStateMapper.class, () -> mock(ChannelReadStateMapper.class))
                 .withBean(ChannelPinMapper.class, () -> mock(ChannelPinMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
+                .withBean(MessageIdempotencyMapper.class, () -> mock(MessageIdempotencyMapper.class))
                 .withBean(MentionMapper.class, () -> mock(MentionMapper.class))
                 .withBean(NotificationPreferenceMapper.class, () -> mock(NotificationPreferenceMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
@@ -89,6 +92,7 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).hasSingleBean(ChannelReadStateDatabaseService.class);
                     assertThat(context).hasSingleBean(ChannelPinDatabaseService.class);
                     assertThat(context).hasSingleBean(MessageDatabaseService.class);
+                    assertThat(context).hasSingleBean(MessageIdempotencyDatabaseService.class);
                     assertThat(context).hasSingleBean(MentionDatabaseService.class);
                     assertThat(context).hasSingleBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).hasSingleBean(UserProfileDatabaseService.class);
@@ -120,6 +124,7 @@ class DatabaseServiceAutoConfigurationTests {
                 .withBean(ChannelReadStateMapper.class, () -> mock(ChannelReadStateMapper.class))
                 .withBean(ChannelPinMapper.class, () -> mock(ChannelPinMapper.class))
                 .withBean(MessageMapper.class, () -> mock(MessageMapper.class))
+                .withBean(MessageIdempotencyMapper.class, () -> mock(MessageIdempotencyMapper.class))
                 .withBean(MentionMapper.class, () -> mock(MentionMapper.class))
                 .withBean(NotificationPreferenceMapper.class, () -> mock(NotificationPreferenceMapper.class))
                 .withBean(PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
@@ -134,6 +139,7 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(ChannelReadStateDatabaseService.class);
                     assertThat(context).doesNotHaveBean(ChannelPinDatabaseService.class);
                     assertThat(context).doesNotHaveBean(MessageDatabaseService.class);
+                    assertThat(context).doesNotHaveBean(MessageIdempotencyDatabaseService.class);
                     assertThat(context).doesNotHaveBean(MentionDatabaseService.class);
                     assertThat(context).doesNotHaveBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).doesNotHaveBean(UserProfileDatabaseService.class);

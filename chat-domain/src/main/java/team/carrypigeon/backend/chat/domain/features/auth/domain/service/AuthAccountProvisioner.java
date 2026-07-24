@@ -1,15 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.InitializeChannelMembershipsCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.command.InitializeUserAccountProfileCommand;
 
 /**
  * 鉴权账号开通协作对象。
@@ -18,21 +13,15 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
  */
 class AuthAccountProvisioner {
 
-    private final UserProfileRepository userProfileRepository;
-    private final ChannelRepository channelRepository;
-    private final ChannelMemberRepository channelMemberRepository;
-    private final TimeProvider timeProvider;
+    private final UserAccountProvisioningApi userAccountProvisioningApi;
+    private final ChannelAccountProvisioningApi channelAccountProvisioningApi;
 
     AuthAccountProvisioner(
-            UserProfileRepository userProfileRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            TimeProvider timeProvider
+            UserAccountProvisioningApi userAccountProvisioningApi,
+            ChannelAccountProvisioningApi channelAccountProvisioningApi
     ) {
-        this.userProfileRepository = userProfileRepository;
-        this.channelRepository = channelRepository;
-        this.channelMemberRepository = channelMemberRepository;
-        this.timeProvider = timeProvider;
+        this.userAccountProvisioningApi = userAccountProvisioningApi;
+        this.channelAccountProvisioningApi = channelAccountProvisioningApi;
     }
 
     /**
@@ -45,31 +34,15 @@ class AuthAccountProvisioner {
      * @param nickname 初始用户资料昵称
      */
     void provisionAccount(AuthAccount account, String nickname) {
-        userProfileRepository.save(UserProfile.initial(
+        userAccountProvisioningApi.initializeProfile(new InitializeUserAccountProfileCommand(
                 account.id(),
                 nickname,
                 account.createdAt(),
                 account.updatedAt()
         ));
-        Channel defaultChannel = channelRepository.findDefaultChannel()
-                .orElseThrow(() -> ProblemException.fail("default_channel_missing", "default channel does not exist"));
-        channelMemberRepository.save(new ChannelMember(
-                defaultChannel.id(),
+        channelAccountProvisioningApi.initializeMemberships(new InitializeChannelMembershipsCommand(
                 account.id(),
-                ChannelMemberRole.MEMBER,
-                timeProvider.nowInstant(),
-                null
+                account.createdAt()
         ));
-        Channel systemChannel = channelRepository.findSystemChannel()
-                .orElseThrow(() -> ProblemException.fail("system_channel_missing", "system channel does not exist"));
-        if (!channelMemberRepository.exists(systemChannel.id(), account.id())) {
-            channelMemberRepository.save(new ChannelMember(
-                    systemChannel.id(),
-                    account.id(),
-                    ChannelMemberRole.MEMBER,
-                    timeProvider.nowInstant(),
-                    null
-            ));
-        }
     }
 }

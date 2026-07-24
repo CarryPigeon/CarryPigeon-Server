@@ -13,15 +13,19 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefre
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelAccountProvisioningDomainApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserAccountProvisioningDomainApi;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -54,9 +58,8 @@ final class AuthDomainApiTestSupport {
     ) {
         return new AuthAccountDomainApi(
                 accountRepository,
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
+                new UserAccountProvisioningDomainApi(userProfileRepository),
+                new ChannelAccountProvisioningDomainApi(channelRepository, channelMemberRepository),
                 new PrefixPasswordHasher(),
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
@@ -70,15 +73,14 @@ final class AuthDomainApiTestSupport {
             UserProfileRepository userProfileRepository,
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
-            AuthTokenService authTokenService,
+            AuthTokenCodec authTokenService,
             TransactionRunner transactionRunner
     ) {
         return new AuthSessionDomainApi(
                 accountRepository,
                 refreshSessionRepository,
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
+                new UserAccountProvisioningDomainApi(userProfileRepository),
+                new ChannelAccountProvisioningDomainApi(channelRepository, channelMemberRepository),
                 new PrefixPasswordHasher(),
                 token -> "hash::" + token,
                 authTokenService,
@@ -90,22 +92,22 @@ final class AuthDomainApiTestSupport {
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                 transactionRunner,
-                new NoopEmailVerificationCodeService()
+                new NoopEmailVerificationApi()
         );
     }
 
     /**
-     * `NoopEmailVerificationCodeService` 验证码端口替身。
+     * `NoopEmailVerificationApi` 验证码 API 替身。
      * 职责：让会话领域 API 测试显式装配验证码边界，不验证发送和校验实现。
      */
-    private static final class NoopEmailVerificationCodeService implements EmailVerificationCodeService {
+    private static final class NoopEmailVerificationApi implements EmailVerificationApi {
 
         @Override
-        public void issueCode(String email) {
+        public void issueCode(IssueEmailVerificationCodeCommand command) {
         }
 
         @Override
-        public void verifyCode(String email, String code) {
+        public void verifyCode(VerifyEmailVerificationCodeCommand command) {
         }
     }
 
@@ -372,7 +374,7 @@ final class AuthDomainApiTestSupport {
      * `FakeAuthTokenService` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
-    static final class FakeAuthTokenService implements AuthTokenService {
+    static final class FakeAuthTokenService implements AuthTokenCodec {
 
         AuthTokenClaims refreshClaims;
 

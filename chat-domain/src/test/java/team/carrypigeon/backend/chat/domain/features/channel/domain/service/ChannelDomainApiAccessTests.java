@@ -94,15 +94,19 @@ class ChannelDomainApiAccessTests {
         TestContext context = newContext();
         context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
         context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.MEMBER, BASE_TIME, null));
-        context.messageRepository.save(new ChannelMessage(5001L, "550e8400-e29b-41d4-a716-446655440000", 9L, 9L, 1002L, "text", "hello", "hello", "hello", null, null, "sent", BASE_TIME));
+        context.messageRepository.save(new ChannelMessage(
+                5001L, 1002L, 9L, "Core:Text", "1.0.0", java.util.Map.of("text", "hello"),
+                BASE_TIME, java.util.List.of(), "hello",
+                team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus.SENT
+        ));
         ChannelAccessDomainApi service = context.createAccessService();
 
         var result = service.updateChannelReadState(new UpdateChannelReadStateCommand(1001L, 9L, 5001L, BASE_TIME.plusSeconds(5).toEpochMilli()));
 
         assertEquals("9", result.cid());
         assertEquals("5001", result.lastReadMid());
-        assertEquals(1, context.channelRealtimePublisher.readStateUpdates.size());
-        assertEquals(5001L, context.channelRealtimePublisher.readStateUpdates.getFirst().lastReadMessageId());
+        assertEquals(1, context.realtimeEventApi.readStateUpdates.size());
+        assertEquals(5001L, context.realtimeEventApi.readStateUpdates.getFirst().lastReadMessageId());
     }
 
     /**

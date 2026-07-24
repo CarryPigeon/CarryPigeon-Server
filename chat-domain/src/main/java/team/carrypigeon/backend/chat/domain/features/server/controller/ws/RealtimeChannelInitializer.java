@@ -6,13 +6,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
-import java.util.function.Supplier;
-import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeInboundMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
@@ -29,11 +25,9 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final JsonProvider jsonProvider;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
-    private final AuthTokenService authTokenService;
+    private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final Supplier<ChannelMessagePublishingApi> channelMessagePublishingApiSupplier;
-    private final Supplier<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherSupplier;
     private final boolean requestLogEnabled;
 
     public RealtimeChannelInitializer(
@@ -41,22 +35,18 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthTokenService authTokenService,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
-            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider,
             boolean requestLogEnabled
     ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.authTokenService = authTokenService;
+        this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.channelMessagePublishingApiSupplier = channelMessagePublishingApiProvider::getIfAvailable;
-        this.realtimeInboundMessageDispatcherSupplier = realtimeInboundMessageDispatcherProvider::getIfAvailable;
         this.requestLogEnabled = requestLogEnabled;
     }
 
@@ -65,32 +55,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
             JsonProvider jsonProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            AuthTokenService authTokenService,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
-            ObjectProvider<ChannelMessagePublishingApi> channelMessagePublishingApiProvider,
-            ObjectProvider<RealtimeInboundMessageDispatcher> realtimeInboundMessageDispatcherProvider
-    ) {
-        this(
-                properties,
-                jsonProvider,
-                idGenerator,
-                timeProvider,
-                authTokenService,
-                serverIdentityProperties,
-                realtimeSessionRegistry,
-                channelMessagePublishingApiProvider,
-                realtimeInboundMessageDispatcherProvider,
-                false
-        );
-    }
-
-    public RealtimeChannelInitializer(
-            RealtimeServerProperties properties,
-            JsonProvider jsonProvider,
-            IdGenerator idGenerator,
-            TimeProvider timeProvider,
-            AuthTokenService authTokenService,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry
     ) {
@@ -99,51 +64,10 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 jsonProvider,
                 idGenerator,
                 timeProvider,
-                authTokenService,
+                accessTokenAuthenticationApi,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                new ObjectProvider<>() {
-                    @Override
-                    public ChannelMessagePublishingApi getObject(Object... args) {
-                        return null;
-                    }
-
-                    @Override
-                    public ChannelMessagePublishingApi getIfAvailable() {
-                        return null;
-                    }
-
-                    @Override
-                    public ChannelMessagePublishingApi getIfUnique() {
-                        return null;
-                    }
-
-                    @Override
-                    public ChannelMessagePublishingApi getObject() {
-                        return null;
-                    }
-                },
-                new ObjectProvider<>() {
-                    @Override
-                    public RealtimeInboundMessageDispatcher getObject(Object... args) {
-                        return null;
-                    }
-
-                    @Override
-                    public RealtimeInboundMessageDispatcher getIfAvailable() {
-                        return null;
-                    }
-
-                    @Override
-                    public RealtimeInboundMessageDispatcher getIfUnique() {
-                        return null;
-                    }
-
-                    @Override
-                    public RealtimeInboundMessageDispatcher getObject() {
-                        return null;
-                    }
-                }
+                false
         );
     }
 
@@ -159,11 +83,9 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 jsonProvider,
                 idGenerator,
                 timeProvider,
-                authTokenService,
+                accessTokenAuthenticationApi,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
-                channelMessagePublishingApiSupplier,
-                realtimeInboundMessageDispatcherSupplier,
                 requestLogEnabled
         ));
     }

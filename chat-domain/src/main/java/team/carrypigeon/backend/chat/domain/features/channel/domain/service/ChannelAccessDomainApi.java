@@ -10,15 +10,16 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelMessageBoundary;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
@@ -40,10 +41,10 @@ public class ChannelAccessDomainApi extends AbstractChannelDomainSupport impleme
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            ChannelMessageBoundary channelMessageBoundary,
-            UserProfileRepository userProfileRepository,
+            MessageReferenceApi messageReferenceApi,
+            UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            ChannelRealtimePublisher channelRealtimePublisher,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
@@ -55,10 +56,10 @@ public class ChannelAccessDomainApi extends AbstractChannelDomainSupport impleme
                 channelBanRepository,
                 channelAuditLogRepository,
                 channelReadStateRepository,
-                channelMessageBoundary,
-                userProfileRepository,
+                messageReferenceApi,
+                userProfileApi,
                 channelGovernancePolicy,
-                channelRealtimePublisher,
+                realtimeEventApi,
                 idGenerator,
                 timeProvider,
                 transactionRunner
@@ -108,7 +109,7 @@ public class ChannelAccessDomainApi extends AbstractChannelDomainSupport impleme
         return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = requireChannel(command.channelId());
             requireMember(channel.id(), command.accountId());
-            ChannelMessageBoundary.ChannelMessageSnapshot message = requireMessage(command.lastReadMessageId());
+            MessageReferenceResult message = requireMessage(command.lastReadMessageId());
             if (message.channelId() != channel.id()) {
                 throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
             }

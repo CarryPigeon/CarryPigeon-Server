@@ -51,8 +51,8 @@ class ChannelDomainApiApplicationFlowTests {
         assertEquals(1002L, result.inviteeAccountId());
         assertEquals("PENDING", result.status());
         assertEquals("PENDING", context.channelInviteRepository.savedInvite.status().name());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("applications"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -71,8 +71,8 @@ class ChannelDomainApiApplicationFlowTests {
         assertEquals(1002L, result.accountId());
         assertEquals("PENDING", result.status());
         assertEquals(1002L, context.channelInviteRepository.savedInvite.inviteeAccountId());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("applications"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -152,9 +152,9 @@ class ChannelDomainApiApplicationFlowTests {
         assertEquals("ACCEPTED", result.status());
         assertEquals(true, context.channelMemberRepository.exists(9L, 1002L));
         assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("applications"));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("members"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -261,9 +261,9 @@ class ChannelDomainApiApplicationFlowTests {
         ChannelMember acceptedMember = context.channelMemberRepository.findByChannelIdAndAccountId(9L, 1002L).orElseThrow();
         assertEquals(ChannelMemberRole.MEMBER, acceptedMember.role());
         assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("applications"));
-        assertTrue(context.channelRealtimePublisher.channelChangedScopes.contains("members"));
-        assertTrue(context.channelRealtimePublisher.channelsChangedAccountIds.contains(1002L));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("applications"));
+        assertTrue(context.realtimeEventApi.channelChangedScopes.contains("members"));
+        assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
     }
 
     /**
@@ -309,8 +309,8 @@ class ChannelDomainApiApplicationFlowTests {
         );
 
         assertEquals("transaction rolled back", exception.getMessage());
-        assertEquals(0, context.channelRealtimePublisher.channelChangedScopes.size());
-        assertEquals(0, context.channelRealtimePublisher.channelsChangedAccountIds.size());
+        assertEquals(0, context.realtimeEventApi.channelChangedScopes.size());
+        assertEquals(0, context.realtimeEventApi.channelsChangedAccountIds.size());
     }
 
     /**

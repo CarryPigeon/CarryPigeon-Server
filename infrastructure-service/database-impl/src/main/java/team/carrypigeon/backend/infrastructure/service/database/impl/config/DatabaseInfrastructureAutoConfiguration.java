@@ -10,9 +10,11 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcPluginMigrationDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.startup.DatabaseInitializationCheck;
 import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
 
@@ -77,5 +79,17 @@ public class DatabaseInfrastructureAutoConfiguration {
     @ConditionalOnMissingBean
     public TransactionRunner transactionRunner(PlatformTransactionManager transactionManager) {
         return new SpringTransactionRunner(new TransactionTemplate(transactionManager));
+    }
+
+    /**
+     * 装配插件迁移历史数据库服务。
+     *
+     * @param jdbcClient Spring JDBC 客户端
+     * @return 插件迁移历史服务
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PluginMigrationDatabaseService pluginMigrationDatabaseService(JdbcClient jdbcClient) {
+        return new JdbcPluginMigrationDatabaseService(jdbcClient);
     }
 }

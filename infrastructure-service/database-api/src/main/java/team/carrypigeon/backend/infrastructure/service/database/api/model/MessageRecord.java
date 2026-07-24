@@ -3,81 +3,31 @@ package team.carrypigeon.backend.infrastructure.service.database.api.model;
 import java.time.Instant;
 
 /**
- * 消息数据库记录契约。
- * 职责：表达消息查询、搜索、写入与更新共用的持久化投影字段。
- * 边界：只服务消息数据库契约，不承担领域业务决策语义。
+ * 消息数据库 canonical 记录契约。
+ * 职责：表达消息查询、写入与撤回更新共用的最小持久化投影。
+ * 边界：data 与 mentions 保持 JSON 文本，不在 database-api 解释 domain 业务结构。
  *
  * @param messageId 消息 ID
- * @param serverId 服务端 ID
- * @param conversationId 会话 ID
- * @param channelId 频道 ID
  * @param senderId 发送者账户 ID
- * @param messageType 消息类型
- * @param body 消息正文主体
- * @param previewText 预览文本
- * @param searchableText 可检索文本
- * @param payload 结构化载荷
- * @param metadata 元数据
- * @param mentions 规范化提及列表 JSON
- * @param forwardedFrom 转发来源 JSON
+ * @param channelId 频道 ID
+ * @param domain 消息 domain
+ * @param domainVersion domain 版本
+ * @param data domain 专属数据 JSON object
+ * @param sendTime 发送时间
+ * @param mentions 提醒用户 ID JSON array
+ * @param preview 通用摘要
  * @param status 消息状态
- * @param createdAt 创建时间
- * @param editedAt 编辑时间
- * @param editVersion 编辑版本
  */
 public record MessageRecord(
         long messageId,
-        String serverId,
-        long conversationId,
-        long channelId,
         long senderId,
-        String messageType,
-        String body,
-        String previewText,
-        String searchableText,
-        String payload,
-        String metadata,
+        long channelId,
+        String domain,
+        String domainVersion,
+        String data,
+        Instant sendTime,
         String mentions,
-        String forwardedFrom,
-        String status,
-        Instant createdAt,
-        Instant editedAt,
-        long editVersion
+        String preview,
+        String status
 ) {
-
-    public MessageRecord(
-            long messageId,
-            String serverId,
-            long conversationId,
-            long channelId,
-            long senderId,
-            String messageType,
-            String body,
-            String previewText,
-            String searchableText,
-            String payload,
-            String metadata,
-            String status,
-            Instant createdAt
-    ) {
-        this(
-                messageId,
-                serverId,
-                conversationId,
-                channelId,
-                senderId,
-                messageType,
-                body,
-                previewText,
-                searchableText,
-                payload,
-                metadata,
-                null,
-                null,
-                status,
-                createdAt,
-                null,
-                1L
-        );
-    }
 }

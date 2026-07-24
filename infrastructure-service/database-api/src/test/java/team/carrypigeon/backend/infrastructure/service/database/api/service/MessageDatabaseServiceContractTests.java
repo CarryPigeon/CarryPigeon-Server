@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * MessageDatabaseService 行为契约测试。
- * 职责：锁定消息数据库抽象的默认删除/after 查询/高级搜索 fallback 语义与读写扩展语义。
+ * 职责：锁定 canonical 消息数据库抽象的 after 查询、高级搜索 fallback 与读写语义。
  * 边界：只验证接口默认行为，不依赖具体数据库实现。
  */
 @Tag("contract")
@@ -22,35 +22,16 @@ class MessageDatabaseServiceContractTests {
 
     private static final MessageRecord RECORD = new MessageRecord(
             5001L,
-            "srv-5001",
-            9L,
-            9L,
             1001L,
-            "text",
+            9L,
+            "Core:Text",
+            "1.0.0",
+            "{\"text\":\"hello\"}",
+            Instant.parse("2026-04-22T00:00:00Z"),
+            "[]",
             "hello",
-            "hello",
-            "hello",
-            null,
-            null,
-            "sent",
-            Instant.parse("2026-04-22T00:00:00Z")
+            "sent"
     );
-
-    /**
-     * 验证未覆盖默认删除能力时会立即 fail-fast。
-     */
-    @Test
-    @DisplayName("delete default implementation throws unsupported operation")
-    void delete_defaultImplementation_throwsUnsupportedOperation() {
-        MessageDatabaseService service = new MinimalMessageDatabaseService();
-
-        UnsupportedOperationException exception = assertThrows(
-                UnsupportedOperationException.class,
-                () -> service.delete(5001L)
-        );
-
-        assertEquals("message delete is not supported", exception.getMessage());
-    }
 
     /**
      * 验证未覆盖默认 after 查询能力时会立即 fail-fast。

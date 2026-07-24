@@ -6,8 +6,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
 /**
@@ -18,14 +18,14 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 class ChannelProjectionMapper {
 
     private final ChannelMemberRepository channelMemberRepository;
-    private final UserProfileRepository userProfileRepository;
+    private final UserProfileApi userProfileApi;
 
     ChannelProjectionMapper(
             ChannelMemberRepository channelMemberRepository,
-            UserProfileRepository userProfileRepository
+            UserProfileApi userProfileApi
     ) {
         this.channelMemberRepository = channelMemberRepository;
-        this.userProfileRepository = userProfileRepository;
+        this.userProfileApi = userProfileApi;
     }
 
     ChannelResult toResult(Channel channel) {
@@ -44,7 +44,9 @@ class ChannelProjectionMapper {
     }
 
     ChannelMemberResult toMemberResult(ChannelMember member) {
-        UserProfile userProfile = userProfileRepository.findByAccountId(member.accountId()).orElse(null);
+        UserProfileResult userProfile = userProfileApi.getPublicUserProfiles(java.util.List.of(member.accountId())).stream()
+                .findFirst()
+                .orElse(null);
         return new ChannelMemberResult(
                 member.accountId(),
                 userProfile == null ? "" : userProfile.nickname(),

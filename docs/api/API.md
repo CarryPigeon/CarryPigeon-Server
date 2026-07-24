@@ -49,6 +49,7 @@ HTTP 失败统一返回标准错误对象：
 - `email_delivery_failed`
 - `required_plugin_missing`
 - `password_login_disabled`
+- `idempotency_key_reused`
 
 建议映射：
 
@@ -58,7 +59,7 @@ HTTP 失败统一返回标准错误对象：
 | `401` | `unauthorized` / `token_expired` |
 | `403` | `forbidden` / `password_login_disabled` / `not_channel_member` / `channel_admin_required` / `channel_owner_required` / `user_muted` |
 | `404` | `not_found` |
-| `409` | `conflict` / `application_already_processed` |
+| `409` | `conflict` / `application_already_processed` / `idempotency_key_reused` |
 | `412` | `required_plugin_missing` |
 | `429` | `rate_limited` |
 | `503` | `mail_service_unavailable` / `email_delivery_failed` |
@@ -88,7 +89,7 @@ HTTP 失败统一返回标准错误对象：
 ### 1.5 认证约定
 
 - 受保护 HTTP 接口使用 `Authorization: Bearer <access-token>`
-- HTTP 鉴权由 `AuthAccessTokenInterceptor` 处理，保护范围为 `/api/**`
+- HTTP 鉴权由顶层 `HttpAuthenticationConfiguration` 统一定义保护范围，并由 `BearerAuthenticationInterceptor` 处理 Bearer token，保护范围为 `/api/**`
 - 当前明确匿名放行的 HTTP 路径：
   - `GET /api/server`
   - `POST /api/gates/required/check`
@@ -707,14 +708,15 @@ required gate 不满足时返回：
   "items": [
     {
       "mid": "5001",
-      "cid": "1",
       "uid": "1001",
-      "sender": { "uid": "1001", "nickname": "carry-user", "avatar": "avatars/u/1001.png" },
-      "send_time": 1700000000000,
+      "cid": "1",
       "domain": "Core:Text",
       "domain_version": "1.0.0",
       "data": { "text": "hello world" },
-      "preview": "hello world"
+      "send_time": 1700000000000,
+      "mentions": ["1002"],
+      "preview": "hello world",
+      "status": "sent"
     }
   ],
   "next_cursor": "5001",
@@ -732,16 +734,16 @@ required gate 不满足时返回：
 
 | 参数 | 类型 | 约束 |
 | --- | --- | --- |
-| `q` | `string` | 推荐使用；搜索关键字 |
-| `keyword` | `string` | 过渡兼容参数；当 `q` 缺失时回退使用 |
-| `cursor` | `string / null` | 当前已接受，但仍为过渡语义 |
-| `sender_uid` | `string / null` | 当前已接受，但尚未生效 |
-| `domain` | `string / null` | 当前已接受，但尚未生效 |
-| `before_mid` | `string / null` | 当前已接受，但尚未生效 |
-| `after_mid` | `string / null` | 当前已接受，但尚未生效 |
+| `q` | `string` | 搜索关键字 |
+| `keyword` | `string` | `q` 缺失时使用的别名 |
+| `cursor` | `string / null` | 不透明分页游标 |
+| `sender_uid` | `string / null` | 按发送者过滤 |
+| `domain` | `string / null` | 按完整 domain 过滤 |
+| `before_mid` | `string / null` | 只返回该消息之前的结果 |
+| `after_mid` | `string / null` | 只返回该消息之后的结果 |
 | `limit` | `int` | 默认 `20`，范围 `1..100` |
 
-当前实现返回 `items + next_cursor + has_more`；`next_cursor` 当前按最后一条命中消息的 `mid` 派生，尚不是完全不透明游标。
+当前实现返回 `items + next_cursor + has_more`；`next_cursor` 是按最后一条命中消息生成的不透明游标。
 
 ### 6.3 发送消息
 
@@ -750,24 +752,51 @@ required gate 不满足时返回：
 - **认证**：是
 - **成功**：`201 Created`
 
-当前最小实现只支持：
+所有消息响应固定使用 `mid / uid / cid / domain / domain_version / data / send_time / mentions / preview / status`。所有 domain 专属字段只允许位于 `data`；`mentions` 是顶层提醒用户 ID 数组。
+
+HTTP 发送按 `domain` 精确查找当前运行时注册的消息插件。发布服务只校验通用 envelope 和顶层
+`mentions`；插件负责校验其支持的 `domain_version`、不可信 `data` 结构并生成 canonical `data` 与
+`preview`。只有插件校验成功的消息才允许写库和发布 realtime 事件。未注册 domain、版本不受支持或
+data 不符合插件 schema 时返回统一校验错误，且不产生消息。
+
+当前内建可由客户端发送的 domain 包括：
 
 - `domain = Core:Text`
+- `domain = Core:ReplyText`
 - `domain = Core:File`
 - `domain = Core:Voice`
-- `domain_version = 1.0.0`
+- 当前内建插件支持 `domain_version = 1.0.0`
 - `Core:Text` 使用 `data.text`
+- `Core:ReplyText` 使用 `data.content.text`，回复、引用和链接预览关系均位于 `data`
 - `Core:File` 使用 `data.object_key` 或附件 `data.share_key`，并要求 `data.filename`
 - `Core:Voice` 使用 `data.object_key` 或附件 `data.share_key`，并要求 `data.filename`、`data.duration_millis`
 
-### 6.4 删除消息
+扩展消息 domain 通过 plugin feature 内部的 `ChannelMessagePlugin` SPI 注册，不需要修改 HTTP controller、发布服务或数据库表。
+扩展插件必须声明唯一 `supportedDomain()`，并在 `validateCanonicalData(...)` 中拒绝不支持的版本和
+异常 data；插件不得负责频道权限、事务、仓储、消息 ID、时间或 realtime 投递。
 
-- **方法**：`DELETE`
-- **路径**：`/api/messages/{mid}`
-- **认证**：是
-- **成功**：`204 No Content`
+ReplyText 请求示例：
 
-### 6.5 上传消息附件
+```json
+{
+  "domain": "Core:ReplyText",
+  "domain_version": "1.0.0",
+  "data": {
+    "content": { "text": "确实如此" },
+    "reply_to_mid": "10086",
+    "reply_to": {
+      "mid": "10086",
+      "sender_name": "Bob",
+      "preview": "今天 meeting 改到 3 点",
+      "created_at": 1700000000000,
+      "unavailable": false
+    }
+  },
+  "mentions": ["67890"]
+}
+```
+
+### 6.4 上传消息附件
 
 - **方法**：`POST`
 - **路径**：`/api/channels/{cid}/messages/attachments`
@@ -791,35 +820,15 @@ required gate 不满足时返回：
 - multipart 字段 `file` 为必填。
 - `message_type` 可选，允许值为 `file` 或 `voice`，默认 `file`。
 
-### 6.6 撤回消息
+### 6.5 撤回消息
 
 - **方法**：`POST`
 - **路径**：`/api/channels/{cid}/messages/{mid}/recall`
 - **认证**：是
 
-成功响应返回撤回后的 v1 消息对象；撤回后消息正文按撤回语义脱敏，并通过实时通道推送 `message.recalled` 事件。
+成功响应返回撤回后的 v1 消息对象。撤回保留消息身份、domain 与发送时间，设置 `status = recalled`，清空 `data / mentions`，将 `preview` 固定为 `消息已撤回`，并推送 `message.recalled`。不提供消息编辑或物理删除接口。
 
-### 6.7 编辑消息
-
-- **方法**：`PATCH`
-- **路径**：`/api/messages/{mid}`
-- **认证**：是
-
-请求体示例：
-
-```json
-{
-  "domain": "Core:Text",
-  "domain_version": "1.0.0",
-  "data": { "text": "edited text" },
-  "mentions": [],
-  "expected_edit_version": 1
-}
-```
-
-成功响应返回编辑后的 v1 消息对象。
-
-### 6.8 转发消息
+### 6.6 转发消息
 
 - **方法**：`POST`
 - **路径**：`/api/messages/{mid}/forward`
@@ -831,9 +840,27 @@ required gate 不满足时返回：
 { "target_cid": "2", "comment": "please check" }
 ```
 
-成功响应返回新创建的转发消息对象。
+合并转发请求示例：
 
-### 6.9 置顶频道消息
+```json
+{
+  "target_cid": "2",
+  "comment": "三则重要通知",
+  "merged_mids": ["10086", "10087", "10088"]
+}
+```
+
+成功返回 `201 Created` 和新建的 `Core:Forward` 消息。单条来源位于 `data.forwarded_from`；合并来源位于 `data.forwarded_messages`，顺序与 `merged_mids` 一致。转发附言位于 `data.content.text`。
+
+幂等约束：
+
+- 客户端可通过 `Idempotency-Key` header 或请求体 `idempotency_key` 提供最多 128 个字符的幂等键；两处同时存在时必须一致。
+- 幂等键按“账号 + `message.forward.v1` 操作”隔离，作为区分大小写的 opaque 字符串原样匹配。
+- 同一幂等键再次提交规范化后相同的请求时返回首次创建的完整消息，HTTP 仍为 `201 Created`，不会重复写入消息或发布 `message.created`。
+- 同一幂等键用于不同的源消息、目标频道、附言或 `merged_mids` 时返回 `409 Conflict`，`reason = idempotency_key_reused`。
+- 幂等预留、消息写入和结果绑定位于同一数据库事务；事务回滚后该键可以重新提交，不会留下无结果占位。
+
+### 6.7 置顶频道消息
 
 - **方法**：`POST`
 - **路径**：`/api/channels/{cid}/pins/{mid}`
@@ -857,14 +884,14 @@ required gate 不满足时返回：
 }
 ```
 
-### 6.10 取消置顶频道消息
+### 6.8 取消置顶频道消息
 
 - **方法**：`DELETE`
 - **路径**：`/api/channels/{cid}/pins/{mid}`
 - **认证**：是
 - **成功**：`204 No Content`
 
-### 6.11 获取频道置顶列表
+### 6.9 获取频道置顶列表
 
 - **方法**：`GET`
 - **路径**：`/api/channels/{cid}/pins`
@@ -879,7 +906,7 @@ required gate 不满足时返回：
 
 成功响应为分页结构：`items + next_cursor + has_more`。
 
-### 6.12 获取提及收件箱
+### 6.10 获取提及收件箱
 
 - **方法**：`GET`
 - **路径**：`/api/mentions`
@@ -896,14 +923,14 @@ required gate 不满足时返回：
 
 成功响应为分页结构：`items + next_cursor + has_more`。
 
-### 6.13 标记单条提及已读
+### 6.11 标记单条提及已读
 
 - **方法**：`PUT`
 - **路径**：`/api/mentions/{mention_id}/read`
 - **认证**：是
 - **成功**：`204 No Content`
 
-### 6.14 批量标记提及已读
+### 6.12 批量标记提及已读
 
 - **方法**：`PUT`
 - **路径**：`/api/mentions/read_state`
@@ -1121,8 +1148,7 @@ required gate 不满足时返回：
 当前已落地最小事件类型：
 
 - `message.created`
-- `message.deleted`
-- `message.updated`
+- `message.recalled`
 - `message.pinned`
 - `message.unpinned`
 - `mention.created`
@@ -1136,11 +1162,9 @@ required gate 不满足时返回：
 | --- | --- |
 | `channels.changed` | `{ "hint": "refresh" }` |
 | `message.created` | `{ "cid": "...", "message": { ...v1 消息对象... } }` |
-| `message.deleted` | `{ "cid": "...", "mid": "...", "delete_time": 1700000000000 }` |
 | `message.recalled` | `{ "cid": "...", "mid": "...", "recall_time": 1700000000000 }` |
-| `message.updated` | `{ "cid": "...", "message": { ...v1 消息对象... } }` |
 | `message.pinned` / `message.unpinned` | `{ "cid": "...", "mid": "..." }` |
-| `mention.created` | `{ "mention": { ...提及对象... } }` |
+| `mention.created` | `{ "mention_id": "...", "cid": "...", "mid": "...", "from_uid": "...", "uid": "...", "created_at": 1700000000000 }` |
 | `read_state.updated` | `{ "cid": "...", "uid": "...", "last_read_mid": "...", "last_read_time": 1700000000000 }` |
 | `channel.changed` | `{ "cid": "...", "scope": "members", "hint": "refresh" }` |
 
@@ -1154,25 +1178,11 @@ required gate 不满足时返回：
 - 跨实例 / 长窗口 / 持久化回放尚未覆盖
 - 客户端收到 `resume.failed` 后，应通过 HTTP 补拉频道列表、最近消息、未读聚合等状态。
 
-### 8.4 历史兼容说明
-
-当前仍保留对旧 `send_channel_message` 入站命令的最小兼容承接，便于现有业务链路继续运行。
-
-当前兼容命令会直接落到消息应用服务，已支持：
-
-- `message_type = text`
-- `message_type = file`
-- `message_type = voice`
-- `message_type = custom`
-- 已注册扩展消息类型（按 `message_type` 透传为 plugin-style draft）
-
-`message_type = system` 当前不会通过该 WS 命令对外开放。
-
 ## 9. 当前未实现 / 未完全收口项
 
 基于当前仓库代码，以下能力仍未完全收口：
 
-- 消息 HTTP 发送当前内置支持 `Core:Text`、`Core:File`、`Core:Voice` 的 `1.0.0` 最小语义，其他插件 domain 仍按注册表与 payload 约束逐步扩展。
+- 消息 HTTP 发送通过运行时 domain 插件校验；当前内置支持 `Core:Text`、`Core:ReplyText`、`Core:File`、`Core:Voice` 的 `1.0.0` 语义，扩展 domain 可通过插件接入，`Core:Forward` 通过独立转发端点创建。
 - WS `resume` 仍是单节点内存实现
 - discovery 当前会根据 realtime 开关输出 `ws_url` 与 `capabilities.websocket`
 - system channel 当前由数据库迁移种子保证存在，但数据库层未建立唯一约束

@@ -6,7 +6,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityP
 
 /**
  * 服务端身份配置。
- * 职责：提供当前服务实例在消息模型中真实使用的最小 serverId 来源。
+ * 职责：提供服务发现与 realtime 握手使用的最小 serverId 来源。
  * 边界：这里只承载稳定配置，不承载公开源信息或多服务端协商逻辑。
  *
  * @param id 当前服务端稳定标识

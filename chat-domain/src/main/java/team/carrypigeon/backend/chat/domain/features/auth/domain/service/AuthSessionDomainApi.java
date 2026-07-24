@@ -12,18 +12,18 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -41,47 +41,44 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     private final AuthAccountProvisioner authAccountProvisioner;
     private final PasswordHasher passwordHasher;
     private final TokenHasher tokenHasher;
-    private final AuthTokenService authTokenService;
+    private final AuthTokenCodec authTokenCodec;
     private final AuthTokenIssuer authTokenIssuer;
     private final AuthTokenSettings authTokenSettings;
     private final AuthPasswordLoginPolicy passwordLoginPolicy;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
-    private final EmailVerificationCodeService emailVerificationCodeService;
+    private final EmailVerificationApi emailVerificationApi;
 
     @Autowired
     public AuthSessionDomainApi(
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
-            UserProfileRepository userProfileRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
+            UserAccountProvisioningApi userAccountProvisioningApi,
+            ChannelAccountProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
-            AuthTokenService authTokenService,
+            AuthTokenCodec authTokenCodec,
             AuthTokenSettings authTokenSettings,
             AuthPasswordLoginPolicy passwordLoginPolicy,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
-            EmailVerificationCodeService emailVerificationCodeService
+            EmailVerificationApi emailVerificationApi
     ) {
         this.authAccountRepository = authAccountRepository;
         this.authRefreshSessionRepository = authRefreshSessionRepository;
         this.authAccountProvisioner = new AuthAccountProvisioner(
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
-                timeProvider
+                userAccountProvisioningApi,
+                channelAccountProvisioningApi
         );
         this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
-        this.authTokenService = authTokenService;
+        this.authTokenCodec = authTokenCodec;
         this.authTokenIssuer = new AuthTokenIssuer(
                 authRefreshSessionRepository,
                 tokenHasher,
-                authTokenService,
+                authTokenCodec,
                 authTokenSettings,
                 idGenerator,
                 timeProvider
@@ -91,47 +88,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
-        this.emailVerificationCodeService = emailVerificationCodeService;
-    }
-
-    public AuthSessionDomainApi(
-            AuthAccountRepository authAccountRepository,
-            AuthRefreshSessionRepository authRefreshSessionRepository,
-            UserProfileRepository userProfileRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            PasswordHasher passwordHasher,
-            TokenHasher tokenHasher,
-            AuthTokenService authTokenService,
-            AuthTokenSettings authTokenSettings,
-            IdGenerator idGenerator,
-            TimeProvider timeProvider,
-            TransactionRunner transactionRunner
-    ) {
-        this(
-                authAccountRepository,
-                authRefreshSessionRepository,
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
-                passwordHasher,
-                tokenHasher,
-                authTokenService,
-                authTokenSettings,
-                new AuthPasswordLoginPolicy(true),
-                idGenerator,
-                timeProvider,
-                transactionRunner,
-                new EmailVerificationCodeService() {
-                    @Override
-                    public void issueCode(String email) {
-                    }
-
-                    @Override
-                    public void verifyCode(String email, String code) {
-                    }
-                }
-        );
+        this.emailVerificationApi = emailVerificationApi;
     }
 
     @Override
@@ -140,7 +97,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
             throw ProblemException.validationFailed("grant_type must be email_code");
         }
         String normalizedEmail = normalizeEmail(command.email());
-        emailVerificationCodeService.verifyCode(normalizedEmail, command.code());
+        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(normalizedEmail, command.code()));
         return transactionRunner.runInTransaction(() -> {
             AuthAccount existingAccount = authAccountRepository.findByUsername(normalizedEmail).orElse(null);
             boolean newUser = existingAccount == null;
@@ -216,7 +173,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     }
 
     private ValidRefreshSession requireValidRefreshSession(String refreshToken) {
-        AuthTokenClaims claims = authTokenService.parseRefreshToken(refreshToken);
+        AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
         long accountId = parseRefreshSubjectAccountId(claims);
         AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
                 .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));

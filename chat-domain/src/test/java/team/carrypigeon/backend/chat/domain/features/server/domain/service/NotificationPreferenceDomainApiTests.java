@@ -8,6 +8,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -21,6 +22,8 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 /**
  * NotificationPreferenceDomainApi 契约测试。
  * 职责：验证服务端与频道级通知偏好的默认值、持久化归一化和成员权限边界。
@@ -36,7 +39,8 @@ class NotificationPreferenceDomainApiTests {
     @DisplayName("get notification preferences returns defaults when missing")
     void getNotificationPreferences_missingPreferences_returnsDefaults() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
-        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(repository, new StubChannelRepository(), new StubChannelMemberRepository(), timeProvider());
+        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
+                repository, mock(ChannelMessagingApi.class), timeProvider());
 
         var result = service.getNotificationPreferences(1001L);
 
@@ -52,7 +56,8 @@ class NotificationPreferenceDomainApiTests {
     @DisplayName("update server preference stores normalized preference")
     void updateServerPreference_storesNormalizedPreference() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
-        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(repository, new StubChannelRepository(), new StubChannelMemberRepository(), timeProvider());
+        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
+                repository, mock(ChannelMessagingApi.class), timeProvider());
 
         service.updateServerPreference(new UpdateNotificationServerPreferenceCommand(1001L, "muted", 0L));
 
@@ -67,7 +72,11 @@ class NotificationPreferenceDomainApiTests {
     @DisplayName("update channel preference non member throws forbidden")
     void updateChannelPreference_nonMember_throwsForbidden() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
-        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(repository, new StubChannelRepository(), new NonMemberChannelMemberRepository(), timeProvider());
+        ChannelMessagingApi channelMessagingApi = mock(ChannelMessagingApi.class);
+        doThrow(ProblemException.forbidden("not_channel_member", "channel membership is required"))
+                .when(channelMessagingApi).requireMemberChannel(9L, 1001L);
+        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
+                repository, channelMessagingApi, timeProvider());
 
         ProblemException exception = assertThrows(ProblemException.class, () -> service.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(1001L, 9L, "inherit", 0L)));
 

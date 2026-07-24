@@ -7,6 +7,7 @@
 
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS plugin_schema_history;
 DROP TABLE IF EXISTS chat_notification_channel_preference;
 DROP TABLE IF EXISTS chat_notification_server_preference;
 DROP TABLE IF EXISTS chat_mention;

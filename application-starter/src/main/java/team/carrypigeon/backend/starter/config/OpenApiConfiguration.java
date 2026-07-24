@@ -204,8 +204,7 @@ public class OpenApiConfiguration {
                               "data": {
                                 "text": "hello from Apifox"
                               },
-                              "reply_to_mid": null,
-                              "mentions": [],
+                              "mentions": ["{{accountId}}"],
                               "client_message_id": "apifox-msg-001"
                             }
                             """
@@ -225,26 +224,13 @@ public class OpenApiConfiguration {
                             }
                             """
             )),
-            Map.entry("PATCH /api/messages/{messageId}", jsonExample(
-                    "编辑文本消息",
-                    """
-                            {
-                              "domain": "Core:Text",
-                              "domain_version": "1.0.0",
-                              "data": {
-                                "text": "edited from Apifox"
-                              },
-                              "mentions": [],
-                              "expected_edit_version": 1
-                            }
-                            """
-            )),
             Map.entry("POST /api/messages/{messageId}/forward", jsonExample(
-                    "转发消息",
+                    "合并转发消息",
                             """
                             {
                               "target_cid": "{{channelId}}",
                               "comment": "FYI",
+                              "merged_mids": ["{{messageId}}", "{{secondMessageId}}"],
                               "idempotency_key": "apifox-forward-001"
                             }
                             """

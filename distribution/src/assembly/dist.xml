@@ -9,7 +9,7 @@
 
     <dependencySets>
         <dependencySet>
-            <outputDirectory>libs</outputDirectory>
+            <outputDirectory>lib</outputDirectory>
             <useProjectArtifact>false</useProjectArtifact>
             <scope>runtime</scope>
             <unpack>false</unpack>
@@ -38,6 +38,11 @@
             <includes>
                 <include>application.yaml</include>
             </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/plugins</directory>
+            <outputDirectory>plugins</outputDirectory>
+            <fileMode>0644</fileMode>
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/../infrastructure-basic/src/main/resources</directory>

@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelTextMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendSystemChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -12,27 +11,30 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  */
 class MessageDeliveryCommandValidator {
 
-    void validateSendCommand(SendChannelTextMessageCommand command) {
-        requirePositive(command.accountId(), "accountId");
-        requirePositive(command.channelId(), "channelId");
-        if (command.body() == null || command.body().isBlank()) {
-            throw ProblemException.validationFailed("body must not be blank");
-        }
-    }
-
     void validateSystemSendCommand(SendSystemChannelMessageCommand command) {
         requirePositive(command.operatorAccountId(), "operatorAccountId");
         requirePositive(command.channelId(), "channelId");
+        validateCanonicalFields(command.domainVersion(), command.data());
     }
 
     void validateSendCommand(SendChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        if (command.draft() == null) {
-            throw ProblemException.validationFailed("draft must not be null");
+        if (command.domain() == null || command.domain().isBlank()) {
+            throw ProblemException.validationFailed("domain must not be blank");
         }
-        if (command.draft().type() == null || command.draft().type().isBlank()) {
-            throw ProblemException.validationFailed("message type must not be blank");
+        validateCanonicalFields(command.domainVersion(), command.data());
+    }
+
+    private void validateCanonicalFields(String domainVersion, java.util.Map<String, Object> data) {
+        if (domainVersion == null || domainVersion.isBlank()) {
+            throw ProblemException.validationFailed("domain_version must not be blank");
+        }
+        if (data == null) {
+            throw ProblemException.validationFailed("data must not be null");
+        }
+        if (data.containsKey("mentions")) {
+            throw ProblemException.validationFailed("mentions must be top-level message metadata");
         }
     }
 

@@ -7,9 +7,9 @@ import java.time.Instant;
 import lombok.Data;
 
 /**
- * 消息持久化实体。
- * 职责：承接 chat_message 表字段与 MyBatis-Plus 映射。
- * 边界：仅供 database-impl 内部使用，不暴露到 database-api。
+ * 消息 canonical 持久化实体。
+ * 职责：承接 chat_message 的十个统一字段与 MyBatis-Plus 映射。
+ * 边界：data 与 mentions 保持 JSON 文本，不解释 domain 业务语义。
  */
 @TableName("chat_message")
 @Data
@@ -17,20 +17,13 @@ public class MessageEntity {
 
     @TableId(value = "message_id", type = IdType.INPUT)
     private Long messageId;
-    private String serverId;
-    private Long conversationId;
-    private Long channelId;
     private Long senderId;
-    private String messageType;
-    private String body;
-    private String previewText;
-    private String searchableText;
-    private String payload;
-    private String metadata;
+    private Long channelId;
+    private String domain;
+    private String domainVersion;
+    private String data;
+    private Instant sendTime;
     private String mentions;
-    private String forwardedFrom;
+    private String preview;
     private String status;
-    private Instant createdAt;
-    private Instant editedAt;
-    private Long editVersion;
 }

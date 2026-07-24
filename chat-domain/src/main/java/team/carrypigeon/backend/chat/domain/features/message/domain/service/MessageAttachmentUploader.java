@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import java.io.InputStream;
 import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileShareKeyCodec;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -19,16 +19,16 @@ class MessageAttachmentUploader {
     private static final String FILE_MESSAGE_TYPE = "file";
     private static final String VOICE_MESSAGE_TYPE = "voice";
 
-    private final MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy;
+    private final FileReferenceApi fileReferenceApi;
     private final IdGenerator idGenerator;
     private final ObjectProvider<ObjectStorageService> objectStorageServiceProvider;
 
     MessageAttachmentUploader(
-            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
+            FileReferenceApi fileReferenceApi,
             IdGenerator idGenerator,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
-        this.messageAttachmentObjectKeyPolicy = messageAttachmentObjectKeyPolicy;
+        this.fileReferenceApi = fileReferenceApi;
         this.idGenerator = idGenerator;
         this.objectStorageServiceProvider = objectStorageServiceProvider;
     }
@@ -64,9 +64,9 @@ class MessageAttachmentUploader {
             throw ProblemException.validationFailed("size must be greater than 0");
         }
         String normalizedMessageType = normalizeAttachmentMessageType(messageType);
-        String normalizedFilename = messageAttachmentObjectKeyPolicy.normalizeFilename(filename);
+        String normalizedFilename = fileReferenceApi.normalizeMessageAttachmentFilename(filename);
         String resolvedContentType = resolveContentType(normalizedMessageType, contentType);
-        String objectKey = messageAttachmentObjectKeyPolicy.buildObjectKey(
+        String objectKey = fileReferenceApi.buildMessageAttachmentObjectKey(
                 channelId,
                 normalizedMessageType,
                 accountId,
@@ -76,7 +76,7 @@ class MessageAttachmentUploader {
         requireObjectStorageService().put(new PutObjectCommand(objectKey, content, size, resolvedContentType));
         return new MessageAttachmentUploadResult(
                 objectKey,
-                FileShareKeyCodec.shareKeyForObjectKey(objectKey),
+                fileReferenceApi.shareKeyForObjectKey(objectKey),
                 normalizedFilename,
                 resolvedContentType,
                 size

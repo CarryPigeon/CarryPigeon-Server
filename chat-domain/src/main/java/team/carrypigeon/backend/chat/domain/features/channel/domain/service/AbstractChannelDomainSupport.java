@@ -21,15 +21,16 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelMessageBoundary;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -57,8 +58,8 @@ abstract class AbstractChannelDomainSupport {
     protected final ChannelBanRepository channelBanRepository;
     protected final ChannelAuditLogRepository channelAuditLogRepository;
     protected final ChannelReadStateRepository channelReadStateRepository;
-    protected final ChannelMessageBoundary channelMessageBoundary;
-    protected final UserProfileRepository userProfileRepository;
+    protected final MessageReferenceApi messageReferenceApi;
+    protected final UserProfileApi userProfileApi;
     protected final ChannelGovernancePolicy channelGovernancePolicy;
     protected final ChannelAfterCommitPublisher channelAfterCommitPublisher;
     protected final ChannelProjectionMapper channelProjectionMapper;
@@ -74,10 +75,10 @@ abstract class AbstractChannelDomainSupport {
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            ChannelMessageBoundary channelMessageBoundary,
-            UserProfileRepository userProfileRepository,
+            MessageReferenceApi messageReferenceApi,
+            UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            ChannelRealtimePublisher channelRealtimePublisher,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
@@ -88,11 +89,11 @@ abstract class AbstractChannelDomainSupport {
         this.channelBanRepository = channelBanRepository;
         this.channelAuditLogRepository = channelAuditLogRepository;
         this.channelReadStateRepository = channelReadStateRepository;
-        this.channelMessageBoundary = channelMessageBoundary;
-        this.userProfileRepository = userProfileRepository;
+        this.messageReferenceApi = messageReferenceApi;
+        this.userProfileApi = userProfileApi;
         this.channelGovernancePolicy = channelGovernancePolicy;
-        this.channelAfterCommitPublisher = new ChannelAfterCommitPublisher(channelRealtimePublisher);
-        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileRepository);
+        this.channelAfterCommitPublisher = new ChannelAfterCommitPublisher(realtimeEventApi);
+        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileApi);
         this.channelCommandValidator = new ChannelCommandValidator();
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -192,7 +193,7 @@ abstract class AbstractChannelDomainSupport {
     protected void requireChannelDeleteSafe(long channelId) {
         if (!channelInviteRepository.findByChannelId(channelId).isEmpty()
                 || !channelBanRepository.findByChannelId(channelId).isEmpty()
-                || channelMessageBoundary.hasMessages(channelId)
+                || messageReferenceApi.hasChannelMessages(channelId)
                 || !channelAuditLogRepository.list(null, 1, channelId, null, null, null, null).isEmpty()) {
             throw ProblemException.conflict(
                     "channel_delete_blocked",
@@ -319,13 +320,13 @@ abstract class AbstractChannelDomainSupport {
 
     /**
      * 读取必须存在的消息快照。
-     * 边界：通过 message feature 边界端口访问消息，不直接依赖消息仓储。
+     * 边界：通过 message feature 领域 API 访问消息，不直接依赖消息仓储。
      *
      * @param messageId 消息 ID
      * @return 消息快照
      */
-    protected ChannelMessageBoundary.ChannelMessageSnapshot requireMessage(long messageId) {
-        return channelMessageBoundary.requireMessage(messageId);
+    protected MessageReferenceResult requireMessage(long messageId) {
+        return messageReferenceApi.requireMessage(messageId);
     }
 
     /**
@@ -371,7 +372,7 @@ abstract class AbstractChannelDomainSupport {
      * @param inviteeAccountId 被邀请账号 ID
      */
     protected void requireInviteeExists(long inviteeAccountId) {
-        if (userProfileRepository.findByAccountId(inviteeAccountId).isEmpty()) {
+        if (userProfileApi.getPublicUserProfiles(List.of(inviteeAccountId)).isEmpty()) {
             throw ProblemException.notFound("invitee account does not exist");
         }
     }

@@ -17,10 +17,12 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthCo
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
@@ -38,49 +40,61 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelMessageBoundary;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.port.ChannelRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelAccountProvisioningDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagingDomainApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelAccessDomainApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelQueryDomainApi;
-import team.carrypigeon.backend.chat.domain.features.channel.support.message.MessageBackedChannelMessageBoundary;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageReferenceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelReadStateController;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.features.file.domain.port.FileAttachmentAccessAuthorizer;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileReferenceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileTransferDomainApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
-import team.carrypigeon.backend.chat.domain.features.message.config.MessagePluginConfiguration;
+import team.carrypigeon.backend.chat.domain.features.plugin.config.PluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessagePayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageIdempotency;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageLifecycleDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageAttachmentDomainApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDomainPluginApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.MessageDomainPluginDomainApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.PluginCatalogDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageTimelineDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePublishingDomainApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
-import team.carrypigeon.backend.chat.domain.features.message.support.channel.ChannelBackedMessageChannelBoundary;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.PluginChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.FileChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.ForwardChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.PluginChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.ReplyTextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.VoiceChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.service.ServerEntranceDomainApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserAccountProvisioningDomainApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -209,27 +223,8 @@ public class StarterRegressionConfiguration {
      * 创建 JWT 令牌服务。
      */
     @Bean
-    public AuthTokenService authTokenService(AuthJwtProperties authJwtProperties, JsonProvider jsonProvider) {
+    public AuthTokenCodec authTokenService(AuthJwtProperties authJwtProperties, JsonProvider jsonProvider) {
         return new HmacJwtAuthTokenService(authJwtProperties, jsonProvider);
-    }
-
-    /**
-     * 创建附件 objectKey policy。
-     */
-    @Bean
-    public MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy() {
-        return new MessageAttachmentObjectKeyPolicy();
-    }
-
-    /**
-     * 创建消息附件 payload resolver。
-     */
-    @Bean
-    public MessageAttachmentPayloadResolver messageAttachmentPayloadResolver(
-            ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-            JsonProvider jsonProvider
-    ) {
-        return new MessageAttachmentPayloadResolver(objectStorageServiceProvider, jsonProvider);
     }
 
     /**
@@ -249,23 +244,9 @@ public class StarterRegressionConfiguration {
         };
     }
 
-    /**
-     * 创建频道实时发布器替身。
-     */
     @Bean
-    @Primary
-    public ChannelRealtimePublisher channelRealtimePublisher() {
-        return new ChannelRealtimePublisher() {
-        };
-    }
-
-    /**
-     * 创建消息实时发布器替身。
-     */
-    @Bean
-    @Primary
-    public MessageRealtimePublisher messageRealtimePublisher() {
-        return (message, senderSnapshot, recipientAccountIds) -> {
+    public RealtimeEventApi realtimeEventApi() {
+        return command -> {
         };
     }
 
@@ -308,24 +289,26 @@ public class StarterRegressionConfiguration {
     public ChannelMessagePluginRegistry channelMessagePluginRegistry(
             ObjectStorageService objectStorageService,
             JsonProvider jsonProvider,
-            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy
+            FileReferenceApi fileReferenceApi
     ) {
-        return new MessagePluginConfiguration().channelMessagePluginRegistry(java.util.List.of(
+        return new PluginConfiguration().channelMessagePluginRegistry(java.util.List.of(
                 registration("builtin-text-message", "text", "text", "always_available", new TextChannelMessagePlugin()),
-                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension", jsonProvider)),
+                registration("builtin-reply-text-message", "reply-text", "reply-text", "always_available", new ReplyTextChannelMessagePlugin()),
+                registration("builtin-forward-message", "forward", "forward", "forward_endpoint_only", new ForwardChannelMessagePlugin()),
+                registration("builtin-test-extension-message", "test-extension", "test-extension", "always_available", new PluginChannelMessagePlugin("test-extension")),
                 registration(
                         "builtin-file-message",
                         "file",
                         "file",
                         "requires_object_storage",
-                        new FileChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)
+                        new FileChannelMessagePlugin(objectStorageService, fileReferenceApi)
                 ),
                 registration(
                         "builtin-voice-message",
                         "voice",
                         "voice",
                         "requires_object_storage",
-                        new VoiceChannelMessagePlugin(objectStorageService, jsonProvider, messageAttachmentObjectKeyPolicy)
+                        new VoiceChannelMessagePlugin(objectStorageService, fileReferenceApi)
                 )
         ));
     }
@@ -342,16 +325,29 @@ public class StarterRegressionConfiguration {
      * 创建测试验证码服务替身。
      */
     @Bean
-    public EmailVerificationCodeService emailVerificationCodeService() {
-        return new EmailVerificationCodeService() {
+    public EmailVerificationApi emailVerificationApi() {
+        return new EmailVerificationApi() {
             @Override
-            public void issueCode(String email) {
+            public void issueCode(IssueEmailVerificationCodeCommand command) {
             }
 
             @Override
-            public void verifyCode(String email, String code) {
+            public void verifyCode(VerifyEmailVerificationCodeCommand command) {
             }
         };
+    }
+
+    @Bean
+    public UserAccountProvisioningApi userAccountProvisioningApi(UserProfileRepository userProfileRepository) {
+        return new UserAccountProvisioningDomainApi(userProfileRepository);
+    }
+
+    @Bean
+    public ChannelAccountProvisioningApi channelAccountProvisioningApi(
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository
+    ) {
+        return new ChannelAccountProvisioningDomainApi(channelRepository, channelMemberRepository);
     }
 
     /**
@@ -360,25 +356,21 @@ public class StarterRegressionConfiguration {
     @Bean
     public AuthAccountApi authAccountDomainApi(
             AuthAccountRepository authAccountRepository,
-            UserProfileRepository userProfileRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
+            UserAccountProvisioningApi userAccountProvisioningApi,
+            ChannelAccountProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner,
-            EmailVerificationCodeService emailVerificationCodeService
+            TransactionRunner transactionRunner
     ) {
         return new AuthAccountDomainApi(
                 authAccountRepository,
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
+                userAccountProvisioningApi,
+                channelAccountProvisioningApi,
                 passwordHasher,
                 idGenerator,
                 timeProvider,
-                transactionRunner,
-                emailVerificationCodeService
+                transactionRunner
         );
     }
 
@@ -389,25 +381,23 @@ public class StarterRegressionConfiguration {
     public AuthSessionApi authSessionDomainApi(
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
-            UserProfileRepository userProfileRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
+            UserAccountProvisioningApi userAccountProvisioningApi,
+            ChannelAccountProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
-            AuthTokenService authTokenService,
+            AuthTokenCodec authTokenService,
             AuthTokenSettings authTokenSettings,
             AuthPasswordLoginPolicy authPasswordLoginPolicy,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
-            EmailVerificationCodeService emailVerificationCodeService
+            EmailVerificationApi emailVerificationApi
     ) {
         return new AuthSessionDomainApi(
                 authAccountRepository,
                 authRefreshSessionRepository,
-                userProfileRepository,
-                channelRepository,
-                channelMemberRepository,
+                userAccountProvisioningApi,
+                channelAccountProvisioningApi,
                 passwordHasher,
                 tokenHasher,
                 authTokenService,
@@ -416,7 +406,7 @@ public class StarterRegressionConfiguration {
                 idGenerator,
                 timeProvider,
                 transactionRunner,
-                emailVerificationCodeService
+                emailVerificationApi
         );
     }
 
@@ -425,16 +415,16 @@ public class StarterRegressionConfiguration {
      */
     @Bean
     public UserProfileApi userProfileDomainApi(
-            AuthAccountRepository authAccountRepository,
+            AuthAccountApi authAccountApi,
             UserProfileRepository userProfileRepository,
-            EmailVerificationCodeService emailVerificationCodeService,
+            EmailVerificationApi emailVerificationApi,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         return new UserProfileDomainApi(
-                authAccountRepository,
+                authAccountApi,
                 userProfileRepository,
-                emailVerificationCodeService,
+                emailVerificationApi,
                 timeProvider,
                 transactionRunner
         );
@@ -444,14 +434,14 @@ public class StarterRegressionConfiguration {
      * 创建消息侧频道边界适配器。
      */
     @Bean
-    public MessageChannelBoundary messageChannelBoundary(
+    public ChannelMessagingApi channelMessagingApi(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelPinRepository channelPinRepository,
             ChannelGovernancePolicy channelGovernancePolicy
     ) {
-        return new ChannelBackedMessageChannelBoundary(
+        return new ChannelMessagingDomainApi(
                 channelRepository,
                 channelMemberRepository,
                 channelAuditLogRepository,
@@ -461,8 +451,13 @@ public class StarterRegressionConfiguration {
     }
 
     @Bean
-    public ChannelMessageBoundary channelMessageBoundary(MessageRepository messageRepository) {
-        return new MessageBackedChannelMessageBoundary(messageRepository);
+    public MessageReferenceApi messageReferenceApi(MessageRepository messageRepository) {
+        return new MessageReferenceDomainApi(messageRepository);
+    }
+
+    @Bean
+    public FileReferenceApi fileReferenceApi() {
+        return new FileReferenceDomainApi();
     }
 
     @Bean
@@ -472,61 +467,50 @@ public class StarterRegressionConfiguration {
 
     @Bean
     public ChannelMessagePublishingApi channelMessagePublishingDomainApi(
-            MessageChannelBoundary messageChannelBoundary,
+            ChannelMessagingApi channelMessagingApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            UserProfileRepository userProfileRepository,
-            MessageRealtimePublisher messageRealtimePublisher,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessagePayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProvider serverIdentityProvider,
+            MessageIdempotencyRepository messageIdempotencyRepository,
+            RealtimeEventApi realtimeEventApi,
+            MessageDomainPluginApi messageDomainPluginApi,
             IdGenerator idGenerator,
-            JsonProvider jsonProvider,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         return new ChannelMessagePublishingDomainApi(
-                messageChannelBoundary,
+                channelMessagingApi,
                 messageRepository,
                 mentionRepository,
-                userProfileRepository,
-                messageRealtimePublisher,
-                channelMessagePluginRegistry,
-                messageAttachmentPayloadResolver,
-                serverIdentityProvider,
+                messageIdempotencyRepository,
+                realtimeEventApi,
+                messageDomainPluginApi,
                 idGenerator,
-                jsonProvider,
                 timeProvider,
                 transactionRunner
         );
     }
 
     @Bean
+    public MessageIdempotencyRepository messageIdempotencyRepository() {
+        return new StarterMessageIdempotencyRepository();
+    }
+
+    @Bean
     public ChannelMessageLifecycleApi channelMessageLifecycleDomainApi(
-            MessageChannelBoundary messageChannelBoundary,
+            ChannelMessagingApi channelMessagingApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            UserProfileRepository userProfileRepository,
-            MessageRealtimePublisher messageRealtimePublisher,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessagePayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProvider serverIdentityProvider,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
-            JsonProvider jsonProvider,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         return new ChannelMessageLifecycleDomainApi(
-                messageChannelBoundary,
+                channelMessagingApi,
                 messageRepository,
                 mentionRepository,
-                userProfileRepository,
-                messageRealtimePublisher,
-                channelMessagePluginRegistry,
-                messageAttachmentPayloadResolver,
-                serverIdentityProvider,
+                realtimeEventApi,
                 idGenerator,
-                jsonProvider,
                 timeProvider,
                 transactionRunner
         );
@@ -534,30 +518,20 @@ public class StarterRegressionConfiguration {
 
     @Bean
     public ChannelMessageTimelineApi channelMessageTimelineDomainApi(
-            MessageChannelBoundary messageChannelBoundary,
+            ChannelMessagingApi channelMessagingApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            UserProfileRepository userProfileRepository,
-            MessageRealtimePublisher messageRealtimePublisher,
-            ChannelMessagePluginRegistry channelMessagePluginRegistry,
-            MessagePayloadResolver messageAttachmentPayloadResolver,
-            ServerIdentityProvider serverIdentityProvider,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
-            JsonProvider jsonProvider,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         return new ChannelMessageTimelineDomainApi(
-                messageChannelBoundary,
+                channelMessagingApi,
                 messageRepository,
                 mentionRepository,
-                userProfileRepository,
-                messageRealtimePublisher,
-                channelMessagePluginRegistry,
-                messageAttachmentPayloadResolver,
-                serverIdentityProvider,
+                realtimeEventApi,
                 idGenerator,
-                jsonProvider,
                 timeProvider,
                 transactionRunner
         );
@@ -565,15 +539,15 @@ public class StarterRegressionConfiguration {
 
     @Bean
     public ChannelMessageAttachmentDomainApi channelMessageAttachmentDomainApi(
-            MessageChannelBoundary messageChannelBoundary,
-            MessageAttachmentObjectKeyPolicy messageAttachmentObjectKeyPolicy,
+            ChannelMessagingApi channelMessagingApi,
+            FileReferenceApi fileReferenceApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
         return new ChannelMessageAttachmentDomainApi(
-                messageChannelBoundary,
-                messageAttachmentObjectKeyPolicy,
+                channelMessagingApi,
+                fileReferenceApi,
                 idGenerator,
                 timeProvider,
                 objectStorageServiceProvider
@@ -587,7 +561,7 @@ public class StarterRegressionConfiguration {
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            UserProfileRepository userProfileRepository,
+            UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy
     ) {
         return new ChannelQueryDomainApi(
@@ -596,7 +570,7 @@ public class StarterRegressionConfiguration {
                 channelBanRepository,
                 channelAuditLogRepository,
                 channelReadStateRepository,
-                userProfileRepository,
+                userProfileApi,
                 channelGovernancePolicy
         );
     }
@@ -609,10 +583,10 @@ public class StarterRegressionConfiguration {
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            ChannelMessageBoundary channelMessageBoundary,
-            UserProfileRepository userProfileRepository,
+            MessageReferenceApi messageReferenceApi,
+            UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            ChannelRealtimePublisher channelRealtimePublisher,
+            RealtimeEventApi realtimeEventApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
@@ -624,10 +598,10 @@ public class StarterRegressionConfiguration {
                 channelBanRepository,
                 channelAuditLogRepository,
                 channelReadStateRepository,
-                channelMessageBoundary,
-                userProfileRepository,
+                messageReferenceApi,
+                userProfileApi,
                 channelGovernancePolicy,
-                channelRealtimePublisher,
+                realtimeEventApi,
                 idGenerator,
                 timeProvider,
                 transactionRunner
@@ -641,12 +615,12 @@ public class StarterRegressionConfiguration {
     public AuthController authController(
             AuthAccountApi authAccountDomainApi,
             AuthSessionApi authSessionDomainApi,
-            ServerEntranceApi serverEntranceDomainApi
+            PluginCatalogApi pluginCatalogApi
     ) {
         return new AuthController(
                 authAccountDomainApi,
                 authSessionDomainApi,
-                serverEntranceDomainApi
+                pluginCatalogApi
         );
     }
 
@@ -656,15 +630,26 @@ public class StarterRegressionConfiguration {
     @Bean
     public ServerEntranceApi serverEntranceDomainApi(
             ServerIdentityProvider serverIdentityProvider,
-            TimeProvider timeProvider
+            TimeProvider timeProvider,
+            PluginCatalogApi pluginCatalogApi
     ) {
         return new ServerEntranceDomainApi(
                 serverIdentityProvider,
                 "CarryPigeonBackend",
                 new team.carrypigeon.backend.chat.domain.features.server.domain.service.RealtimeDiscoverySettings(true, "127.0.0.1", 28080, "/api/ws"),
                 timeProvider,
-                java.util.List.of()
+                pluginCatalogApi
         );
+    }
+
+    @Bean
+    public MessageDomainPluginApi messageDomainPluginApi(ChannelMessagePluginRegistry pluginRegistry) {
+        return new MessageDomainPluginDomainApi(pluginRegistry);
+    }
+
+    @Bean
+    public PluginCatalogApi pluginCatalogApi(ChannelMessagePluginRegistry pluginRegistry) {
+        return new PluginCatalogDomainApi(pluginRegistry);
     }
 
     /**
@@ -690,34 +675,26 @@ public class StarterRegressionConfiguration {
     }
 
     @Bean
-    public ChannelMessageV1ResponseMapper channelMessageV1ResponseMapper(
-            UserProfileApi userProfileDomainApi,
-            JsonProvider jsonProvider
-    ) {
-        return new ChannelMessageV1ResponseMapper(userProfileDomainApi, jsonProvider);
+    public ChannelMessageV1ResponseMapper channelMessageV1ResponseMapper() {
+        return new ChannelMessageV1ResponseMapper();
     }
 
     @Bean
-    public FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer(ChannelMemberRepository channelMemberRepository) {
-        return new team.carrypigeon.backend.chat.domain.features.file.support.ChannelMemberFileAttachmentAccessAuthorizer(channelMemberRepository);
-    }
-
-    @Bean
-    public FileUploadShareKeyCodec fileUploadShareKeyCodec(AuthJwtProperties authJwtProperties) {
-        return new FileUploadShareKeyCodec(authJwtProperties.secret());
+    public FileUploadShareKeyCodec fileUploadShareKeyCodec() {
+        return new FileUploadShareKeyCodec("0123456789abcdef0123456789abcdef");
     }
 
     @Bean
     public FileTransferApi fileTransferDomainApi(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-            FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer,
+            ChannelMessagingApi channelMessagingApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             FileUploadShareKeyCodec fileUploadShareKeyCodec
     ) {
         return new FileTransferDomainApi(
                 objectStorageServiceProvider,
-                fileAttachmentAccessAuthorizer,
+                channelMessagingApi,
                 idGenerator,
                 timeProvider,
                 fileUploadShareKeyCodec
@@ -782,5 +759,28 @@ public class StarterRegressionConfiguration {
                 ),
                 plugin
         );
+    }
+
+    /**
+     * Starter 回归环境的消息幂等仓储替身。
+     * 职责：为不发送幂等转发请求的启动测试提供完整装配依赖。
+     */
+    private static final class StarterMessageIdempotencyRepository implements MessageIdempotencyRepository {
+
+        @Override
+        public MessageIdempotency reserve(MessageIdempotency reservation) {
+            return reservation;
+        }
+
+        @Override
+        public void complete(
+                long accountId,
+                String operation,
+                String idempotencyKey,
+                String requestFingerprint,
+                long messageId,
+                Instant completedAt
+        ) {
+        }
     }
 }

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,7 +31,7 @@ class ServerEntranceDomainApiTests {
                 "CarryPigeonBackend",
                 realtimeProperties(true),
                 new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
-                java.util.List.of("mc-bind")
+                pluginCatalog(java.util.List.of("mc-bind"))
         );
 
         var result = service.getServerDiscoveryDocument();
@@ -58,7 +59,7 @@ class ServerEntranceDomainApiTests {
                 "CarryPigeonBackend",
                 realtimeProperties(false),
                 new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
-                java.util.List.of()
+                pluginCatalog(java.util.List.of())
         );
 
         var result = service.getServerDiscoveryDocument();
@@ -67,47 +68,13 @@ class ServerEntranceDomainApiTests {
         assertEquals(false, result.capabilities().eventResume());
     }
 
-    /**
-     * 验证 required gate 缺失插件会被正确识别。
-     */
-    @Test
-    @DisplayName("find missing required plugins returns plugins not installed")
-    void findMissingRequiredPlugins_returnsPluginsNotInstalled() {
-        ServerEntranceDomainApi service = new ServerEntranceDomainApi(
-                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                "CarryPigeonBackend",
-                realtimeProperties(true),
-                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
-                java.util.List.of("mc-bind", "math-formula")
-        );
-
-        var result = service.findMissingRequiredPlugins(java.util.List.of("mc-bind"));
-
-        assertEquals(java.util.List.of("math-formula"), result);
-    }
-
-    /**
-     * 验证 required plugin 配置会忽略空条目并裁剪空白，避免空配置误触发 required gate。
-     */
-    @Test
-    @DisplayName("required plugins blank entries are ignored")
-    void requiredPlugins_blankEntries_areIgnored() {
-        ServerEntranceDomainApi service = new ServerEntranceDomainApi(
-                new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                "CarryPigeonBackend",
-                realtimeProperties(true),
-                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
-                java.util.List.of("", "  mc-bind  ", " ")
-        );
-
-        var discovery = service.getServerDiscoveryDocument();
-        var missingPlugins = service.findMissingRequiredPlugins(java.util.List.of("mc-bind"));
-
-        assertEquals(java.util.List.of("mc-bind"), discovery.requiredPlugins());
-        assertEquals(java.util.List.of(), missingPlugins);
-    }
-
     private RealtimeDiscoverySettings realtimeProperties(boolean enabled) {
         return new RealtimeDiscoverySettings(enabled, "127.0.0.1", 28080, "/api/ws");
+    }
+
+    private PluginCatalogApi pluginCatalog(java.util.List<String> requiredPluginIds) {
+        PluginCatalogApi api = org.mockito.Mockito.mock(PluginCatalogApi.class);
+        org.mockito.Mockito.when(api.requiredPluginIds()).thenReturn(requiredPluginIds);
+        return api;
     }
 }

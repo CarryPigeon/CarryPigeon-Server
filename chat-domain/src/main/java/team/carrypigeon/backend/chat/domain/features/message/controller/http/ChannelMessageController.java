@@ -15,7 +15,6 @@ import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,9 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.EditChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageHttpCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
@@ -41,7 +39,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelM
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.EditChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MessageAttachmentUploadResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
@@ -51,7 +48,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 
 /**
  * 频道消息 HTTP 入口。
- * 职责：提供频道消息历史/搜索查询、发送、编辑、删除与附件上传协议能力。
+ * 职责：提供频道消息历史/搜索查询、发送、撤回与附件上传协议能力。
  * 边界：只承接协议层请求，不承载消息业务规则。
  */
 @Validated
@@ -197,22 +194,24 @@ public class ChannelMessageController {
     }
 
     @PostMapping("/{channelId}/messages")
-    @Operation(summary = "发送消息", description = "按 v1 语义发送频道消息；当前支持 Core:Text / Core:File / Core:Voice。")
+    @Operation(
+            summary = "发送消息",
+            description = "按 canonical envelope 发送频道消息；domain_version 与 data 由当前运行时注册的 domain 插件校验。"
+    )
     public ResponseEntity<ChannelMessageV1Response> sendChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,
             HttpServletRequest request
     ) {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        ChannelMessageResult result = channelMessagePublishingApi.sendChannelMessageHttp(
-                new SendChannelMessageHttpCommand(
+        ChannelMessageResult result = channelMessagePublishingApi.sendChannelMessage(
+                new SendChannelMessageCommand(
                         principal.accountId(),
                         channelId,
                         requestBody.domain(),
                         requestBody.domainVersion(),
                         requestBody.data(),
-                        requestBody.replyToMid(),
-                        toMentionCommands(requestBody.mentions()),
+                        parseMentionIds(requestBody.mentions()),
                         requestBody.clientMessageId()
                 )
         );
@@ -274,23 +273,19 @@ public class ChannelMessageController {
         return responseMapper.toResponse(result);
     }
 
-    private java.util.List<EditChannelMessageCommand.MentionTargetCommand> toMentionCommands(
-            java.util.List<EditChannelMessageRequest.MentionTargetRequest> mentionRequests
-    ) {
-        if (mentionRequests == null || mentionRequests.isEmpty()) {
+    private java.util.List<Long> parseMentionIds(java.util.List<String> mentionIds) {
+        if (mentionIds == null || mentionIds.isEmpty()) {
             return java.util.List.of();
         }
-        java.util.List<EditChannelMessageCommand.MentionTargetCommand> commands = new java.util.ArrayList<>();
-        for (EditChannelMessageRequest.MentionTargetRequest mentionRequest : mentionRequests) {
-            if (mentionRequest == null || mentionRequest.uid() == null || mentionRequest.uid().isBlank()) {
-                throw ProblemException.validationFailed("mentions uid must be decimal snowflake string");
+        java.util.List<Long> parsedIds = new java.util.ArrayList<>();
+        for (String mentionId : mentionIds) {
+            Long parsedId = parseOptionalSnowflake(mentionId, "mentions", false);
+            if (parsedId == null || parsedId <= 0L) {
+                throw ProblemException.validationFailed("mentions must contain positive decimal snowflake strings");
             }
-            commands.add(new EditChannelMessageCommand.MentionTargetCommand(
-                    mentionRequest.type() == null || mentionRequest.type().isBlank() ? "user" : mentionRequest.type().trim(),
-                    parseOptionalSnowflake(mentionRequest.uid(), "mentions uid", false)
-            ));
+            parsedIds.add(parsedId);
         }
-        return commands;
+        return parsedIds;
     }
 
     /**

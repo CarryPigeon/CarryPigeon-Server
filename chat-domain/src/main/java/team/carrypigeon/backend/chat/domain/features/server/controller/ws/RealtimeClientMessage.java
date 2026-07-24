@@ -20,26 +20,6 @@ public record RealtimeClientMessage(
         Map<String, Object> data
 ) {
 
-    public Map<String, Object> payload() {
-        return objectValue("payload");
-    }
-
-    public Map<String, Object> metadata() {
-        return objectValue("metadata");
-    }
-
-    public Long channelId() {
-        return longValue("channel_id");
-    }
-
-    public String messageType() {
-        return textValue("message_type");
-    }
-
-    public String body() {
-        return textValue("body");
-    }
-
     public String accessToken() {
         return textValue("access_token");
     }
@@ -59,31 +39,6 @@ public record RealtimeClientMessage(
         }
         Object value = resume.get("last_event_id");
         return value == null ? null : String.valueOf(value);
-    }
-
-    /**
-     * 从统一 data envelope 中读取可选数字字段。
-     * 约束：兼容 JSON number 与数字字符串；无法解析时返回 v1 协议校验错误。
-     *
-     * @param key data 字段名
-     * @return long 值，缺失时为 null
-     */
-    private Long longValue(String key) {
-        if (data == null) {
-            return null;
-        }
-        Object value = data.get(key);
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        try {
-            return Long.parseLong(String.valueOf(value));
-        } catch (NumberFormatException exception) {
-            throw ProblemException.validationFailed("validation_failed", key + " must be decimal number");
-        }
     }
 
     private String textValue(String key) {

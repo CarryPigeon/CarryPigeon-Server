@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.util.Optional;
-import team.carrypigeon.backend.chat.domain.features.file.domain.port.FileAttachmentAccessAuthorizer;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**
@@ -15,14 +15,14 @@ class FileObjectKeyResolver {
     private static final String PROFILE_BACKGROUND_SHARE_KEY_PREFIX = "profile_bg_";
     private static final long MAX_PROFILE_BACKGROUND_SIZE_BYTES = 10L * 1024 * 1024;
 
-    private final FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer;
+    private final ChannelMessagingApi channelMessagingApi;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
 
     FileObjectKeyResolver(
-            FileAttachmentAccessAuthorizer fileAttachmentAccessAuthorizer,
+            ChannelMessagingApi channelMessagingApi,
             FileUploadShareKeyCodec uploadShareKeyCodec
     ) {
-        this.fileAttachmentAccessAuthorizer = fileAttachmentAccessAuthorizer;
+        this.channelMessagingApi = channelMessagingApi;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
     }
 
@@ -139,7 +139,7 @@ class FileObjectKeyResolver {
      */
     private void authorizeAttachmentDownload(long accountId, String objectKey) {
         AttachmentScope attachmentScope = parseAttachmentScope(objectKey);
-        if (!fileAttachmentAccessAuthorizer.canAccessChannelAttachment(accountId, attachmentScope.channelId())) {
+        if (!channelMessagingApi.isMember(attachmentScope.channelId(), accountId)) {
             throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
         }
     }

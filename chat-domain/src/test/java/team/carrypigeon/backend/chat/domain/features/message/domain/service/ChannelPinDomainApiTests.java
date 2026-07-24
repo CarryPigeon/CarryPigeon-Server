@@ -34,7 +34,11 @@ class ChannelPinDomainApiTests {
         fixture.channelMemberRepository.memberships.put(1L, new java.util.ArrayList<>(List.of(
                 new ChannelMember(1L, 1001L, ChannelMemberRole.OWNER, MessageDomainApiTestSupport.BASE_TIME, null)
         )));
-        fixture.messageRepository.messagesById.put(5001L, new ChannelMessage(5001L, MessageDomainApiTestSupport.SERVER_ID, 1L, 1L, 1002L, "text", "hello", "hello", "hello", null, null, "sent", MessageDomainApiTestSupport.BASE_TIME));
+        fixture.messageRepository.messagesById.put(5001L, new ChannelMessage(
+                5001L, 1002L, 1L, "Core:Text", "1.0.0", java.util.Map.of("text", "hello"),
+                MessageDomainApiTestSupport.BASE_TIME, List.of(), "hello",
+                team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus.SENT
+        ));
 
         ChannelPinResult result = fixture.pinApi.pinChannelMessage(new PinChannelMessageCommand(1001L, 1L, 5001L, "重要通知"));
 

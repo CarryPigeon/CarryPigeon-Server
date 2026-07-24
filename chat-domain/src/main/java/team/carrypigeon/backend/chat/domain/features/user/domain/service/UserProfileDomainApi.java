@@ -3,9 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.user.domain.service;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
@@ -17,6 +15,8 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.query.SearchUse
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -30,22 +30,22 @@ public class UserProfileDomainApi implements UserProfileApi {
 
     private static final String USER_PROFILE_NOT_FOUND_MESSAGE = "user profile does not exist";
 
-    private final AuthAccountRepository authAccountRepository;
+    private final AuthAccountApi authAccountApi;
     private final UserProfileRepository userProfileRepository;
-    private final EmailVerificationCodeService emailVerificationCodeService;
+    private final EmailVerificationApi emailVerificationApi;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileDomainApi(
-            AuthAccountRepository authAccountRepository,
+            AuthAccountApi authAccountApi,
             UserProfileRepository userProfileRepository,
-            EmailVerificationCodeService emailVerificationCodeService,
+            EmailVerificationApi emailVerificationApi,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        this.authAccountRepository = authAccountRepository;
+        this.authAccountApi = authAccountApi;
         this.userProfileRepository = userProfileRepository;
-        this.emailVerificationCodeService = emailVerificationCodeService;
+        this.emailVerificationApi = emailVerificationApi;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
     }
@@ -69,9 +69,7 @@ public class UserProfileDomainApi implements UserProfileApi {
      * @return 当前账户邮箱
      */
     public String getCurrentUserEmail(long accountId) {
-        return authAccountRepository.findById(accountId)
-                .orElseThrow(() -> ProblemException.notFound("auth account does not exist"))
-                .username();
+        return authAccountApi.getAccountEmail(accountId);
     }
 
     /**
@@ -179,24 +177,8 @@ public class UserProfileDomainApi implements UserProfileApi {
      */
     public void updateCurrentUserEmail(UpdateCurrentUserEmailCommand command) {
         String normalizedEmail = normalizeEmail(command.email());
-        emailVerificationCodeService.verifyCode(normalizedEmail, command.code());
-        transactionRunner.runInTransaction(() -> {
-            AuthAccount existingAccount = authAccountRepository.findById(command.accountId())
-                    .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
-            authAccountRepository.findByUsername(normalizedEmail)
-                    .filter(account -> account.id() != command.accountId())
-                    .ifPresent(account -> {
-                        throw ProblemException.validationFailed("email already exists");
-                    });
-            authAccountRepository.update(new AuthAccount(
-                    existingAccount.id(),
-                    normalizedEmail,
-                    existingAccount.passwordHash(),
-                    existingAccount.createdAt(),
-                    timeProvider.nowInstant()
-            ));
-            return null;
-        });
+        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(normalizedEmail, command.code()));
+        authAccountApi.updateAccountEmail(command.accountId(), normalizedEmail);
     }
 
     private String normalizeEmail(String email) {

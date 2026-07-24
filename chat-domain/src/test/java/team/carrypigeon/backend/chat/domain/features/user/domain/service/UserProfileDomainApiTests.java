@@ -10,7 +10,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
@@ -300,26 +305,60 @@ class UserProfileDomainApiTests {
         private final InMemoryAuthAccountRepository authAccountRepository = new InMemoryAuthAccountRepository();
         private final InMemoryUserProfileRepository repository = new InMemoryUserProfileRepository();
         private final UserProfileDomainApi service = new UserProfileDomainApi(
-                authAccountRepository,
+                new RepositoryBackedAuthAccountApi(authAccountRepository),
                 repository,
-                new NoopEmailVerificationCodeService(),
+                new NoopEmailVerificationApi(),
                 new TimeProvider(Clock.fixed(UPDATED_TIME, ZoneOffset.UTC)),
                 new NoopTransactionRunner()
         );
     }
 
     /**
-     * `NoopEmailVerificationCodeService` 测试替身。
-     * 职责：隔离验证码外部能力，使资料领域测试只关注邮箱更新编排。
+     * 通过账号仓储提供测试所需的最小 auth API 行为。
      */
-    private static class NoopEmailVerificationCodeService implements EmailVerificationCodeService {
+    private static class RepositoryBackedAuthAccountApi implements AuthAccountApi {
 
-        @Override
-        public void issueCode(String email) {
+        private final AuthAccountRepository repository;
+
+        RepositoryBackedAuthAccountApi(AuthAccountRepository repository) {
+            this.repository = repository;
         }
 
         @Override
-        public void verifyCode(String email, String code) {
+        public RegisterResult register(RegisterCommand command) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public String getAccountEmail(long accountId) {
+            return repository.findById(accountId).orElseThrow().username();
+        }
+
+        @Override
+        public void updateAccountEmail(long accountId, String email) {
+            AuthAccount account = repository.findById(accountId).orElseThrow();
+            repository.update(new AuthAccount(
+                    account.id(),
+                    email,
+                    account.passwordHash(),
+                    account.createdAt(),
+                    UPDATED_TIME
+            ));
+        }
+    }
+
+    /**
+     * `NoopEmailVerificationApi` 测试替身。
+     * 职责：隔离验证码外部能力，使资料领域测试只关注邮箱更新编排。
+     */
+    private static class NoopEmailVerificationApi implements EmailVerificationApi {
+
+        @Override
+        public void issueCode(IssueEmailVerificationCodeCommand command) {
+        }
+
+        @Override
+        public void verifyCode(VerifyEmailVerificationCodeCommand command) {
         }
     }
 

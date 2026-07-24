@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.command;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * system 频道消息发送命令。
  * 职责：表达内部受信领域服务向 system 频道写入消息所需的最小输入。
@@ -7,15 +10,15 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.command;
  *
  * @param operatorAccountId 触发 system 消息的账户 ID
  * @param channelId system 频道 ID
- * @param body 消息正文摘要
- * @param payload 结构化载荷 JSON
- * @param metadata 元数据 JSON
+ * @param domainVersion Core:System domain 版本
+ * @param data Core:System 专属 canonical 数据
+ * @param mentions 需要提醒的用户 ID
  */
 public record SendSystemChannelMessageCommand(
         long operatorAccountId,
         long channelId,
-        String body,
-        String payload,
-        String metadata
+        String domainVersion,
+        Map<String, Object> data,
+        List<Long> mentions
 ) {
 }

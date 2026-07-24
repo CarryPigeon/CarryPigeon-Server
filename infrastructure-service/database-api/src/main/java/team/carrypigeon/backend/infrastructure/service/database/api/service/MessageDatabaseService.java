@@ -33,15 +33,6 @@ public interface MessageDatabaseService {
     void update(MessageRecord record);
 
     /**
-     * 按消息 ID 删除消息记录。
-     *
-     * @param messageId 消息 ID
-     */
-    default void delete(long messageId) {
-        throw new UnsupportedOperationException("message delete is not supported");
-    }
-
-    /**
      * 按频道查询游标之前的历史消息。
      *
      * @param channelId 频道 ID

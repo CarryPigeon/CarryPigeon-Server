@@ -26,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
@@ -60,7 +60,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
             ChannelReadStateRepository channelReadStateRepository,
-            UserProfileRepository userProfileRepository,
+            UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy
     ) {
         this.channelRepository = channelRepository;
@@ -69,7 +69,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         this.channelAuditLogRepository = channelAuditLogRepository;
         this.channelReadStateRepository = channelReadStateRepository;
         this.channelGovernancePolicy = channelGovernancePolicy;
-        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileRepository);
+        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileApi);
         this.channelAuditActionMapper = new ChannelAuditActionMapper();
     }
 

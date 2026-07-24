@@ -1,10 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,7 +18,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.command.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.CreateTokenSessionCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RefreshTokenCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.command.SendEmailCodeCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthSessionTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
@@ -31,13 +30,12 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.Refresh
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.SendEmailCodeRequest;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
 /**
  * 鉴权 HTTP 入口。
- * 职责：承接邮箱验证码、会话令牌签发、刷新与撤销等 v1 公共鉴权协议请求。
+ * 职责：承接账号注册、会话令牌签发、刷新与撤销等 v1 公共鉴权协议请求。
  * 边界：当前阶段不扩展 OAuth、SSO、复杂权限与主业务资源接口。
  */
 @RestController
@@ -47,41 +45,23 @@ public class AuthController {
 
     private final AuthAccountApi authAccountDomainApi;
     private final AuthSessionApi authSessionDomainApi;
-    private final ServerEntranceApi serverEntranceDomainApi;
+    private final PluginCatalogApi pluginCatalogApi;
 
     /**
      * 创建鉴权 HTTP 入口。
      *
      * @param authAccountDomainApi 鉴权账号领域 API
      * @param authSessionDomainApi 鉴权会话领域 API
-     * @param serverEntranceDomainApi 服务入口领域 API
+     * @param pluginCatalogApi 插件目录领域 API
      */
     public AuthController(
             AuthAccountApi authAccountDomainApi,
             AuthSessionApi authSessionDomainApi,
-            ServerEntranceApi serverEntranceDomainApi
+            PluginCatalogApi pluginCatalogApi
     ) {
         this.authAccountDomainApi = authAccountDomainApi;
         this.authSessionDomainApi = authSessionDomainApi;
-        this.serverEntranceDomainApi = serverEntranceDomainApi;
-    }
-
-    /**
-     * 发送邮箱验证码。
-     *
-     * @param request 验证码请求
-     * @return HTTP 204
-     */
-    @PostMapping("/email_codes")
-    @Operation(summary = "发送邮箱验证码", description = "为目标邮箱签发一次性验证码。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "验证码请求体。当前只承载邮箱字段。", required = true,
-            content = @Content(schema = @Schema(implementation = SendEmailCodeRequest.class)))
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "验证码请求受理成功")
-    })
-    public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeRequest request) {
-        authAccountDomainApi.sendEmailCode(new SendEmailCodeCommand(request.email()));
-        return ResponseEntity.noContent().build();
+        this.pluginCatalogApi = pluginCatalogApi;
     }
 
     /**
@@ -130,7 +110,7 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
     })
     public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
-        serverEntranceDomainApi.requireRequiredPluginsSatisfied(
+        pluginCatalogApi.requireRequiredPluginsSatisfied(
                 request.client().installedPlugins() == null
                         ? List.of()
                         : request.client().installedPlugins().stream().map(CreateTokenSessionRequest.InstalledPluginRequest::pluginId).toList()

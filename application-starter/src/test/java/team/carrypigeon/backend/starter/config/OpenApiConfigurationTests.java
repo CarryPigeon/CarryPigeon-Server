@@ -196,15 +196,17 @@ class OpenApiConfigurationTests {
                     .containsKey("发送文本消息");
             assertThat(jsonExamples(sendMessageOperation).get("发送文本消息").getValue().toString())
                     .contains("\"domain_version\": \"1.0.0\"")
-                    .contains("\"text\": \"hello from Apifox\"");
+                    .contains("\"text\": \"hello from Apifox\"")
+                    .contains("\"mentions\": [\"{{accountId}}\"]");
             assertThat(formExamples(uploadBackgroundOperation))
                     .containsKey("上传用户背景图");
             assertThat(formExamples(uploadAttachmentOperation))
                     .containsKey("上传消息附件");
             assertThat(jsonExamples(pinMessageOperation))
                     .containsKey("置顶频道消息");
-            assertThat(jsonExamples(forwardMessageOperation).get("转发消息").getValue().toString())
-                    .contains("\"target_cid\": \"{{channelId}}\"");
+            assertThat(jsonExamples(forwardMessageOperation).get("合并转发消息").getValue().toString())
+                    .contains("\"target_cid\": \"{{channelId}}\"")
+                    .contains("\"merged_mids\": [\"{{messageId}}\", \"{{secondMessageId}}\"]");
             assertThat(jsonExamples(readStateOperation).get("更新频道已读状态").getValue().toString())
                     .contains("\"last_read_mid\": \"{{messageId}}\"");
             assertThat(jsonExamples(markMentionsReadOperation))

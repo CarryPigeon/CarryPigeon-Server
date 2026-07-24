@@ -24,14 +24,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.support.AuthAccessTokenInterceptor;
+import team.carrypigeon.backend.chat.domain.shared.controller.security.BearerAuthenticationInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.EmailVerificationCodeService;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.PasswordHasher;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.TokenHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthAccountDomainApi;
@@ -42,15 +44,18 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelAccountProvisioningDomainApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.PluginCatalogItemResult;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.UserProfileController;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserAccountProvisioningDomainApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AccessTokenAuthenticationDomainApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -134,7 +139,7 @@ class AuthUserBusinessChainTests {
     @DisplayName("email token session missing required plugin returns precondition failed")
     void emailTokenSession_missingRequiredPlugin_returnsPreconditionFailed() throws Exception {
         Fixture fixture = new Fixture();
-        fixture.serverEntranceApi.missingPlugins = List.of("mc-bind");
+        fixture.pluginCatalogApi.missingPlugins = List.of("mc-bind");
 
         fixture.authMvc.perform(post("/api/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -553,7 +558,7 @@ class AuthUserBusinessChainTests {
         private final InMemoryChannelMemberRepository channelMemberRepository = new InMemoryChannelMemberRepository();
         private final DeterministicIdGenerator idGenerator = new DeterministicIdGenerator();
         private final DeterministicAuthTokenService tokenService = new DeterministicAuthTokenService();
-        private final NoopServerEntranceApi serverEntranceApi = new NoopServerEntranceApi();
+        private final NoopPluginCatalogApi pluginCatalogApi = new NoopPluginCatalogApi();
         private final RecordingFileTransferApi fileTransferApi = new RecordingFileTransferApi();
         private final AuthTokenSettings tokenSettings = new AuthTokenSettings(Duration.ofMinutes(30), Duration.ofDays(14));
         private final MockMvc authMvc;
@@ -564,24 +569,26 @@ class AuthUserBusinessChainTests {
             TransactionRunner transactionRunner = new NoopTransactionRunner();
             PasswordHasher passwordHasher = new PrefixPasswordHasher();
             TokenHasher tokenHasher = token -> "hash::" + token;
-            EmailVerificationCodeService emailVerificationCodeService = new AcceptingEmailVerificationCodeService();
+            EmailVerificationApi emailVerificationApi = new AcceptingEmailVerificationApi();
+            UserAccountProvisioningDomainApi userProvisioningApi = new UserAccountProvisioningDomainApi(userProfileRepository);
+            ChannelAccountProvisioningDomainApi channelProvisioningApi = new ChannelAccountProvisioningDomainApi(
+                    channelRepository,
+                    channelMemberRepository
+            );
             AuthAccountDomainApi accountApi = new AuthAccountDomainApi(
                     accountRepository,
-                    userProfileRepository,
-                    channelRepository,
-                    channelMemberRepository,
+                    userProvisioningApi,
+                    channelProvisioningApi,
                     passwordHasher,
                     idGenerator,
                     timeProvider,
-                    transactionRunner,
-                    emailVerificationCodeService
+                    transactionRunner
             );
             AuthSessionDomainApi sessionApi = new AuthSessionDomainApi(
                     accountRepository,
                     refreshSessionRepository,
-                    userProfileRepository,
-                    channelRepository,
-                    channelMemberRepository,
+                    userProvisioningApi,
+                    channelProvisioningApi,
                     passwordHasher,
                     tokenHasher,
                     tokenService,
@@ -590,13 +597,13 @@ class AuthUserBusinessChainTests {
                     idGenerator,
                     timeProvider,
                     transactionRunner,
-                    emailVerificationCodeService
+                    emailVerificationApi
             );
             RequestAuthenticationContext authRequestContext = new RequestAuthenticationContext();
             UserProfileDomainApi userProfileApi = new UserProfileDomainApi(
-                    accountRepository,
+                    accountApi,
                     userProfileRepository,
-                    emailVerificationCodeService,
+                    emailVerificationApi,
                     timeProvider,
                     transactionRunner
             );
@@ -604,7 +611,7 @@ class AuthUserBusinessChainTests {
             this.authMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                             accountApi,
                             sessionApi,
-                            serverEntranceApi
+                            pluginCatalogApi
                     ))
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
@@ -614,7 +621,10 @@ class AuthUserBusinessChainTests {
                             authRequestContext,
                             fileTransferApi
                     ))
-                    .addInterceptors(new AuthAccessTokenInterceptor(tokenService, authRequestContext))
+                    .addInterceptors(new BearerAuthenticationInterceptor(
+                            new AccessTokenAuthenticationDomainApi(tokenService),
+                            authRequestContext
+                    ))
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
                     .build();
@@ -816,7 +826,7 @@ class AuthUserBusinessChainTests {
      * `DeterministicAuthTokenService` 确定性令牌服务。
      * 职责：签发可解析的测试 token，使 HTTP 认证拦截器参与链路验证。
      */
-    private static final class DeterministicAuthTokenService implements AuthTokenService {
+    private static final class DeterministicAuthTokenService implements AuthTokenCodec {
 
         @Override
         public String issueAccessToken(AuthAccount account, Instant expiresAt) {
@@ -883,18 +893,18 @@ class AuthUserBusinessChainTests {
     }
 
     /**
-     * `AcceptingEmailVerificationCodeService` 验证码替身。
+     * `AcceptingEmailVerificationApi` 验证码 API 替身。
      * 职责：让邮箱验证码链路可通过，同时仍经过真实领域 API 的验证码校验调用点。
      */
-    private static final class AcceptingEmailVerificationCodeService implements EmailVerificationCodeService {
+    private static final class AcceptingEmailVerificationApi implements EmailVerificationApi {
 
         @Override
-        public void issueCode(String email) {
+        public void issueCode(IssueEmailVerificationCodeCommand command) {
         }
 
         @Override
-        public void verifyCode(String email, String code) {
-            if (!"123456".equals(code)) {
+        public void verifyCode(VerifyEmailVerificationCodeCommand command) {
+            if (!"123456".equals(command.code())) {
                 throw ProblemException.validationFailed("email code is invalid");
             }
         }
@@ -918,16 +928,21 @@ class AuthUserBusinessChainTests {
     }
 
     /**
-     * `NoopServerEntranceApi` 服务入口替身。
+     * `NoopPluginCatalogApi` 插件目录替身。
      * 职责：让鉴权 HTTP 链路通过 required plugin gate，不验证服务发现领域。
      */
-    private static final class NoopServerEntranceApi implements ServerEntranceApi {
+    private static final class NoopPluginCatalogApi implements PluginCatalogApi {
 
         private List<String> missingPlugins = List.of();
 
         @Override
-        public ServerDiscoveryDocument getServerDiscoveryDocument() {
-            throw new UnsupportedOperationException("server discovery is not part of this business chain");
+        public List<PluginCatalogItemResult> listPublicPlugins() {
+            return List.of();
+        }
+
+        @Override
+        public List<String> requiredPluginIds() {
+            return List.of();
         }
 
         @Override

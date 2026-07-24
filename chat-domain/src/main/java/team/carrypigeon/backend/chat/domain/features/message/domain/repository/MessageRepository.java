@@ -35,15 +35,6 @@ public interface MessageRepository {
     ChannelMessage update(ChannelMessage message);
 
     /**
-     * 按消息 ID 删除消息。
-     *
-     * @param messageId 消息 ID
-     */
-    default void delete(long messageId) {
-        throw new UnsupportedOperationException("message delete is not supported");
-    }
-
-    /**
      * 查询频道历史消息。
      *
      * @param channelId 频道 ID

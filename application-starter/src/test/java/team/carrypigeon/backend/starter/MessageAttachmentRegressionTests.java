@@ -19,7 +19,6 @@ import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateF
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.draft.TextChannelMessageDraft;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
@@ -110,7 +109,11 @@ class MessageAttachmentRegressionTests {
             channelMessagePublishingApi.sendChannelMessage(new SendChannelMessageCommand(
                     peerLoginResult.accountId(),
                     1L,
-                    new TextChannelMessageDraft("未读消息")
+                    "Core:Text",
+                    "1.0.0",
+                    java.util.Map.of("text", "未读消息"),
+                    java.util.List.of(),
+                    null
             ));
 
             var unreadResponse = channelReadStateController.listUnreads(request);

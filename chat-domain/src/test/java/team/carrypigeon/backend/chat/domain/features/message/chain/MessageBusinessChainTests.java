@@ -34,35 +34,41 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagingDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelPinsController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.MentionController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.MessageController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageIdempotency;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageChannelBoundary;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageRealtimePublisher;
-import team.carrypigeon.backend.chat.domain.features.message.domain.port.MessageSenderSnapshot;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageAttachmentDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageLifecycleDomainApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginDescriptor;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistration;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.MessageDomainPluginDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessagePublishingDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelMessageTimelineDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.ChannelPinDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.MentionDomainApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
-import team.carrypigeon.backend.chat.domain.features.message.support.channel.ChannelBackedMessageChannelBoundary;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.FileChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.TextChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.message.support.plugin.VoiceChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.FileChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.ForwardChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.TextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.ReplyTextChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.support.message.VoiceChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
+import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
@@ -96,7 +102,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -133,7 +138,7 @@ class MessageBusinessChainTests {
                 .andExpect(jsonPath("$.mid").value("7001"))
                 .andExpect(jsonPath("$.cid").value("1"))
                 .andExpect(jsonPath("$.uid").value("1001"))
-                .andExpect(jsonPath("$.sender.nickname").value("carry-user-1001"))
+                .andExpect(jsonPath("$.sender").doesNotExist())
                 .andExpect(jsonPath("$.domain").value("Core:Text"))
                 .andExpect(jsonPath("$.data.text").value("hello business chain"))
                 .andReturn();
@@ -150,7 +155,7 @@ class MessageBusinessChainTests {
                 .andExpect(jsonPath("$.items[0].mid").value(String.valueOf(messageId)))
                 .andExpect(jsonPath("$.items[0].preview").value("hello business chain"));
 
-        assertEquals("hello business chain", fixture.messageRepository.messagesById.get(messageId).body());
+        assertEquals("hello business chain", fixture.messageRepository.messagesById.get(messageId).data().get("text"));
         assertEquals(1, fixture.publisher.publishedMessages.size());
         assertEquals(List.of(1001L, 1002L), fixture.publisher.recipientAccountIds.get(0));
     }
@@ -170,11 +175,11 @@ class MessageBusinessChainTests {
                                   "domain":"Core:Text",
                                   "domain_version":"1.0.0",
                                   "data":{"text":"hello @1002"},
-                                  "mentions":[{"type":"user","uid":"1002"}]
+                                  "mentions":["1002"]
                                 }
-                                """))
+                """))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.mentions[0].uid").value("1002"));
+                .andExpect(jsonPath("$.mentions[0]").value("1002"));
 
         fixture.mvc(1002L).perform(get("/api/mentions").param("unread_only", "true"))
                 .andExpect(status().isOk())
@@ -194,7 +199,7 @@ class MessageBusinessChainTests {
                                   "domain":"Core:Text",
                                   "domain_version":"1.0.0",
                                   "data":{"text":"hello again @1002"},
-                                  "mentions":[{"type":"user","uid":"1002"}]
+                                  "mentions":["1002"]
                                 }
                                 """))
                 .andExpect(status().isCreated());
@@ -207,43 +212,6 @@ class MessageBusinessChainTests {
 
         assertTrue(fixture.mentionRepository.mentions.stream().allMatch(Mention::read));
         assertEquals(2, fixture.publisher.createdMentions.size());
-    }
-
-    /**
-     * 验证编辑会更新消息正文和编辑版本，随后删除会移除仓储记录并发布更新事件。
-     */
-    @Test
-    @DisplayName("edit and delete message update repository version and publish update event")
-    void editAndDeleteMessage_ownedMessage_updatesRepositoryVersionAndPublishesUpdateEvent() throws Exception {
-        Fixture fixture = new Fixture();
-        long messageId = fixture.sendText(1001L, "before edit");
-
-        fixture.mvc(1001L).perform(patch("/api/messages/{messageId}", messageId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "domain":"Core:Text",
-                                  "domain_version":"1.0.0",
-                                  "data":{"text":"after edit"},
-                                  "expected_edit_version":1
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.mid").value(String.valueOf(messageId)))
-                .andExpect(jsonPath("$.data.text").value("after edit"))
-                .andExpect(jsonPath("$.edit_version").value(2));
-
-        ChannelMessage updated = fixture.messageRepository.messagesById.get(messageId);
-        assertEquals("after edit", updated.body());
-        assertEquals(2L, updated.editVersion());
-
-        fixture.mvc(1001L).perform(delete("/api/messages/{messageId}", messageId))
-                .andExpect(status().isNoContent());
-
-        assertFalse(fixture.messageRepository.messagesById.containsKey(messageId));
-        assertEquals(1, fixture.publisher.updatedMessages.size());
-        assertEquals(1, fixture.publisher.deletedMessages.size());
-        assertEquals(messageId, fixture.publisher.deletedMessages.getFirst().messageId());
     }
 
     /**
@@ -372,19 +340,6 @@ class MessageBusinessChainTests {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.message").value("q must not be blank"));
 
-        long messageId = fixture.sendText(1001L, "versioned");
-        fixture.mvc(1001L).perform(patch("/api/messages/{messageId}", messageId)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "domain":"Core:Text",
-                                  "domain_version":"1.0.0",
-                                  "data":{"text":"version conflict"},
-                                  "expected_edit_version":99
-                                }
-                                """))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error.reason").value("conflict"));
     }
 
     /**
@@ -427,14 +382,16 @@ class MessageBusinessChainTests {
                         .content("""
                                 {"target_cid":"1","comment":"please check"}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.mid").value("7002"))
                 .andExpect(jsonPath("$.uid").value("1002"))
-                .andExpect(jsonPath("$.data.text").value("please check\n\n[Forwarded] source body"))
-                .andExpect(jsonPath("$.forwarded_from.mid").value(String.valueOf(sourceMessageId)))
-                .andExpect(jsonPath("$.forwarded_from.cid").value("1"))
-                .andExpect(jsonPath("$.forwarded_from.uid").value("1001"))
-                .andExpect(jsonPath("$.forwarded_from.preview").value("source body"));
+                .andExpect(jsonPath("$.domain").value("Core:Forward"))
+                .andExpect(jsonPath("$.data.content.text").value("please check"))
+                .andExpect(jsonPath("$.data.forwarded_from.mid").value(String.valueOf(sourceMessageId)))
+                .andExpect(jsonPath("$.data.forwarded_from.cid").value("1"))
+                .andExpect(jsonPath("$.data.forwarded_from.uid").value("1001"))
+                .andExpect(jsonPath("$.data.forwarded_from.preview").value("source body"))
+                .andExpect(jsonPath("$.forwarded_from").doesNotExist());
 
         assertEquals(2, fixture.messageRepository.messagesById.size());
         assertEquals(2, fixture.publisher.publishedMessages.size());
@@ -586,28 +543,6 @@ class MessageBusinessChainTests {
     }
 
     /**
-     * 验证普通成员不能删除他人消息，而 owner 可以删除成员消息。
-     */
-    @Test
-    @DisplayName("delete message follows recall permission rules")
-    void deleteMessage_otherSender_followsRecallPermissionRules() throws Exception {
-        Fixture fixture = new Fixture();
-        long ownerMessageId = fixture.sendText(1001L, "owner message");
-
-        fixture.mvc(1002L).perform(delete("/api/messages/{messageId}", ownerMessageId))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.reason").value("forbidden"));
-
-        long memberMessageId = fixture.sendText(1002L, "member message");
-        fixture.mvc(1001L).perform(delete("/api/messages/{messageId}", memberMessageId))
-                .andExpect(status().isNoContent());
-
-        assertFalse(fixture.messageRepository.messagesById.containsKey(memberMessageId));
-        assertTrue(fixture.publisher.deletedMessages.stream()
-                .anyMatch(message -> message.messageId() == memberMessageId && "recalled".equals(message.status())));
-    }
-
-    /**
      * 验证频道消息撤回 HTTP 入口会复用生命周期领域规则并发布更新事件。
      */
     @Test
@@ -619,11 +554,15 @@ class MessageBusinessChainTests {
         fixture.mvc(1002L).perform(post("/api/channels/1/messages/{messageId}/recall", messageId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mid").value(String.valueOf(messageId)))
-                .andExpect(jsonPath("$.data.text").value("[消息已撤回]"));
+                .andExpect(jsonPath("$.data").isEmpty())
+                .andExpect(jsonPath("$.mentions").isArray())
+                .andExpect(jsonPath("$.mentions").isEmpty())
+                .andExpect(jsonPath("$.preview").value("消息已撤回"))
+                .andExpect(jsonPath("$.status").value("recalled"));
 
-        assertEquals("recalled", fixture.messageRepository.messagesById.get(messageId).status());
-        assertTrue(fixture.publisher.updatedMessages.stream()
-                .anyMatch(message -> message.messageId() == messageId && "recalled".equals(message.status())));
+        assertEquals(MessageStatus.RECALLED, fixture.messageRepository.messagesById.get(messageId).status());
+        assertTrue(fixture.publisher.recalledMessages.stream()
+                .anyMatch(message -> message.messageId() == messageId && message.status() == MessageStatus.RECALLED));
     }
 
     /**
@@ -892,10 +831,11 @@ class MessageBusinessChainTests {
         final InMemoryChannelAuditLogRepository channelAuditLogRepository = new InMemoryChannelAuditLogRepository();
         final InMemoryChannelPinRepository channelPinRepository = new InMemoryChannelPinRepository();
         final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
+        final NoopMessageIdempotencyRepository messageIdempotencyRepository = new NoopMessageIdempotencyRepository();
         final InMemoryMentionRepository mentionRepository = new InMemoryMentionRepository();
         final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
         final TestObjectStorageService storageService = new TestObjectStorageService();
-        final RecordingMessageRealtimePublisher publisher = new RecordingMessageRealtimePublisher();
+        final RecordingRealtimeEventApi publisher = new RecordingRealtimeEventApi();
         final TimeProvider timeProvider = new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
         final TransactionRunner transactionRunner = new NoopTransactionRunner();
 
@@ -911,10 +851,8 @@ class MessageBusinessChainTests {
             channelMemberRepository.save(new ChannelMember(1L, 1002L, ChannelMemberRole.MEMBER, BASE_TIME, null));
             channelMemberRepository.save(new ChannelMember(2L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
             ObjectProvider<ObjectStorageService> storageProvider = objectProvider(storageService);
-            MessageAttachmentObjectKeyPolicy objectKeyPolicy = new MessageAttachmentObjectKeyPolicy();
-            MessageAttachmentPayloadResolver payloadResolver = new MessageAttachmentPayloadResolver(storageProvider, jsonProvider);
-            ChannelMessagePluginRegistry pluginRegistry = pluginRegistry(storageService, jsonProvider, objectKeyPolicy);
-            MessageChannelBoundary channelBoundary = new ChannelBackedMessageChannelBoundary(
+            ChannelMessagePluginRegistry pluginRegistry = pluginRegistry(storageService);
+            ChannelMessagingApi channelBoundary = new ChannelMessagingDomainApi(
                     channelRepository,
                     channelMemberRepository,
                     channelAuditLogRepository,
@@ -925,13 +863,10 @@ class MessageBusinessChainTests {
                     channelBoundary,
                     messageRepository,
                     mentionRepository,
-                    userProfileRepository,
+                    messageIdempotencyRepository,
                     publisher,
-                    pluginRegistry,
-                    payloadResolver,
-                    new ServerIdentityProperties(SERVER_ID),
+                    new MessageDomainPluginDomainApi(pluginRegistry),
                     idGenerator,
-                    jsonProvider,
                     timeProvider,
                     transactionRunner
             );
@@ -939,13 +874,8 @@ class MessageBusinessChainTests {
                     channelBoundary,
                     messageRepository,
                     mentionRepository,
-                    userProfileRepository,
                     publisher,
-                    pluginRegistry,
-                    payloadResolver,
-                    new ServerIdentityProperties(SERVER_ID),
                     idGenerator,
-                    jsonProvider,
                     timeProvider,
                     transactionRunner
             );
@@ -953,19 +883,14 @@ class MessageBusinessChainTests {
                     channelBoundary,
                     messageRepository,
                     mentionRepository,
-                    userProfileRepository,
                     publisher,
-                    pluginRegistry,
-                    payloadResolver,
-                    new ServerIdentityProperties(SERVER_ID),
                     idGenerator,
-                    jsonProvider,
                     timeProvider,
                     transactionRunner
             );
             ChannelMessageAttachmentDomainApi attachmentApi = new ChannelMessageAttachmentDomainApi(
                     channelBoundary,
-                    objectKeyPolicy,
+                    TestFeatureApis.fileReferences(),
                     idGenerator,
                     timeProvider,
                     storageProvider
@@ -974,21 +899,13 @@ class MessageBusinessChainTests {
                     channelBoundary,
                     messageRepository,
                     mentionRepository,
-                    userProfileRepository,
                     publisher,
-                    pluginRegistry,
-                    payloadResolver,
-                    new ServerIdentityProperties(SERVER_ID),
                     idGenerator,
-                    jsonProvider,
                     timeProvider,
                     transactionRunner
             );
             MentionDomainApi mentionApi = new MentionDomainApi(mentionRepository);
-            ChannelMessageV1ResponseMapper responseMapper = new ChannelMessageV1ResponseMapper(
-                    new FixtureUserProfileApi(userProfileRepository),
-                    jsonProvider
-            );
+            ChannelMessageV1ResponseMapper responseMapper = new ChannelMessageV1ResponseMapper();
             ChannelMessageController channelMessageController = new ChannelMessageController(
                     publishingApi,
                     timelineApi,
@@ -999,7 +916,6 @@ class MessageBusinessChainTests {
             );
             MessageController messageController = new MessageController(
                     publishingApi,
-                    lifecycleApi,
                     authRequestContext,
                     responseMapper
             );
@@ -1039,7 +955,7 @@ class MessageBusinessChainTests {
                                       "domain":"Core:Text",
                                       "domain_version":"1.0.0",
                                       "data":{"text":"%s"},
-                                      "mentions":[{"type":"user","uid":"%d"}]
+                                      "mentions":["%d"]
                                     }
                                     """.formatted(text, targetAccountId)))
                     .andExpect(status().isCreated())
@@ -1067,15 +983,17 @@ class MessageBusinessChainTests {
         }
     }
 
-    private static ChannelMessagePluginRegistry pluginRegistry(
-            ObjectStorageService storageService,
-            JsonProvider jsonProvider,
-            MessageAttachmentObjectKeyPolicy objectKeyPolicy
-    ) {
+    private static ChannelMessagePluginRegistry pluginRegistry(ObjectStorageService storageService) {
         List<ChannelMessagePluginRegistration> registrations = new ArrayList<>();
         registrations.add(registration("builtin-text-message", "text", new TextChannelMessagePlugin()));
-        registrations.add(registration("builtin-file-message", "file", new FileChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy)));
-        registrations.add(registration("builtin-voice-message", "voice", new VoiceChannelMessagePlugin(storageService, jsonProvider, objectKeyPolicy)));
+        registrations.add(registration("builtin-reply-text-message", "reply-text", new ReplyTextChannelMessagePlugin()));
+        registrations.add(registration("builtin-forward-message", "forward", new ForwardChannelMessagePlugin()));
+        registrations.add(registration("builtin-file-message", "file", new FileChannelMessagePlugin(
+                storageService, TestFeatureApis.fileReferences()
+        )));
+        registrations.add(registration("builtin-voice-message", "voice", new VoiceChannelMessagePlugin(
+                storageService, TestFeatureApis.fileReferences()
+        )));
         return new ChannelMessagePluginRegistry(registrations);
     }
 
@@ -1261,11 +1179,6 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public void delete(long messageId) {
-            messagesById.remove(messageId);
-        }
-
-        @Override
         public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
             return messagesById.values().stream()
                     .filter(message -> message.channelId() == channelId)
@@ -1305,13 +1218,37 @@ class MessageBusinessChainTests {
                     .filter(message -> message.channelId() == channelId)
                     .filter(message -> cursorMessageId == null || message.messageId() < cursorMessageId)
                     .filter(message -> senderAccountId == null || message.senderId() == senderAccountId)
-                    .filter(message -> domain == null || domain.equals(message.messageType()))
+                    .filter(message -> domain == null || domain.equals(message.domain()))
                     .filter(message -> beforeMessageId == null || message.messageId() < beforeMessageId)
                     .filter(message -> afterMessageId == null || message.messageId() > afterMessageId)
-                    .filter(message -> message.searchableText() != null && message.searchableText().contains(keyword.trim()))
+                    .filter(message -> message.status() == team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus.SENT)
+                    .filter(message -> message.preview().contains(keyword.trim()) || message.data().toString().contains(keyword.trim()))
                     .sorted(Comparator.comparingLong(ChannelMessage::messageId).reversed())
                     .limit(limit)
                     .toList();
+        }
+    }
+
+    /**
+     * `NoopMessageIdempotencyRepository` 测试替身。
+     * 职责：为不使用幂等键的业务链测试提供显式依赖。
+     */
+    private static final class NoopMessageIdempotencyRepository implements MessageIdempotencyRepository {
+
+        @Override
+        public MessageIdempotency reserve(MessageIdempotency reservation) {
+            return reservation;
+        }
+
+        @Override
+        public void complete(
+                long accountId,
+                String operation,
+                String idempotencyKey,
+                String requestFingerprint,
+                long messageId,
+                Instant completedAt
+        ) {
         }
     }
 
@@ -1501,45 +1438,77 @@ class MessageBusinessChainTests {
         }
     }
 
-    private static final class RecordingMessageRealtimePublisher implements MessageRealtimePublisher {
+    private static final class RecordingRealtimeEventApi implements RealtimeEventApi {
 
         final List<ChannelMessage> publishedMessages = new ArrayList<>();
-        final List<ChannelMessage> updatedMessages = new ArrayList<>();
-        final List<ChannelMessage> deletedMessages = new ArrayList<>();
+        final List<ChannelMessage> recalledMessages = new ArrayList<>();
         final List<List<Long>> recipientAccountIds = new ArrayList<>();
-        final List<MessageChannelBoundary.MessageChannelPin> pinnedMessages = new ArrayList<>();
-        final List<MessageChannelBoundary.MessageChannelPin> unpinnedMessages = new ArrayList<>();
+        final List<ChannelPinReference> pinnedMessages = new ArrayList<>();
+        final List<ChannelPinReference> unpinnedMessages = new ArrayList<>();
         final List<Mention> createdMentions = new ArrayList<>();
 
         @Override
-        public void publish(ChannelMessage message, MessageSenderSnapshot senderSnapshot, java.util.Collection<Long> recipients) {
-            publishedMessages.add(message);
-            recipientAccountIds.add(List.copyOf(recipients));
+        public void publish(PublishRealtimeEventCommand command) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = (Map<String, Object>) command.payload();
+            switch (command.eventType()) {
+                case "message.created" -> {
+                    publishedMessages.add(messageFrom(payload, "sent"));
+                    recipientAccountIds.add(List.copyOf(command.recipientAccountIds()));
+                }
+                case "message.recalled" -> recalledMessages.add(simpleMessage(payload, "recalled"));
+                case "message.pinned" -> pinnedMessages.add(pin(payload));
+                case "message.unpinned" -> unpinnedMessages.add(pin(payload));
+                case "mention.created" -> {
+                    createdMentions.add(new Mention(
+                            Long.parseLong(String.valueOf(payload.get("mention_id"))),
+                            Long.parseLong(String.valueOf(payload.get("cid"))),
+                            Long.parseLong(String.valueOf(payload.get("mid"))),
+                            Long.parseLong(String.valueOf(payload.get("from_uid"))),
+                            "user",
+                            Long.parseLong(String.valueOf(payload.get("uid"))),
+                            BASE_TIME,
+                            false
+                    ));
+                }
+                default -> { }
+            }
         }
 
-        @Override
-        public void publishUpdate(ChannelMessage message, MessageSenderSnapshot senderSnapshot, java.util.Collection<Long> recipientAccountIds) {
-            updatedMessages.add(message);
+        private ChannelMessage messageFrom(Map<String, Object> payload, String status) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> message = (Map<String, Object>) payload.get("message");
+            return message(
+                    Long.parseLong(String.valueOf(message.get("mid"))),
+                    Long.parseLong(String.valueOf(payload.get("cid"))),
+                    status
+            );
         }
 
-        @Override
-        public void publishDelete(ChannelMessage message, java.util.Collection<Long> recipientAccountIds) {
-            deletedMessages.add(message);
+        private ChannelMessage simpleMessage(Map<String, Object> payload, String status) {
+            return message(
+                    Long.parseLong(String.valueOf(payload.get("mid"))),
+                    Long.parseLong(String.valueOf(payload.get("cid"))),
+                    status
+            );
         }
 
-        @Override
-        public void publishPin(MessageChannelBoundary.MessageChannelPin pin, java.util.Collection<Long> recipientAccountIds) {
-            pinnedMessages.add(pin);
+        private ChannelMessage message(long messageId, long channelId, String status) {
+            return new ChannelMessage(
+                    messageId, 1001L, channelId, "Core:Text", "1.0.0", Map.of(), BASE_TIME,
+                    List.of(), "", MessageStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT))
+            );
         }
 
-        @Override
-        public void publishUnpin(MessageChannelBoundary.MessageChannelPin pin, long unpinnedByAccountId, long unpinnedAt, java.util.Collection<Long> recipientAccountIds) {
-            unpinnedMessages.add(pin);
-        }
-
-        @Override
-        public void publishMentionCreated(Mention mention, java.util.Collection<Long> recipientAccountIds) {
-            createdMentions.add(mention);
+        private ChannelPinReference pin(Map<String, Object> payload) {
+            return new ChannelPinReference(
+                    Long.parseLong(String.valueOf(payload.get("pin_id"))),
+                    Long.parseLong(String.valueOf(payload.get("cid"))),
+                    Long.parseLong(String.valueOf(payload.get("mid"))),
+                    1001L,
+                    "",
+                    BASE_TIME
+            );
         }
     }
 

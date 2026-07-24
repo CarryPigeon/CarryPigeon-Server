@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
@@ -28,6 +29,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 /**
  * `FileTransferDomainApi` 契约测试。
  * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
@@ -188,7 +190,7 @@ class FileTransferDomainApiTests {
     private FileTransferDomainApi createService(RecordingObjectStorageService storageService) {
         return new FileTransferDomainApi(
                 new StaticObjectProvider(storageService),
-                (accountId, channelId) -> false,
+                mock(ChannelMessagingApi.class),
                 new FixedIdGenerator(),
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-23T00:00:00Z"), ZoneOffset.UTC)),
                 new FileUploadShareKeyCodec("0123456789abcdef0123456789abcdef")

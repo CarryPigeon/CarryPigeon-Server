@@ -1,6 +1,6 @@
 -- CarryPigeon backend database
 -- All-in-one schema bootstrap for empty MySQL schemas only
--- Source: docs/sql/01-auth.sql ... docs/sql/05-notification.sql
+-- Source: docs/sql/01-auth.sql ... docs/sql/06-plugin.sql
 
 -- Auth domain
 CREATE TABLE auth_account (
@@ -206,22 +206,15 @@ VALUES (2, 2, 'system', 'system', FALSE, '2026-04-22 00:00:00', '2026-04-22 00:0
 -- Message domain
 CREATE TABLE chat_message (
     message_id BIGINT NOT NULL,
-    server_id VARCHAR(128) NOT NULL,
-    conversation_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
     sender_id BIGINT NOT NULL,
-    message_type VARCHAR(32) NOT NULL,
-    body TEXT NOT NULL,
-    preview_text VARCHAR(255) NOT NULL DEFAULT '',
-    searchable_text TEXT NOT NULL,
-    payload JSON NULL,
-    metadata JSON NULL,
-    mentions JSON NULL,
-    forwarded_from JSON NULL,
+    channel_id BIGINT NOT NULL,
+    domain VARCHAR(128) NOT NULL,
+    domain_version VARCHAR(32) NOT NULL,
+    data JSON NOT NULL,
+    send_time DATETIME(6) NOT NULL,
+    mentions JSON NOT NULL,
+    preview VARCHAR(255) NOT NULL DEFAULT '',
     status VARCHAR(32) NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    edited_at DATETIME(6) NULL,
-    edit_version BIGINT NOT NULL DEFAULT 1,
     PRIMARY KEY (message_id),
     CONSTRAINT fk_chat_message_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
     CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES auth_account (id)
@@ -233,8 +226,24 @@ CREATE INDEX idx_chat_message_channel_message
 CREATE INDEX idx_chat_message_channel_sender_message_id
     ON chat_message (channel_id, sender_id, message_id DESC);
 
-CREATE INDEX idx_chat_message_channel_type_message_id
-    ON chat_message (channel_id, message_type, message_id DESC);
+CREATE INDEX idx_chat_message_channel_domain_message_id
+    ON chat_message (channel_id, domain, message_id DESC);
+
+CREATE TABLE chat_message_idempotency (
+    account_id BIGINT NOT NULL,
+    operation VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    idempotency_key VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    message_id BIGINT NULL,
+    created_at DATETIME(6) NOT NULL,
+    completed_at DATETIME(6) NULL,
+    PRIMARY KEY (account_id, operation, idempotency_key),
+    CONSTRAINT fk_chat_message_idempotency_account FOREIGN KEY (account_id) REFERENCES auth_account (id),
+    CONSTRAINT fk_chat_message_idempotency_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id)
+);
+
+CREATE INDEX idx_chat_message_idempotency_message
+    ON chat_message_idempotency (message_id);
 
 ALTER TABLE chat_channel_pin
     ADD CONSTRAINT fk_chat_channel_pin_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id);
@@ -292,3 +301,15 @@ CREATE TABLE chat_notification_channel_preference (
 
 CREATE INDEX idx_chat_notification_channel_preference_account_id
     ON chat_notification_channel_preference (account_id, channel_id);
+
+-- Plugin runtime
+CREATE TABLE plugin_schema_history (
+    plugin_id VARCHAR(128) NOT NULL,
+    plugin_version VARCHAR(64) NOT NULL,
+    migration_version VARCHAR(64) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    checksum CHAR(64) NOT NULL,
+    executed_at DATETIME(6) NOT NULL,
+    success BOOLEAN NOT NULL,
+    PRIMARY KEY (plugin_id, migration_version)
+);

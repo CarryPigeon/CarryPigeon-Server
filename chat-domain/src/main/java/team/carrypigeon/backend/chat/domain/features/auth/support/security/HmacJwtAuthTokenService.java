@@ -12,17 +12,17 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.port.AuthTokenService;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
- * HS256 JWT 鉴权令牌服务。
+ * HS256 JWT 鉴权令牌 codec 实现。
  * 职责：使用 JDK HMAC 与项目统一 JSON 能力签发和解析最小 JWT。
  * 边界：只支持当前 auth MVP 所需的 access/refresh token，不实现 OAuth/OIDC 能力。
  */
 @Component
-public class HmacJwtAuthTokenService implements AuthTokenService {
+public class HmacJwtAuthTokenService implements AuthTokenCodec {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final String ACCESS_TOKEN_TYPE = "access";

@@ -11,8 +11,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageAttachmentObjectKeyPolicy;
-import team.carrypigeon.backend.chat.domain.features.message.support.payload.MessageAttachmentPayloadResolver;
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
@@ -54,8 +52,6 @@ class ApplicationStarterSmokeTests {
             assertThat(context).hasSingleBean(AuthAccountApi.class);
             assertThat(context).hasSingleBean(ChannelMessagePublishingApi.class);
             assertThat(context).hasSingleBean(ChannelMessageController.class);
-            assertThat(context).hasSingleBean(MessageAttachmentObjectKeyPolicy.class);
-            assertThat(context).hasSingleBean(MessageAttachmentPayloadResolver.class);
         });
     }
 

@@ -5,7 +5,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageIdempotencyDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageIdempotencyMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusMessageIdempotencyDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusMessageDatabaseService;
 
 /**
@@ -29,5 +32,19 @@ public class DatabaseMessageServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public MessageDatabaseService messageDatabaseService(MessageMapper messageMapper) {
         return new MybatisPlusMessageDatabaseService(messageMapper);
+    }
+
+    /**
+     * 装配消息幂等数据库服务。
+     *
+     * @param mapper 消息幂等表 Mapper
+     * @return 消息幂等数据库服务实现
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public MessageIdempotencyDatabaseService messageIdempotencyDatabaseService(
+            MessageIdempotencyMapper mapper
+    ) {
+        return new MybatisPlusMessageIdempotencyDatabaseService(mapper);
     }
 }

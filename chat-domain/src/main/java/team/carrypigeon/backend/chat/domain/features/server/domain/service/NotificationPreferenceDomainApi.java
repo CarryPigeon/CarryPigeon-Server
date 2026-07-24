@@ -2,9 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationServerPreferenceCommand;
 import team.carrypigeon.backend.chat.domain.features.server.domain.projection.NotificationPreferencesResult;
@@ -25,19 +24,16 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
     private static final List<String> CHANNEL_MODES = List.of("all", "mentions_only", "muted", "inherit");
 
     private final NotificationPreferenceRepository notificationPreferenceRepository;
-    private final ChannelRepository channelRepository;
-    private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelMessagingApi channelMessagingApi;
     private final TimeProvider timeProvider;
 
     public NotificationPreferenceDomainApi(
             NotificationPreferenceRepository notificationPreferenceRepository,
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
+            ChannelMessagingApi channelMessagingApi,
             TimeProvider timeProvider
     ) {
         this.notificationPreferenceRepository = notificationPreferenceRepository;
-        this.channelRepository = channelRepository;
-        this.channelMemberRepository = channelMemberRepository;
+        this.channelMessagingApi = channelMessagingApi;
         this.timeProvider = timeProvider;
     }
 
@@ -92,10 +88,7 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
     public void updateChannelPreference(UpdateNotificationChannelPreferenceCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        channelRepository.findById(command.channelId()).orElseThrow(() -> ProblemException.notFound("channel does not exist"));
-        if (!channelMemberRepository.exists(command.channelId(), command.accountId())) {
-            throw ProblemException.forbidden("not_channel_member", "channel membership is required");
-        }
+        channelMessagingApi.requireMemberChannel(command.channelId(), command.accountId());
         String mode = normalizeMode(command.mode(), CHANNEL_MODES, "mode");
         long mutedUntil = normalizeMutedUntil(command.mutedUntil());
         NotificationChannelPreference existing = notificationPreferenceRepository.listChannelPreferencesByAccountId(command.accountId()).stream()

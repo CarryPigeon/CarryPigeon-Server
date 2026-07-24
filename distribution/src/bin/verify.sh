@@ -98,10 +98,11 @@ require_config_value() {
   fi
 }
 
-APP_JAR=$(find "$BASE_DIR/app" -maxdepth 1 -name 'application-starter-*.jar' ! -name '*-exec.jar' ! -name '*.original' | head -n 1)
+APP_JAR=$(find "$BASE_DIR/app" -maxdepth 1 -type f -name 'application-starter-*.jar' ! -name '*-exec.jar' ! -name '*.original' | head -n 1)
 
 require_path "$BASE_DIR/app" "app directory"
-require_path "$BASE_DIR/libs" "libs directory"
+require_path "$BASE_DIR/lib" "lib directory"
+require_path "$BASE_DIR/plugins" "plugins directory"
 require_path "$BASE_DIR/config" "config directory"
 require_path "$BASE_DIR/bin" "bin directory"
 require_path "$BASE_DIR/service/systemd" "systemd example directory"
@@ -122,6 +123,20 @@ if [ -z "$APP_JAR" ]; then
   exit 1
 fi
 
+APP_COUNT=$(find "$BASE_DIR/app" -maxdepth 1 -type f -name 'application-starter-*.jar' ! -name '*-exec.jar' ! -name '*.original' | wc -l | tr -d ' ')
+if [ "$APP_COUNT" -ne 1 ]; then
+  echo "expected exactly one application-starter thin jar under $BASE_DIR/app" >&2
+  exit 1
+fi
+
+if ! command -v java >/dev/null 2>&1; then
+  echo "java executable not found in PATH; plugin preflight cannot run" >&2
+  exit 1
+fi
+
+PLUGIN_CLASSPATH="$APP_JAR:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
+java -cp "$PLUGIN_CLASSPATH" team.carrypigeon.backend.starter.PluginPreflightCommand
+
 if [ "$STRICT_CONFIG" -eq 1 ]; then
   JWT_SECRET=$(yaml_value "$BASE_DIR/config/application.yaml" "cp.chat.auth.jwt.secret")
   SERVER_ID=$(yaml_value "$BASE_DIR/config/application.yaml" "cp.chat.server.id")
@@ -138,6 +153,7 @@ fi
 echo "Distribution package verification passed."
 echo "Base directory: $BASE_DIR"
 echo "Thin jar: $APP_JAR"
+echo "Plugin classpath preflight: passed"
 if [ "$STRICT_CONFIG" -eq 1 ]; then
   echo "Configuration readiness: strict verification passed"
 else

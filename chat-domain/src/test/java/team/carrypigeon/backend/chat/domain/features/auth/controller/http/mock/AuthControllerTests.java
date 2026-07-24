@@ -22,10 +22,9 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LoginCo
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.LogoutCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RefreshTokenCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.command.SendEmailCodeCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -51,109 +50,22 @@ class AuthControllerTests {
 
     private AuthAccountApi authAccountApi;
     private AuthSessionApi authSessionApi;
-    private ServerEntranceApi serverEntranceApi;
+    private PluginCatalogApi pluginCatalogApi;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         authAccountApi = mock(AuthAccountApi.class);
         authSessionApi = mock(AuthSessionApi.class);
-        serverEntranceApi = mock(ServerEntranceApi.class);
+        pluginCatalogApi = mock(PluginCatalogApi.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                         authAccountApi,
                         authSessionApi,
-                        serverEntranceApi
+                        pluginCatalogApi
                 ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
-    }
-
-    /**
-     * 验证邮箱验证码协议会把请求邮箱映射到签发命令。
-     */
-    @Test
-    @DisplayName("send email code success returns 204")
-    void sendEmailCode_success_returns204() throws Exception {
-        doNothing().when(authAccountApi).sendEmailCode(any());
-
-        mockMvc.perform(post("/api/auth/email_codes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":"user@example.com"}
-                                """))
-                .andExpect(status().isNoContent());
-        ArgumentCaptor<SendEmailCodeCommand> commandCaptor = ArgumentCaptor.forClass(SendEmailCodeCommand.class);
-        verify(authAccountApi).sendEmailCode(commandCaptor.capture());
-        assertEquals("user@example.com", commandCaptor.getValue().email());
-    }
-
-    /**
-     * 验证邮箱验证码协议会拒绝空邮箱并返回参数校验失败。
-     */
-    @Test
-    @DisplayName("send email code invalid request returns 422")
-    void sendEmailCode_invalidRequest_returns422() throws Exception {
-        mockMvc.perform(post("/api/auth/email_codes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":""}
-                                """))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
-    }
-
-    /**
-     * 验证邮箱验证码协议会拒绝超过持久化容量的邮箱。
-     */
-    @Test
-    @DisplayName("send email code too long email returns 422")
-    void sendEmailCode_tooLongEmail_returns422() throws Exception {
-        mockMvc.perform(post("/api/auth/email_codes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + tooLongEmail() + "\"}"))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
-    }
-
-    /**
-     * 验证邮箱服务不可用时会转换为 503 响应。
-     */
-    @Test
-    @DisplayName("send email code mail service unavailable returns 503")
-    void sendEmailCode_mailServiceUnavailable_returns503() throws Exception {
-        doThrow(ProblemException.fail("mail_service_unavailable", "mail service is unavailable"))
-                .when(authAccountApi)
-                .sendEmailCode(any());
-
-        mockMvc.perform(post("/api/auth/email_codes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":"user@example.com"}
-                                """))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error.reason").value("mail_service_unavailable"))
-                .andExpect(jsonPath("$.error.message").value("mail service is unavailable"));
-    }
-
-    /**
-     * 验证邮箱投递失败时会转换为 503 响应并保留错误原因。
-     */
-    @Test
-    @DisplayName("send email code delivery failure returns 503")
-    void sendEmailCode_deliveryFailure_returns503() throws Exception {
-        doThrow(ProblemException.fail("email_delivery_failed", "failed to deliver verification email"))
-                .when(authAccountApi)
-                .sendEmailCode(any());
-
-        mockMvc.perform(post("/api/auth/email_codes")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"email":"user@example.com"}
-                                """))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.error.reason").value("email_delivery_failed"))
-                .andExpect(jsonPath("$.error.message").value("failed to deliver verification email"));
     }
 
     /**
@@ -162,7 +74,7 @@ class AuthControllerTests {
     @Test
     @DisplayName("create token session success returns token response")
     void createTokenSession_success_returnsTokenResponse() throws Exception {
-        doNothing().when(serverEntranceApi).requireRequiredPluginsSatisfied(any());
+        doNothing().when(pluginCatalogApi).requireRequiredPluginsSatisfied(any());
         when(authSessionApi.createTokenSession(any())).thenReturn(tokenResult(true));
 
         mockMvc.perform(post("/api/auth/tokens")
@@ -183,7 +95,7 @@ class AuthControllerTests {
                 .andExpect(jsonPath("$.is_new_user").value(true));
         @SuppressWarnings("unchecked")
         ArgumentCaptor<java.util.List<String>> pluginsCaptor = ArgumentCaptor.forClass((Class) java.util.List.class);
-        verify(serverEntranceApi).requireRequiredPluginsSatisfied(pluginsCaptor.capture());
+        verify(pluginCatalogApi).requireRequiredPluginsSatisfied(pluginsCaptor.capture());
         assertEquals(java.util.List.of("mc-bind"), pluginsCaptor.getValue());
         ArgumentCaptor<CreateTokenSessionCommand> commandCaptor = ArgumentCaptor.forClass(CreateTokenSessionCommand.class);
         verify(authSessionApi).createTokenSession(commandCaptor.capture());
@@ -202,7 +114,7 @@ class AuthControllerTests {
                 "required_plugin_missing",
                 "required plugins are missing",
                 Map.of("missing_plugins", java.util.List.of("mc-bind"))
-        )).when(serverEntranceApi).requireRequiredPluginsSatisfied(any());
+        )).when(pluginCatalogApi).requireRequiredPluginsSatisfied(any());
 
         mockMvc.perform(post("/api/auth/tokens")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -261,7 +173,7 @@ class AuthControllerTests {
     @Test
     @DisplayName("create token session invalid code returns 422")
     void createTokenSession_invalidCode_returns422() throws Exception {
-        when(serverEntranceApi.findMissingRequiredPlugins(any())).thenReturn(java.util.List.of());
+        doNothing().when(pluginCatalogApi).requireRequiredPluginsSatisfied(any());
         when(authSessionApi.createTokenSession(any())).thenThrow(ProblemException.validationFailed("email code is invalid"));
 
         mockMvc.perform(post("/api/auth/tokens")
@@ -346,7 +258,7 @@ class AuthControllerTests {
         MockMvc disabledLoginMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                         authAccountApi,
                         authSessionApi,
-                        serverEntranceApi
+                        pluginCatalogApi
                 ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())

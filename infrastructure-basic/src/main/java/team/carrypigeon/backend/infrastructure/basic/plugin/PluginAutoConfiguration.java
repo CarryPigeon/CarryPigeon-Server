@@ -1,8 +1,10 @@
 package team.carrypigeon.backend.infrastructure.basic.plugin;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
 
 /**
  * 插件配置基础设施自动配置。
@@ -22,5 +24,17 @@ public class PluginAutoConfiguration {
     @Bean
     public PluginConfigurationProvider pluginConfigurationProvider(PluginProperties properties) {
         return new PluginConfigurationProvider(properties);
+    }
+
+    /**
+     * 提供开发测试和非 starter 组装场景使用的空 Manifest 快照。
+     * 正式启动时由 ApplicationStarter 在 Spring Context 创建前注册实际快照。
+     *
+     * @return 空插件 Manifest 目录
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PluginManifestCatalog pluginManifestCatalog() {
+        return PluginManifestCatalog.empty();
     }
 }

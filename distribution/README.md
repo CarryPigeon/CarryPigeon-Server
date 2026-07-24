@@ -1,6 +1,6 @@
 # Distribution Module
 
-This module assembles the runtime delivery package in **thin jar + libs** mode.
+This module assembles the runtime delivery package in **app + plugins + config + lib** thin-jar mode.
 
 ## Output layout
 
@@ -19,7 +19,8 @@ distribution/target/full-distribution/full-distribution/
 with the following structure:
 
 - `app/` - application thin jar
-- `libs/` - internal module jars and third-party dependencies
+- `lib/` - internal module jars and third-party dependencies
+- `plugins/` - startup classpath plugin jars; `plugins/disabled/` is excluded by convention
 - `config/` - runtime configuration files
 - `bin/` - startup and shutdown scripts
 - `service/` - service-manager examples for non-containerized deployment
@@ -93,6 +94,11 @@ To verify deployment readiness with required YAML values filled, run:
 bash distribution/target/full-distribution/full-distribution/bin/verify.sh --strict-config
 ```
 
+The verifier requires Java and runs the same plugin classpath preflight used by normal startup. It validates plugin
+JAR ownership, Boot AutoConfiguration metadata, exact `required_host_artifacts`, duplicate plugin classes, forbidden
+bundled host/shared classes, and conflicting top-level Maven artifact versions. This phase does not create the Spring
+context and does not connect to MySQL, Redis, MinIO, mail, or other external services.
+
 ## Launch commands
 
 ### Foreground startup
@@ -102,6 +108,14 @@ Unix-like:
 ```bash
 bash distribution/target/full-distribution/full-distribution/bin/start.sh
 ```
+
+To start without loading any plugin JAR, use the JVM-startup safe mode:
+
+```bash
+bash distribution/target/full-distribution/full-distribution/bin/start.sh --safe-mode
+```
+
+Safe mode omits `plugins/*` from the classpath before the JVM is created. It is not an in-process plugin sandbox.
 
 Windows:
 
@@ -163,4 +177,5 @@ The unit file is only a template. Adjust install paths, user, and group before e
 - The application still requires valid runtime configuration and, in normal service mode, reachable external dependencies such as MySQL, Redis, and MinIO.
 - The package launchers now point Spring to `config/application.yaml` and `config/log4j2-spring.xml`, so the packaged `config/` directory is part of the real runtime path. The packaged `config/application.yaml` is an external override file; development defaults remain inside the application jar.
 - The package now includes a verification entrypoint, a `systemd` example, and a minimal release-artifact workflow, but it still does not replace public checksum publishing, artifact signing, or multi-node orchestration.
+- A plugin SHA-256 printed by preflight is a runtime fingerprint of the inspected JAR, not a publisher signature or an external trust proof.
 - GitHub Actions now includes a dedicated `Distribution Release` workflow that builds the package and uploads the zip, checksum, and manifest as workflow artifacts.

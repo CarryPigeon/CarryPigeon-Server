@@ -6,6 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginHostIdentity;
+import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
+import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestLoader;
 
 /**
  * Spring Boot 启动入口。
@@ -28,7 +31,19 @@ public class ApplicationStarter {
      */
     public static void main(String[] args) {
         log.info("Application is starting...");
-        new SpringApplication(ApplicationStarter.class).run(args);
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        PluginHostIdentity hostIdentity = PluginHostIdentity.load(classLoader);
+        PluginManifestCatalog manifestCatalog = PluginManifestLoader.load(classLoader, hostIdentity);
+        log.info(
+                "Plugin preflight passed: hostVersion={}, buildHash={}, pluginCount={}",
+                hostIdentity.version(),
+                hostIdentity.buildHash(),
+                manifestCatalog.manifests().size()
+        );
+        SpringApplication application = new SpringApplication(ApplicationStarter.class);
+        application.addInitializers(context -> context.getBeanFactory()
+                .registerSingleton("pluginManifestCatalog", manifestCatalog));
+        application.run(args);
         log.info("Application is running ...");
     }
 
