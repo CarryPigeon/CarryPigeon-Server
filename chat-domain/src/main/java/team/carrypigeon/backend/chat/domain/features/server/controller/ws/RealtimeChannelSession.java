@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.ScheduledFuture;
+import java.time.Instant;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 
 /**
@@ -17,6 +19,12 @@ public final class RealtimeChannelSession {
     public static final AttributeKey<String> LAST_EVENT_ID_KEY = AttributeKey.valueOf("cp.realtime.last-event-id");
     public static final AttributeKey<AuthenticatedAccount> AUTHENTICATED_PRINCIPAL_KEY =
             AttributeKey.valueOf("cp.realtime.authenticated-principal");
+    public static final AttributeKey<ScheduledFuture<?>> AUTHENTICATION_TIMEOUT_FUTURE_KEY =
+            AttributeKey.valueOf("cp.realtime.authentication-timeout-future");
+    public static final AttributeKey<Instant> ACCESS_TOKEN_EXPIRES_AT_KEY =
+            AttributeKey.valueOf("cp.realtime.access-token-expires-at");
+    public static final AttributeKey<ScheduledFuture<?>> ACCESS_TOKEN_EXPIRATION_FUTURE_KEY =
+            AttributeKey.valueOf("cp.realtime.access-token-expiration-future");
 
     private RealtimeChannelSession() {
     }

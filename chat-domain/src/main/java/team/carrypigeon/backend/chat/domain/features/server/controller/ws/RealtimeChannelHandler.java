@@ -1,12 +1,15 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
-
+import io.netty.util.concurrent.ScheduledFuture;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +42,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
+    private final int authenticationTimeoutSeconds;
     private final RealtimeWebSocketDebugLogger debugLogger;
 
     public RealtimeChannelHandler(
@@ -56,6 +60,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 accessTokenAuthenticationApi,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
+                10,
                 false
         );
     }
@@ -69,12 +74,38 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             RealtimeSessionRegistry realtimeSessionRegistry,
             boolean requestLogEnabled
     ) {
+        this(
+                jsonProvider,
+                idGenerator,
+                timeProvider,
+                accessTokenAuthenticationApi,
+                serverIdentityProperties,
+                realtimeSessionRegistry,
+                10,
+                requestLogEnabled
+        );
+    }
+
+    public RealtimeChannelHandler(
+            JsonProvider jsonProvider,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
+            ServerIdentityProperties serverIdentityProperties,
+            RealtimeSessionRegistry realtimeSessionRegistry,
+            int authenticationTimeoutSeconds,
+            boolean requestLogEnabled
+    ) {
+        if (authenticationTimeoutSeconds <= 0) {
+            throw new IllegalArgumentException("authenticationTimeoutSeconds must be greater than 0");
+        }
         this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.authenticationTimeoutSeconds = authenticationTimeoutSeconds;
         this.debugLogger = requestLogEnabled
                 ? new RealtimeWebSocketDebugLogger(true)
                 : RealtimeWebSocketDebugLogger.disabled();
@@ -85,9 +116,13 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
             context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(idGenerator.nextStringId());
             debugLogger.handshakeComplete(context, (WebSocketServerProtocolHandler.HandshakeComplete) event);
+            scheduleAuthenticationTimeout(context);
             return;
         }
         if (event instanceof IdleStateEvent) {
+            debugLogger.frameRejected(context, "idle_timeout", null);
+            context.writeAndFlush(commandError(null, "command.err", "idle_timeout", "realtime connection is idle"))
+                    .addListener(ChannelFutureListener.CLOSE);
             return;
         }
         super.userEventTriggered(context, event);
@@ -101,11 +136,26 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 debugLogger.frameReceived(context, request, frame.text().length());
                 if (request == null || request.type() == null || request.type().isBlank()) {
                     debugLogger.frameRejected(context, "type_blank", null);
-                    context.writeAndFlush(commandError(null, "command.err", "validation_failed", "type must not be blank"));
+                    writeErrorAndCloseIfUnauthenticated(
+                            context,
+                            commandError(null, "command.err", "validation_failed", "type must not be blank")
+                    );
+                    return;
+                }
+                if (!isAuthenticated(context) && !"auth".equals(request.type())) {
+                    rejectUnauthenticatedCommand(context, request);
                     return;
                 }
                 switch (request.type()) {
-                    case "auth" -> handleAuth(context, request, false);
+                    case "auth" -> {
+                        if (isAuthenticated(context)) {
+                            context.writeAndFlush(commandError(
+                                    request.id(), "auth.err", "already_authenticated", "use reauth to replace credentials"
+                            ));
+                        } else {
+                            handleAuth(context, request, false);
+                        }
+                    }
                     case "reauth" -> handleAuth(context, request, true);
                     case "ping" -> context.writeAndFlush(serverFrame("pong", null, null, null));
                     default -> context.writeAndFlush(commandError(
@@ -114,7 +164,10 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 }
             } catch (InfrastructureException exception) {
                 debugLogger.frameRejected(context, "request_body_invalid", exception);
-                context.writeAndFlush(commandError(null, "command.err", "validation_failed", "request body is invalid"));
+                writeErrorAndCloseIfUnauthenticated(
+                        context,
+                        commandError(null, "command.err", "validation_failed", "request body is invalid")
+                );
             } catch (ProblemException exception) {
                 debugLogger.frameRejected(context, mapReason(exception), exception);
                 context.writeAndFlush(commandError(null, "command.err", mapReason(exception), exception.getMessage()));
@@ -129,6 +182,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
         withMdc(context, () -> {
+            cancelAuthenticationTimeout(context);
+            cancelAccessTokenExpiration(context);
             debugLogger.channelInactive(context);
             AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
             if (principal != null) {
@@ -156,12 +211,16 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
 
     /**
      * 创建实时连接读空闲检测处理器。
-     * 输出：60 秒无入站数据即触发空闲事件，供上层决定是否关闭连接。
+     * 输出：指定时间无入站数据即触发空闲事件，供本处理器关闭连接。
      *
+     * @param readIdleTimeoutSeconds 读空闲超时秒数
      * @return Netty 读空闲处理器
      */
-    public static IdleStateHandler idleStateHandler() {
-        return new IdleStateHandler(60, 0, 0, TimeUnit.SECONDS);
+    public static IdleStateHandler idleStateHandler(int readIdleTimeoutSeconds) {
+        if (readIdleTimeoutSeconds <= 0) {
+            throw new IllegalArgumentException("readIdleTimeoutSeconds must be greater than 0");
+        }
+        return new IdleStateHandler(readIdleTimeoutSeconds, 0, 0, TimeUnit.SECONDS);
     }
 
     /**
@@ -191,6 +250,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             }
             context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(principal);
             realtimeSessionRegistry.register(principal.accountId(), context.channel());
+            cancelAuthenticationTimeout(context);
+            scheduleAccessTokenExpiration(context, authentication.expiresAt());
             debugLogger.authResult(context, request, reauth, true, "");
             context.writeAndFlush(serverFrame(
                     reauth ? "reauth.ok" : "auth.ok",
@@ -206,6 +267,90 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         } catch (ProblemException exception) {
             debugLogger.authResult(context, request, reauth, false, mapReason(exception));
             context.writeAndFlush(commandError(request.id(), reauth ? "reauth.err" : "auth.err", mapReason(exception), exception.getMessage()));
+        }
+    }
+
+    /**
+     * 在 WebSocket 握手完成后启动首帧鉴权超时计时。
+     * 失败语义：超时时仍无 principal 则下发 auth.err 并关闭通道。
+     *
+     * @param context Netty 通道上下文
+     */
+    private void scheduleAuthenticationTimeout(ChannelHandlerContext context) {
+        cancelAuthenticationTimeout(context);
+        ScheduledFuture<?> timeoutFuture = context.executor().schedule(() -> withMdc(context, () -> {
+            if (context.channel().isActive() && !isAuthenticated(context)) {
+                debugLogger.frameRejected(context, "authentication_timeout", null);
+                context.writeAndFlush(commandError(
+                        null, "auth.err", "authentication_timeout", "authentication frame was not received in time"
+                )).addListener(ChannelFutureListener.CLOSE);
+            }
+        }), authenticationTimeoutSeconds, TimeUnit.SECONDS);
+        context.channel().attr(RealtimeChannelSession.AUTHENTICATION_TIMEOUT_FUTURE_KEY).set(timeoutFuture);
+    }
+
+    /**
+     * 取消当前连接尚未执行的首帧鉴权超时任务。
+     *
+     * @param context Netty 通道上下文
+     */
+    private void cancelAuthenticationTimeout(ChannelHandlerContext context) {
+        ScheduledFuture<?> timeoutFuture = context.channel()
+                .attr(RealtimeChannelSession.AUTHENTICATION_TIMEOUT_FUTURE_KEY)
+                .getAndSet(null);
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel(false);
+        }
+    }
+
+    /**
+     * 按 access token 的绝对过期时间关闭实时连接。
+     * 约束：reauth 会替换旧任务；旧任务不得关闭已换新 token 的会话。
+     */
+    private void scheduleAccessTokenExpiration(ChannelHandlerContext context, Instant expiresAt) {
+        cancelAccessTokenExpiration(context);
+        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).set(expiresAt);
+        long delayMillis = Math.max(0L, Duration.between(timeProvider.nowInstant(), expiresAt).toMillis());
+        ScheduledFuture<?> expirationFuture = context.executor().schedule(() -> withMdc(context, () -> {
+            Instant currentExpiresAt = context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).get();
+            if (context.channel().isActive()
+                    && isAuthenticated(context)
+                    && expiresAt.equals(currentExpiresAt)) {
+                debugLogger.frameRejected(context, "token_expired", null);
+                context.writeAndFlush(commandError(
+                        null, "auth.err", "token_expired", "access token is expired"
+                )).addListener(ChannelFutureListener.CLOSE);
+            }
+        }), delayMillis, TimeUnit.MILLISECONDS);
+        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRATION_FUTURE_KEY).set(expirationFuture);
+    }
+
+    private void cancelAccessTokenExpiration(ChannelHandlerContext context) {
+        ScheduledFuture<?> expirationFuture = context.channel()
+                .attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRATION_FUTURE_KEY)
+                .getAndSet(null);
+        if (expirationFuture != null) {
+            expirationFuture.cancel(false);
+        }
+        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).set(null);
+    }
+
+    private boolean isAuthenticated(ChannelHandlerContext context) {
+        return context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get() != null;
+    }
+
+    private void rejectUnauthenticatedCommand(ChannelHandlerContext context, RealtimeClientMessage request) {
+        debugLogger.frameRejected(context, "unauthorized", null);
+        context.writeAndFlush(commandError(
+                request.id(), "auth.err", "unauthorized", "auth must be the first realtime command"
+        )).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private void writeErrorAndCloseIfUnauthenticated(ChannelHandlerContext context, TextWebSocketFrame errorFrame) {
+        if (isAuthenticated(context)) {
+            context.writeAndFlush(errorFrame);
+        } else {
+            context.writeAndFlush(errorFrame).addListener(ChannelFutureListener.CLOSE);
         }
     }
 

@@ -198,6 +198,7 @@ public class ChannelMessageController {
             summary = "发送消息",
             description = "按 canonical envelope 发送频道消息；domain_version 与 data 由当前运行时注册的 domain 插件校验。"
     )
+    @ApiResponses({@ApiResponse(responseCode = "201", description = "消息发送成功")})
     public ResponseEntity<ChannelMessageV1Response> sendChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,

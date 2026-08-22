@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -68,6 +70,7 @@ public class MessageController {
      * @return 转发后创建的消息响应
      */
     @PostMapping("/{messageId}/forward")
+    @ApiResponses({@ApiResponse(responseCode = "201", description = "转发消息创建成功")})
     public ResponseEntity<ChannelMessageV1Response> forwardMessage(
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             @Valid @NotNull(message = "request body must not be null") @RequestBody ForwardChannelMessageRequest body,

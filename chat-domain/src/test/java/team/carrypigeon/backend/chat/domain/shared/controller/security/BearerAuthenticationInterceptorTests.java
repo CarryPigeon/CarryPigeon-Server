@@ -1,9 +1,11 @@
 package team.carrypigeon.backend.chat.domain.shared.controller.security;
 
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
@@ -26,6 +28,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Tag("contract")
 class BearerAuthenticationInterceptorTests {
+
+    /**
+     * 验证合法 CORS 预检不要求 Bearer token，也不会触发 token 认证。
+     */
+    @Test
+    @DisplayName("preHandle CORS preflight bypasses bearer authentication")
+    void preHandle_corsPreFlightWithoutBearer_bypassesAuthentication() {
+        AtomicInteger authenticationCalls = new AtomicInteger();
+        BearerAuthenticationInterceptor interceptor = new BearerAuthenticationInterceptor(
+                token -> {
+                    authenticationCalls.incrementAndGet();
+                    return new AccessTokenAuthenticationResult(1001L, "carry-user", Instant.MAX);
+                },
+                new RequestAuthenticationContext()
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/api/users/me");
+        request.addHeader(HttpHeaders.ORIGIN, "http://localhost:1420");
+        request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        boolean result = interceptor.preHandle(request, new MockHttpServletResponse(), new Object());
+
+        assertTrue(result);
+        assertEquals(0, authenticationCalls.get());
+    }
+
+    /**
+     * 验证缺少预检请求头的普通 OPTIONS 请求不会绕过 Bearer 认证。
+     */
+    @Test
+    @DisplayName("preHandle plain OPTIONS still requires bearer authentication")
+    void preHandle_plainOptionsWithoutBearer_throwsForbiddenProblem() {
+        BearerAuthenticationInterceptor interceptor = new BearerAuthenticationInterceptor(
+                new FakeAccessTokenAuthenticationApi(),
+                new RequestAuthenticationContext()
+        );
+        MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/api/users/me");
+        request.addHeader(HttpHeaders.ORIGIN, "http://localhost:1420");
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object())
+        );
+
+        assertEquals("authentication is required", exception.getMessage());
+    }
 
     /**
      * 验证合法 Bearer access token 会绑定当前请求身份。

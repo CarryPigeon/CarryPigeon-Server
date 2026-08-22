@@ -1,10 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Netty 实时通道配置。
- * 职责：收敛实时通道的地址、端口、路径和线程模型配置。
+ * 职责：收敛实时通道的地址、端口、路径、线程模型和连接超时配置。
  * 边界：这里只承载稳定运行参数，不承载启动逻辑。
  */
 @ConfigurationProperties(prefix = "cp.chat.server.realtime")
@@ -14,7 +15,11 @@ public record RealtimeServerProperties(
         int port,
         String path,
         int bossThreads,
-        int workerThreads
+        int workerThreads,
+        @DefaultValue("10")
+        int authenticationTimeoutSeconds,
+        @DefaultValue("60")
+        int readIdleTimeoutSeconds
 ) {
 
     public RealtimeServerProperties {
@@ -32,6 +37,12 @@ public record RealtimeServerProperties(
         }
         if (workerThreads < 0) {
             throw new IllegalArgumentException("workerThreads must be greater than or equal to 0");
+        }
+        if (authenticationTimeoutSeconds <= 0) {
+            throw new IllegalArgumentException("authenticationTimeoutSeconds must be greater than 0");
+        }
+        if (readIdleTimeoutSeconds <= 0) {
+            throw new IllegalArgumentException("readIdleTimeoutSeconds must be greater than 0");
         }
     }
 

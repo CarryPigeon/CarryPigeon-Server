@@ -16,8 +16,8 @@
 - HTTP Base：`/api`
 - WebSocket 默认入口：`/api/ws`
 - 不使用 URL 路径版本，不采用 `/api/{version}/...` 形式。
-- 推荐请求头：`Accept: application/vnd.carrypigeon+json; version=1`
-- JSON 字段统一使用 `snake_case`。
+- 推荐请求头：`Accept: application/json`。当前没有启用媒体类型参数版本协商。
+- JSON 字段、查询参数及 OpenAPI path 参数统一使用 `snake_case`；标准 HTTP header 名保持协议原样。
 - 时间字段统一使用 Unix epoch 毫秒。
 - 雪花 ID 在 JSON 中统一编码为十进制字符串，避免 JS / TS 客户端精度丢失。
 - API 返回的图片、文件地址必须为相对路径，例如 `avatars/u/1001.png` 或 `/api/files/download/server_avatar`；客户端按当前连接服务器 origin 拼接。
@@ -47,25 +47,35 @@ HTTP 失败统一返回标准错误对象：
 - `internal_error`
 - `mail_service_unavailable`
 - `email_delivery_failed`
+- `storage_service_unavailable`
 - `required_plugin_missing`
 - `password_login_disabled`
 - `idempotency_key_reused`
+- `method_not_allowed`
+- `not_acceptable`
+- `payload_too_large`
+- `unsupported_media_type`
 
 建议映射：
 
 | HTTP | reason |
 | --- | --- |
-| `400` / `422` | `validation_failed` / `schema_invalid` |
+| `405` | `method_not_allowed` |
+| `406` | `not_acceptable` |
+| `413` | `payload_too_large` |
+| `415` | `unsupported_media_type` |
+| `422` | `validation_failed` / `schema_invalid` |
 | `401` | `unauthorized` / `token_expired` |
 | `403` | `forbidden` / `password_login_disabled` / `not_channel_member` / `channel_admin_required` / `channel_owner_required` / `user_muted` |
 | `404` | `not_found` |
 | `409` | `conflict` / `application_already_processed` / `idempotency_key_reused` |
 | `412` | `required_plugin_missing` |
-| `429` | `rate_limited` |
-| `503` | `mail_service_unavailable` / `email_delivery_failed` |
+| `503` | `mail_service_unavailable` / `email_delivery_failed` / `storage_service_unavailable` |
 | `500` | `internal_error` |
 
 客户端应以 `error.reason` 作为业务分支依据，HTTP status 用于通用兜底与日志分组。
+
+所有错误响应均使用 `application/json`。所有 `401 Unauthorized` 响应均携带 `WWW-Authenticate: Bearer`。路径或查询参数类型错误、必需请求值缺失及 multipart part 缺失统一返回 `422 validation_failed`；未知 API 路由返回 `404 not_found`，不会映射为 500。
 
 ### 1.4 分页与游标
 
@@ -287,6 +297,7 @@ HTTP 失败统一返回标准错误对象：
 
 - 该入口受 `cp.chat.auth.password-login.enabled` 控制。
 - 分发包外部使用时可在 `config/application.yaml` 中设置 `cp.chat.auth.password-login.enabled=false` 关闭用户名密码登录。
+- 用户名不存在或密码错误时返回 HTTP `401`、`error.reason = "unauthorized"`，并携带 `WWW-Authenticate: Bearer`。
 - 关闭后接口返回 HTTP `403`，`error.reason = "password_login_disabled"`。
 
 ### 3.4 创建会话并签发 Token
@@ -457,6 +468,8 @@ required gate 不满足时返回：
 { "background_url": "/api/files/download/profile_bg_1001" }
 ```
 
+对象存储未启用或当前不可用时，返回 `503 Service Unavailable`，`error.reason=storage_service_unavailable`。
+
 ## 5. 频道接口
 
 基路径：`/api/channels`
@@ -502,6 +515,8 @@ required gate 不满足时返回：
 - **成功**：`204 No Content`
 
 删除后，该频道不应再出现在当前用户的频道列表中。
+
+频道仍包含邀请、封禁、消息或审计等依赖数据时返回 `409 Conflict`。
 
 ### 5.5 更新频道资料
 
@@ -635,6 +650,8 @@ required gate 不满足时返回：
 
 说明：`decision` 当前支持 `approve` / `reject`。
 
+申请已经完成审批时返回 `409 Conflict`，`error.reason = "application_already_processed"`。
+
 ### 5.14 禁言频道成员
 
 - **方法**：`PUT`
@@ -754,6 +771,8 @@ required gate 不满足时返回：
 
 所有消息响应固定使用 `mid / uid / cid / domain / domain_version / data / send_time / mentions / preview / status`。所有 domain 专属字段只允许位于 `data`；`mentions` 是顶层提醒用户 ID 数组。
 
+可选的 `client_message_id` 是客户端重试幂等键：同一账号在同一频道使用相同值和相同请求内容重复提交时返回首次创建的消息；相同值对应不同内容时返回 `409 Conflict`，`error.reason = "idempotency_key_reused"`。长度上限为 128。
+
 HTTP 发送按 `domain` 精确查找当前运行时注册的消息插件。发布服务只校验通用 envelope 和顶层
 `mentions`；插件负责校验其支持的 `domain_version`、不可信 `data` 结构并生成 canonical `data` 与
 `preview`。只有插件校验成功的消息才允许写库和发布 realtime 事件。未注册 domain、版本不受支持或
@@ -814,6 +833,8 @@ ReplyText 请求示例：
   "size": 123
 }
 ```
+
+对象存储未启用或当前不可用时，返回 `503 Service Unavailable`，`error.reason=storage_service_unavailable`。
 
 说明：
 
@@ -1013,6 +1034,7 @@ ReplyText 请求示例：
 - **认证**：是
 - **Content-Type**：任意文件 MIME
 - **成功**：`204 No Content`
+- **存储不可用**：`503 Service Unavailable`，`error.reason=storage_service_unavailable`
 
 ### 7.5 下载文件
 
@@ -1021,6 +1043,8 @@ ReplyText 请求示例：
 - **认证**：普通文件需要登录；`server_avatar` 保留值允许匿名访问。
 
 成功响应：
+
+- 对象存储未启用或当前不可用时，返回 `503 Service Unavailable`，`error.reason=storage_service_unavailable`。
 
 - 对象内容可直接读取时返回 `200` 与二进制内容。
 - 对象服务提供预签名 URL 时返回 `302`，`Location` 指向对象下载地址。
@@ -1084,14 +1108,18 @@ ReplyText 请求示例：
 - **配置来源**：`cp.chat.server.realtime.path`
 - **默认监听端口**：`18080`
 - **默认开关**：`cp.chat.server.realtime.enabled=true`
+- **首帧鉴权时限**：`cp.chat.server.realtime.authentication-timeout-seconds=10`
+- **读空闲时限**：`cp.chat.server.realtime.read-idle-timeout-seconds=60`
 - **公开发现语义**：realtime 开关关闭时，`GET /api/server` 当前返回 `ws_url=null`，并将 `capabilities.websocket=false`
 - **广播退化语义**：当 realtime 未装配时，消息与频道 realtime 发布器退化为空实现，主业务链路继续运行但不会产生实际推送
 
 ### 8.1 连接与认证
 
-- 握手阶段当前只准备请求上下文
-- 鉴权改为首帧 `auth`
-- 刷新当前会话令牌使用 `reauth`
+- 握手阶段只准备请求上下文，允许匿名完成 HTTP Upgrade。
+- 握手完成后必须在鉴权时限内以 `auth` 作为首帧；超时会收到 `auth.err` / `authentication_timeout`，随后连接关闭。
+- 未鉴权时发送 `ping`、`reauth` 或其它命令会收到 `auth.err` / `unauthorized`，随后连接关闭。
+- 刷新已鉴权会话的令牌使用 `reauth`；未鉴权连接不能直接使用 `reauth`。
+- access token 到期时服务端会发送 `auth.err` / `token_expired` 并关闭连接；客户端应先通过 HTTP 刷新 token，再使用 `reauth` 建立新的有效期。
 
 首帧 `auth` 示例：
 
@@ -1124,8 +1152,9 @@ ReplyText 请求示例：
 
 ### 8.2 心跳
 
-- 客户端发送：`{"type":"ping"}`
+- 已鉴权客户端发送：`{"type":"ping"}`
 - 服务端回写：`{"type":"pong"}`
+- 每个入站帧都会重置读空闲计时；连续 60 秒无入站数据时，服务端返回 `command.err` / `idle_timeout` 并关闭连接。
 
 ### 8.3 事件 envelope
 

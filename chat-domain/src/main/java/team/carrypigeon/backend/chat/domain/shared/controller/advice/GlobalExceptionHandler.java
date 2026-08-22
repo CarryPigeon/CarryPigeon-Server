@@ -6,14 +6,26 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiError;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -24,7 +36,7 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
  * 职责：把业务问题异常和常见请求异常收敛为稳定的 HTTP 错误响应。
  * 边界：这里只负责协议层映射，不承载业务决策逻辑。
  */
-@RestControllerAdvice(basePackages = "team.carrypigeon.backend.chat.domain")
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -44,8 +56,10 @@ public class GlobalExceptionHandler {
             case NOT_FOUND -> new ErrorDescriptor(HttpStatus.NOT_FOUND, "not_found", exception.getMessage(), null);
             case INTERNAL -> internalDescriptor(exception);
         };
-        if (exception.type() == team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemType.INTERNAL) {
+        if (descriptor.status() == HttpStatus.INTERNAL_SERVER_ERROR) {
             log.error("Problem exception mapped to internal error, reason={}", exception.reason(), exception);
+        } else if (descriptor.status() == HttpStatus.SERVICE_UNAVAILABLE) {
+            log.warn("Problem exception mapped to service unavailable, reason={}", exception.reason());
         }
         return buildErrorResponse(descriptor);
     }
@@ -60,7 +74,11 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException.class,
             BindException.class,
             ConstraintViolationException.class,
-            HttpMessageNotReadableException.class
+            HttpMessageNotReadableException.class,
+            ServletRequestBindingException.class,
+            MissingServletRequestPartException.class,
+            MethodArgumentTypeMismatchException.class,
+            HandlerMethodValidationException.class
     })
     public ResponseEntity<ApiErrorResponse> handleValidationException(Exception exception) {
         return buildErrorResponse(new ErrorDescriptor(
@@ -68,6 +86,90 @@ public class GlobalExceptionHandler {
                 "validation_failed",
                 resolveValidationMessage(exception),
                 resolveValidationDetails(exception)
+        ));
+    }
+
+    /**
+     * 处理请求媒体类型不受支持问题。
+     *
+     * @param exception 媒体类型协商异常
+     * @return HTTP 415 标准错误响应
+     */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                "unsupported_media_type",
+                "request content type is not supported",
+                null
+        ));
+    }
+
+    /**
+     * 处理响应媒体类型无法满足 Accept 请求头的问题。
+     *
+     * @param exception 响应媒体类型协商异常
+     * @return HTTP 406 标准错误响应
+     */
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotAcceptable(HttpMediaTypeNotAcceptableException exception) {
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.NOT_ACCEPTABLE,
+                "not_acceptable",
+                "requested response media type is not supported",
+                null
+        ));
+    }
+
+    /**
+     * 处理路由存在但 HTTP 方法不受支持的问题。
+     *
+     * @param exception HTTP 方法异常
+     * @return HTTP 405 标准错误响应，并在可确定时携带 Allow 响应头
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException exception) {
+        HttpHeaders headers = new HttpHeaders();
+        if (exception.getSupportedHttpMethods() != null) {
+            headers.setAllow(exception.getSupportedHttpMethods());
+        }
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "method_not_allowed",
+                "request method is not supported",
+                null
+        ), headers);
+    }
+
+    /**
+     * 处理超过服务端 multipart 限制的上传请求。
+     *
+     * @param exception 上传大小异常
+     * @return HTTP 413 标准错误响应
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handlePayloadTooLarge(MaxUploadSizeExceededException exception) {
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "payload_too_large",
+                "request payload is too large",
+                null
+        ));
+    }
+
+    /**
+     * 处理未匹配到 API 控制器或静态资源的请求。
+     *
+     * @param exception 路由或资源不存在异常
+     * @return HTTP 404 标准错误响应
+     */
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ApiErrorResponse> handleRouteNotFound(Exception exception) {
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.NOT_FOUND,
+                "not_found",
+                "resource does not exist",
+                null
         ));
     }
 
@@ -110,6 +212,18 @@ public class GlobalExceptionHandler {
         if (exception instanceof HttpMessageNotReadableException) {
             return "request body is invalid";
         }
+        if (exception instanceof MethodArgumentTypeMismatchException methodArgumentTypeMismatchException) {
+            return toSnakeCase(methodArgumentTypeMismatchException.getName()) + " is invalid";
+        }
+        if (exception instanceof ServletRequestBindingException) {
+            return "required request value is missing or invalid";
+        }
+        if (exception instanceof MissingServletRequestPartException) {
+            return "required multipart part is missing";
+        }
+        if (exception instanceof HandlerMethodValidationException) {
+            return "validation failed";
+        }
         return "validation failed";
     }
 
@@ -134,7 +248,7 @@ public class GlobalExceptionHandler {
         if (exception instanceof ConstraintViolationException constraintViolationException) {
             List<Map<String, String>> fieldErrors = constraintViolationException.getConstraintViolations().stream()
                     .map(violation -> Map.of(
-                            "field", violation.getPropertyPath().toString(),
+                            "field", toSnakeCase(violation.getPropertyPath().toString()),
                             "reason", "invalid",
                             "message", violation.getMessage()
                     ))
@@ -146,10 +260,37 @@ public class GlobalExceptionHandler {
 
     private Map<String, String> toFieldError(FieldError fieldError) {
         return Map.of(
-                "field", fieldError.getField(),
+                "field", toSnakeCase(fieldError.getField()),
                 "reason", "invalid",
                 "message", fieldError.getDefaultMessage() == null ? "validation failed" : fieldError.getDefaultMessage()
         );
+    }
+
+    private String toSnakeCase(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        StringBuilder result = new StringBuilder(value.length() + 8);
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.isUpperCase(current)) {
+                boolean followsLowerOrDigit = index > 0
+                        && (Character.isLowerCase(value.charAt(index - 1)) || Character.isDigit(value.charAt(index - 1)));
+                boolean startsWordBeforeLower = index > 0
+                        && index + 1 < value.length()
+                        && Character.isUpperCase(value.charAt(index - 1))
+                        && Character.isLowerCase(value.charAt(index + 1));
+                if ((followsLowerOrDigit || startsWordBeforeLower)
+                        && result.length() > 0
+                        && result.charAt(result.length() - 1) != '_') {
+                    result.append('_');
+                }
+                result.append(Character.toLowerCase(current));
+            } else {
+                result.append(current);
+            }
+        }
+        return result.toString();
     }
 
     /**
@@ -161,12 +302,11 @@ public class GlobalExceptionHandler {
      */
     private ErrorDescriptor forbiddenDescriptor(ProblemException exception) {
         return switch (exception.reason()) {
-            case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token" ->
+            case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token", "invalid_credentials" ->
                     new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "unauthorized", exception.getMessage(), null);
             case "token_expired" ->
                     new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "token_expired", exception.getMessage(), null);
-            case "invalid_credentials",
-                 "private_channel_required",
+            case "private_channel_required",
                  "channel_invite_forbidden",
                  "channel_profile_forbidden",
                  "channel_role_forbidden",
@@ -225,7 +365,7 @@ public class GlobalExceptionHandler {
      */
     private ErrorDescriptor internalDescriptor(ProblemException exception) {
         return switch (exception.reason()) {
-            case "mail_service_unavailable", "email_delivery_failed" ->
+            case "mail_service_unavailable", "email_delivery_failed", "storage_service_unavailable" ->
                     new ErrorDescriptor(HttpStatus.SERVICE_UNAVAILABLE, exception.reason(), exception.getMessage(), null);
             default -> new ErrorDescriptor(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", "internal server error", null);
         };
@@ -239,6 +379,10 @@ public class GlobalExceptionHandler {
      * @return 可直接返回给客户端的响应实体
      */
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(ErrorDescriptor descriptor) {
+        return buildErrorResponse(descriptor, new HttpHeaders());
+    }
+
+    private ResponseEntity<ApiErrorResponse> buildErrorResponse(ErrorDescriptor descriptor, HttpHeaders headers) {
         ApiErrorResponse response = new ApiErrorResponse(new ApiError(
                 descriptor.status().value(),
                 descriptor.reason(),
@@ -246,7 +390,11 @@ public class GlobalExceptionHandler {
                 MDC.get(LogKeys.REQUEST_ID),
                 descriptor.details()
         ));
-        return ResponseEntity.status(descriptor.status()).body(response);
+        if (descriptor.status() == HttpStatus.UNAUTHORIZED) {
+            headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+        }
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(response, headers, descriptor.status());
     }
 
     /**

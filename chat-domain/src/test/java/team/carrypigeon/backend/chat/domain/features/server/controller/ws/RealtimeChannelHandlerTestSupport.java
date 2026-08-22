@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import io.netty.channel.embedded.EmbeddedChannel;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.Instant;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
@@ -25,14 +26,28 @@ final class RealtimeChannelHandlerTestSupport {
     }
 
     static EmbeddedChannel channel(RealtimeSessionRegistry registry) {
+        return channel(registry, 10);
+    }
+
+    static EmbeddedChannel channel(RealtimeSessionRegistry registry, int authenticationTimeoutSeconds) {
+        return channel(registry, authenticationTimeoutSeconds, new AccessTokenAuthenticationDomainApi(authTokenCodec()));
+    }
+
+    static EmbeddedChannel channel(
+            RealtimeSessionRegistry registry,
+            int authenticationTimeoutSeconds,
+            AccessTokenAuthenticationApi accessTokenAuthenticationApi
+    ) {
         JsonProvider jsonProvider = jsonProvider();
         return new EmbeddedChannel(new RealtimeChannelHandler(
                 jsonProvider,
                 () -> 9001L,
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
-                new AccessTokenAuthenticationDomainApi(authTokenCodec()),
+                accessTokenAuthenticationApi,
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
-                registry
+                registry,
+                authenticationTimeoutSeconds,
+                false
         ));
     }
 

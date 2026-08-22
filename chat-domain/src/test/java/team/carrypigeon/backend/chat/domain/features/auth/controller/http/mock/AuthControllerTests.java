@@ -213,6 +213,20 @@ class AuthControllerTests {
     }
 
     /**
+     * 验证超出持久化字段上限的用户名在控制器层返回 422，而不会进入领域 API。
+     */
+    @Test
+    @DisplayName("register overlong username returns validation error")
+    void register_overlongUsername_returnsValidationError() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + "x".repeat(321) + "\",\"password\":\"password123\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+        verify(authAccountApi, never()).register(any());
+    }
+
+    /**
      * 验证登录协议会规范化用户名空白并返回标准 Bearer token 响应。
      */
     @Test

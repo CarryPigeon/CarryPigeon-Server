@@ -40,7 +40,7 @@ cp:
         max-age: 3600
       request-log:
         # 职责：控制本地 HTTP / WS 请求摘要日志。
-        enabled: false
+        enabled: true
   plugin:
     # 职责：统一承载插件级启停与自定义选项。
     # 边界：本地只保留实际读取的空入口；具体插件配置应在插件接入后按需添加。
@@ -77,6 +77,10 @@ cp:
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
         worker-threads: 0
+        # 职责：限制 WebSocket 握手后等待首帧 auth 的最长时间，超时后关闭未鉴权连接。
+        authentication-timeout-seconds: 10
+        # 职责：定义服务端读空闲超时；客户端需在此时间内发送 ping 或其他入站帧。
+        read-idle-timeout-seconds: 60
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。

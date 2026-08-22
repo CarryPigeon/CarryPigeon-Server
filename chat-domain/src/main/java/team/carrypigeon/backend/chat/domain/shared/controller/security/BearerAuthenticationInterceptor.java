@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.shared.controller.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.cors.CorsUtils;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
@@ -32,17 +33,20 @@ public class BearerAuthenticationInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * 校验请求头中的 Bearer access token 并绑定当前主体。
+     * 放行合法 CORS 预检，或校验请求头中的 Bearer access token 并绑定当前主体。
      * 输入：HTTP 请求上下文。
      * 副作用：向请求上下文和日志上下文写入当前账号身份。
      *
      * @param request 当前 HTTP 请求
      * @param response 当前 HTTP 响应
      * @param handler 当前处理器
-     * @return 认证成功时始终返回 true
+     * @return 合法 CORS 预检或认证成功时返回 true
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if (CorsUtils.isPreFlightRequest(request)) {
+            return true;
+        }
         String authorization = request.getHeader("Authorization");
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
             throw ProblemException.forbidden("authentication_required", "authentication is required");

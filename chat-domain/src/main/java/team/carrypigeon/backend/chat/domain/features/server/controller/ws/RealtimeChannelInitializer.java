@@ -77,7 +77,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
         pipeline.addLast(new RealtimeAccessTokenHandshakeHandler(properties.path(), requestLogEnabled));
-        pipeline.addLast(RealtimeChannelHandler.idleStateHandler());
+        pipeline.addLast(RealtimeChannelHandler.idleStateHandler(properties.readIdleTimeoutSeconds()));
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
         pipeline.addLast(new RealtimeChannelHandler(
                 jsonProvider,
@@ -86,6 +86,7 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
                 accessTokenAuthenticationApi,
                 serverIdentityProperties,
                 realtimeSessionRegistry,
+                properties.authenticationTimeoutSeconds(),
                 requestLogEnabled
         ));
     }

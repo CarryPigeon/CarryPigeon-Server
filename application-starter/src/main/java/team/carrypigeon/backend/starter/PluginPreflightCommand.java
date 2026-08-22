@@ -1,8 +1,6 @@
 package team.carrypigeon.backend.starter;
 
-import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginHostIdentity;
-import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
-import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestLoader;
+import team.carrypigeon.backend.starter.bootstrap.plugin.PluginPreflight;
 
 /**
  * 分发包插件预检命令入口。
@@ -24,16 +22,15 @@ public final class PluginPreflightCommand {
             throw new IllegalArgumentException("PluginPreflightCommand does not accept arguments");
         }
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        PluginManifestCatalog catalog = verify(classLoader);
-        PluginHostIdentity host = PluginHostIdentity.load(classLoader);
+        PluginPreflight.Result preflight = verify(classLoader);
         System.out.printf(
                 "Plugin preflight passed: hostVersion=%s, buildHash=%s, springBootVersion=%s, pluginCount=%d%n",
-                host.version(),
-                host.buildHash(),
-                host.springBootVersion(),
-                catalog.manifests().size()
+                preflight.hostIdentity().version(),
+                preflight.hostIdentity().buildHash(),
+                preflight.hostIdentity().springBootVersion(),
+                preflight.manifestCatalog().manifests().size()
         );
-        catalog.manifests().forEach(manifest -> System.out.printf(
+        preflight.manifestCatalog().manifests().forEach(manifest -> System.out.printf(
                 "Plugin verified: pluginId=%s, version=%s, sha256=%s%n",
                 manifest.pluginId(),
                 manifest.version(),
@@ -45,10 +42,9 @@ public final class PluginPreflightCommand {
      * 对指定 ClassLoader 执行与正式启动一致的预检。
      *
      * @param classLoader 待验证的启动 ClassLoader
-     * @return 已通过预检的插件目录
+     * @return 包含宿主身份和已验证插件目录的预检结果
      */
-    static PluginManifestCatalog verify(ClassLoader classLoader) {
-        PluginHostIdentity host = PluginHostIdentity.load(classLoader);
-        return PluginManifestLoader.load(classLoader, host);
+    static PluginPreflight.Result verify(ClassLoader classLoader) {
+        return PluginPreflight.verify(classLoader);
     }
 }

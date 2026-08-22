@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.http;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -72,6 +75,8 @@ public class NotificationPreferenceController {
      * @return HTTP 204
      */
     @PutMapping("/server")
+    @Operation(summary = "更新服务通知偏好", description = "更新当前账户的服务级通知偏好。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "服务通知偏好更新成功")})
     public ResponseEntity<Void> updateServerNotificationPreference(
             @Valid @NotNull(message = "request body must not be null") @RequestBody UpdateNotificationPreferenceRequest body,
             HttpServletRequest request

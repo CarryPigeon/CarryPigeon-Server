@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
@@ -93,6 +95,7 @@ public class ChannelPinsController {
      */
     @DeleteMapping("/{channelId}/pins/{messageId}")
     @Operation(summary = "取消置顶频道消息", description = "取消置顶指定消息。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "取消置顶成功")})
     public ResponseEntity<Void> unpinChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,

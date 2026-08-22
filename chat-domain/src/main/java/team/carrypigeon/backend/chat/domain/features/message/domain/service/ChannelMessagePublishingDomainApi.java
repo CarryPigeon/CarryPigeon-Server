@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,6 +43,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupport implements ChannelMessagePublishingApi {
 
     private static final String FORWARD_OPERATION = "message.forward.v1";
+    private static final String SEND_OPERATION = "message.send.v1";
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 128;
 
     private final MessageDeliveryCommandValidator commandValidator;
@@ -76,7 +78,21 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
     @Override
     public ChannelMessageResult sendChannelMessage(SendChannelMessageCommand command) {
         commandValidator.validateSendCommand(command);
+        String idempotencyKey = normalizedIdempotencyKey(command.clientMessageId());
+        if (idempotencyKey != null && idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
+            throw ProblemException.validationFailed("client_message_id length must be less than or equal to 128");
+        }
+        String requestFingerprint = idempotencyKey == null ? null : sendRequestFingerprint(command);
         PersistedMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
+            MessageIdempotency reservation = reserveSendIdempotency(command, idempotencyKey, requestFingerprint);
+            if (reservation != null && reservation.messageId() != null) {
+                return messageRepository.findById(reservation.messageId())
+                        .map(message -> new PersistedMessage(message, List.of(), List.of()))
+                        .orElseThrow(() -> ProblemException.fail(
+                                "idempotency_result_missing",
+                                "idempotency result message is unavailable"
+                        ));
+            }
             ChannelMessagingContext channel = requireSendableChannel(command.channelId(), command.accountId());
             ChannelMessage message = buildCanonicalMessage(
                     channel,
@@ -87,9 +103,46 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
                     command.mentions(),
                     true
             );
-            return persistCreatedMessage(afterCommit, message, channel);
+            PersistedMessage created = persistCreatedMessage(afterCommit, message, channel);
+            if (reservation != null) {
+                messageIdempotencyRepository.complete(
+                        command.accountId(),
+                        SEND_OPERATION,
+                        idempotencyKey,
+                        requestFingerprint,
+                        created.message().messageId(),
+                        now()
+                );
+            }
+            return created;
         });
         return toResult(persisted.message());
+    }
+
+    private MessageIdempotency reserveSendIdempotency(
+            SendChannelMessageCommand command,
+            String idempotencyKey,
+            String requestFingerprint
+    ) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        MessageIdempotency reservation = messageIdempotencyRepository.reserve(new MessageIdempotency(
+                command.accountId(),
+                SEND_OPERATION,
+                idempotencyKey,
+                requestFingerprint,
+                null,
+                now(),
+                null
+        ));
+        if (!requestFingerprint.equals(reservation.requestFingerprint())) {
+            throw ProblemException.conflict(
+                    "idempotency_key_reused",
+                    "client_message_id has already been used for a different request"
+            );
+        }
+        return reservation;
     }
 
     @Override
@@ -296,6 +349,41 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private String sendRequestFingerprint(SendChannelMessageCommand command) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            updateFingerprint(digest, SEND_OPERATION);
+            updateFingerprint(digest, command.channelId());
+            updateFingerprint(digest, command.domain());
+            updateFingerprint(digest, command.domainVersion());
+            updateCanonicalValue(digest, command.data());
+            updateCanonicalValue(digest, command.mentions());
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
+    private void updateCanonicalValue(MessageDigest digest, Object value) {
+        if (value == null) {
+            updateFingerprint(digest, "null");
+        } else if (value instanceof Map<?, ?> map) {
+            updateFingerprint(digest, "map");
+            map.entrySet().stream()
+                    .sorted(Comparator.comparing(entry -> String.valueOf(entry.getKey())))
+                    .forEach(entry -> {
+                        updateFingerprint(digest, String.valueOf(entry.getKey()));
+                        updateCanonicalValue(digest, entry.getValue());
+                    });
+        } else if (value instanceof List<?> list) {
+            updateFingerprint(digest, "list");
+            list.forEach(item -> updateCanonicalValue(digest, item));
+        } else {
+            updateFingerprint(digest, value.getClass().getName());
+            updateFingerprint(digest, String.valueOf(value));
         }
     }
 

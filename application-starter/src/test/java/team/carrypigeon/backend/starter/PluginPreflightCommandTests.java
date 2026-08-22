@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.starter;
 
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
+import team.carrypigeon.backend.starter.bootstrap.plugin.PluginPreflight;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,9 +17,9 @@ class PluginPreflightCommandTests {
      */
     @Test
     void verify_noExternalPlugin_returnsEmptyCatalog() {
-        PluginManifestCatalog catalog = PluginPreflightCommand.verify(getClass().getClassLoader());
+        PluginPreflight.Result result = PluginPreflightCommand.verify(getClass().getClassLoader());
 
-        assertEquals(0, catalog.manifests().size());
+        assertEquals(0, result.manifestCatalog().manifests().size());
     }
 
     /**

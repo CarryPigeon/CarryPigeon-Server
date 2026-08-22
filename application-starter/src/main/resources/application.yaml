@@ -95,6 +95,10 @@ cp:
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
         worker-threads: 0
+        # 职责：限制 WebSocket 握手后等待首帧 auth 的最长时间，超时后关闭未鉴权连接。
+        authentication-timeout-seconds: 10
+        # 职责：定义服务端读空闲超时；客户端需在此时间内发送 ping 或其他入站帧。
+        read-idle-timeout-seconds: 60
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。

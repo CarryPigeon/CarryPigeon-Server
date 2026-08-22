@@ -23,7 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.http.Cha
 import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
-import team.carrypigeon.backend.starter.config.InitializationCheckConfiguration;
+import team.carrypigeon.backend.starter.config.initialization.InitializationCheckConfiguration;
 import team.carrypigeon.backend.starter.support.StarterRegressionConfiguration;
 import team.carrypigeon.backend.starter.support.StarterTestRuntimeConfiguration;
 

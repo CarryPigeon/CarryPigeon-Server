@@ -167,6 +167,7 @@ public class ChannelController {
 
     @PostMapping
     @Operation(summary = "创建频道", description = "按 v1 资源路径创建频道；当前内部仍复用 private channel 创建逻辑。")
+    @ApiResponses({@ApiResponse(responseCode = "201", description = "频道创建成功")})
     public ResponseEntity<ChannelSummaryResponse> createChannel(
             @Valid @RequestBody CreateChannelRequest body,
             HttpServletRequest request
@@ -183,6 +184,7 @@ public class ChannelController {
 
     @DeleteMapping("/{channelId}")
     @Operation(summary = "删除频道", description = "按 v1 资源路径删除指定频道。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "频道删除成功")})
     public ResponseEntity<Void> deleteChannel(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             HttpServletRequest request
@@ -194,6 +196,7 @@ public class ChannelController {
 
     @PatchMapping("/{channelId}")
     @Operation(summary = "更新频道资料", description = "按 v1 资源路径更新频道名称与简介。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "频道资料更新成功")})
     public ResponseEntity<Void> updateChannelProfile(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody UpdateChannelProfileRequest body,
@@ -235,6 +238,7 @@ public class ChannelController {
 
     @PutMapping("/{channelId}/admins/{targetAccountId}")
     @Operation(summary = "设为管理员", description = "按 v1 资源路径将指定成员设为管理员。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "管理员设置成功")})
     public ResponseEntity<Void> promoteChannelMemberV1(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
@@ -249,6 +253,7 @@ public class ChannelController {
 
     @DeleteMapping("/{channelId}/admins/{targetAccountId}")
     @Operation(summary = "撤销管理员", description = "按 v1 资源路径撤销管理员角色。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "管理员角色撤销成功")})
     public ResponseEntity<Void> demoteChannelAdminV1(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
@@ -343,6 +348,8 @@ public class ChannelController {
     }
 
     @PutMapping("/{channelId}/notification_preference")
+    @Operation(summary = "更新频道通知偏好", description = "更新当前账户在指定频道中的通知偏好。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "频道通知偏好更新成功")})
     public ResponseEntity<Void> updateChannelNotificationPreference(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody UpdateChannelNotificationPreferenceRequest body,

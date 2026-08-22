@@ -49,6 +49,31 @@ class ChannelMessagePublishingDomainApiTests {
     }
 
     /**
+     * 验证客户端消息 ID 提供普通消息重试幂等性，并拒绝同键不同请求。
+     */
+    @Test
+    @DisplayName("send message client id is idempotent and detects reuse")
+    void sendChannelMessage_sameClientMessageId_returnsOriginalAndRejectsDifferentRequest() {
+        MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(null);
+        SendChannelMessageCommand first = new SendChannelMessageCommand(
+                1001L, 1L, "Core:Text", "1.0.0", Map.of("text", "retry-safe"), List.of(), "client-1"
+        );
+
+        ChannelMessageResult created = fixture.publishingApi.sendChannelMessage(first);
+        ChannelMessageResult replay = fixture.publishingApi.sendChannelMessage(first);
+
+        assertEquals(created.messageId(), replay.messageId());
+        assertEquals(1, fixture.messageRepository.savedMessages.size());
+
+        ProblemException exception = assertThrows(ProblemException.class, () ->
+                fixture.publishingApi.sendChannelMessage(new SendChannelMessageCommand(
+                        1001L, 1L, "Core:Text", "1.0.0", Map.of("text", "different"), List.of(), "client-1"
+                ))
+        );
+        assertEquals("idempotency_key_reused", exception.reason());
+    }
+
+    /**
      * 验证 mentions 去重保序并生成派生提醒索引。
      */
     @Test

@@ -17,6 +17,7 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.mock.web.MockMultipartFile;
@@ -71,6 +72,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -278,11 +280,11 @@ class AuthUserBusinessChainTests {
     }
 
     /**
-     * 验证账号不存在或密码错误时登录链路返回权限失败语义。
+     * 验证账号不存在或密码错误时登录链路返回未认证语义。
      */
     @Test
-    @DisplayName("login invalid credentials returns forbidden")
-    void login_invalidCredentials_returnsForbidden() throws Exception {
+    @DisplayName("login invalid credentials returns unauthorized")
+    void login_invalidCredentials_returnsUnauthorized() throws Exception {
         Fixture fixture = new Fixture();
         fixture.authMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -296,8 +298,9 @@ class AuthUserBusinessChainTests {
                         .content("""
                                 {"username":"carry-user","password":"wrong-password"}
                                 """))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.reason").value("forbidden"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
+                .andExpect(jsonPath("$.error.reason").value("unauthorized"))
                 .andExpect(jsonPath("$.error.message").value("username or password is invalid"));
 
         fixture.authMvc.perform(post("/api/auth/login")
@@ -305,8 +308,9 @@ class AuthUserBusinessChainTests {
                         .content("""
                                 {"username":"missing-user","password":"password123"}
                                 """))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error.reason").value("forbidden"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, "Bearer"))
+                .andExpect(jsonPath("$.error.reason").value("unauthorized"))
                 .andExpect(jsonPath("$.error.message").value("username or password is invalid"));
     }
 

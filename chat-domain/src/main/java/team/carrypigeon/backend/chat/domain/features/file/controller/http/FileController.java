@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.file.controller.http;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -96,6 +98,8 @@ public class FileController {
      * @return HTTP 204
      */
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
+    @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "文件内容写入成功")})
     public ResponseEntity<Void> uploadFile(@PathVariable String shareKey, HttpServletRequest request) {
         var principal = authRequestContext.requirePrincipal(request);
         try {
@@ -124,6 +128,9 @@ public class FileController {
     @GetMapping("/download/{shareKey}")
     @Operation(summary = "获取文件下载", description = "按 share_key 返回下载入口。")
     @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "直接返回文件二进制内容",
+                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                            schema = @Schema(type = "string", format = "binary"))),
             @ApiResponse(responseCode = "302", description = "重定向到对象下载地址"),
             @ApiResponse(responseCode = "404", description = "文件不存在")
     })

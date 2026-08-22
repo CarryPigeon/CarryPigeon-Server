@@ -160,6 +160,7 @@ public class UserProfileController {
      */
     @PutMapping("/me/email")
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
+    @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})
     public ResponseEntity<Void> updateCurrentUserEmail(
             HttpServletRequest request,
             @Valid @RequestBody UpdateCurrentUserEmailRequest body
