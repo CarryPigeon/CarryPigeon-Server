@@ -84,9 +84,6 @@ class ChannelMessagePluginRegistryTests {
                 registration("example-extension", "test-extension", "test-extension", true)
         ));
 
-        assertFalse(registry.supportsExtensionMessageType("text"));
-        assertTrue(registry.supportsExtensionMessageType("test-extension"));
-        assertFalse(registry.supportsExtensionMessageType("missing-extension"));
     }
 
     /**

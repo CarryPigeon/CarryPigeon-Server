@@ -23,16 +23,12 @@ public interface ChannelInviteDatabaseService {
     /**
      * 按申请/邀请 ID 查询。
      */
-    default Optional<ChannelInviteRecord> findByChannelIdAndApplicationId(long channelId, long applicationId) {
-        return Optional.empty();
-    }
+    Optional<ChannelInviteRecord> findByChannelIdAndApplicationId(long channelId, long applicationId);
 
     /**
      * 查询频道下的全部申请/邀请记录。
      */
-    default List<ChannelInviteRecord> findByChannelId(long channelId) {
-        return List.of();
-    }
+    List<ChannelInviteRecord> findByChannelId(long channelId);
 
     /**
      * 写入新的邀请记录。

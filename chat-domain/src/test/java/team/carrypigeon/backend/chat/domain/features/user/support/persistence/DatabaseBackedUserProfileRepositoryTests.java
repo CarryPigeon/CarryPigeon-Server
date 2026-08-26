@@ -86,22 +86,6 @@ class DatabaseBackedUserProfileRepositoryTests {
     }
 
     /**
-     * 验证游标分页查询会转换并返回领域模型列表。
-     */
-    @Test
-    @DisplayName("find by account id before maps domain models")
-    void findByAccountIdBefore_mapsDomainModels() {
-        FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "", 0L, 0L, BASE_TIME, BASE_TIME);
-        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
-
-        java.util.List<UserProfile> result = repository.findByAccountIdBefore(1002L, 20);
-
-        assertEquals(1, result.size());
-        assertEquals(1001L, result.get(0).accountId());
-    }
-
-    /**
      * 验证按账户 ID 集合查询时会调用 database-api 批量查询契约。
      */
     @Test
@@ -117,22 +101,6 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals(1001L, result.get(0).accountId());
         assertEquals(List.of(1001L, 1002L), databaseService.batchAccountIds);
         assertEquals(0, databaseService.findAllCalls);
-    }
-
-    /**
-     * 验证关键字搜索会转换并返回领域模型列表。
-     */
-    @Test
-    @DisplayName("search by keyword maps domain models")
-    void searchByKeyword_mapsDomainModels() {
-        FakeUserProfileDatabaseService databaseService = new FakeUserProfileDatabaseService();
-        databaseService.record = new UserProfileRecord(1001L, "carry-user", "", "hello carry", 0L, 0L, BASE_TIME, BASE_TIME);
-        DatabaseBackedUserProfileRepository repository = new DatabaseBackedUserProfileRepository(databaseService);
-
-        java.util.List<UserProfile> result = repository.searchByKeyword("carry", null, 20);
-
-        assertEquals(1, result.size());
-        assertEquals(1001L, result.get(0).accountId());
     }
 
     /**
@@ -162,16 +130,6 @@ class DatabaseBackedUserProfileRepositoryTests {
         public List<UserProfileRecord> findByAccountIds(List<Long> accountIds) {
             this.batchAccountIds = accountIds;
             return record == null || !accountIds.contains(record.accountId()) ? List.of() : List.of(record);
-        }
-
-        @Override
-        public List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit) {
-            return record == null || (cursorAccountId != null && record.accountId() >= cursorAccountId) ? List.of() : List.of(record);
-        }
-
-        @Override
-        public List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-            return findByAccountIdBefore(cursorAccountId, limit);
         }
 
         @Override

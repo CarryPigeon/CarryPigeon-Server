@@ -5,7 +5,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.A
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.DiscoverChannelsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListAuditLogsQuery;
@@ -14,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListCh
 
 /**
  * 频道查询领域 API。
- * 职责：暴露频道列表、成员、封禁、审计、发现和未读查询能力。
+ * 职责：暴露频道列表、成员、封禁、审计和发现查询能力。
  * 边界：不暴露 controller 协议、具体实现类和查询仓储细节。
  * 输入：频道查询对象或账号、频道标识等稳定业务入参。
  * 输出：频道、成员、封禁、审计、发现和未读投影列表。
@@ -90,14 +89,4 @@ public interface ChannelQueryApi {
      */
     List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query);
 
-    /**
-     * 查询账号在各频道的未读状态。
-     * 输入：当前账号 ID。
-     * 输出：频道未读计数和最后消息等未读投影列表。
-     * 约束：未读计算基于领域读状态，不暴露具体统计实现。
-     *
-     * @param accountId 当前账号 ID
-     * @return 当前账号的频道未读投影列表
-     */
-    List<ChannelUnreadResult> listUnreads(long accountId);
 }

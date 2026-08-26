@@ -41,8 +41,4 @@ public class MessageDomainPluginDomainApi implements MessageDomainPluginApi {
         );
     }
 
-    @Override
-    public boolean supportsExtensionMessageType(String messageType) {
-        return pluginRegistry.supportsExtensionMessageType(messageType);
-    }
 }

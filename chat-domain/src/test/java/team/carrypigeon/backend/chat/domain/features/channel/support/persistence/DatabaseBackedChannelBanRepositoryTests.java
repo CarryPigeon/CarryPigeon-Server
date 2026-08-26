@@ -69,6 +69,11 @@ class DatabaseBackedChannelBanRepositoryTests {
         }
 
         @Override
+        public java.util.List<ChannelBanRecord> findByChannelId(long channelId) {
+            return java.util.List.of();
+        }
+
+        @Override
         public void insert(ChannelBanRecord record) {
         }
 

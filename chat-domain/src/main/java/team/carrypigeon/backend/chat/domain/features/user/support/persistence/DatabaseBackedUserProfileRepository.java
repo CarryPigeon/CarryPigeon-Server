@@ -52,28 +52,6 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     }
 
     /**
-     * 按账户游标倒序拉取资料列表。
-     * 原因：供用户列表和分页接口使用稳定锚点。
-     */
-    @Override
-    public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-        return userProfileDatabaseService.findByAccountIdBefore(cursorAccountId, limit).stream()
-                .map(this::toDomainModel)
-                .toList();
-    }
-
-    /**
-     * 按关键字搜索资料。
-     * 输出：返回匹配关键字的领域资料集合。
-     */
-    @Override
-    public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-        return userProfileDatabaseService.searchByKeyword(keyword, cursorAccountId, limit).stream()
-                .map(this::toDomainModel)
-                .toList();
-    }
-
-    /**
      * 持久化新的用户资料。
      */
     @Override

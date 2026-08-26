@@ -22,11 +22,4 @@ public interface MessageDomainPluginApi {
      */
     ValidatedMessageDataResult validateMessageData(ValidateMessageDataCommand command);
 
-    /**
-     * 判断扩展消息类型是否已注册并允许使用。
-     *
-     * @param messageType 扩展消息类型
-     * @return 已注册时为 true
-     */
-    boolean supportsExtensionMessageType(String messageType);
 }

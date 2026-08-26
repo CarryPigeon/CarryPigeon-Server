@@ -18,16 +18,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -41,38 +38,47 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：这里只处理成员治理动作，不承担频道生命周期和申请流编排。
  */
 @Service
-public class ChannelGovernanceDomainApi extends AbstractChannelDomainSupport implements ChannelGovernanceApi {
+public class ChannelGovernanceDomainApi implements ChannelGovernanceApi {
+
+    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
+    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
+    private static final String CHANNEL_MEMBER_NOT_FOUND_MESSAGE = "channel member does not exist";
+    private static final String CHANNEL_BAN_NOT_FOUND_MESSAGE = "channel ban does not exist";
+
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelBanRepository channelBanRepository;
+    private final ChannelAuditLogRepository channelAuditLogRepository;
+    private final ChannelGovernancePolicy channelGovernancePolicy;
+    private final ChannelAfterCommitPublisher channelAfterCommitPublisher;
+    private final ChannelProjectionMapper channelProjectionMapper;
+    private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final TransactionRunner transactionRunner;
 
     public ChannelGovernanceDomainApi(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
-            ChannelInviteRepository channelInviteRepository,
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
-            ChannelReadStateRepository channelReadStateRepository,
-            MessageReferenceApi messageReferenceApi,
             UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            RealtimeEventApi realtimeEventApi,
+            ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        super(
-                channelRepository,
-                channelMemberRepository,
-                channelInviteRepository,
-                channelBanRepository,
-                channelAuditLogRepository,
-                channelReadStateRepository,
-                messageReferenceApi,
-                userProfileApi,
-                channelGovernancePolicy,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.channelBanRepository = channelBanRepository;
+        this.channelAuditLogRepository = channelAuditLogRepository;
+        this.channelGovernancePolicy = channelGovernancePolicy;
+        this.channelAfterCommitPublisher = new ChannelAfterCommitPublisher(eventPublisher);
+        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileApi);
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
     }
 
     /**
@@ -379,5 +385,76 @@ public class ChannelGovernanceDomainApi extends AbstractChannelDomainSupport imp
             channelAfterCommitPublisher.publishChannelsChangedAfterCommit(afterCommit, existingBan.bannedAccountId());
             return toBanResult(revokedBan);
         });
+    }
+
+    private void validateTargetedCommand(
+            long operatorAccountId,
+            long channelId,
+            long targetAccountId,
+            String targetFieldName
+    ) {
+        channelCommandValidator.validateTargetedCommand(
+                operatorAccountId, channelId, targetAccountId, targetFieldName
+        );
+    }
+
+    private Channel requireChannel(long channelId) {
+        return channelRepository.findById(channelId)
+                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+    }
+
+    private ChannelMember requireMember(long channelId, long accountId) {
+        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+    }
+
+    private ChannelMember requireTargetMember(long channelId, long accountId) {
+        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
+                .orElseThrow(() -> ProblemException.notFound(CHANNEL_MEMBER_NOT_FOUND_MESSAGE));
+    }
+
+    private void appendAuditLog(
+            long channelId,
+            long actorAccountId,
+            String actionType,
+            Long targetAccountId,
+            String metadata
+    ) {
+        channelAuditLogRepository.append(new ChannelAuditLog(
+                idGenerator.nextLongId(),
+                channelId,
+                actorAccountId,
+                actionType,
+                targetAccountId,
+                metadata == null ? "{}" : metadata,
+                now()
+        ));
+    }
+
+    private List<Long> snapshotChannelRecipientAccountIds(long channelId) {
+        return List.copyOf(channelMemberRepository.findAccountIdsByChannelId(channelId));
+    }
+
+    private ChannelMemberResult toMemberResult(ChannelMember member) {
+        return channelProjectionMapper.toMemberResult(member);
+    }
+
+    private ChannelBanResult toBanResult(ChannelBan ban) {
+        return new ChannelBanResult(
+                ban.channelId(), ban.bannedAccountId(), ban.operatorAccountId(), ban.reason(),
+                ban.expiresAt(), ban.createdAt(), ban.revokedAt()
+        );
+    }
+
+    private Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private String normalizeReason(String reason) {
+        return channelCommandValidator.normalizeReason(reason);
+    }
+
+    private String buildBanAuditMetadata(ChannelBan ban) {
+        return channelCommandValidator.buildBanAuditMetadata(ban);
     }
 }

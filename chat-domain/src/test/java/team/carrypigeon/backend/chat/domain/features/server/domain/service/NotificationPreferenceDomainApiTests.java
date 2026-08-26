@@ -8,7 +8,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -40,7 +40,7 @@ class NotificationPreferenceDomainApiTests {
     void getNotificationPreferences_missingPreferences_returnsDefaults() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
         NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
-                repository, mock(ChannelMessagingApi.class), timeProvider());
+                repository, mock(ChannelContextApi.class), timeProvider());
 
         var result = service.getNotificationPreferences(1001L);
 
@@ -57,7 +57,7 @@ class NotificationPreferenceDomainApiTests {
     void updateServerPreference_storesNormalizedPreference() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
         NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
-                repository, mock(ChannelMessagingApi.class), timeProvider());
+                repository, mock(ChannelContextApi.class), timeProvider());
 
         service.updateServerPreference(new UpdateNotificationServerPreferenceCommand(1001L, "muted", 0L));
 
@@ -72,11 +72,11 @@ class NotificationPreferenceDomainApiTests {
     @DisplayName("update channel preference non member throws forbidden")
     void updateChannelPreference_nonMember_throwsForbidden() {
         RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
-        ChannelMessagingApi channelMessagingApi = mock(ChannelMessagingApi.class);
+        ChannelContextApi channelContextApi = mock(ChannelContextApi.class);
         doThrow(ProblemException.forbidden("not_channel_member", "channel membership is required"))
-                .when(channelMessagingApi).requireMemberChannel(9L, 1001L);
+                .when(channelContextApi).requireMemberChannel(9L, 1001L);
         NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
-                repository, channelMessagingApi, timeProvider());
+                repository, channelContextApi, timeProvider());
 
         ProblemException exception = assertThrows(ProblemException.class, () -> service.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(1001L, 9L, "inherit", 0L)));
 

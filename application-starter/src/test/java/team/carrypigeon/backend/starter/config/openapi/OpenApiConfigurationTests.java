@@ -21,8 +21,11 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.AuditLogController;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelLifecycleController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelMemberGovernanceController;
+import team.carrypigeon.backend.chat.domain.features.server.controller.http.ChannelNotificationPreferenceController;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelPinsController;
@@ -175,7 +178,7 @@ class OpenApiConfigurationTests {
     @Test
     @DisplayName("created controller operations declare 201 response")
     void controllers_createdOperations_declareCreatedResponse() {
-        assertThat(responseCodes(ChannelController.class, "createChannel")).contains("201");
+        assertThat(responseCodes(ChannelLifecycleController.class, "createChannel")).contains("201");
         assertThat(responseCodes(ChannelMessageController.class, "sendChannelMessage")).contains("201");
         assertThat(responseCodes(MessageController.class, "forwardMessage")).contains("201");
     }
@@ -188,15 +191,16 @@ class OpenApiConfigurationTests {
     @Test
     @DisplayName("no content controller operations declare 204 response")
     void controllers_noContentOperations_declare204Response() {
-        assertThat(responseCodes(ChannelController.class, "deleteChannel")).contains("204");
-        assertThat(responseCodes(ChannelController.class, "updateChannelProfile")).contains("204");
-        assertThat(responseCodes(ChannelController.class, "promoteChannelMemberV1")).contains("204");
-        assertThat(responseCodes(ChannelController.class, "demoteChannelAdminV1")).contains("204");
-        assertThat(responseCodes(ChannelController.class, "updateChannelNotificationPreference")).contains("204");
+        assertThat(responseCodes(ChannelLifecycleController.class, "deleteChannel")).contains("204");
+        assertThat(responseCodes(ChannelLifecycleController.class, "updateChannelProfile")).contains("204");
+        assertThat(responseCodes(ChannelMemberGovernanceController.class, "promoteChannelMemberV1")).contains("204");
+        assertThat(responseCodes(ChannelMemberGovernanceController.class, "demoteChannelAdminV1")).contains("204");
+        assertThat(responseCodes(ChannelNotificationPreferenceController.class, "updateChannelNotificationPreference")).contains("204");
         assertThat(responseCodes(FileController.class, "uploadFile")).contains("204");
         assertThat(responseCodes(ChannelPinsController.class, "unpinChannelMessage")).contains("204");
         assertThat(responseCodes(NotificationPreferenceController.class, "updateServerNotificationPreference")).contains("204");
-        assertThat(responseCodes(UserProfileController.class, "updateCurrentUserEmail")).contains("204");
+        assertThat(responseCodes(UserProfileController.class, "patchCurrentUserProfile")).contains("204");
+        assertThat(responseCodes(CurrentUserAccountController.class, "updateEmail")).contains("204");
     }
 
     /**

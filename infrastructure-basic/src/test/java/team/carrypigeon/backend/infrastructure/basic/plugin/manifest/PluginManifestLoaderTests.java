@@ -6,6 +6,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -17,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 插件 Manifest 与 classpath 启动预检测试。
  * 职责：验证合法插件发现、宿主精确绑定、入口归属、依赖图、宿主构件和冲突拒绝契约。
  */
+@Tag("contract")
 class PluginManifestLoaderTests {
 
     private static final PluginHostIdentity HOST = new PluginHostIdentity("1.0.0", "build-a", "21", "3.5.3");

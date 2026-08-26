@@ -4,12 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.UpdateCurrentAccountEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -29,6 +32,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
+    private final EmailVerificationApi emailVerificationApi;
 
     @Autowired
     public AuthAccountDomainApi(
@@ -38,7 +42,8 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             PasswordHasher passwordHasher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            TransactionRunner transactionRunner
+            TransactionRunner transactionRunner,
+            EmailVerificationApi emailVerificationApi
     ) {
         this.authAccountRepository = authAccountRepository;
         this.authAccountProvisioner = new AuthAccountProvisioner(
@@ -49,6 +54,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
+        this.emailVerificationApi = emailVerificationApi;
     }
 
     @Override
@@ -81,13 +87,14 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     }
 
     @Override
-    public void updateAccountEmail(long accountId, String email) {
-        String normalizedEmail = normalizeEmail(email);
+    public void updateCurrentAccountEmail(UpdateCurrentAccountEmailCommand command) {
+        String normalizedEmail = normalizeEmail(command.email());
+        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(normalizedEmail, command.code()));
         transactionRunner.runInTransaction(() -> {
-            AuthAccount existingAccount = authAccountRepository.findById(accountId)
+            AuthAccount existingAccount = authAccountRepository.findById(command.accountId())
                     .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
             authAccountRepository.findByUsername(normalizedEmail)
-                    .filter(account -> account.id() != accountId)
+                    .filter(account -> account.id() != command.accountId())
                     .ifPresent(account -> {
                         throw ProblemException.validationFailed("email already exists");
                     });

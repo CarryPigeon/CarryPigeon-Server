@@ -586,7 +586,8 @@ class AuthUserBusinessChainTests {
                     passwordHasher,
                     idGenerator,
                     timeProvider,
-                    transactionRunner
+                    transactionRunner,
+                    emailVerificationApi
             );
             AuthSessionDomainApi sessionApi = new AuthSessionDomainApi(
                     accountRepository,
@@ -605,9 +606,7 @@ class AuthUserBusinessChainTests {
             );
             RequestAuthenticationContext authRequestContext = new RequestAuthenticationContext();
             UserProfileDomainApi userProfileApi = new UserProfileDomainApi(
-                    accountApi,
                     userProfileRepository,
-                    emailVerificationApi,
                     timeProvider,
                     transactionRunner
             );
@@ -620,11 +619,18 @@ class AuthUserBusinessChainTests {
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
                     .build();
-            this.userMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(
-                            userProfileApi,
-                            authRequestContext,
-                            fileTransferApi
-                    ))
+            this.userMvc = MockMvcBuilders.standaloneSetup(
+                            new UserProfileController(userProfileApi, authRequestContext),
+                            new team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController(
+                                    accountApi,
+                                    userProfileApi,
+                                    authRequestContext
+                            ),
+                            new team.carrypigeon.backend.chat.domain.features.file.controller.http.ProfileBackgroundController(
+                                    fileTransferApi,
+                                    authRequestContext
+                            )
+                    )
                     .addInterceptors(new BearerAuthenticationInterceptor(
                             new AccessTokenAuthenticationDomainApi(tokenService),
                             authRequestContext
@@ -740,23 +746,6 @@ class AuthUserBusinessChainTests {
         @Override
         public List<UserProfile> findAll() {
             return new ArrayList<>(profilesByAccountId.values());
-        }
-
-        @Override
-        public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-            return profilesByAccountId.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .limit(limit)
-                    .toList();
-        }
-
-        @Override
-        public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-            return profilesByAccountId.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .filter(profile -> profile.nickname().contains(keyword) || profile.bio().contains(keyword))
-                    .limit(limit)
-                    .toList();
         }
 
         @Override
@@ -1009,9 +998,5 @@ class AuthUserBusinessChainTests {
             return false;
         }
 
-        @Override
-        public Map<String, String> uploadHeaders() {
-            return Map.of();
-        }
     }
 }

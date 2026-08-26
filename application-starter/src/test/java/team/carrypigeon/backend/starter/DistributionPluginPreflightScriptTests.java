@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 分发脚本插件预检契约测试。
  * 职责：防止 Linux 与 PowerShell verify 入口遗漏正式 Java 插件预检或错误排除插件目录。
  */
+@Tag("contract")
 class DistributionPluginPreflightScriptTests {
 
     /**

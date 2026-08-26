@@ -69,42 +69,6 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
     }
 
     /**
-     * 按账户游标倒序拉取资料记录。
-     */
-    @Override
-    public List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit) {
-        return execute(
-                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
-                        .lt(cursorAccountId != null, UserProfileEntity::getAccountId, cursorAccountId)
-                        .orderByDesc(UserProfileEntity::getAccountId)
-                        .last("LIMIT " + limit)).stream()
-                        .map(UserProfileEntity::toRecord)
-                        .toList(),
-                "failed to query user profiles by cursor"
-        );
-    }
-
-    /**
-     * 按昵称或简介关键字搜索资料记录。
-     */
-    @Override
-    public List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-        String normalizedKeyword = keyword == null ? "" : keyword.trim();
-        return execute(
-                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
-                        .lt(cursorAccountId != null, UserProfileEntity::getAccountId, cursorAccountId)
-                        .and(wrapper -> wrapper.like(UserProfileEntity::getNickname, normalizedKeyword)
-                                .or()
-                                .like(UserProfileEntity::getBio, normalizedKeyword))
-                        .orderByDesc(UserProfileEntity::getAccountId)
-                        .last("LIMIT " + limit)).stream()
-                        .map(UserProfileEntity::toRecord)
-                        .toList(),
-                "failed to search user profiles"
-        );
-    }
-
-    /**
      * 插入新的用户资料记录。
      */
     @Override

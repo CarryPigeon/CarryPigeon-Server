@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.starter.config;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginHostIdentity;
 
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 宿主构建身份资源测试。
  * 职责：验证 Maven 过滤后的宿主版本和构建指纹可供插件预检直接使用。
  */
+@Tag("contract")
 class PluginHostIdentityResourceTests {
 
     /**

@@ -19,10 +19,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.BanChannelMemberUntilCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelGovernanceApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -31,20 +31,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 /**
- * `ChannelBansController` 契约测试。
- * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
+ * ChannelBansController 契约测试。
+ * 职责：验证频道封禁、解禁和封禁列表的 HTTP 输入输出契约。
+ * 边界：领域查询与治理操作由替身提供，不验证内部业务规则。
  */
 
 @Tag("contract")
 class ChannelBansControllerTests {
 
     private ChannelQueryApi channelQueryDomainApi;
-    private ChannelLifecycleApi channelLifecycleDomainApi;
     private ChannelGovernanceApi channelGovernanceDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
@@ -52,7 +53,6 @@ class ChannelBansControllerTests {
     @BeforeEach
     void setUp() {
         channelQueryDomainApi = mock(ChannelQueryApi.class);
-        channelLifecycleDomainApi = mock(ChannelLifecycleApi.class);
         channelGovernanceDomainApi = mock(ChannelGovernanceApi.class);
         authRequestContext = new RequestAuthenticationContext();
         mockMvc = MockMvcBuilders.standaloneSetup(controller())
@@ -100,7 +100,38 @@ class ChannelBansControllerTests {
                 .andExpect(jsonPath("$.reason").value("spam"));
         ArgumentCaptor<BanChannelMemberUntilCommand> commandCaptor = ArgumentCaptor.forClass(BanChannelMemberUntilCommand.class);
         verify(channelGovernanceDomainApi).banChannelMemberUntil(commandCaptor.capture());
+        assertEquals(1001L, commandCaptor.getValue().operatorAccountId());
+        assertEquals(9L, commandCaptor.getValue().channelId());
+        assertEquals(1002L, commandCaptor.getValue().targetAccountId());
+        assertEquals("spam", commandCaptor.getValue().reason());
         assertEquals(1776819600000L, commandCaptor.getValue().untilEpochMillis());
+    }
+
+    /**
+     * 验证解除封禁返回 204 并完整映射当前账户、频道和目标账户。
+     */
+    @Test
+    @DisplayName("delete ban resource returns 204")
+    void unbanChannelMember_returns204() throws Exception {
+        mockMvc = authenticatedMockMvc();
+        when(channelGovernanceDomainApi.unbanChannelMember(any())).thenReturn(new ChannelBanResult(
+                9L,
+                1002L,
+                1001L,
+                "spam",
+                Instant.parse("2026-04-24T13:00:00Z"),
+                Instant.parse("2026-04-24T12:00:00Z"),
+                Instant.parse("2026-04-24T12:10:00Z")
+        ));
+
+        mockMvc.perform(delete("/api/channels/9/bans/1002"))
+                .andExpect(status().isNoContent());
+        ArgumentCaptor<UnbanChannelMemberCommand> commandCaptor =
+                ArgumentCaptor.forClass(UnbanChannelMemberCommand.class);
+        verify(channelGovernanceDomainApi).unbanChannelMember(commandCaptor.capture());
+        assertEquals(1001L, commandCaptor.getValue().operatorAccountId());
+        assertEquals(9L, commandCaptor.getValue().channelId());
+        assertEquals(1002L, commandCaptor.getValue().targetAccountId());
     }
 
     private MockMvc authenticatedMockMvc() {
@@ -111,10 +142,9 @@ class ChannelBansControllerTests {
                 .build();
     }
 
-    private ChannelController controller() {
-        return new ChannelController(
+    private ChannelBansController controller() {
+        return new ChannelBansController(
                 channelQueryDomainApi,
-                channelLifecycleDomainApi,
                 channelGovernanceDomainApi,
                 authRequestContext
         );

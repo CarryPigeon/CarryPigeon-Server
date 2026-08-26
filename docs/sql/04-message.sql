@@ -26,6 +26,21 @@ CREATE INDEX idx_chat_message_channel_sender_message_id
 CREATE INDEX idx_chat_message_channel_domain_message_id
     ON chat_message (channel_id, domain, message_id DESC);
 
+CREATE TABLE chat_channel_read_state (
+    channel_id BIGINT NOT NULL,
+    account_id BIGINT NOT NULL,
+    last_read_message_id BIGINT NOT NULL,
+    last_read_time DATETIME(6) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (channel_id, account_id),
+    CONSTRAINT fk_chat_channel_read_state_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
+    CONSTRAINT fk_chat_channel_read_state_account FOREIGN KEY (account_id) REFERENCES auth_account (id)
+);
+
+CREATE INDEX idx_chat_channel_read_state_account_id
+    ON chat_channel_read_state (account_id);
+
 CREATE TABLE chat_message_idempotency (
     account_id BIGINT NOT NULL,
     operation VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

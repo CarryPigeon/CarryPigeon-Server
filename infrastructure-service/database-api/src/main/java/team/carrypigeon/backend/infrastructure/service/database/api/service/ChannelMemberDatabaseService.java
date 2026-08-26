@@ -57,9 +57,7 @@ public interface ChannelMemberDatabaseService {
      * @param channelId 频道 ID
      * @return 成员记录列表
      */
-    default List<ChannelMemberRecord> findByChannelId(long channelId) {
-        return List.of();
-    }
+    List<ChannelMemberRecord> findByChannelId(long channelId);
 
     /**
      * 查询频道下的全部成员账户 ID。
@@ -69,7 +67,5 @@ public interface ChannelMemberDatabaseService {
      */
     List<Long> findAccountIdsByChannelId(long channelId);
 
-    default List<Long> findChannelIdsByAccountId(long accountId) {
-        return List.of();
-    }
+    List<Long> findChannelIdsByAccountId(long accountId);
 }

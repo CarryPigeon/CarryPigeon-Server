@@ -16,10 +16,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -69,14 +67,12 @@ class ChannelDiscoverDomainApiTests {
     private ChannelQueryDomainApi createService(ChannelRepository channelRepository) {
         StubChannelMemberRepository channelMemberRepository = new StubChannelMemberRepository();
         StubChannelBanRepository channelBanRepository = new StubChannelBanRepository();
-        StubChannelReadStateRepository channelReadStateRepository = new StubChannelReadStateRepository();
         StubUserProfileRepository userProfileRepository = new StubUserProfileRepository();
         return new ChannelQueryDomainApi(
                 channelRepository,
                 channelMemberRepository,
                 channelBanRepository,
                 channelAuditLog -> { },
-                channelReadStateRepository,
                 TestFeatureApis.userProfiles(userProfileRepository),
                 new ChannelGovernancePolicy()
         );
@@ -130,36 +126,12 @@ class ChannelDiscoverDomainApiTests {
     }
 
     /**
-     * `StubChannelReadStateRepository` 测试替身。
-     * 职责：隔离外部依赖，使测试只验证当前契约边界。
-     */
-    private static final class StubChannelReadStateRepository implements ChannelReadStateRepository {
-        @Override public Optional<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) { return Optional.empty(); }
-        @Override public team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState upsert(team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState readState) { return readState; }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelUnread> listUnreadsByAccountId(long accountId) { return List.of(); }
-    }
-
-    /**
-     * `StubMessageRepository` 测试替身。
-     * 职责：隔离外部依赖，使测试只验证当前契约边界。
-     */
-    private static final class StubMessageRepository implements MessageRepository {
-        @Override public team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage save(team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage message) { return message; }
-        @Override public Optional<team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage> findById(long messageId) { return Optional.empty(); }
-        @Override public team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage update(team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage message) { return message; }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) { return List.of(); }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) { return List.of(); }
-    }
-
-    /**
      * `StubUserProfileRepository` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
     private static final class StubUserProfileRepository implements UserProfileRepository {
         @Override public Optional<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountId(long accountId) { return Optional.empty(); }
         @Override public List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findAll() { return List.of(); }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) { return List.of(); }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) { return List.of(); }
         @Override public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile save(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) { return userProfile; }
         @Override public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile update(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) { return userProfile; }
     }

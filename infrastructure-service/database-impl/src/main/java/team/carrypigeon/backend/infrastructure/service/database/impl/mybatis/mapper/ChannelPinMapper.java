@@ -34,12 +34,6 @@ public interface ChannelPinMapper {
             """)
     int delete(@Param("channelId") long channelId, @Param("messageId") long messageId);
 
-    @Delete("""
-            DELETE FROM chat_channel_pin
-            WHERE message_id = #{messageId}
-            """)
-    int deleteByMessageId(@Param("messageId") long messageId);
-
     @Select("""
             <script>
             SELECT pin_id, channel_id, message_id, pinned_by_account_id, note, pinned_at

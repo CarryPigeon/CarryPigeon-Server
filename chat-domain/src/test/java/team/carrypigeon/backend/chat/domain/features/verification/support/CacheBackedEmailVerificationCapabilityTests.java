@@ -26,11 +26,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class CacheBackedEmailVerificationCapabilityTests {
 
     /**
-     * 验证 `issueAndVerifyCode` 在 `normalizedEmail` 条件下满足 `deletesCacheEntry` 的测试契约。
+     * 验证规范化邮箱对应的验证码通过单次原子操作校验并消费。
      */
     @Test
-    @DisplayName("issue and verify code normalized email deletes cache entry")
-    void issueAndVerifyCode_normalizedEmail_deletesCacheEntry() {
+    @DisplayName("issue and verify code normalized email atomically consumes cache entry")
+    void issueAndVerifyCode_normalizedEmail_atomicallyConsumesCacheEntry() {
         RecordingCacheService cacheService = new RecordingCacheService();
         RecordingMailSenderService mailSenderService = new RecordingMailSenderService();
         CacheBackedEmailVerificationCapability service = new CacheBackedEmailVerificationCapability(cacheService, mailSenderService);
@@ -45,7 +45,8 @@ class CacheBackedEmailVerificationCapabilityTests {
 
         service.verifyCode("carry-user@example.com", cacheService.lastSetValue);
 
-        assertEquals("auth:email-code:carry-user@example.com", cacheService.lastDeletedKey);
+        assertEquals("auth:email-code:carry-user@example.com", cacheService.lastConsumedKey);
+        assertEquals(cacheService.lastSetValue, cacheService.lastConsumedValue);
         assertFalse(cacheService.exists("auth:email-code:carry-user@example.com"));
     }
 
@@ -121,6 +122,8 @@ class CacheBackedEmailVerificationCapabilityTests {
         private String lastSetValue;
         private Duration lastSetTtl;
         private String lastDeletedKey;
+        private String lastConsumedKey;
+        private String lastConsumedValue;
 
         @Override
         public Optional<String> get(String key) {
@@ -139,6 +142,13 @@ class CacheBackedEmailVerificationCapabilityTests {
         public void delete(String key) {
             lastDeletedKey = key;
             values.remove(key);
+        }
+
+        @Override
+        public boolean consumeIfEquals(String key, String expectedValue) {
+            lastConsumedKey = key;
+            lastConsumedValue = expectedValue;
+            return values.remove(key, expectedValue);
         }
 
         @Override

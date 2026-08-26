@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
-import java.io.IOException;
 import java.util.List;
 import java.util.Arrays;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,27 +15,17 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.PatchCurrentUserProfileRequest;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UpdateCurrentUserEmailRequest;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserBackgroundUploadResponse;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserMeResponse;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileListResponse;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -55,49 +44,19 @@ public class UserProfileController {
 
     private final UserProfileApi userProfileDomainApi;
     private final RequestAuthenticationContext authRequestContext;
-    private final FileTransferApi fileTransferDomainApi;
 
     /**
      * 创建用户资料 HTTP 入口。
      *
      * @param userProfileDomainApi 用户资料领域 API
      * @param authRequestContext 请求认证上下文
-     * @param fileTransferDomainApi 文件传输领域 API
      */
     public UserProfileController(
             UserProfileApi userProfileDomainApi,
-            RequestAuthenticationContext authRequestContext,
-            FileTransferApi fileTransferDomainApi
+            RequestAuthenticationContext authRequestContext
     ) {
         this.userProfileDomainApi = userProfileDomainApi;
         this.authRequestContext = authRequestContext;
-        this.fileTransferDomainApi = fileTransferDomainApi;
-    }
-
-    /**
-     * 查询当前登录用户资料。
-     *
-     * @param request 当前 HTTP 请求
-     * @return 统一响应包装的用户资料
-     */
-    @GetMapping("/me")
-    @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回当前用户资料"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "404", description = "资料不存在")
-    })
-    public UserMeResponse me(HttpServletRequest request) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        UserProfileResult result = userProfileDomainApi.getCurrentUserProfile(
-                new GetCurrentUserProfileCommand(principal.accountId())
-        );
-        return new UserMeResponse(
-                Ids.toString(result.accountId()),
-                userProfileDomainApi.getCurrentUserEmail(principal.accountId()),
-                result.nickname(),
-                result.avatarUrl()
-        );
     }
 
     /**
@@ -121,7 +80,7 @@ public class UserProfileController {
     ) {
         authRequestContext.requirePrincipal(request);
         UserProfileResult result = userProfileDomainApi.getUserProfileByAccountId(
-                new GetUserProfileByAccountIdCommand(accountId)
+                new GetUserProfileByAccountIdQuery(accountId)
         );
         return toPublicResponse(result);
     }
@@ -149,29 +108,6 @@ public class UserProfileController {
                 .map(this::toPublicResponse)
                 .toList();
         return new UserPublicProfileListResponse(result);
-    }
-
-    /**
-     * 更新当前登录用户邮箱。
-     *
-     * @param request 当前 HTTP 请求
-     * @param body 邮箱更新请求
-     * @return HTTP 204
-     */
-    @PutMapping("/me/email")
-    @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})
-    public ResponseEntity<Void> updateCurrentUserEmail(
-            HttpServletRequest request,
-            @Valid @RequestBody UpdateCurrentUserEmailRequest body
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        userProfileDomainApi.updateCurrentUserEmail(new UpdateCurrentUserEmailCommand(
-                principal.accountId(),
-                body.email(),
-                body.code()
-        ));
-        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -205,34 +141,6 @@ public class UserProfileController {
                 )
         );
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * 上传并更新当前用户背景图。
-     * 副作用：将背景图写入文件传输领域维护的对象位置。
-     *
-     * @param request 当前 HTTP 请求
-     * @param background 背景图 multipart 文件
-     * @return 背景图下载地址响应
-     */
-    @PostMapping(path = "/me/background", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "更新当前用户背景图", description = "上传当前用户背景图并返回下载地址。")
-    public UserBackgroundUploadResponse uploadCurrentUserBackground(
-            HttpServletRequest request,
-            @RequestPart("background") MultipartFile background
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        try {
-            String shareKey = fileTransferDomainApi.uploadProfileBackground(
-                    principal.accountId(),
-                    background.getContentType(),
-                    background.getSize(),
-                    background.getInputStream()
-            );
-            return new UserBackgroundUploadResponse("/api/files/download/" + shareKey);
-        } catch (IOException exception) {
-            throw ProblemException.fail("background_upload_read_failed", "failed to read background upload content");
-        }
     }
 
     private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {

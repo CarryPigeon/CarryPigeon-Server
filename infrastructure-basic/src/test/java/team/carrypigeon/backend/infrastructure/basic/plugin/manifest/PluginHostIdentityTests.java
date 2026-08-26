@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.basic.plugin.manifest;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.SpringBootVersion;
 
@@ -9,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 插件宿主身份测试。
  * 职责：验证 Manifest 兼容性使用 Spring Boot 版本，而不是 Spring Framework 版本。
  */
+@Tag("unit")
 class PluginHostIdentityTests {
 
     /**

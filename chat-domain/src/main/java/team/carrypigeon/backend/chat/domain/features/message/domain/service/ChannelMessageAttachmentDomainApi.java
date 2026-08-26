@@ -1,13 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
-import java.io.InputStream;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -22,18 +21,18 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 @Service
 public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachmentApi {
 
-    private final ChannelMessagingApi channelMessagingApi;
+    private final ChannelMessagePolicyApi channelMessagePolicyApi;
     private final MessageAttachmentUploader messageAttachmentUploader;
     private final TimeProvider timeProvider;
 
     public ChannelMessageAttachmentDomainApi(
-            ChannelMessagingApi channelMessagingApi,
+            ChannelMessagePolicyApi channelMessagePolicyApi,
             FileReferenceApi fileReferenceApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
-        this.channelMessagingApi = channelMessagingApi;
+        this.channelMessagePolicyApi = channelMessagePolicyApi;
         this.messageAttachmentUploader = new MessageAttachmentUploader(
                 fileReferenceApi,
                 idGenerator,
@@ -43,23 +42,23 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
     }
 
     @Override
-    public MessageAttachmentUploadResult uploadMessageAttachment(
-            long accountId,
-            long channelId,
-            String messageType,
-            String filename,
-            String mimeType,
-            long size,
-            InputStream content
-    ) {
-        requirePositive(accountId, "accountId");
-        requirePositive(channelId, "channelId");
-        ChannelMessagingContext channel = channelMessagingApi.requireSendableChannel(
-                channelId,
-                accountId,
+    public MessageAttachmentUploadResult uploadMessageAttachment(UploadMessageAttachmentCommand command) {
+        requirePositive(command.accountId(), "accountId");
+        requirePositive(command.channelId(), "channelId");
+        ChannelMessagingContext channel = channelMessagePolicyApi.requireSendableChannel(
+                command.channelId(),
+                command.accountId(),
                 timeProvider.nowInstant()
         );
-        return messageAttachmentUploader.upload(accountId, channel.id(), messageType, filename, mimeType, size, content);
+        return messageAttachmentUploader.upload(
+                command.accountId(),
+                channel.id(),
+                command.messageType(),
+                command.filename(),
+                command.mimeType(),
+                command.size(),
+                command.content()
+        );
     }
 
     private void requirePositive(long value, String fieldName) {

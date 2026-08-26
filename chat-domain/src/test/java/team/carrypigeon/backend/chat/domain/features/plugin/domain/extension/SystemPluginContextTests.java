@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.plugin.domain.extension;
 
 import java.util.List;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifest;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.when;
  * SYSTEM 插件主 Context 访问契约测试。
  * 职责：验证插件生命周期可以从宿主主 Spring Context 获取数据库与事务等核心 Bean。
  */
+@Tag("contract")
 class SystemPluginContextTests {
 
     /**

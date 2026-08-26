@@ -34,34 +34,26 @@ public interface ChannelDatabaseService {
      */
     Optional<ChannelRecord> findById(long channelId);
 
-    default List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
-        throw new UnsupportedOperationException("channel discover is not supported");
-    }
+    List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit);
 
     /**
      * 写入新的频道记录。
      *
      * @param record 待持久化频道记录
      */
-    default void insert(ChannelRecord record) {
-        throw new UnsupportedOperationException("channel insert is not supported");
-    }
+    void insert(ChannelRecord record);
 
     /**
      * 更新频道记录。
      *
      * @param record 待更新频道记录
      */
-    default void update(ChannelRecord record) {
-        throw new UnsupportedOperationException("channel update is not supported");
-    }
+    void update(ChannelRecord record);
 
     /**
      * 按频道 ID 删除频道记录。
      *
      * @param channelId 频道 ID
      */
-    default void delete(long channelId) {
-        throw new UnsupportedOperationException("channel delete is not supported");
-    }
+    void delete(long channelId);
 }

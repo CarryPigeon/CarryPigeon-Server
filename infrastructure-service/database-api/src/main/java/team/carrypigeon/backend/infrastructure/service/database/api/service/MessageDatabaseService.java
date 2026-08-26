@@ -45,9 +45,7 @@ public interface MessageDatabaseService {
     /**
      * 查询频道内指定消息之后的消息。
      */
-    default List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
-        throw new UnsupportedOperationException("message after query is not supported");
-    }
+    List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
 
     /**
      * 在频道内按关键字搜索消息。
@@ -62,7 +60,7 @@ public interface MessageDatabaseService {
     /**
      * 在频道内按关键字和高级过滤条件搜索消息。
      */
-    default List<MessageRecord> searchByChannelId(
+    List<MessageRecord> searchByChannelId(
             long channelId,
             String keyword,
             Long cursorMessageId,
@@ -71,7 +69,5 @@ public interface MessageDatabaseService {
             Long beforeMessageId,
             Long afterMessageId,
             int limit
-    ) {
-        return searchByChannelId(channelId, keyword, limit);
-    }
+    );
 }

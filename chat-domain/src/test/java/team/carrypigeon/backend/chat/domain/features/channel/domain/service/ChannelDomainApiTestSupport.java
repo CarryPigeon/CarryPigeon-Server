@@ -13,21 +13,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInvite;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelUnread;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.MessageReferenceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
@@ -37,6 +29,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
+import team.carrypigeon.backend.chat.domain.support.TestRealtimeDomainEventPublisher;
 
 /**
  * 频道应用测试支撑。
@@ -81,12 +74,10 @@ final class ChannelDomainApiTestSupport {
         final InMemoryChannelInviteRepository channelInviteRepository = new InMemoryChannelInviteRepository();
         final InMemoryChannelBanRepository channelBanRepository = new InMemoryChannelBanRepository();
         final InMemoryChannelAuditLogRepository channelAuditLogRepository = new InMemoryChannelAuditLogRepository();
-        final InMemoryChannelReadStateRepository channelReadStateRepository = new InMemoryChannelReadStateRepository();
-        final InMemoryMessageRepository messageRepository = new InMemoryMessageRepository();
-        final MessageReferenceApi messageReferenceApi = new MessageReferenceDomainApi(messageRepository);
         final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
         final UserProfileApi userProfileApi = TestFeatureApis.userProfiles(userProfileRepository);
         final RecordingRealtimeEventApi realtimeEventApi = new RecordingRealtimeEventApi();
+        final TestRealtimeDomainEventPublisher eventPublisher = new TestRealtimeDomainEventPublisher(realtimeEventApi);
 
         private TestContext() {
             channelRepository.defaultChannel = publicChannel();
@@ -100,31 +91,8 @@ final class ChannelDomainApiTestSupport {
                     channelMemberRepository,
                     channelBanRepository,
                     channelAuditLogRepository,
-                    channelReadStateRepository,
                     userProfileApi,
                     governancePolicy()
-            );
-        }
-
-        ChannelAccessDomainApi createAccessService() {
-            return createAccessService(new NoopTransactionRunner());
-        }
-
-        ChannelAccessDomainApi createAccessService(TransactionRunner transactionRunner) {
-            return new ChannelAccessDomainApi(
-                    channelRepository,
-                    channelMemberRepository,
-                    channelInviteRepository,
-                    channelBanRepository,
-                    channelAuditLogRepository,
-                    channelReadStateRepository,
-                    messageReferenceApi,
-                    userProfileApi,
-                    governancePolicy(),
-                    realtimeEventApi,
-                    new FixedIdGenerator(),
-                    timeProvider(),
-                    transactionRunner
             );
         }
 
@@ -139,11 +107,9 @@ final class ChannelDomainApiTestSupport {
                     channelInviteRepository,
                     channelBanRepository,
                     channelAuditLogRepository,
-                    channelReadStateRepository,
-                    messageReferenceApi,
                     userProfileApi,
                     governancePolicy(),
-                    realtimeEventApi,
+                    eventPublisher,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -158,14 +124,11 @@ final class ChannelDomainApiTestSupport {
             return new ChannelGovernanceDomainApi(
                     channelRepository,
                     channelMemberRepository,
-                    channelInviteRepository,
                     channelBanRepository,
                     channelAuditLogRepository,
-                    channelReadStateRepository,
-                    messageReferenceApi,
                     userProfileApi,
                     governancePolicy(),
-                    realtimeEventApi,
+                    eventPublisher,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -182,12 +145,9 @@ final class ChannelDomainApiTestSupport {
                     channelMemberRepository,
                     channelInviteRepository,
                     channelBanRepository,
-                    channelAuditLogRepository,
-                    channelReadStateRepository,
-                    messageReferenceApi,
                     userProfileApi,
                     governancePolicy(),
-                    realtimeEventApi,
+                    eventPublisher,
                     new FixedIdGenerator(),
                     timeProvider(),
                     transactionRunner
@@ -204,82 +164,11 @@ final class ChannelDomainApiTestSupport {
     }
 
     /**
-     * `InMemoryChannelReadStateRepository` 测试替身。
-     * 职责：隔离外部依赖，使测试只验证当前契约边界。
-     */
-    static final class InMemoryChannelReadStateRepository implements ChannelReadStateRepository {
-
-        final Map<String, ChannelReadState> states = new HashMap<>();
-        List<ChannelUnread> unreadResults = List.of();
-
-        @Override
-        public Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) {
-            return Optional.ofNullable(states.get(key(channelId, accountId)));
-        }
-
-        @Override
-        public ChannelReadState upsert(ChannelReadState readState) {
-            states.put(key(readState.channelId(), readState.accountId()), readState);
-            return readState;
-        }
-
-        @Override
-        public List<ChannelUnread> listUnreadsByAccountId(long accountId) {
-            return unreadResults;
-        }
-
-        private String key(long channelId, long accountId) {
-            return channelId + ":" + accountId;
-        }
-    }
-
-    /**
-     * `InMemoryMessageRepository` 测试替身。
-     * 职责：隔离外部依赖，使测试只验证当前契约边界。
-     */
-    static final class InMemoryMessageRepository implements MessageRepository {
-
-        final Map<Long, ChannelMessage> messagesById = new HashMap<>();
-
-        @Override
-        public ChannelMessage save(ChannelMessage message) {
-            messagesById.put(message.messageId(), message);
-            return message;
-        }
-
-        @Override
-        public Optional<ChannelMessage> findById(long messageId) {
-            return Optional.ofNullable(messagesById.get(messageId));
-        }
-
-        @Override
-        public ChannelMessage update(ChannelMessage message) {
-            messagesById.put(message.messageId(), message);
-            return message;
-        }
-
-        @Override
-        public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-            return messagesById.values().stream()
-                    .filter(message -> message.channelId() == channelId)
-                    .sorted(java.util.Comparator.comparingLong(ChannelMessage::messageId).reversed())
-                    .limit(limit)
-                    .toList();
-        }
-
-        @Override
-        public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
-            return List.of();
-        }
-    }
-
-    /**
      * `RecordingRealtimeEventApi` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
     static final class RecordingRealtimeEventApi implements RealtimeEventApi {
 
-        final List<ChannelReadState> readStateUpdates = new ArrayList<>();
         final List<String> channelChangedScopes = new ArrayList<>();
         final List<Long> channelsChangedAccountIds = new ArrayList<>();
 
@@ -288,14 +177,6 @@ final class ChannelDomainApiTestSupport {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = (Map<String, Object>) command.payload();
             switch (command.eventType()) {
-                case "read_state.updated" -> readStateUpdates.add(new ChannelReadState(
-                        Long.parseLong(String.valueOf(payload.get("cid"))),
-                        Long.parseLong(String.valueOf(payload.get("uid"))),
-                        Long.parseLong(String.valueOf(payload.get("last_read_mid"))),
-                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue()),
-                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue()),
-                        Instant.ofEpochMilli(((Number) payload.get("last_read_time")).longValue())
-                ));
                 case "channel.changed" -> channelChangedScopes.add(String.valueOf(payload.get("scope")));
                 case "channels.changed" -> channelsChangedAccountIds.add(command.recipientAccountIds().iterator().next());
                 default -> { }
@@ -504,26 +385,6 @@ final class ChannelDomainApiTestSupport {
         @Override
         public List<UserProfile> findAll() {
             return new ArrayList<>(profiles.values());
-        }
-
-        @Override
-        public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-            return profiles.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
-                    .limit(limit)
-                    .toList();
-        }
-
-        @Override
-        public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-            String normalizedKeyword = keyword == null ? "" : keyword.trim();
-            return profiles.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .filter(profile -> profile.nickname().contains(normalizedKeyword) || profile.bio().contains(normalizedKeyword))
-                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
-                    .limit(limit)
-                    .toList();
         }
 
         @Override

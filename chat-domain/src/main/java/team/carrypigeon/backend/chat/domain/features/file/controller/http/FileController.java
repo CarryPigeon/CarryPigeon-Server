@@ -82,7 +82,7 @@ public class FileController {
                 new FileUploadResponse.UploadResponse(
                         "PUT",
                         result.uploadUrl(),
-                        fileTransferDomainApi.uploadHeaders(),
+                        java.util.Map.of(),
                         result.expiresAt().toEpochMilli()
                 )
         );

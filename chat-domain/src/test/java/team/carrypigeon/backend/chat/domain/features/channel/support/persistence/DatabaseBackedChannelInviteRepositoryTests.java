@@ -79,6 +79,16 @@ class DatabaseBackedChannelInviteRepositoryTests {
         }
 
         @Override
+        public Optional<ChannelInviteRecord> findByChannelIdAndApplicationId(long channelId, long applicationId) {
+            return Optional.empty();
+        }
+
+        @Override
+        public java.util.List<ChannelInviteRecord> findByChannelId(long channelId) {
+            return java.util.List.of();
+        }
+
+        @Override
         public void insert(ChannelInviteRecord record) {
         }
 

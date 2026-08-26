@@ -1,17 +1,16 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.api;
 
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 
 /**
  * 文件传输领域 API。
- * 职责：暴露上传授权、同源上传、下载和固定上传头查询能力。
+ * 职责：暴露上传授权、同源上传、资料背景图上传和下载能力。
  * 边界：不暴露 controller 协议、对象存储适配实现和 share_key 解析细节。
  * 输入：账号、文件名、MIME 类型、大小、share key 与文件内容流。
- * 输出：上传授权、下载授权、固定上传头或上传副作用。
+ * 输出：上传授权、下载授权、背景图引用或上传副作用。
  * 失败语义：文件参数非法、share key 无效、权限不足或对象不存在由领域问题异常表达。
  * 调用方：只通过本接口请求文件传输能力，不直接依赖对象存储服务。
  */
@@ -82,12 +81,4 @@ public interface FileTransferApi {
      */
     boolean isServerAvatar(String shareKey);
 
-    /**
-     * 获取同源上传需要固定携带的请求头。
-     * 输出：上传头名称到取值的稳定映射。
-     * 边界：该结果表达领域上传约束，不暴露对象存储客户端实现。
-     *
-     * @return 上传请求头映射
-     */
-    Map<String, String> uploadHeaders();
 }

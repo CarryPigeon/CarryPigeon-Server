@@ -6,13 +6,16 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelP
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.PinChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UnpinChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelPinManagementApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.RemoveChannelPinCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.command.SetChannelPinCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelPinReferencesQuery;
+import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelPinResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListChannelPinsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -25,26 +28,33 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：不暴露普通消息发送、编辑和历史搜索能力。
  */
 @Service
-public class ChannelPinDomainApi extends AbstractMessageDomainSupport implements ChannelPinApi {
+public class ChannelPinDomainApi implements ChannelPinApi {
+
+    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
+    private final ChannelContextApi channelContextApi;
+    private final ChannelPinManagementApi channelPinManagementApi;
+    private final MessageRepository messageRepository;
+    private final MessageAfterCommitPublisher messageAfterCommitPublisher;
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final TransactionRunner transactionRunner;
 
     public ChannelPinDomainApi(
-            ChannelMessagingApi channelMessagingApi,
+            ChannelContextApi channelContextApi,
+            ChannelPinManagementApi channelPinManagementApi,
             MessageRepository messageRepository,
-            MentionRepository mentionRepository,
-            RealtimeEventApi realtimeEventApi,
+            ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        super(
-                channelMessagingApi,
-                messageRepository,
-                mentionRepository,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelContextApi = channelContextApi;
+        this.channelPinManagementApi = channelPinManagementApi;
+        this.messageRepository = messageRepository;
+        this.messageAfterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
     }
 
     @Override
@@ -52,33 +62,28 @@ public class ChannelPinDomainApi extends AbstractMessageDomainSupport implements
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
         requirePositive(command.messageId(), "messageId");
-        if (command.note() != null && command.note().trim().length() > 200) {
-            throw ProblemException.validationFailed("note length must be less than or equal to 200");
-        }
-        PinnedChannelMessage pinnedChannelMessage = transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessagingContext channel = requireChannel(command.channelId());
-            channelMessagingApi.requirePinModerationPermission(channel.id(), command.accountId());
+        ChannelPinReference pin = transactionRunner.runInTransaction(afterCommit -> {
+            ChannelMessagingContext channel = channelContextApi.requireChannel(command.channelId());
             ChannelMessage message = requireMessage(command.messageId());
             if (message.channelId() != channel.id()) {
                 throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
             }
-            if (channelMessagingApi.findPin(channel.id(), message.messageId()).isEmpty()
-                    && channelMessagingApi.countPins(channel.id()) >= MAX_PINS_PER_CHANNEL) {
-                throw ProblemException.validationFailed("pin_limit_reached", "channel pin limit is reached");
-            }
-            ChannelPinReference pin = channelMessagingApi.savePin(
+            ChannelPinReference savedPin = channelPinManagementApi.setPin(new SetChannelPinCommand(
                     idGenerator.nextLongId(),
                     channel.id(),
                     message.messageId(),
                     command.accountId(),
-                    command.note() == null ? "" : command.note().trim(),
+                    command.note(),
                     now()
+            ));
+            messageAfterCommitPublisher.publishMessagePinnedAfterCommit(
+                    afterCommit,
+                    savedPin,
+                    channelContextApi.recipientAccountIds(channel.id())
             );
-            PinnedChannelMessage pinnedResult = new PinnedChannelMessage(pin, channelMessagingApi.recipientAccountIds(channel.id()));
-            messageAfterCommitPublisher.publishMessagePinnedAfterCommit(afterCommit, pinnedResult);
-            return pinnedResult;
+            return savedPin;
         });
-        return toPinResult(pinnedChannelMessage.pin());
+        return toPinResult(pin);
     }
 
     @Override
@@ -87,18 +92,16 @@ public class ChannelPinDomainApi extends AbstractMessageDomainSupport implements
         requirePositive(command.channelId(), "channelId");
         requirePositive(command.messageId(), "messageId");
         transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessagingContext channel = requireChannel(command.channelId());
-            channelMessagingApi.requirePinModerationPermission(channel.id(), command.accountId());
-            ChannelPinReference pin = channelMessagingApi.findPin(channel.id(), command.messageId())
-                    .orElseThrow(() -> ProblemException.notFound("channel pin does not exist"));
-            channelMessagingApi.deletePin(channel.id(), command.messageId());
-            UnpinnedChannelMessage unpinnedChannelMessage = new UnpinnedChannelMessage(
+            ChannelPinReference pin = channelPinManagementApi.removePin(new RemoveChannelPinCommand(
+                    command.channelId(), command.messageId(), command.accountId()
+            ));
+            messageAfterCommitPublisher.publishMessageUnpinnedAfterCommit(
+                    afterCommit,
                     pin,
                     command.accountId(),
                     now().toEpochMilli(),
-                    channelMessagingApi.recipientAccountIds(channel.id())
+                    channelContextApi.recipientAccountIds(pin.channelId())
             );
-            messageAfterCommitPublisher.publishMessageUnpinnedAfterCommit(afterCommit, unpinnedChannelMessage);
         });
     }
 
@@ -112,9 +115,36 @@ public class ChannelPinDomainApi extends AbstractMessageDomainSupport implements
         if (query.limit() <= 0 || query.limit() > 50) {
             throw ProblemException.validationFailed("limit must be between 1 and 50");
         }
-        ChannelMessagingContext channel = channelMessagingApi.requireMemberChannel(query.channelId(), query.accountId());
-        return channelMessagingApi.findPinsBefore(channel.id(), query.cursorMessageId(), query.limit() + 1).stream()
+        return channelPinManagementApi.listPins(new ListChannelPinReferencesQuery(
+                        query.accountId(), query.channelId(), query.cursorMessageId(), query.limit() + 1
+                )).stream()
                 .map(this::toPinResult)
                 .toList();
+    }
+
+    private ChannelMessage requireMessage(long messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+    }
+
+    private ChannelPinResult toPinResult(ChannelPinReference pin) {
+        return new ChannelPinResult(
+                pin.pinId(),
+                pin.channelId(),
+                pin.messageId(),
+                pin.pinnedByAccountId(),
+                pin.pinnedAt(),
+                pin.note()
+        );
+    }
+
+    private java.time.Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
     }
 }

@@ -63,7 +63,8 @@ final class AuthDomainApiTestSupport {
                 new PrefixPasswordHasher(),
                 new IncrementingIdGenerator(),
                 new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                transactionRunner
+                transactionRunner,
+                new NoopEmailVerificationApi()
         );
     }
 
@@ -233,26 +234,6 @@ final class AuthDomainApiTestSupport {
         @Override
         public List<UserProfile> findAll() {
             return new java.util.ArrayList<>(profiles.values());
-        }
-
-        @Override
-        public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-            return profiles.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
-                    .limit(limit)
-                    .toList();
-        }
-
-        @Override
-        public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-            String normalizedKeyword = keyword == null ? "" : keyword.trim();
-            return profiles.values().stream()
-                    .filter(profile -> cursorAccountId == null || profile.accountId() < cursorAccountId)
-                    .filter(profile -> profile.nickname().contains(normalizedKeyword) || profile.bio().contains(normalizedKeyword))
-                    .sorted(java.util.Comparator.comparingLong(UserProfile::accountId).reversed())
-                    .limit(limit)
-                    .toList();
         }
 
         @Override

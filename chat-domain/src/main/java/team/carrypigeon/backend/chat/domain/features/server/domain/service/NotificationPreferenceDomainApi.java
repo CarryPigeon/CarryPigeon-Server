@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationServerPreferenceCommand;
@@ -24,16 +24,16 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
     private static final List<String> CHANNEL_MODES = List.of("all", "mentions_only", "muted", "inherit");
 
     private final NotificationPreferenceRepository notificationPreferenceRepository;
-    private final ChannelMessagingApi channelMessagingApi;
+    private final ChannelContextApi channelContextApi;
     private final TimeProvider timeProvider;
 
     public NotificationPreferenceDomainApi(
             NotificationPreferenceRepository notificationPreferenceRepository,
-            ChannelMessagingApi channelMessagingApi,
+            ChannelContextApi channelContextApi,
             TimeProvider timeProvider
     ) {
         this.notificationPreferenceRepository = notificationPreferenceRepository;
-        this.channelMessagingApi = channelMessagingApi;
+        this.channelContextApi = channelContextApi;
         this.timeProvider = timeProvider;
     }
 
@@ -88,7 +88,7 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
     public void updateChannelPreference(UpdateNotificationChannelPreferenceCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        channelMessagingApi.requireMemberChannel(command.channelId(), command.accountId());
+        channelContextApi.requireMemberChannel(command.channelId(), command.accountId());
         String mode = normalizeMode(command.mode(), CHANNEL_MODES, "mode");
         long mutedUntil = normalizeMutedUntil(command.mutedUntil());
         NotificationChannelPreference existing = notificationPreferenceRepository.listChannelPreferencesByAccountId(command.accountId()).stream()

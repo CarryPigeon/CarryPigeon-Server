@@ -83,6 +83,11 @@ class CacheServiceAutoConfigurationTests {
             }
 
             @Override
+            public boolean consumeIfEquals(String key, String expectedValue) {
+                return false;
+            }
+
+            @Override
             public boolean exists(String key) {
                 return false;
             }

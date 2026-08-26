@@ -14,7 +14,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.Auth
  * 输入：登录、刷新、注销与验证码会话命令对象。
  * 输出：访问令牌、刷新令牌和会话过期信息等认证投影。
  * 失败语义：认证失败、令牌无效、会话过期等问题由领域问题异常表达。
- * 调用方：controller 或 realtime 认证入口只能依赖本接口，不直接依赖具体实现类。
+ * 调用方：auth HTTP controller 只能依赖本接口，不直接依赖具体实现类。
  */
 public interface AuthSessionApi {
 

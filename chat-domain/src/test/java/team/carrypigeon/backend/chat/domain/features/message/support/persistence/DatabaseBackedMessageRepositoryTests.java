@@ -134,7 +134,26 @@ class DatabaseBackedMessageRepositoryTests {
         }
 
         @Override
+        public List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+            return List.of();
+        }
+
+        @Override
         public List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit) {
+            return List.of();
+        }
+
+        @Override
+        public List<MessageRecord> searchByChannelId(
+                long channelId,
+                String keyword,
+                Long cursorMessageId,
+                Long senderAccountId,
+                String domain,
+                Long beforeMessageId,
+                Long afterMessageId,
+                int limit
+        ) {
             return List.of();
         }
     }

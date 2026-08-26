@@ -13,12 +13,9 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  */
 public class ChannelMessagePluginRegistry {
 
-    private static final java.util.Set<String> BUILTIN_MESSAGE_TYPES = java.util.Set.of("text", "file", "voice");
-
     private final Map<String, ChannelMessagePlugin> pluginsByType;
     private final Map<String, ChannelMessagePlugin> pluginsByDomain;
     private final Map<String, ChannelMessagePluginDescriptor> descriptorsByType;
-    private final Map<String, String> messageTypesByPublicPluginKey;
 
     public ChannelMessagePluginRegistry(List<ChannelMessagePluginRegistration> registrations) {
         Map<String, ChannelMessagePlugin> resolvedPlugins = new LinkedHashMap<>();
@@ -47,7 +44,6 @@ public class ChannelMessagePluginRegistry {
         this.pluginsByType = Map.copyOf(resolvedPlugins);
         this.pluginsByDomain = Map.copyOf(resolvedDomainPlugins);
         this.descriptorsByType = Map.copyOf(resolvedDescriptors);
-        this.messageTypesByPublicPluginKey = Map.copyOf(publicPluginKeys);
     }
 
     /**
@@ -120,20 +116,4 @@ public class ChannelMessagePluginRegistry {
         return pluginsByDomain.containsKey(domain);
     }
 
-    /**
-     * 判断扩展消息类型是否在当前运行时白名单中。
-     *
-     * @param messageType 扩展消息类型
-     * @return 白名单命中时返回 true
-     */
-    public boolean supportsExtensionMessageType(String messageType) {
-        if (messageType == null || messageType.isBlank()) {
-            return false;
-        }
-        String normalizedType = messageType.trim();
-        if (BUILTIN_MESSAGE_TYPES.contains(normalizedType)) {
-            return false;
-        }
-        return messageTypesByPublicPluginKey.containsKey(normalizedType);
-    }
 }

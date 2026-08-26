@@ -19,7 +19,7 @@ public interface ChannelAuditLogDatabaseService {
      */
     void insert(ChannelAuditLogWriteRecord record);
 
-    default List<ChannelAuditLogReadRecord> list(
+    List<ChannelAuditLogReadRecord> list(
             Long cursorAuditId,
             int limit,
             Long channelId,
@@ -27,7 +27,5 @@ public interface ChannelAuditLogDatabaseService {
             String actionType,
             Instant fromTime,
             Instant toTime
-    ) {
-        throw new UnsupportedOperationException("channel audit log list is not supported");
-    }
+    );
 }

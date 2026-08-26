@@ -11,7 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.ForwardChannelMessageCommand;
@@ -25,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDomainPluginApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.ValidateMessageDataCommand;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
@@ -40,39 +41,51 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：不承载撤回、查询、附件上传和置顶能力。
  */
 @Service
-public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupport implements ChannelMessagePublishingApi {
+public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishingApi {
 
+    private static final String CORE_TEXT_DOMAIN = "Core:Text";
+    private static final String CORE_FORWARD_DOMAIN = "Core:Forward";
+    private static final String CORE_TEXT_DOMAIN_VERSION = "1.0.0";
+    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String FORWARD_OPERATION = "message.forward.v1";
     private static final String SEND_OPERATION = "message.send.v1";
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 128;
 
     private final MessageDeliveryCommandValidator commandValidator;
+    private final ChannelContextApi channelContextApi;
+    private final ChannelMessagePolicyApi channelMessagePolicyApi;
+    private final MessageRepository messageRepository;
+    private final MessageMentionManager messageMentionManager;
+    private final MessageAfterCommitPublisher messageAfterCommitPublisher;
     private final MessageIdempotencyRepository messageIdempotencyRepository;
     private final MessageDomainPluginApi messageDomainPluginApi;
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final TransactionRunner transactionRunner;
 
     public ChannelMessagePublishingDomainApi(
-            ChannelMessagingApi channelMessagingApi,
+            ChannelContextApi channelContextApi,
+            ChannelMessagePolicyApi channelMessagePolicyApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
             MessageIdempotencyRepository messageIdempotencyRepository,
-            RealtimeEventApi realtimeEventApi,
+            ApplicationEventPublisher eventPublisher,
             MessageDomainPluginApi messageDomainPluginApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        super(
-                channelMessagingApi,
-                messageRepository,
-                mentionRepository,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelContextApi = channelContextApi;
+        this.channelMessagePolicyApi = channelMessagePolicyApi;
+        this.messageRepository = messageRepository;
+        this.messageMentionManager = new MessageMentionManager(mentionRepository, idGenerator, timeProvider);
+        this.messageAfterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
         this.commandValidator = new MessageDeliveryCommandValidator();
         this.messageIdempotencyRepository = messageIdempotencyRepository;
         this.messageDomainPluginApi = messageDomainPluginApi;
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
     }
 
     @Override
@@ -83,17 +96,18 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
             throw ProblemException.validationFailed("client_message_id length must be less than or equal to 128");
         }
         String requestFingerprint = idempotencyKey == null ? null : sendRequestFingerprint(command);
-        PersistedMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
+        ChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
             MessageIdempotency reservation = reserveSendIdempotency(command, idempotencyKey, requestFingerprint);
             if (reservation != null && reservation.messageId() != null) {
                 return messageRepository.findById(reservation.messageId())
-                        .map(message -> new PersistedMessage(message, List.of(), List.of()))
                         .orElseThrow(() -> ProblemException.fail(
                                 "idempotency_result_missing",
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext channel = requireSendableChannel(command.channelId(), command.accountId());
+            ChannelMessagingContext channel = channelMessagePolicyApi.requireSendableChannel(
+                    command.channelId(), command.accountId(), now()
+            );
             ChannelMessage message = buildCanonicalMessage(
                     channel,
                     command.accountId(),
@@ -103,20 +117,20 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
                     command.mentions(),
                     true
             );
-            PersistedMessage created = persistCreatedMessage(afterCommit, message, channel);
+            ChannelMessage created = persistCreatedMessage(afterCommit, message, channel);
             if (reservation != null) {
                 messageIdempotencyRepository.complete(
                         command.accountId(),
                         SEND_OPERATION,
                         idempotencyKey,
                         requestFingerprint,
-                        created.message().messageId(),
+                        created.messageId(),
                         now()
                 );
             }
             return created;
         });
-        return toResult(persisted.message());
+        return ChannelMessageProjectionMapper.toResult(persisted);
     }
 
     private MessageIdempotency reserveSendIdempotency(
@@ -148,8 +162,8 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
     @Override
     public ChannelMessageResult sendSystemChannelMessage(SendSystemChannelMessageCommand command) {
         commandValidator.validateSystemSendCommand(command);
-        PersistedMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessagingContext channel = requireChannel(command.channelId());
+        ChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
+            ChannelMessagingContext channel = channelContextApi.requireChannel(command.channelId());
             requireSystemChannel(channel);
             ChannelMessage message = buildCanonicalMessage(
                     channel,
@@ -162,7 +176,7 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
             );
             return persistCreatedMessage(afterCommit, message, channel);
         });
-        return toResult(persisted.message());
+        return ChannelMessageProjectionMapper.toResult(persisted);
     }
 
     @Override
@@ -184,7 +198,9 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext targetChannel = requireSendableChannel(command.targetChannelId(), command.accountId());
+            ChannelMessagingContext targetChannel = channelMessagePolicyApi.requireSendableChannel(
+                    command.targetChannelId(), command.accountId(), now()
+            );
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("domain", CORE_TEXT_DOMAIN);
             data.put("domain_version", CORE_TEXT_DOMAIN_VERSION);
@@ -193,7 +209,7 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
             }
             if (command.mergedMessageIds() == null || command.mergedMessageIds().isEmpty()) {
                 ChannelMessage source = requireMessage(command.sourceMessageId());
-                requireMemberChannel(source.channelId(), command.accountId());
+                channelContextApi.requireMemberChannel(source.channelId(), command.accountId());
                 data.put("forwarded_from", forwardSource(source));
             } else {
                 List<Map<String, Object>> sources = new ArrayList<>();
@@ -203,7 +219,7 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
                         sources.add(Map.of("mid", Long.toString(messageId), "unavailable", true));
                         continue;
                     }
-                    requireMemberChannel(source.channelId(), command.accountId());
+                    channelContextApi.requireMemberChannel(source.channelId(), command.accountId());
                     sources.add(forwardSource(source));
                 }
                 data.put("forwarded_messages", List.copyOf(sources));
@@ -217,20 +233,20 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
                     List.of(),
                     false
             );
-            PersistedMessage persisted = persistCreatedMessage(afterCommit, message, targetChannel);
+            ChannelMessage persisted = persistCreatedMessage(afterCommit, message, targetChannel);
             if (reservation != null) {
                 messageIdempotencyRepository.complete(
                         command.accountId(),
                         FORWARD_OPERATION,
                         idempotencyKey,
                         requestFingerprint,
-                        persisted.message().messageId(),
+                        persisted.messageId(),
                         now()
                 );
             }
-            return persisted.message();
+            return persisted;
         });
-        return toResult(result);
+        return ChannelMessageProjectionMapper.toResult(result);
     }
 
     private MessageIdempotency reserveForwardIdempotency(
@@ -294,17 +310,16 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
         );
     }
 
-    private PersistedMessage persistCreatedMessage(
+    private ChannelMessage persistCreatedMessage(
             TransactionRunner.AfterCommitExecutor afterCommit,
             ChannelMessage message,
             ChannelMessagingContext channel
     ) {
-        List<Long> recipients = channelMessagingApi.recipientAccountIds(channel.id());
+        List<Long> recipients = channelContextApi.recipientAccountIds(channel.id());
         ChannelMessage saved = messageRepository.save(message);
         List<Mention> mentions = messageMentionManager.persistMentions(saved, recipients);
-        PersistedMessage persisted = new PersistedMessage(saved, recipients, mentions);
-        messageAfterCommitPublisher.publishMessageCreatedAfterCommit(afterCommit, persisted);
-        return persisted;
+        messageAfterCommitPublisher.publishMessageCreatedAfterCommit(afterCommit, saved, recipients, mentions);
+        return saved;
     }
 
     private void validateForwardCommand(ForwardChannelMessageCommand command) {
@@ -403,6 +418,41 @@ public class ChannelMessagePublishingDomainApi extends AbstractMessageDomainSupp
 
     private String normalizedComment(String comment) {
         return comment == null || comment.isBlank() ? null : comment.trim();
+    }
+
+    private ChannelMessage requireMessage(long messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+    }
+
+    private void requireSystemChannel(ChannelMessagingContext channel) {
+        if (!"system".equals(channel.type())) {
+            throw ProblemException.forbidden("system_channel_required", "system message requires system channel");
+        }
+    }
+
+    private Map<String, Object> forwardSource(ChannelMessage sourceMessage) {
+        Map<String, Object> source = new LinkedHashMap<>();
+        source.put("mid", Long.toString(sourceMessage.messageId()));
+        source.put("cid", Long.toString(sourceMessage.channelId()));
+        source.put("uid", Long.toString(sourceMessage.senderId()));
+        source.put("preview", sourceMessage.preview());
+        source.put("send_time", sourceMessage.sendTime().toEpochMilli());
+        return source;
+    }
+
+    private long nextMessageId() {
+        return idGenerator.nextLongId();
+    }
+
+    private java.time.Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
     }
 
 }

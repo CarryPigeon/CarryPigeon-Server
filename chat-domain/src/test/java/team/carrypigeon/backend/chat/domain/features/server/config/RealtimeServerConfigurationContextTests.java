@@ -150,16 +150,6 @@ class RealtimeServerConfigurationContextTests {
                 }
 
                 @Override
-                public java.util.List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-                    return java.util.List.of();
-                }
-
-                @Override
-                public java.util.List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-                    return java.util.List.of();
-                }
-
-                @Override
                 public UserProfile save(UserProfile userProfile) {
                     return userProfile;
                 }

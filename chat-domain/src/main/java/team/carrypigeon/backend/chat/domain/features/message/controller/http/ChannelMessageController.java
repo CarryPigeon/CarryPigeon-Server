@@ -28,6 +28,7 @@ import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAut
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
@@ -230,13 +231,15 @@ public class ChannelMessageController {
         AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         try {
             MessageAttachmentUploadResult result = channelMessageAttachmentDomainApi.uploadMessageAttachment(
-                    principal.accountId(),
-                    channelId,
-                    messageType,
-                    file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename(),
-                    file.getContentType(),
-                    file.getSize(),
-                    file.getInputStream()
+                    new UploadMessageAttachmentCommand(
+                            principal.accountId(),
+                            channelId,
+                            messageType,
+                            file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename(),
+                            file.getContentType(),
+                            file.getSize(),
+                            file.getInputStream()
+                    )
             );
             return new MessageAttachmentUploadResponse(
                     result.objectKey(),

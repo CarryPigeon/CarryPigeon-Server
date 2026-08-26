@@ -15,14 +15,10 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelInviteStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -36,38 +32,46 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：这里只处理 invite/application 生命周期，不承担频道目录查询或成员治理。
  */
 @Service
-public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSupport implements ChannelApplicationFlowApi {
+public class ChannelApplicationFlowDomainApi implements ChannelApplicationFlowApi {
+
+    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
+    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
+    private static final String CHANNEL_INVITE_NOT_FOUND_MESSAGE = "channel invite does not exist";
+
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelInviteRepository channelInviteRepository;
+    private final ChannelBanRepository channelBanRepository;
+    private final UserProfileApi userProfileApi;
+    private final ChannelGovernancePolicy channelGovernancePolicy;
+    private final ChannelAfterCommitPublisher channelAfterCommitPublisher;
+    private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final TransactionRunner transactionRunner;
 
     public ChannelApplicationFlowDomainApi(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelInviteRepository channelInviteRepository,
             ChannelBanRepository channelBanRepository,
-            ChannelAuditLogRepository channelAuditLogRepository,
-            ChannelReadStateRepository channelReadStateRepository,
-            MessageReferenceApi messageReferenceApi,
             UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            RealtimeEventApi realtimeEventApi,
+            ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        super(
-                channelRepository,
-                channelMemberRepository,
-                channelInviteRepository,
-                channelBanRepository,
-                channelAuditLogRepository,
-                channelReadStateRepository,
-                messageReferenceApi,
-                userProfileApi,
-                channelGovernancePolicy,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.channelInviteRepository = channelInviteRepository;
+        this.channelBanRepository = channelBanRepository;
+        this.userProfileApi = userProfileApi;
+        this.channelGovernancePolicy = channelGovernancePolicy;
+        this.channelAfterCommitPublisher = new ChannelAfterCommitPublisher(eventPublisher);
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
     }
 
     /**
@@ -296,5 +300,72 @@ public class ChannelApplicationFlowDomainApi extends AbstractChannelDomainSuppor
 
     private String normalizeApplicationReason(String reason) {
         return reason == null || reason.isBlank() ? "" : reason.trim();
+    }
+
+    private void validateInviteChannelMemberCommand(InviteChannelMemberCommand command) {
+        channelCommandValidator.validateInviteChannelMemberCommand(command);
+    }
+
+    private void validateAcceptChannelInviteCommand(AcceptChannelInviteCommand command) {
+        channelCommandValidator.validateAcceptChannelInviteCommand(command);
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        channelCommandValidator.requirePositive(value, fieldName);
+    }
+
+    private Channel requireChannel(long channelId) {
+        return channelRepository.findById(channelId)
+                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+    }
+
+    private ChannelMember requireMember(long channelId, long accountId) {
+        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+    }
+
+    private void requireInviteeExists(long inviteeAccountId) {
+        if (userProfileApi.getPublicUserProfiles(List.of(inviteeAccountId)).isEmpty()) {
+            throw ProblemException.notFound("invitee account does not exist");
+        }
+    }
+
+    private boolean isChannelApplication(ChannelInvite invite) {
+        return invite.inviterAccountId() == channelApplicationMarkerAccountId(invite.inviteeAccountId());
+    }
+
+    private long channelApplicationMarkerAccountId(long inviteeAccountId) {
+        return inviteeAccountId;
+    }
+
+    private ChannelInviteResult toInviteResult(ChannelInvite invite) {
+        return new ChannelInviteResult(
+                invite.channelId(), invite.inviteeAccountId(), invite.inviterAccountId(),
+                invite.status().name(), invite.createdAt(), invite.respondedAt()
+        );
+    }
+
+    private ChannelApplicationResult toApplicationResult(ChannelInvite invite, String reason) {
+        return new ChannelApplicationResult(
+                invite.applicationId(), invite.channelId(), invite.inviteeAccountId(),
+                normalizeApplicationReason(reason == null ? invite.reason() : reason),
+                invite.createdAt(), invite.status().name()
+        );
+    }
+
+    private ChannelMember newMember(long channelId, long accountId, ChannelMemberRole role) {
+        return new ChannelMember(channelId, accountId, role, now(), null);
+    }
+
+    private List<Long> snapshotChannelRecipientAccountIds(long channelId) {
+        return List.copyOf(channelMemberRepository.findAccountIdsByChannelId(channelId));
+    }
+
+    private long nextId() {
+        return idGenerator.nextLongId();
+    }
+
+    private java.time.Instant now() {
+        return timeProvider.nowInstant();
     }
 }

@@ -41,25 +41,6 @@ public interface UserProfileDatabaseService {
     }
 
     /**
-     * 按账户 ID 游标查询用户资料记录分页。
-     *
-     * @param cursorAccountId 游标账户 ID，可为空
-     * @param limit 查询条数
-     * @return 用户资料记录列表
-     */
-    List<UserProfileRecord> findByAccountIdBefore(Long cursorAccountId, int limit);
-
-    /**
-     * 按关键字搜索用户资料记录。
-     *
-     * @param keyword 搜索关键字
-     * @param cursorAccountId 游标账户 ID，可为空
-     * @param limit 查询条数
-     * @return 命中用户资料记录列表
-     */
-    List<UserProfileRecord> searchByKeyword(String keyword, Long cursorAccountId, int limit);
-
-    /**
      * 写入新的用户资料。
      *
      * @param record 待保存资料记录

@@ -95,21 +95,6 @@ CREATE TABLE chat_channel_audit_log (
 CREATE INDEX idx_chat_channel_audit_log_channel_created_at
     ON chat_channel_audit_log (channel_id, created_at);
 
-CREATE TABLE chat_channel_read_state (
-    channel_id BIGINT NOT NULL,
-    account_id BIGINT NOT NULL,
-    last_read_message_id BIGINT NOT NULL,
-    last_read_time DATETIME(6) NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (channel_id, account_id),
-    CONSTRAINT fk_chat_channel_read_state_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_channel_read_state_account FOREIGN KEY (account_id) REFERENCES auth_account (id)
-);
-
-CREATE INDEX idx_chat_channel_read_state_account_id
-    ON chat_channel_read_state (account_id);
-
 CREATE TABLE chat_channel_pin (
     pin_id BIGINT NOT NULL,
     channel_id BIGINT NOT NULL,

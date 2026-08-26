@@ -1,16 +1,12 @@
 package team.carrypigeon.backend.chat.domain.support;
 
 import java.time.Clock;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileReferenceDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -26,9 +22,7 @@ public final class TestFeatureApis {
 
     public static UserProfileApi userProfiles(UserProfileRepository repository) {
         return new UserProfileDomainApi(
-                new UnsupportedAuthAccountApi(),
                 repository,
-                new NoopEmailVerificationApi(),
                 new TimeProvider(Clock.systemUTC()),
                 new DirectTransactionRunner()
         );
@@ -41,17 +35,6 @@ public final class TestFeatureApis {
     public static RealtimeEventApi noopRealtime() {
         return command -> {
         };
-    }
-
-    private static final class UnsupportedAuthAccountApi implements AuthAccountApi {
-        @Override public RegisterResult register(RegisterCommand command) { throw new UnsupportedOperationException(); }
-        @Override public String getAccountEmail(long accountId) { throw new UnsupportedOperationException(); }
-        @Override public void updateAccountEmail(long accountId, String email) { throw new UnsupportedOperationException(); }
-    }
-
-    private static final class NoopEmailVerificationApi implements EmailVerificationApi {
-        @Override public void issueCode(team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand command) { }
-        @Override public void verifyCode(team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand command) { }
     }
 
     private static final class DirectTransactionRunner implements TransactionRunner {

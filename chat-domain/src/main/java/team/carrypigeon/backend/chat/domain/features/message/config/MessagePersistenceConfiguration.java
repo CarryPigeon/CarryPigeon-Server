@@ -6,12 +6,15 @@ import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedMentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedMessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedMessageRepository;
+import team.carrypigeon.backend.chat.domain.features.message.support.persistence.DatabaseBackedChannelReadStateRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageIdempotencyDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /**
@@ -56,6 +59,17 @@ public class MessagePersistenceConfiguration {
     @Bean
     public MentionRepository mentionRepository(MentionDatabaseService mentionDatabaseService) {
         return new DatabaseBackedMentionRepository(mentionDatabaseService);
+    }
+
+    /**
+     * 创建频道消息读状态仓储适配器。
+     *
+     * @param databaseService 频道读状态数据库服务契约
+     * @return 面向消息领域的读状态仓储
+     */
+    @Bean
+    public ChannelReadStateRepository channelReadStateRepository(ChannelReadStateDatabaseService databaseService) {
+        return new DatabaseBackedChannelReadStateRepository(databaseService);
     }
 
 }

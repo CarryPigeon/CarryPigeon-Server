@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.starter.bootstrap.plugin;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginRuntimeApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.verify;
  * 插件启动生命周期测试。
  * 职责：验证插件生命周期顺序、幂等性与 readiness 状态。
  */
+@Tag("unit")
 class PluginStartupLifecycleTests {
 
     @Test

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.PluginHealth;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.when;
  * 插件运行时领域服务测试。
  * 职责：验证逻辑启停、强依赖拓扑、健康失败清理和逆序停止契约。
  */
+@Tag("unit")
 class PluginRuntimeDomainApiTests {
 
     @Test

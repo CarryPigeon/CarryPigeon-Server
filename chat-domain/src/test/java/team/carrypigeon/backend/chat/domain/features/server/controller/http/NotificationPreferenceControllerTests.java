@@ -9,6 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -18,12 +19,15 @@ import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAut
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.server.domain.projection.NotificationPreferencesResult;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
+import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -99,6 +103,34 @@ class NotificationPreferenceControllerTests {
                         .content("null"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error.reason").value("validation_failed"));
+    }
+
+    /**
+     * 验证频道资源路径保持不变，并由 server feature 映射频道级通知偏好命令。
+     */
+    @Test
+    @DisplayName("update channel notification preference returns 204")
+    void updateChannelNotificationPreference_validBody_returns204() throws Exception {
+        MockMvc channelPreferenceMvc = MockMvcBuilders.standaloneSetup(
+                        new ChannelNotificationPreferenceController(notificationPreferenceDomainApi, authRequestContext)
+                )
+                .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
+                .setMessageConverters(snakeCaseConverter())
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        channelPreferenceMvc.perform(put("/api/channels/9/notification_preference")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"mode\":\"inherit\",\"muted_until\":0}"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<UpdateNotificationChannelPreferenceCommand> captor =
+                ArgumentCaptor.forClass(UpdateNotificationChannelPreferenceCommand.class);
+        verify(notificationPreferenceDomainApi).updateChannelPreference(captor.capture());
+        assertEquals(1001L, captor.getValue().accountId());
+        assertEquals(9L, captor.getValue().channelId());
+        assertEquals("inherit", captor.getValue().mode());
+        assertEquals(0L, captor.getValue().mutedUntil());
     }
 
     private MockMvc authenticatedMockMvc() {

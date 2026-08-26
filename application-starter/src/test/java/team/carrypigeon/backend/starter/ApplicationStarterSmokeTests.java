@@ -3,84 +3,59 @@ package team.carrypigeon.backend.starter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Import;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelBansController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelLifecycleController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelMemberGovernanceController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelQueryController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
-import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
-import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
-import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
-import team.carrypigeon.backend.starter.config.initialization.InitializationCheckConfiguration;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
-import team.carrypigeon.backend.starter.support.StarterRegressionConfiguration;
-import team.carrypigeon.backend.starter.support.StarterTestRuntimeConfiguration;
+import team.carrypigeon.tests.starter.support.StarterExternalPortsTestConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * ApplicationStarter 启动烟雾测试。
- * 职责：验证 starter 模块在当前消息附件链路场景下的最小装配能力。
- * 边界：不依赖真实外部服务，只验证关键 Bean 的上下文级装配结果。
+ * 职责：验证真实启动入口的组件扫描、自动配置和关键生产 Bean 唯一性。
+ * 边界：关闭真实外部服务并以端口替身隔离环境，不替换领域服务或控制器。
  */
 @Tag("smoke")
+@SpringBootTest(
+        classes = ApplicationStarter.class,
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = {
+                "spring.main.banner-mode=off",
+                "cp.infrastructure.service.database.enabled=false",
+                "cp.infrastructure.service.cache.enabled=false",
+                "cp.infrastructure.service.storage.enabled=false",
+                "cp.infrastructure.service.mail.enabled=false",
+                "cp.chat.server.realtime.enabled=false"
+        }
+)
+@Import(StarterExternalPortsTestConfiguration.class)
 class ApplicationStarterSmokeTests {
 
-    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withConfiguration(AutoConfigurations.of(
-                    BasicInfrastructureAutoConfiguration.class,
-                    JacksonAutoConfiguration.class,
-                    PluginAutoConfiguration.class
-            ))
-            .withUserConfiguration(
-                    StarterTestRuntimeConfiguration.class,
-                    StarterRegressionConfiguration.class,
-                    InitializationCheckConfiguration.class
-            );
+    @Autowired
+    private ApplicationContext context;
 
     /**
-     * 验证 starter 级上下文能装配消息附件回归所需的关键 Bean。
+     * 验证真实 ApplicationStarter 在无外部服务环境中完成生产组件装配。
      */
     @Test
-    @DisplayName("starter assembly registers key message attachment beans")
-    void starterAssembly_registersKeyMessageAttachmentBeans() {
-        contextRunner.run(context -> {
-            assertThat(context).hasSingleBean(InitializationCheckRunner.class);
-            assertThat(context).hasSingleBean(AuthAccountApi.class);
-            assertThat(context).hasSingleBean(ChannelMessagePublishingApi.class);
-            assertThat(context).hasSingleBean(ChannelMessageController.class);
-        });
-    }
-
-    /**
-     * 验证通过真实 SpringApplication 启动路径也能完成最小 starter 装配。
-     */
-    @Test
-    @DisplayName("spring application startup registers key beans with test runtime configuration")
-    void springApplicationStartup_registersKeyBeansWithTestRuntimeConfiguration() {
-        try (ConfigurableApplicationContext context = new SpringApplicationBuilder(
-                BasicInfrastructureAutoConfiguration.class,
-                JacksonAutoConfiguration.class,
-                PluginAutoConfiguration.class,
-                StarterTestRuntimeConfiguration.class,
-                StarterRegressionConfiguration.class,
-                InitializationCheckConfiguration.class
-        )
-                .web(WebApplicationType.NONE)
-                .properties(
-                        "spring.main.banner-mode=off",
-                        "spring.main.allow-bean-definition-overriding=true",
-                        "cp.infrastructure.id.worker-id=1",
-                        "cp.infrastructure.id.datacenter-id=1"
-                )
-                .run()) {
-            assertThat(context.getBeansOfType(InitializationCheckRunner.class)).hasSize(1);
-            assertThat(context.getBeansOfType(AuthAccountApi.class)).hasSize(1);
-            assertThat(context.getBeansOfType(ChannelMessagePublishingApi.class)).hasSize(1);
-            assertThat(context.getBeansOfType(ChannelMessageController.class)).hasSize(1);
-        }
+    @DisplayName("application starter assembles unique production domain and controller beans")
+    void applicationStarter_externalPortsIsolated_assemblesUniqueProductionBeans() {
+        assertThat(context.getBeansOfType(InitializationCheckRunner.class)).hasSize(1);
+        assertThat(context.getBeansOfType(AuthAccountApi.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelMessagePublishingApi.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelMessageController.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelQueryController.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelLifecycleController.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelMemberGovernanceController.class)).hasSize(1);
+        assertThat(context.getBeansOfType(ChannelBansController.class)).hasSize(1);
     }
 }

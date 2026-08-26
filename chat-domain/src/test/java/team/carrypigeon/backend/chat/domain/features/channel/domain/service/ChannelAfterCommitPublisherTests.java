@@ -1,29 +1,22 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 /**
- * ChannelAfterCommitPublisher 契约测试。
- * 职责：验证 channel feature 在事务提交后构造的 realtime 命令与通知偏好策略标记。
- * 边界：不验证 server feature 的过滤、缓存和 Netty 投递实现。
+ * 频道提交后事件发布契约测试。
+ * 职责：验证 channel feature 只发布自身拥有的事实事件，并保留接收者快照与默认范围。
  */
 @Tag("contract")
 class ChannelAfterCommitPublisherTests {
@@ -32,102 +25,38 @@ class ChannelAfterCommitPublisherTests {
     private static final AfterCommitExecutor DIRECT_AFTER_COMMIT = Runnable::run;
 
     /**
-     * 验证已读状态事件仅面向当前账号，并应用通知偏好策略。
+     * 验证频道变化使用默认范围并复制接收账号快照。
      */
     @Test
-    @DisplayName("publish read state updated emits account scoped event")
-    void publishReadStateUpdatedAfterCommit_readState_emitsAccountScopedEvent() {
-        Fixture fixture = new Fixture();
-        ChannelReadState readState = new ChannelReadState(
-                9L, 1001L, 5001L, BASE_TIME.plusSeconds(5), BASE_TIME, BASE_TIME.plusSeconds(5));
-
-        fixture.publisher.publishReadStateUpdatedAfterCommit(DIRECT_AFTER_COMMIT, readState);
-
-        PublishRealtimeEventCommand command = fixture.singleCommand();
-        JsonNode payload = fixture.payload(command);
-        assertEquals(9L, command.channelId());
-        assertEquals("read_state.updated", command.eventType());
-        assertEquals(List.of(1001L), List.copyOf(command.recipientAccountIds()));
-        assertTrue(command.applyNotificationPreferences());
-        assertEquals("9", payload.path("cid").asText());
-        assertEquals("1001", payload.path("uid").asText());
-        assertEquals("5001", payload.path("last_read_mid").asText());
-        assertEquals(BASE_TIME.plusSeconds(5).toEpochMilli(), payload.path("last_read_time").asLong());
-    }
-
-    /**
-     * 验证频道刷新事件使用默认 scope，并应用通知偏好策略。
-     */
-    @Test
-    @DisplayName("publish channel changed blank scope defaults to profile")
-    void publishChannelChangedAfterCommit_blankScope_defaultsToProfile() {
-        Fixture fixture = new Fixture();
+    @DisplayName("publish channel changed blank scope emits channel fact")
+    void publishChannelChangedAfterCommit_blankScope_emitsChannelFact() {
+        List<Object> events = new ArrayList<>();
+        ChannelAfterCommitPublisher publisher = new ChannelAfterCommitPublisher(events::add);
+        List<Long> recipients = new ArrayList<>(List.of(1001L, 1002L));
         Channel channel = new Channel(9L, 9L, "general", "", "", "1001", "private", false,
                 BASE_TIME, BASE_TIME);
 
-        fixture.publisher.publishChannelChangedAfterCommit(
-                DIRECT_AFTER_COMMIT, channel, " ", List.of(1001L, 1002L));
+        publisher.publishChannelChangedAfterCommit(DIRECT_AFTER_COMMIT, channel, " ", recipients);
+        recipients.clear();
 
-        PublishRealtimeEventCommand command = fixture.singleCommand();
-        JsonNode payload = fixture.payload(command);
-        assertEquals(9L, command.channelId());
-        assertEquals("channel.changed", command.eventType());
-        assertEquals(List.of(1001L, 1002L), List.copyOf(command.recipientAccountIds()));
-        assertTrue(command.applyNotificationPreferences());
-        assertEquals("9", payload.path("cid").asText());
-        assertEquals("profile", payload.path("scope").asText());
-        assertEquals("refresh", payload.path("hint").asText());
+        ChannelChangedEvent event = assertInstanceOf(ChannelChangedEvent.class, events.getFirst());
+        assertEquals(9L, event.channelId());
+        assertEquals("profile", event.scope());
+        assertEquals(List.of(1001L, 1002L), event.recipientAccountIds());
     }
 
     /**
-     * 验证账号频道集合刷新不绑定单一频道，并绕过通知偏好过滤。
+     * 验证账号频道集合变化只携带目标账号，不泄漏 realtime 命令类型。
      */
     @Test
-    @DisplayName("publish channels changed bypasses notification preferences")
-    void publishChannelsChangedAfterCommit_account_bypassesNotificationPreferences() {
-        Fixture fixture = new Fixture();
+    @DisplayName("publish channels changed account emits account fact")
+    void publishChannelsChangedAfterCommit_account_emitsAccountFact() {
+        List<Object> events = new ArrayList<>();
+        ChannelAfterCommitPublisher publisher = new ChannelAfterCommitPublisher(events::add);
 
-        fixture.publisher.publishChannelsChangedAfterCommit(DIRECT_AFTER_COMMIT, 1002L);
+        publisher.publishChannelsChangedAfterCommit(DIRECT_AFTER_COMMIT, 1002L);
 
-        PublishRealtimeEventCommand command = fixture.singleCommand();
-        assertNull(command.channelId());
-        assertEquals("channels.changed", command.eventType());
-        assertEquals(List.of(1002L), List.copyOf(command.recipientAccountIds()));
-        assertFalse(command.applyNotificationPreferences());
-        assertEquals("refresh", fixture.payload(command).path("hint").asText());
-    }
-
-    /**
-     * `Fixture` 测试夹具。
-     * 职责：同步执行 after-commit 动作并记录跨 feature realtime 命令。
-     */
-    private static final class Fixture {
-
-        private final JsonProvider jsonProvider = new JsonProvider(new ObjectMapper().findAndRegisterModules());
-        private final RecordingRealtimeEventApi realtimeEventApi = new RecordingRealtimeEventApi();
-        private final ChannelAfterCommitPublisher publisher = new ChannelAfterCommitPublisher(realtimeEventApi);
-
-        private PublishRealtimeEventCommand singleCommand() {
-            assertEquals(1, realtimeEventApi.commands.size());
-            return realtimeEventApi.commands.getFirst();
-        }
-
-        private JsonNode payload(PublishRealtimeEventCommand command) {
-            return jsonProvider.readTree(jsonProvider.toJson(command.payload()));
-        }
-    }
-
-    /**
-     * `RecordingRealtimeEventApi` 测试替身。
-     * 职责：完整记录 channel feature 交给 server feature 的正式事件命令。
-     */
-    private static final class RecordingRealtimeEventApi implements RealtimeEventApi {
-
-        private final List<PublishRealtimeEventCommand> commands = new ArrayList<>();
-
-        @Override
-        public void publish(PublishRealtimeEventCommand command) {
-            commands.add(command);
-        }
+        AccountChannelsChangedEvent event = assertInstanceOf(AccountChannelsChangedEvent.class, events.getFirst());
+        assertEquals(1002L, event.accountId());
     }
 }

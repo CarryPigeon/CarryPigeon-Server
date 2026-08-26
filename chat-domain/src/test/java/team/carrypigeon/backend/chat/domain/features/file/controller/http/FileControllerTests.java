@@ -66,8 +66,6 @@ class FileControllerTests {
         mockMvc = authenticatedMockMvc();
         when(fileTransferDomainApi.createUploadGrant(anyLong(), any(), any(), anyLong()))
                 .thenReturn(new FileUploadGrantResult(7001L, "shr_7001", "/api/files/uploads/shr_7001", Instant.parse("2026-04-23T01:00:00Z")));
-        when(fileTransferDomainApi.uploadHeaders()).thenReturn(java.util.Map.of());
-
         mockMvc.perform(MockMvcRequestBuilders.post("/api/files/uploads")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{" +

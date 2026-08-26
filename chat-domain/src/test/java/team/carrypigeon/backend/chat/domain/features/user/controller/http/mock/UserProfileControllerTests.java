@@ -17,14 +17,17 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.UserProfileController;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
+import team.carrypigeon.backend.chat.domain.features.file.controller.http.ProfileBackgroundController;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.command.UpdateCurrentAccountEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
 
@@ -52,6 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserProfileControllerTests {
 
     private UserProfileApi userProfileDomainApi;
+    private AuthAccountApi authAccountApi;
     private FileTransferApi fileTransferDomainApi;
     private RequestAuthenticationContext authRequestContext;
     private MockMvc mockMvc;
@@ -59,9 +63,10 @@ class UserProfileControllerTests {
     @BeforeEach
     void setUp() {
         userProfileDomainApi = mock(UserProfileApi.class);
+        authAccountApi = mock(AuthAccountApi.class);
         fileTransferDomainApi = mock(FileTransferApi.class);
         authRequestContext = new RequestAuthenticationContext();
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, authRequestContext, fileTransferDomainApi))
+        mockMvc = controllerSetup()
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -75,7 +80,7 @@ class UserProfileControllerTests {
     void me_authenticatedRequest_returnsCurrentUserResource() throws Exception {
         mockMvc = authenticatedMockMvc();
         when(userProfileDomainApi.getCurrentUserProfile(any())).thenReturn(userProfileResult());
-        when(userProfileDomainApi.getCurrentUserEmail(1001L)).thenReturn("carry-user@example.com");
+        when(authAccountApi.getAccountEmail(1001L)).thenReturn("carry-user@example.com");
 
         mockMvc.perform(get("/api/users/me"))
                 .andExpect(status().isOk())
@@ -83,14 +88,14 @@ class UserProfileControllerTests {
                 .andExpect(jsonPath("$.email").value("carry-user@example.com"))
                 .andExpect(jsonPath("$.nickname").value("carry-user"))
                 .andExpect(jsonPath("$.avatar").value("avatars/u/1001.png"));
-        ArgumentCaptor<GetCurrentUserProfileCommand> commandCaptor = ArgumentCaptor.forClass(GetCurrentUserProfileCommand.class);
-        verify(userProfileDomainApi).getCurrentUserProfile(commandCaptor.capture());
-        assertEquals(1001L, commandCaptor.getValue().accountId());
-        verify(userProfileDomainApi).getCurrentUserEmail(1001L);
+        ArgumentCaptor<GetCurrentUserProfileQuery> queryCaptor = ArgumentCaptor.forClass(GetCurrentUserProfileQuery.class);
+        verify(userProfileDomainApi).getCurrentUserProfile(queryCaptor.capture());
+        assertEquals(1001L, queryCaptor.getValue().accountId());
+        verify(authAccountApi).getAccountEmail(1001L);
     }
 
     /**
-     * 验证按账户 ID 查询协议会把路径 ID 映射到领域查询命令。
+     * 验证按账户 ID 查询协议会把路径 ID 映射到领域查询对象。
      */
     @Test
     @DisplayName("get by uid authenticated request returns public profile")
@@ -103,10 +108,10 @@ class UserProfileControllerTests {
                 .andExpect(jsonPath("$.uid").value("1001"))
                 .andExpect(jsonPath("$.nickname").value("carry-user"))
                 .andExpect(jsonPath("$.avatar").value("avatars/u/1001.png"));
-        ArgumentCaptor<GetUserProfileByAccountIdCommand> commandCaptor =
-                ArgumentCaptor.forClass(GetUserProfileByAccountIdCommand.class);
-        verify(userProfileDomainApi).getUserProfileByAccountId(commandCaptor.capture());
-        assertEquals(1001L, commandCaptor.getValue().accountId());
+        ArgumentCaptor<GetUserProfileByAccountIdQuery> queryCaptor =
+                ArgumentCaptor.forClass(GetUserProfileByAccountIdQuery.class);
+        verify(userProfileDomainApi).getUserProfileByAccountId(queryCaptor.capture());
+        assertEquals(1001L, queryCaptor.getValue().accountId());
     }
 
     /**
@@ -161,7 +166,7 @@ class UserProfileControllerTests {
     @DisplayName("put current user email success returns 204")
     void updateCurrentUserEmail_success_returns204() throws Exception {
         mockMvc = authenticatedMockMvc();
-        doNothing().when(userProfileDomainApi).updateCurrentUserEmail(any());
+        doNothing().when(authAccountApi).updateCurrentAccountEmail(any());
 
         mockMvc.perform(put("/api/users/me/email")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -169,8 +174,8 @@ class UserProfileControllerTests {
                                 {"email":"new@example.com","code":"123456"}
                 """))
                 .andExpect(status().isNoContent());
-        ArgumentCaptor<UpdateCurrentUserEmailCommand> commandCaptor = ArgumentCaptor.forClass(UpdateCurrentUserEmailCommand.class);
-        verify(userProfileDomainApi).updateCurrentUserEmail(commandCaptor.capture());
+        ArgumentCaptor<UpdateCurrentAccountEmailCommand> commandCaptor = ArgumentCaptor.forClass(UpdateCurrentAccountEmailCommand.class);
+        verify(authAccountApi).updateCurrentAccountEmail(commandCaptor.capture());
         assertEquals(1001L, commandCaptor.getValue().accountId());
         assertEquals("new@example.com", commandCaptor.getValue().email());
         assertEquals("123456", commandCaptor.getValue().code());
@@ -254,11 +259,19 @@ class UserProfileControllerTests {
     }
 
     private MockMvc authenticatedMockMvc() {
-        return MockMvcBuilders.standaloneSetup(new UserProfileController(userProfileDomainApi, authRequestContext, fileTransferDomainApi))
+        return controllerSetup()
                 .addInterceptors(new BindPrincipalInterceptor(authRequestContext))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    private org.springframework.test.web.servlet.setup.StandaloneMockMvcBuilder controllerSetup() {
+        return MockMvcBuilders.standaloneSetup(
+                new UserProfileController(userProfileDomainApi, authRequestContext),
+                new CurrentUserAccountController(authAccountApi, userProfileDomainApi, authRequestContext),
+                new ProfileBackgroundController(fileTransferDomainApi, authRequestContext)
+        );
     }
 
     private UserProfileResult userProfileResult() {

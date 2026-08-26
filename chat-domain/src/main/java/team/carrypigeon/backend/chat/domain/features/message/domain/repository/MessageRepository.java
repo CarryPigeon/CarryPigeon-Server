@@ -52,9 +52,7 @@ public interface MessageRepository {
      * @param limit 查询条数
      * @return 消息列表，按 messageId 升序排列
      */
-    default List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
-        throw new UnsupportedOperationException("message after query is not supported");
-    }
+    List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
 
     /**
      * 在频道内按关键字搜索消息。
@@ -69,7 +67,7 @@ public interface MessageRepository {
     /**
      * 在频道内按关键字和高级过滤条件搜索消息。
      */
-    default List<ChannelMessage> searchByChannelId(
+    List<ChannelMessage> searchByChannelId(
             long channelId,
             String keyword,
             Long cursorMessageId,
@@ -78,7 +76,5 @@ public interface MessageRepository {
             Long beforeMessageId,
             Long afterMessageId,
             int limit
-    ) {
-        return searchByChannelId(channelId, keyword, limit);
-    }
+    );
 }

@@ -136,5 +136,9 @@ class DatabaseBackedChannelRepositoryTests {
         public void update(ChannelRecord record) {
             this.updatedRecord = record;
         }
+
+        @Override
+        public void delete(long channelId) {
+        }
     }
 }

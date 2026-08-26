@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendSystemChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -320,10 +321,15 @@ class ChannelMessagePublishingDomainApiTests {
                 new MessageDomainApiTestSupport.TestObjectStorageService();
         MessageDomainApiTestSupport.Fixture fixture = new MessageDomainApiTestSupport.Fixture(storageService);
 
-        var result = fixture.attachmentApi.uploadMessageAttachment(
-                1001L, 1L, "file", "demo.pdf", "application/pdf", 4L,
+        var result = fixture.attachmentApi.uploadMessageAttachment(new UploadMessageAttachmentCommand(
+                1001L,
+                1L,
+                "file",
+                "demo.pdf",
+                "application/pdf",
+                4L,
                 new ByteArrayInputStream("demo".getBytes(java.nio.charset.StandardCharsets.UTF_8))
-        );
+        ));
 
         assertEquals("channels/1/messages/file/accounts/1001/5001-demo.pdf", result.objectKey());
         assertTrue(result.shareKey().startsWith("shr_att_"));

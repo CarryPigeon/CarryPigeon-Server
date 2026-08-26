@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelApplicationController;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelBansController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelLifecycleController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelMemberGovernanceController;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelQueryController;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.UserProfileController;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -34,7 +38,15 @@ class HttpRouteContractTests {
     @Test
     @DisplayName("controllers do not declare removed transitional routes")
     void controllers_removedTransitionalRoutes_notDeclared() {
-        Set<Route> routes = collectRoutes(UserProfileController.class, ChannelController.class, ChannelApplicationController.class);
+        Set<Route> routes = collectRoutes(
+                CurrentUserAccountController.class,
+                UserProfileController.class,
+                ChannelQueryController.class,
+                ChannelLifecycleController.class,
+                ChannelMemberGovernanceController.class,
+                ChannelBansController.class,
+                ChannelApplicationController.class
+        );
 
         assertFalse(routes.contains(new Route("GET", "/api/users/page")));
         assertFalse(routes.contains(new Route("GET", "/api/users/search")));
@@ -56,7 +68,15 @@ class HttpRouteContractTests {
     @Test
     @DisplayName("controllers declare current v1 resource routes")
     void controllers_currentV1Routes_declared() {
-        Set<Route> routes = collectRoutes(UserProfileController.class, ChannelController.class, ChannelApplicationController.class);
+        Set<Route> routes = collectRoutes(
+                CurrentUserAccountController.class,
+                UserProfileController.class,
+                ChannelQueryController.class,
+                ChannelLifecycleController.class,
+                ChannelMemberGovernanceController.class,
+                ChannelBansController.class,
+                ChannelApplicationController.class
+        );
 
         assertTrue(routes.contains(new Route("GET", "/api/users/me")));
         assertTrue(routes.contains(new Route("PATCH", "/api/users/me")));

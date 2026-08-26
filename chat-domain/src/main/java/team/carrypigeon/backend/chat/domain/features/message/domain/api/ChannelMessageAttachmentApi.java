@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.api;
 
-import java.io.InputStream;
+import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
 
 /**
@@ -20,22 +20,8 @@ public interface ChannelMessageAttachmentApi {
      * 输出：包含对象键、share key、文件名、MIME 类型和大小的附件上传投影。
      * 副作用：将附件内容写入消息附件存储位置。
      *
-     * @param accountId 上传账号 ID
-     * @param channelId 目标频道 ID
-     * @param messageType 附件将要关联的消息类型
-     * @param filename 原始文件名
-     * @param mimeType 文件 MIME 类型
-     * @param size 文件大小，单位字节
-     * @param content 文件内容输入流，由调用方负责提供可读取流
+     * @param command 消息附件上传业务命令
      * @return 消息附件上传结果投影
      */
-    MessageAttachmentUploadResult uploadMessageAttachment(
-            long accountId,
-            long channelId,
-            String messageType,
-            String filename,
-            String mimeType,
-            long size,
-            InputStream content
-    );
+    MessageAttachmentUploadResult uploadMessageAttachment(UploadMessageAttachmentCommand command);
 }

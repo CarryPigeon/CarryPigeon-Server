@@ -10,7 +10,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.A
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.DiscoverChannelsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListAuditLogsQuery;
@@ -23,7 +22,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
@@ -49,7 +47,6 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
     private final ChannelAuditLogRepository channelAuditLogRepository;
-    private final ChannelReadStateRepository channelReadStateRepository;
     private final ChannelGovernancePolicy channelGovernancePolicy;
     private final ChannelProjectionMapper channelProjectionMapper;
     private final ChannelAuditActionMapper channelAuditActionMapper;
@@ -59,7 +56,6 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
             ChannelMemberRepository channelMemberRepository,
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
-            ChannelReadStateRepository channelReadStateRepository,
             UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy
     ) {
@@ -67,7 +63,6 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         this.channelMemberRepository = channelMemberRepository;
         this.channelBanRepository = channelBanRepository;
         this.channelAuditLogRepository = channelAuditLogRepository;
-        this.channelReadStateRepository = channelReadStateRepository;
         this.channelGovernancePolicy = channelGovernancePolicy;
         this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileApi);
         this.channelAuditActionMapper = new ChannelAuditActionMapper();
@@ -220,23 +215,6 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
                         channel.avatar(),
                         channel.memberCount(),
                         channel.requiresApplication()
-                ))
-                .toList();
-    }
-
-    /**
-     * 查询账号各频道未读统计。
-     *
-     * @param accountId 当前账号 ID
-     * @return 频道未读投影列表
-     */
-    public List<ChannelUnreadResult> listUnreads(long accountId) {
-        requirePositive(accountId, "accountId");
-        return channelReadStateRepository.listUnreadsByAccountId(accountId).stream()
-                .map(item -> new ChannelUnreadResult(
-                        Ids.toString(item.channelId()),
-                        item.unreadCount(),
-                        item.lastReadTime() == null ? 0L : item.lastReadTime().toEpochMilli()
                 ))
                 .toList();
     }

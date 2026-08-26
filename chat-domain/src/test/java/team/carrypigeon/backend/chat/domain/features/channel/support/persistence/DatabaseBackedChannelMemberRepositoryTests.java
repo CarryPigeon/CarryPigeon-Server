@@ -157,5 +157,10 @@ class DatabaseBackedChannelMemberRepositoryTests {
         public List<Long> findAccountIdsByChannelId(long channelId) {
             return List.of();
         }
+
+        @Override
+        public List<Long> findChannelIdsByAccountId(long accountId) {
+            return List.of();
+        }
     }
 }

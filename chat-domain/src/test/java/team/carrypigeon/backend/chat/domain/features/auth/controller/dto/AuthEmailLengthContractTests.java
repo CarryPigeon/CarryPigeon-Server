@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UpdateCurrentUserEmailRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.UpdateCurrentAccountEmailRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.dto.SendEmailCodeRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,7 +31,7 @@ class AuthEmailLengthContractTests {
     void emailRequestDtoSizeConstraints_useSchemaCapacity() {
         assertEquals(EMAIL_MAX_LENGTH, emailMaxLength(CreateTokenSessionRequest.class));
         assertEquals(EMAIL_MAX_LENGTH, emailMaxLength(SendEmailCodeRequest.class));
-        assertEquals(EMAIL_MAX_LENGTH, emailMaxLength(UpdateCurrentUserEmailRequest.class));
+        assertEquals(EMAIL_MAX_LENGTH, emailMaxLength(UpdateCurrentAccountEmailRequest.class));
     }
 
     /**

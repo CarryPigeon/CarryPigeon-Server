@@ -1,11 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
@@ -38,7 +37,7 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     public FileTransferDomainApi(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
-            ChannelMessagingApi channelMessagingApi,
+            ChannelContextApi channelContextApi,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec
@@ -47,7 +46,7 @@ public class FileTransferDomainApi implements FileTransferApi {
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
-        this.fileObjectKeyResolver = new FileObjectKeyResolver(channelMessagingApi, uploadShareKeyCodec);
+        this.fileObjectKeyResolver = new FileObjectKeyResolver(channelContextApi, uploadShareKeyCodec);
     }
 
     /**
@@ -129,14 +128,6 @@ public class FileTransferDomainApi implements FileTransferApi {
      */
     public boolean isServerAvatar(String shareKey) {
         return fileObjectKeyResolver.isServerAvatar(shareKey);
-    }
-
-    /**
-     * 返回客户端上传时需要附带的固定请求头。
-     * 输出：当前实现返回空集合，保留统一扩展点给未来存储策略。
-     */
-    public Map<String, String> uploadHeaders() {
-        return Map.of();
     }
 
     /**

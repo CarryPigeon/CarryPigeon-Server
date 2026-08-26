@@ -23,9 +23,7 @@ public interface ChannelBanDatabaseService {
     /**
      * 查询频道下的全部封禁记录。
      */
-    default List<ChannelBanRecord> findByChannelId(long channelId) {
-        return List.of();
-    }
+    List<ChannelBanRecord> findByChannelId(long channelId);
 
     /**
      * 写入新的封禁记录。

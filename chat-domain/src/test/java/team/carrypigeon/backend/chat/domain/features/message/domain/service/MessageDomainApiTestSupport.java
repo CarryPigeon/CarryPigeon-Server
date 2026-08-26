@@ -22,7 +22,15 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagingDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessageAuditApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelPinManagementApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelContextDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMembershipService;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessageAuditDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagePolicyDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelPinManagementDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageIdempotency;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
@@ -31,7 +39,6 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.Chann
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.MessageDomainPluginDomainApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
@@ -61,6 +68,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObje
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
+import team.carrypigeon.backend.chat.domain.support.TestRealtimeDomainEventPublisher;
 
 /**
  * 消息领域 API 测试支撑。
@@ -89,6 +97,7 @@ final class MessageDomainApiTestSupport {
         final InMemoryMentionRepository mentionRepository = new InMemoryMentionRepository();
         final InMemoryMessageIdempotencyRepository messageIdempotencyRepository = new InMemoryMessageIdempotencyRepository();
         final RecordingRealtimeEventApi publisher = new RecordingRealtimeEventApi();
+        final TestRealtimeDomainEventPublisher eventPublisher = new TestRealtimeDomainEventPublisher(publisher);
         final JsonProvider jsonProvider = jsonProvider();
         final ChannelMessagePublishingDomainApi publishingApi;
         final ChannelMessageLifecycleDomainApi lifecycleApi;
@@ -106,54 +115,55 @@ final class MessageDomainApiTestSupport {
             channelMemberRepository.save(new ChannelMember(1L, 1002L, ChannelMemberRole.MEMBER, BASE_TIME.plusSeconds(1), null));
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider = objectProvider(storageService);
             ChannelMessagePluginRegistry pluginRegistry = channelMessagePluginRegistry(storageService);
-            ChannelMessagingApi channelMessagingApi = new ChannelMessagingDomainApi(
-                    channelRepository,
-                    channelMemberRepository,
-                    channelAuditLogRepository,
-                    channelPinRepository,
-                    new ChannelGovernancePolicy()
+            ChannelMembershipService membershipService = new ChannelMembershipService(channelRepository, channelMemberRepository);
+            ChannelGovernancePolicy governancePolicy = new ChannelGovernancePolicy();
+            ChannelContextApi channelContextApi = new ChannelContextDomainApi(membershipService, channelMemberRepository);
+            ChannelMessagePolicyApi channelMessagePolicyApi = new ChannelMessagePolicyDomainApi(
+                    membershipService, channelMemberRepository, governancePolicy
             );
+            ChannelPinManagementApi channelPinManagementApi = new ChannelPinManagementDomainApi(
+                    membershipService, channelPinRepository, governancePolicy
+            );
+            ChannelMessageAuditApi channelMessageAuditApi = new ChannelMessageAuditDomainApi(channelAuditLogRepository);
             this.publishingApi = new ChannelMessagePublishingDomainApi(
-                    channelMessagingApi,
+                    channelContextApi,
+                    channelMessagePolicyApi,
                     messageRepository,
                     mentionRepository,
                     messageIdempotencyRepository,
-                    publisher,
+                    eventPublisher,
                     new MessageDomainPluginDomainApi(pluginRegistry),
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
             );
             this.lifecycleApi = new ChannelMessageLifecycleDomainApi(
-                    channelMessagingApi,
+                    channelContextApi,
+                    channelMessagePolicyApi,
+                    channelMessageAuditApi,
                     messageRepository,
                     mentionRepository,
-                    publisher,
+                    eventPublisher,
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
             );
             this.timelineApi = new ChannelMessageTimelineDomainApi(
-                    channelMessagingApi,
-                    messageRepository,
-                    mentionRepository,
-                    publisher,
-                    new FixedIdGenerator(),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
-                    transactionRunner
+                    channelContextApi,
+                    messageRepository
             );
             this.attachmentApi = new ChannelMessageAttachmentDomainApi(
-                    channelMessagingApi,
+                    channelMessagePolicyApi,
                     TestFeatureApis.fileReferences(),
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     objectStorageServiceProvider
             );
             this.pinApi = new ChannelPinDomainApi(
-                    channelMessagingApi,
+                    channelContextApi,
+                    channelPinManagementApi,
                     messageRepository,
-                    mentionRepository,
-                    publisher,
+                    eventPublisher,
                     new FixedIdGenerator(),
                     new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
@@ -808,16 +818,6 @@ final class MessageDomainApiTestSupport {
 
             @Override
             public List<UserProfile> findAll() {
-                return List.of();
-            }
-
-            @Override
-            public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-                return List.of();
-            }
-
-            @Override
-            public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
                 return List.of();
             }
 

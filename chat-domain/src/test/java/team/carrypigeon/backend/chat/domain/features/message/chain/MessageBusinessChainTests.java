@@ -34,7 +34,15 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelPinRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagingDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessageAuditApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelPinManagementApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelContextDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMembershipService;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessageAuditDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelMessagePolicyDomainApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelPinManagementDomainApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelMessageController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.ChannelPinsController;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.MentionController;
@@ -45,7 +53,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Messag
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
@@ -69,16 +76,13 @@ import team.carrypigeon.backend.chat.domain.features.plugin.support.message.Voic
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
+import team.carrypigeon.backend.chat.domain.support.TestRealtimeDomainEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetCurrentUserProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.GetUserProfileByAccountIdCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserEmailCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
-import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfilePageResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfilesQuery;
-import team.carrypigeon.backend.chat.domain.features.user.domain.query.SearchUserProfilesQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
@@ -836,6 +840,7 @@ class MessageBusinessChainTests {
         final InMemoryUserProfileRepository userProfileRepository = new InMemoryUserProfileRepository();
         final TestObjectStorageService storageService = new TestObjectStorageService();
         final RecordingRealtimeEventApi publisher = new RecordingRealtimeEventApi();
+        final TestRealtimeDomainEventPublisher eventPublisher = new TestRealtimeDomainEventPublisher(publisher);
         final TimeProvider timeProvider = new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
         final TransactionRunner transactionRunner = new NoopTransactionRunner();
 
@@ -852,54 +857,55 @@ class MessageBusinessChainTests {
             channelMemberRepository.save(new ChannelMember(2L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
             ObjectProvider<ObjectStorageService> storageProvider = objectProvider(storageService);
             ChannelMessagePluginRegistry pluginRegistry = pluginRegistry(storageService);
-            ChannelMessagingApi channelBoundary = new ChannelMessagingDomainApi(
-                    channelRepository,
-                    channelMemberRepository,
-                    channelAuditLogRepository,
-                    channelPinRepository,
-                    new ChannelGovernancePolicy()
+            ChannelMembershipService membershipService = new ChannelMembershipService(channelRepository, channelMemberRepository);
+            ChannelGovernancePolicy governancePolicy = new ChannelGovernancePolicy();
+            ChannelContextApi channelContextApi = new ChannelContextDomainApi(membershipService, channelMemberRepository);
+            ChannelMessagePolicyApi channelMessagePolicyApi = new ChannelMessagePolicyDomainApi(
+                    membershipService, channelMemberRepository, governancePolicy
             );
+            ChannelPinManagementApi channelPinManagementApi = new ChannelPinManagementDomainApi(
+                    membershipService, channelPinRepository, governancePolicy
+            );
+            ChannelMessageAuditApi channelMessageAuditApi = new ChannelMessageAuditDomainApi(channelAuditLogRepository);
             ChannelMessagePublishingDomainApi publishingApi = new ChannelMessagePublishingDomainApi(
-                    channelBoundary,
+                    channelContextApi,
+                    channelMessagePolicyApi,
                     messageRepository,
                     mentionRepository,
                     messageIdempotencyRepository,
-                    publisher,
+                    eventPublisher,
                     new MessageDomainPluginDomainApi(pluginRegistry),
                     idGenerator,
                     timeProvider,
                     transactionRunner
             );
             ChannelMessageTimelineDomainApi timelineApi = new ChannelMessageTimelineDomainApi(
-                    channelBoundary,
-                    messageRepository,
-                    mentionRepository,
-                    publisher,
-                    idGenerator,
-                    timeProvider,
-                    transactionRunner
+                    channelContextApi,
+                    messageRepository
             );
             ChannelMessageLifecycleDomainApi lifecycleApi = new ChannelMessageLifecycleDomainApi(
-                    channelBoundary,
+                    channelContextApi,
+                    channelMessagePolicyApi,
+                    channelMessageAuditApi,
                     messageRepository,
                     mentionRepository,
-                    publisher,
+                    eventPublisher,
                     idGenerator,
                     timeProvider,
                     transactionRunner
             );
             ChannelMessageAttachmentDomainApi attachmentApi = new ChannelMessageAttachmentDomainApi(
-                    channelBoundary,
+                    channelMessagePolicyApi,
                     TestFeatureApis.fileReferences(),
                     idGenerator,
                     timeProvider,
                     storageProvider
             );
             ChannelPinDomainApi pinApi = new ChannelPinDomainApi(
-                    channelBoundary,
+                    channelContextApi,
+                    channelPinManagementApi,
                     messageRepository,
-                    mentionRepository,
-                    publisher,
+                    eventPublisher,
                     idGenerator,
                     timeProvider,
                     transactionRunner
@@ -1338,16 +1344,6 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public List<UserProfile> findByAccountIdBefore(Long cursorAccountId, int limit) {
-            return List.of();
-        }
-
-        @Override
-        public List<UserProfile> searchByKeyword(String keyword, Long cursorAccountId, int limit) {
-            return List.of();
-        }
-
-        @Override
         public UserProfile save(UserProfile userProfile) {
             return userProfile;
         }
@@ -1380,23 +1376,13 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public UserProfileResult getCurrentUserProfile(GetCurrentUserProfileCommand command) {
-            return result(command.accountId());
+        public UserProfileResult getCurrentUserProfile(GetCurrentUserProfileQuery query) {
+            return result(query.accountId());
         }
 
         @Override
-        public String getCurrentUserEmail(long accountId) {
-            return "carry-user-" + accountId + "@example.com";
-        }
-
-        @Override
-        public UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdCommand command) {
-            return result(command.accountId());
-        }
-
-        @Override
-        public List<UserProfileResult> listUserProfiles(long accountId) {
-            return List.of(result(accountId));
+        public UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdQuery query) {
+            return result(query.accountId());
         }
 
         @Override
@@ -1405,22 +1391,8 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public UserProfilePageResult getUserProfiles(GetUserProfilesQuery query) {
-            return new UserProfilePageResult(List.of(), null);
-        }
-
-        @Override
-        public UserProfilePageResult searchUserProfiles(SearchUserProfilesQuery query) {
-            return new UserProfilePageResult(List.of(), null);
-        }
-
-        @Override
         public UserProfileResult updateCurrentUserProfile(UpdateCurrentUserProfileCommand command) {
             return result(command.accountId());
-        }
-
-        @Override
-        public void updateCurrentUserEmail(UpdateCurrentUserEmailCommand command) {
         }
 
         private UserProfileResult result(long accountId) {

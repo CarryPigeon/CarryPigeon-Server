@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.starter.support.http;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -13,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * 插件 HTTP 启动门禁测试。
  * 职责：验证插件未就绪时拒绝 Servlet HTTP 请求，就绪后恢复正常过滤链。
  */
+@Tag("contract")
 class PluginStartupGateFilterTests {
 
     /**

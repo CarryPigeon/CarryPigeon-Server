@@ -6,21 +6,15 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
  * 频道消息时间线领域 API 实现。
@@ -28,32 +22,25 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：不承载消息发布、编辑、撤回、删除、附件上传和置顶能力。
  */
 @Service
-public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSupport implements ChannelMessageTimelineApi {
+public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineApi {
+
+    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
+
+    private final ChannelContextApi channelContextApi;
+    private final MessageRepository messageRepository;
 
     public ChannelMessageTimelineDomainApi(
-            ChannelMessagingApi channelMessagingApi,
-            MessageRepository messageRepository,
-            MentionRepository mentionRepository,
-            RealtimeEventApi realtimeEventApi,
-            IdGenerator idGenerator,
-            TimeProvider timeProvider,
-            TransactionRunner transactionRunner
+            ChannelContextApi channelContextApi,
+            MessageRepository messageRepository
     ) {
-        super(
-                channelMessagingApi,
-                messageRepository,
-                mentionRepository,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelContextApi = channelContextApi;
+        this.messageRepository = messageRepository;
     }
 
     @Override
     public ChannelMessageHistoryResult getChannelMessageHistory(GetChannelMessageHistoryQuery query) {
         validateHistoryQuery(query);
-        ChannelMessagingContext channel = channelMessagingApi.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelMessagingContext channel = channelContextApi.requireMemberChannel(query.channelId(), query.accountId());
         if (query.aroundMessageId() != null) {
             ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
             if (targetMessage.channelId() != channel.id()) {
@@ -69,7 +56,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
                             messageRepository.findByChannelIdAfter(channel.id(), query.aroundMessageId(), afterCount).stream()
                     )
                     .sorted(Comparator.comparingLong(ChannelMessage::messageId).reversed())
-                    .map(this::toResult)
+                    .map(ChannelMessageProjectionMapper::toResult)
                     .toList();
             return new ChannelMessageHistoryResult(messages, null);
         }
@@ -78,7 +65,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
                         query.cursorMessageId(),
                         query.limit() + 1
                 ).stream()
-                .map(this::toResult)
+                .map(ChannelMessageProjectionMapper::toResult)
                 .toList();
         boolean hasMore = messages.size() > query.limit();
         List<ChannelMessageResult> pageItems = hasMore ? messages.subList(0, query.limit()) : messages;
@@ -89,7 +76,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
     @Override
     public ChannelMessageSearchResult searchChannelMessages(SearchChannelMessagesQuery query) {
         validateSearchQuery(query);
-        ChannelMessagingContext channel = channelMessagingApi.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelMessagingContext channel = channelContextApi.requireMemberChannel(query.channelId(), query.accountId());
         List<ChannelMessageResult> messages = messageRepository.searchByChannelId(
                         channel.id(),
                         query.keyword().trim(),
@@ -100,7 +87,7 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
                         query.afterMessageId(),
                         query.limit() + 1
                 ).stream()
-                .map(this::toResult)
+                .map(ChannelMessageProjectionMapper::toResult)
                 .toList();
         return new ChannelMessageSearchResult(messages);
     }
@@ -177,5 +164,16 @@ public class ChannelMessageTimelineDomainApi extends AbstractMessageDomainSuppor
             return null;
         }
         return domain.trim();
+    }
+
+    private ChannelMessage requireMessage(long messageId) {
+        return messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+    }
+
+    private void requirePositive(long value, String fieldName) {
+        if (value <= 0) {
+            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+        }
     }
 }

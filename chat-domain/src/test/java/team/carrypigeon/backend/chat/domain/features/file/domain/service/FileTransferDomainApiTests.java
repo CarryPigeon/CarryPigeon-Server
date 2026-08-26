@@ -10,7 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagingApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
@@ -190,7 +190,7 @@ class FileTransferDomainApiTests {
     private FileTransferDomainApi createService(RecordingObjectStorageService storageService) {
         return new FileTransferDomainApi(
                 new StaticObjectProvider(storageService),
-                mock(ChannelMessagingApi.class),
+                mock(ChannelContextApi.class),
                 new FixedIdGenerator(),
                 new TimeProvider(Clock.fixed(Instant.parse("2026-04-23T00:00:00Z"), ZoneOffset.UTC)),
                 new FileUploadShareKeyCodec("0123456789abcdef0123456789abcdef")

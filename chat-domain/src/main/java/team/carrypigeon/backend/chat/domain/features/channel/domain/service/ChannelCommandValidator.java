@@ -6,7 +6,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Crea
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DeleteChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.InviteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UpdateChannelProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
@@ -52,15 +51,6 @@ class ChannelCommandValidator {
     void validateAcceptChannelInviteCommand(AcceptChannelInviteCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-    }
-
-    void validateUpdateChannelReadStateCommand(UpdateChannelReadStateCommand command) {
-        requirePositive(command.accountId(), "accountId");
-        requirePositive(command.channelId(), "channelId");
-        requirePositive(command.lastReadMessageId(), "lastReadMessageId");
-        if (command.lastReadTime() <= 0) {
-            throw ProblemException.validationFailed("lastReadTime must be greater than 0");
-        }
     }
 
     void validateTargetedCommand(long operatorAccountId, long channelId, long targetAccountId, String targetFieldName) {

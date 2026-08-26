@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
+import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.CreateChannelCommand;
@@ -10,14 +11,11 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReferenceApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageReferenceResult;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
+import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
@@ -31,9 +29,24 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  * 边界：这里只处理频道实体本身的生命周期，不承担邀请流和成员治理。
  */
 @Service
-public class ChannelLifecycleDomainApi extends AbstractChannelDomainSupport implements ChannelLifecycleApi {
+public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
 
     private static final String PRIVATE_CHANNEL_TYPE = "private";
+    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
+    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
+
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelInviteRepository channelInviteRepository;
+    private final ChannelBanRepository channelBanRepository;
+    private final ChannelAuditLogRepository channelAuditLogRepository;
+    private final ChannelGovernancePolicy channelGovernancePolicy;
+    private final ChannelAfterCommitPublisher channelAfterCommitPublisher;
+    private final ChannelProjectionMapper channelProjectionMapper;
+    private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final TransactionRunner transactionRunner;
 
     public ChannelLifecycleDomainApi(
             ChannelRepository channelRepository,
@@ -41,30 +54,24 @@ public class ChannelLifecycleDomainApi extends AbstractChannelDomainSupport impl
             ChannelInviteRepository channelInviteRepository,
             ChannelBanRepository channelBanRepository,
             ChannelAuditLogRepository channelAuditLogRepository,
-            ChannelReadStateRepository channelReadStateRepository,
-            MessageReferenceApi messageReferenceApi,
             UserProfileApi userProfileApi,
             ChannelGovernancePolicy channelGovernancePolicy,
-            RealtimeEventApi realtimeEventApi,
+            ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
-        super(
-                channelRepository,
-                channelMemberRepository,
-                channelInviteRepository,
-                channelBanRepository,
-                channelAuditLogRepository,
-                channelReadStateRepository,
-                messageReferenceApi,
-                userProfileApi,
-                channelGovernancePolicy,
-                realtimeEventApi,
-                idGenerator,
-                timeProvider,
-                transactionRunner
-        );
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.channelInviteRepository = channelInviteRepository;
+        this.channelBanRepository = channelBanRepository;
+        this.channelAuditLogRepository = channelAuditLogRepository;
+        this.channelGovernancePolicy = channelGovernancePolicy;
+        this.channelAfterCommitPublisher = new ChannelAfterCommitPublisher(eventPublisher);
+        this.channelProjectionMapper = new ChannelProjectionMapper(channelMemberRepository, userProfileApi);
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.transactionRunner = transactionRunner;
     }
 
     /**
@@ -171,5 +178,70 @@ public class ChannelLifecycleDomainApi extends AbstractChannelDomainSupport impl
             channelAfterCommitPublisher.publishChannelChangedAfterCommit(afterCommit, updated, "profile", snapshotChannelRecipientAccountIds(channel.id()));
             return toResult(updated);
         });
+    }
+
+    private void validateCreatePrivateChannelCommand(CreatePrivateChannelCommand command) {
+        channelCommandValidator.validateCreatePrivateChannelCommand(command);
+    }
+
+    private void validateCreateChannelCommand(CreateChannelCommand command) {
+        channelCommandValidator.validateCreateChannelCommand(command);
+    }
+
+    private void validateUpdateChannelProfileCommand(UpdateChannelProfileCommand command) {
+        channelCommandValidator.validateUpdateChannelProfileCommand(command);
+    }
+
+    private void validateDeleteChannelCommand(DeleteChannelCommand command) {
+        channelCommandValidator.validateDeleteChannelCommand(command);
+    }
+
+    private Channel requireChannel(long channelId) {
+        return channelRepository.findById(channelId)
+                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+    }
+
+    private ChannelMember requireMember(long channelId, long accountId) {
+        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+    }
+
+    private void requireChannelDeleteSafe(long channelId) {
+        if (!channelInviteRepository.findByChannelId(channelId).isEmpty()
+                || !channelBanRepository.findByChannelId(channelId).isEmpty()
+                || !channelAuditLogRepository.list(null, 1, channelId, null, null, null, null).isEmpty()) {
+            throw ProblemException.conflict(
+                    "channel_delete_blocked",
+                    "channel contains dependent data and cannot be deleted"
+            );
+        }
+    }
+
+    private ChannelMember newMember(long channelId, long accountId, ChannelMemberRole role) {
+        return new ChannelMember(channelId, accountId, role, now(), null);
+    }
+
+    private List<Long> snapshotChannelRecipientAccountIds(long channelId) {
+        return List.copyOf(channelMemberRepository.findAccountIdsByChannelId(channelId));
+    }
+
+    private ChannelResult toResult(Channel channel) {
+        return channelProjectionMapper.toResult(channel);
+    }
+
+    private String findOwnerUid(long channelId) {
+        return channelProjectionMapper.findOwnerUid(channelId);
+    }
+
+    private long nextId() {
+        return idGenerator.nextLongId();
+    }
+
+    private java.time.Instant now() {
+        return timeProvider.nowInstant();
+    }
+
+    private String normalizeNullableText(String value) {
+        return channelCommandValidator.normalizeNullableText(value);
     }
 }

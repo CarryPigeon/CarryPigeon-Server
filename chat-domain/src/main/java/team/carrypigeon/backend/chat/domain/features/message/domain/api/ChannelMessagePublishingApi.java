@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
  * 输入：canonical 消息发送、系统消息和转发命令对象。
  * 输出：创建后的频道消息投影。
  * 失败语义：频道权限、消息类型、领域版本、附件引用和消息源不存在等问题由领域问题异常表达。
- * 调用方：controller、realtime 入站处理器或其它 feature 通过本接口创建频道消息。
+ * 调用方：message HTTP controller 通过本接口创建频道消息。
  */
 public interface ChannelMessagePublishingApi {
 

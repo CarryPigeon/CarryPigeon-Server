@@ -9,7 +9,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Upda
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelDomainApiTestSupport.RollbackingTransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelDomainApiTestSupport.TestContext;
@@ -158,36 +157,4 @@ class ChannelDomainApiLifecycleTests {
         assertTrue(context.channelRepository.channels.containsKey(9L));
     }
 
-    /**
-     * 验证存在消息依赖时会拒绝删除频道。
-     */
-    @Test
-    @DisplayName("delete channel with dependent messages throws conflict problem")
-    void deleteChannel_withDependentMessages_throwsConflictProblem() {
-        TestContext context = newContext();
-        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
-        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
-        context.messageRepository.save(new ChannelMessage(
-                5001L,
-                1001L,
-                9L,
-                "Core:Text",
-                "1.0.0",
-                java.util.Map.of("text", "hello"),
-                BASE_TIME,
-                java.util.List.of(),
-                "hello",
-                team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus.SENT
-        ));
-        ChannelLifecycleDomainApi service = context.createLifecycleService();
-
-        ProblemException exception = assertThrows(
-                ProblemException.class,
-                () -> service.deleteChannel(new DeleteChannelCommand(1001L, 9L))
-        );
-
-        assertEquals("channel contains dependent data and cannot be deleted", exception.getMessage());
-        assertEquals("channel_delete_blocked", exception.reason());
-        assertTrue(context.channelRepository.channels.containsKey(9L));
-    }
 }
