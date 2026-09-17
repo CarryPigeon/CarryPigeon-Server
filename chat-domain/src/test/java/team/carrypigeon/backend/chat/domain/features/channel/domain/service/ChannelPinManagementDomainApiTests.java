@@ -6,8 +6,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.RemoveChannelPinCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.SetChannelPinCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -23,7 +21,6 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -46,34 +43,32 @@ class ChannelPinManagementDomainApiTests {
     @DisplayName("set pin owner persists normalized pin")
     void setPin_owner_persistsNormalizedPin() {
         Fixture fixture = fixture(ChannelMemberRole.OWNER);
-        when(fixture.pinRepository.findByChannelIdAndMessageId(1L, 5001L)).thenReturn(Optional.empty());
-        when(fixture.pinRepository.countByChannelId(1L)).thenReturn(0L);
+        when(fixture.pinRepository.replaceWithinLimit(
+                new ChannelPin(9001L, 1L, 5001L, 1001L, "notice", NOW), 50L
+        )).thenReturn(true);
 
         ChannelPinReference result = fixture.api.setPin(command(9001L, " notice "));
 
-        ArgumentCaptor<ChannelPin> captor = ArgumentCaptor.forClass(ChannelPin.class);
-        verify(fixture.pinRepository).save(captor.capture());
-        assertEquals(new ChannelPin(9001L, 1L, 5001L, 1001L, "notice", NOW), captor.getValue());
+        verify(fixture.pinRepository).replaceWithinLimit(
+                new ChannelPin(9001L, 1L, 5001L, 1001L, "notice", NOW), 50L
+        );
         assertEquals(9001L, result.pinId());
         assertEquals("notice", result.note());
     }
 
     /**
-     * 验证重复置顶会先删除旧记录再写入新记录，兼容真实数据库联合主键约束。
+     * 验证重复置顶由持久化契约在频道上限内原子替换。
      */
     @Test
     @DisplayName("set pin existing pin replaces record")
     void setPin_existingPin_replacesRecord() {
         Fixture fixture = fixture(ChannelMemberRole.OWNER);
-        ChannelPin existing = new ChannelPin(8001L, 1L, 5001L, 1001L, "old", NOW.minusSeconds(60));
-        when(fixture.pinRepository.findByChannelIdAndMessageId(1L, 5001L)).thenReturn(Optional.of(existing));
+        ChannelPin replacement = new ChannelPin(9001L, 1L, 5001L, 1001L, "new", NOW);
+        when(fixture.pinRepository.replaceWithinLimit(replacement, 50L)).thenReturn(true);
 
         fixture.api.setPin(command(9001L, "new"));
 
-        InOrder order = inOrder(fixture.pinRepository);
-        order.verify(fixture.pinRepository).delete(1L, 5001L);
-        order.verify(fixture.pinRepository).save(new ChannelPin(9001L, 1L, 5001L, 1001L, "new", NOW));
-        verify(fixture.pinRepository, never()).countByChannelId(1L);
+        verify(fixture.pinRepository).replaceWithinLimit(replacement, 50L);
     }
 
     /**
@@ -83,8 +78,9 @@ class ChannelPinManagementDomainApiTests {
     @DisplayName("set pin full channel throws pin limit problem")
     void setPin_fullChannel_throwsPinLimitProblem() {
         Fixture fixture = fixture(ChannelMemberRole.OWNER);
-        when(fixture.pinRepository.findByChannelIdAndMessageId(1L, 5001L)).thenReturn(Optional.empty());
-        when(fixture.pinRepository.countByChannelId(1L)).thenReturn(50L);
+        when(fixture.pinRepository.replaceWithinLimit(
+                new ChannelPin(9001L, 1L, 5001L, 1001L, "notice", NOW), 50L
+        )).thenReturn(false);
 
         ProblemException exception = assertThrows(
                 ProblemException.class,

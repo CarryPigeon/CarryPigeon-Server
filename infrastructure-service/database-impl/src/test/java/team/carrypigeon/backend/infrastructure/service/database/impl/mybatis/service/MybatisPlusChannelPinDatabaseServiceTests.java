@@ -11,6 +11,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelPinMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -68,6 +70,32 @@ class MybatisPlusChannelPinDatabaseServiceTests {
 
         assertEquals(5001L, record.messageId());
         assertEquals(7001L, record.pinId());
+    }
+
+    /** 验证未达上限时会在锁定频道记录后插入新置顶。 */
+    @Test
+    @DisplayName("replace within limit available slot inserts pin")
+    void replaceWithinLimit_availableSlot_insertsPin() {
+        ChannelPinMapper mapper = mock(ChannelPinMapper.class);
+        when(mapper.lockMessageIdsByChannelId(1L)).thenReturn(List.of(4001L));
+        MybatisPlusChannelPinDatabaseService service = new MybatisPlusChannelPinDatabaseService(mapper);
+        ChannelPinRecord record = new ChannelPinRecord(7001L, 1L, 5001L, 1001L, "note", Instant.parse("2026-04-22T00:00:00Z"));
+
+        assertTrue(service.replaceWithinLimit(record, 2L));
+
+        verify(mapper).insert(any(ChannelPinEntity.class));
+    }
+
+    /** 验证达到上限且目标消息未置顶时不会写入。 */
+    @Test
+    @DisplayName("replace within limit full channel rejects insert")
+    void replaceWithinLimit_fullChannel_rejectsInsert() {
+        ChannelPinMapper mapper = mock(ChannelPinMapper.class);
+        when(mapper.lockMessageIdsByChannelId(1L)).thenReturn(List.of(4001L, 4002L));
+        MybatisPlusChannelPinDatabaseService service = new MybatisPlusChannelPinDatabaseService(mapper);
+        ChannelPinRecord record = new ChannelPinRecord(7001L, 1L, 5001L, 1001L, "note", Instant.parse("2026-04-22T00:00:00Z"));
+
+        assertFalse(service.replaceWithinLimit(record, 2L));
     }
 
 }

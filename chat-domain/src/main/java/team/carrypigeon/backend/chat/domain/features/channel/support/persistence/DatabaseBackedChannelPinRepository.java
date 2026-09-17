@@ -36,6 +36,11 @@ public class DatabaseBackedChannelPinRepository implements ChannelPinRepository 
         channelPinDatabaseService.insert(toRecord(channelPin));
     }
 
+    @Override
+    public boolean replaceWithinLimit(ChannelPin channelPin, long maxPins) {
+        return channelPinDatabaseService.replaceWithinLimit(toRecord(channelPin), maxPins);
+    }
+
     /**
      * 删除指定消息的置顶记录。
      */

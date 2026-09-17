@@ -20,26 +20,12 @@ public interface UserProfileRepository {
     Optional<UserProfile> findByAccountId(long accountId);
 
     /**
-     * 查询全部用户资料。
-     *
-     * @return 用户资料列表
-     */
-    List<UserProfile> findAll();
-
-    /**
      * 按账户 ID 集合查询用户资料。
      *
      * @param accountIds 目标账户 ID 集合
      * @return 命中的用户资料列表
      */
-    default List<UserProfile> findByAccountIds(List<Long> accountIds) {
-        if (accountIds == null || accountIds.isEmpty()) {
-            return List.of();
-        }
-        return findAll().stream()
-                .filter(userProfile -> accountIds.contains(userProfile.accountId()))
-                .toList();
-    }
+    List<UserProfile> findByAccountIds(List<Long> accountIds);
 
     /**
      * 保存新的用户资料。

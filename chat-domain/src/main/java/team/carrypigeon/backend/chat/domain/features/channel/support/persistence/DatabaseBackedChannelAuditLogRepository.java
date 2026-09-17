@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
@@ -41,6 +42,14 @@ public class DatabaseBackedChannelAuditLogRepository implements ChannelAuditLogR
         ));
     }
 
+    /**
+     * 判断频道是否存在审计日志，不加载日志投影。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return channelAuditLogDatabaseService.existsByChannelId(channelId);
+    }
+
     @Override
     public List<ChannelAuditLog> list(
             Long cursorAuditId,
@@ -53,6 +62,23 @@ public class DatabaseBackedChannelAuditLogRepository implements ChannelAuditLogR
     ) {
         return channelAuditLogDatabaseService.list(cursorAuditId, limit, channelId, actorAccountId, actionType, fromTime, toTime)
                 .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<ChannelAuditLog> listByChannelIds(
+            Long cursorAuditId,
+            int limit,
+            Collection<Long> channelIds,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        return channelAuditLogDatabaseService.listByChannelIds(
+                        cursorAuditId, limit, channelIds, actorAccountId, actionType, fromTime, toTime
+                ).stream()
                 .map(this::toDomain)
                 .toList();
     }

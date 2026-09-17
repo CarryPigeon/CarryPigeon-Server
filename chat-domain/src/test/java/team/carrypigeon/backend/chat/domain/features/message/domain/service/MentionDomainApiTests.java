@@ -104,7 +104,7 @@ class MentionDomainApiTests {
         private Long markAllChannelId;
 
         @Override
-        public void save(Mention mention) {
+        public void saveAll(List<Mention> mentions) {
         }
 
         @Override

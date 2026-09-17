@@ -1,12 +1,18 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MessageEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 消息数据库服务。
@@ -40,6 +46,28 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 () -> java.util.Optional.ofNullable(messageMapper.selectById(messageId))
                         .map(this::toRecord),
                 "failed to query message"
+        );
+    }
+
+    /**
+     * 分片批量查询消息记录，避免合并转发按消息逐条访问数据库。
+     */
+    @Override
+    public Map<Long, MessageRecord> findByIds(Collection<Long> messageIds) {
+        if (messageIds == null || messageIds.isEmpty()) {
+            return Map.of();
+        }
+        return execute(
+                () -> SqlInClauseBatches.partition(messageIds).stream()
+                        .flatMap(batch -> messageMapper.findByIds(batch).stream())
+                        .map(this::toRecord)
+                        .collect(Collectors.toMap(
+                                MessageRecord::messageId,
+                                Function.identity(),
+                                (existing, ignored) -> existing,
+                                LinkedHashMap::new
+                        )),
+                "failed to batch query messages"
         );
     }
 

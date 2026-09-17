@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -46,6 +48,12 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     @Override
     public Optional<Channel> findById(long channelId) {
         return channelDatabaseService.findById(channelId).map(this::toDomainModel);
+    }
+
+    @Override
+    public Map<Long, Channel> findByIds(Collection<Long> channelIds) {
+        return channelDatabaseService.findByIds(channelIds).entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> toDomainModel(entry.getValue())));
     }
 
     /**

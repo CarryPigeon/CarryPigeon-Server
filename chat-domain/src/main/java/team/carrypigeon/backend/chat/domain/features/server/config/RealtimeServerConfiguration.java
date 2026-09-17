@@ -11,8 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.ws.Realti
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 实时通道启动装配。
@@ -26,11 +26,20 @@ public class RealtimeServerConfiguration {
     /**
      * 创建实时会话注册表。
      *
+     * @param properties 实时通道配置
+     * @param timeProvider 项目统一时间提供器
      * @return 当前运行时使用的实时会话注册表
      */
     @Bean
-    public RealtimeSessionRegistry realtimeSessionRegistry() {
-        return new RealtimeSessionRegistry();
+    public RealtimeSessionRegistry realtimeSessionRegistry(
+            RealtimeServerProperties properties,
+            TimeProviderImpl timeProvider
+    ) {
+        return new RealtimeSessionRegistry(
+                timeProvider,
+                properties.eventRetention(),
+                properties.maxEventAccounts()
+        );
     }
 
     /**
@@ -63,7 +72,7 @@ public class RealtimeServerConfiguration {
     @Bean
     public RealtimeNotificationPreferenceFilter realtimeNotificationPreferenceFilter(
             NotificationPreferenceRepository notificationPreferenceRepository,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         return new RealtimeNotificationPreferenceFilter(notificationPreferenceRepository, timeProvider);
     }
@@ -82,9 +91,9 @@ public class RealtimeServerConfiguration {
     @Bean
     public RealtimeChannelInitializer realtimeChannelInitializer(
             RealtimeServerProperties properties,
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,

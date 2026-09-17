@@ -15,6 +15,16 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 @Mapper
 public interface ChannelAuditLogMapper extends BaseMapper<ChannelAuditLogEntity> {
 
+    /** 短路判断频道下是否存在审计日志。 */
+    @Select("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM chat_channel_audit_log
+                WHERE channel_id = #{channelId}
+            )
+            """)
+    boolean existsByChannelId(@Param("channelId") long channelId);
+
     @Select("""
             <script>
             SELECT audit_id, channel_id, actor_account_id, action_type, metadata, created_at
@@ -23,8 +33,11 @@ public interface ChannelAuditLogMapper extends BaseMapper<ChannelAuditLogEntity>
             <if test="cursorAuditId != null">
               AND audit_id &lt; #{cursorAuditId}
             </if>
-            <if test="channelId != null">
-              AND channel_id = #{channelId}
+            <if test="channelIds != null and !channelIds.isEmpty()">
+              AND channel_id IN
+              <foreach collection="channelIds" item="channelId" open="(" separator="," close=")">
+                #{channelId}
+              </foreach>
             </if>
             <if test="actorAccountId != null">
               AND actor_account_id = #{actorAccountId}
@@ -42,10 +55,10 @@ public interface ChannelAuditLogMapper extends BaseMapper<ChannelAuditLogEntity>
             LIMIT #{limit}
             </script>
             """)
-    List<ChannelAuditLogEntity> list(
+    List<ChannelAuditLogEntity> listByChannelIds(
             @Param("cursorAuditId") Long cursorAuditId,
             @Param("limit") int limit,
-            @Param("channelId") Long channelId,
+            @Param("channelIds") java.util.Collection<Long> channelIds,
             @Param("actorAccountId") Long actorAccountId,
             @Param("actionType") String actionType,
             @Param("fromTime") java.time.Instant fromTime,

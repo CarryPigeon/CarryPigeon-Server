@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Base64;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -34,7 +35,14 @@ public class FileUploadShareKeyCodec {
      * @return 稳定对外 share_key
      */
     public String issue(long ownerAccountId, long fileId, long declaredSizeBytes) {
-        String payload = ownerAccountId + ":" + fileId + ":" + declaredSizeBytes;
+        return issue(ownerAccountId, fileId, declaredSizeBytes, Instant.now().plusSeconds(600));
+    }
+
+    public String issue(long ownerAccountId, long fileId, long declaredSizeBytes, Instant expiresAt) {
+        if (expiresAt == null) {
+            throw new IllegalArgumentException("expiresAt must not be null");
+        }
+        String payload = ownerAccountId + ":" + fileId + ":" + declaredSizeBytes + ":" + expiresAt.toEpochMilli();
         return SHARE_KEY_PREFIX + base64Url(payload) + "." + sign(payload);
     }
 
@@ -45,6 +53,10 @@ public class FileUploadShareKeyCodec {
      * @return 已校验的上传 share_key 快照
      */
     public IssuedUploadShareKey parse(String shareKey) {
+        return parse(shareKey, Instant.now());
+    }
+
+    public IssuedUploadShareKey parse(String shareKey, Instant now) {
         if (shareKey == null || shareKey.isBlank() || !shareKey.startsWith(SHARE_KEY_PREFIX)) {
             throw invalidShareKey();
         }
@@ -60,17 +72,19 @@ public class FileUploadShareKeyCodec {
             throw invalidShareKey();
         }
         String[] segments = payload.split(":");
-        if (segments.length != 3) {
+        if (segments.length != 4) {
             throw invalidShareKey();
         }
         try {
             long ownerAccountId = Long.parseLong(segments[0]);
             long fileId = Long.parseLong(segments[1]);
             long declaredSizeBytes = Long.parseLong(segments[2]);
-            if (ownerAccountId <= 0 || fileId <= 0 || declaredSizeBytes <= 0) {
+            long expiresAtEpochMillis = Long.parseLong(segments[3]);
+            if (ownerAccountId <= 0 || fileId <= 0 || declaredSizeBytes <= 0
+                    || now == null || expiresAtEpochMillis <= now.toEpochMilli()) {
                 throw invalidShareKey();
             }
-            return new IssuedUploadShareKey(ownerAccountId, fileId, declaredSizeBytes);
+            return new IssuedUploadShareKey(ownerAccountId, fileId, declaredSizeBytes, expiresAtEpochMillis);
         } catch (NumberFormatException exception) {
             throw invalidShareKey();
         }
@@ -154,6 +168,6 @@ public class FileUploadShareKeyCodec {
      * 已解析的上传 share key。
      * 职责：承载上传所有者、文件 ID 和声明大小，供上传提交校验。
      */
-    public record IssuedUploadShareKey(long ownerAccountId, long fileId, long declaredSizeBytes) {
+    public record IssuedUploadShareKey(long ownerAccountId, long fileId, long declaredSizeBytes, long expiresAtEpochMillis) {
     }
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -41,6 +42,7 @@ public class PluginGateController {
      * @param request gate 检查请求
      * @return 缺失必需插件列表
      */
+    @PermitAll
     @PostMapping("/check")
     @Operation(summary = "执行 required gate 预检查", description = "按当前设备已安装插件列表返回缺失的必需插件。")
     @ApiResponses({

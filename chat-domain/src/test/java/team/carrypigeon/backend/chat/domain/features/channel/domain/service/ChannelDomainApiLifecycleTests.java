@@ -48,6 +48,8 @@ class ChannelDomainApiLifecycleTests {
         assertNotNull(context.channelRepository.savedChannel);
         ChannelMember ownerMember = context.channelMemberRepository.findByChannelIdAndAccountId(result.channelId(), 1001L).orElseThrow();
         assertEquals(ChannelMemberRole.OWNER, ownerMember.role());
+        assertEquals(1, context.channelMemberRepository.findOwnerAccountIdsCalls);
+        assertEquals(0, context.channelMemberRepository.findByChannelIdCalls);
         assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1001L));
     }
 
@@ -103,6 +105,7 @@ class ChannelDomainApiLifecycleTests {
         service.deleteChannel(new DeleteChannelCommand(1001L, 9L));
 
         assertEquals(false, context.channelRepository.channels.containsKey(9L));
+        assertEquals(1, context.channelMemberRepository.deleteByChannelIdCalls);
     }
 
     /**

@@ -8,7 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mentio
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 消息提醒元数据协作对象。
@@ -19,9 +19,9 @@ class MessageMentionManager {
 
     private final MentionRepository mentionRepository;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
 
-    MessageMentionManager(MentionRepository mentionRepository, IdGenerator idGenerator, TimeProvider timeProvider) {
+    MessageMentionManager(MentionRepository mentionRepository, IdGenerator idGenerator, TimeProviderImpl timeProvider) {
         this.mentionRepository = mentionRepository;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -42,7 +42,11 @@ class MessageMentionManager {
     }
 
     List<Mention> persistMentions(ChannelMessage message, List<Long> recipientAccountIds) {
+        if (message.mentions().isEmpty()) {
+            return List.of();
+        }
         Set<Long> validRecipients = Set.copyOf(recipientAccountIds);
+        java.time.Instant createdAt = timeProvider.nowInstant();
         java.util.ArrayList<Mention> created = new java.util.ArrayList<>();
         for (Long targetAccountId : message.mentions()) {
             if (targetAccountId == message.senderId() || !validRecipients.contains(targetAccountId)) {
@@ -55,13 +59,14 @@ class MessageMentionManager {
                     message.senderId(),
                     "user",
                     targetAccountId,
-                    timeProvider.nowInstant(),
+                    createdAt,
                     false
             );
-            mentionRepository.save(mention);
             created.add(mention);
         }
-        return List.copyOf(created);
+        List<Mention> result = List.copyOf(created);
+        mentionRepository.saveAll(result);
+        return result;
     }
 
     void deleteByMessageId(long messageId) {

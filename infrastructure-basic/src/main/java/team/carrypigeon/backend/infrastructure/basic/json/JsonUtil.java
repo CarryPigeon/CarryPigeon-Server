@@ -11,9 +11,9 @@ import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureExc
  * JSON 基础工具。
  * 职责：收敛常见 JSON 序列化与反序列化操作，避免业务代码重复封装 ObjectMapper 调用。
  */
-public final class Jsons {
+public final class JsonUtil {
 
-    private Jsons() {
+    private JsonUtil() {
     }
 
     /**

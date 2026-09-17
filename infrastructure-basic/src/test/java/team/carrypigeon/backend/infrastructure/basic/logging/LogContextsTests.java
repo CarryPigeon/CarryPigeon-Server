@@ -8,6 +8,7 @@ import org.slf4j.MDC;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * 验证 MDC 日志上下文工具的最小契约。
@@ -37,10 +38,12 @@ class LogContextsTests {
     /**
      * 测试空白值写入。
      * 输入：空白字符串。
-     * 期望：MDC 不写入对应字段，避免日志上下文污染。
+     * 期望：MDC 移除旧字段，避免日志上下文污染。
      */
     @Test
-    void put_blankValue_ignored() {
+    void put_blankValue_removesExistingField() {
+        MDC.put(LogKeys.UID, "old-user");
+
         LogContexts.put(LogKeys.UID, " ");
 
         assertNull(MDC.get(LogKeys.UID));
@@ -71,5 +74,42 @@ class LogContextsTests {
         LogContexts.remove(LogKeys.UID);
 
         assertNull(MDC.get(LogKeys.UID));
+    }
+
+    /**
+     * 验证隔离作用域进入时清除外层字段，退出时完整恢复外层上下文。
+     */
+    @Test
+    void openScope_existingContext_isolatesAndRestoresOuterContext() {
+        LogContexts.traceId("outer-trace");
+        LogContexts.uid("outer-user");
+
+        try (LogContexts.Scope ignored = LogContexts.openScope()) {
+            assertNull(MDC.get(LogKeys.TRACE_ID));
+            assertNull(MDC.get(LogKeys.UID));
+            LogContexts.requestId("inner-request");
+            assertEquals("inner-request", MDC.get(LogKeys.REQUEST_ID));
+        }
+
+        assertEquals("outer-trace", MDC.get(LogKeys.TRACE_ID));
+        assertEquals("outer-user", MDC.get(LogKeys.UID));
+        assertNull(MDC.get(LogKeys.REQUEST_ID));
+    }
+
+    /**
+     * 验证作用域内抛出异常时，try-with-resources 仍能恢复外层上下文。
+     */
+    @Test
+    void openScope_actionFails_restoresOuterContext() {
+        LogContexts.traceId("outer-trace");
+
+        assertThrows(IllegalStateException.class, () -> {
+            try (LogContexts.Scope ignored = LogContexts.openScope()) {
+                LogContexts.traceId("inner-trace");
+                throw new IllegalStateException("test failure");
+            }
+        });
+
+        assertEquals("outer-trace", MDC.get(LogKeys.TRACE_ID));
     }
 }

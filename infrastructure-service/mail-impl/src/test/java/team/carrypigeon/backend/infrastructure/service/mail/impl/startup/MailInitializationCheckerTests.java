@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 边界：只验证契约转换，不验证 SMTP 连接细节。
  */
 @Tag("contract")
-class MailInitializationCheckTests {
+class MailInitializationCheckerTests {
 
     /**
      * 验证可用健康状态会映射为通过结果。
@@ -25,7 +25,7 @@ class MailInitializationCheckTests {
     @Test
     @DisplayName("check available health returns passed result")
     void check_availableHealth_returnsPassedResult() {
-        MailInitializationCheck check = new MailInitializationCheck(() -> new MailHealth(true, "ok"));
+        MailInitializationChecker check = new MailInitializationChecker(() -> new MailHealth(true, "ok"));
 
         InitializationCheckResult result = check.check();
 
@@ -40,7 +40,7 @@ class MailInitializationCheckTests {
     @DisplayName("check unavailable health returns failed result")
     void check_unavailableHealth_returnsFailedResult() {
         MailHealthService healthService = () -> new MailHealth(false, "smtp down");
-        MailInitializationCheck check = new MailInitializationCheck(healthService);
+        MailInitializationChecker check = new MailInitializationChecker(healthService);
 
         InitializationCheckResult result = check.check();
 

@@ -2,12 +2,18 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.annotation.Transactional;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelOwnerProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 频道成员数据库服务。
@@ -27,7 +33,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      */
     @Override
     public boolean exists(long channelId, long accountId) {
-        return execute(() -> channelMemberMapper.countMembership(channelId, accountId) > 0, "failed to query channel membership");
+        return execute(() -> channelMemberMapper.existsMembership(channelId, accountId), "failed to query channel membership");
     }
 
     /**
@@ -56,12 +62,38 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         executeVoid(() -> channelMemberMapper.updateMembership(toEntity(record)), "failed to update channel membership");
     }
 
+    @Override
+    @Transactional
+    public boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
+        return execute(() -> {
+            if (channelId <= 0 || previousOwnerAccountId <= 0 || targetAccountId <= 0
+                    || previousOwnerAccountId == targetAccountId) {
+                return false;
+            }
+            if (channelMemberMapper.demoteOwnerIfCurrent(channelId, previousOwnerAccountId) != 1) {
+                return false;
+            }
+            if (channelMemberMapper.promoteToOwnerIfMember(channelId, targetAccountId) != 1) {
+                throw new IllegalStateException("target channel member cannot become owner");
+            }
+            return true;
+        }, "failed to transfer channel ownership");
+    }
+
     /**
      * 删除成员关系记录。
      */
     @Override
     public void delete(long channelId, long accountId) {
         executeVoid(() -> channelMemberMapper.deleteMembership(channelId, accountId), "failed to delete channel membership");
+    }
+
+    /**
+     * 按频道一次删除全部成员关系。
+     */
+    @Override
+    public void deleteByChannelId(long channelId) {
+        executeVoid(() -> channelMemberMapper.deleteByChannelId(channelId), "failed to delete channel memberships");
     }
 
     /**
@@ -89,6 +121,17 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     @Override
     public List<Long> findChannelIdsByAccountId(long accountId) {
         return execute(() -> channelMemberMapper.findChannelIdsByAccountId(accountId), "failed to query account channel ids");
+    }
+
+    @Override
+    public Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return Map.of();
+        }
+        return execute(() -> SqlInClauseBatches.partition(channelIds).stream()
+                        .flatMap(batch -> channelMemberMapper.findOwnerAccountIdsByChannelIds(batch).stream())
+                        .collect(Collectors.toMap(ChannelOwnerProjection::getChannelId, ChannelOwnerProjection::getAccountId)),
+                "failed to query channel owners");
     }
 
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {

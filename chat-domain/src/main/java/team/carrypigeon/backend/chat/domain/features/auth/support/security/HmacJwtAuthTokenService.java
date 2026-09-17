@@ -14,7 +14,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * HS256 JWT 鉴权令牌 codec 实现。
@@ -31,11 +32,17 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
     };
 
     private final AuthJwtProperties properties;
-    private final JsonProvider jsonProvider;
+    private final JsonProviderImpl jsonProvider;
+    private final TimeProviderImpl timeProvider;
 
-    public HmacJwtAuthTokenService(AuthJwtProperties properties, JsonProvider jsonProvider) {
+    public HmacJwtAuthTokenService(
+            AuthJwtProperties properties,
+            JsonProviderImpl jsonProvider,
+            TimeProviderImpl timeProvider
+    ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;
+        this.timeProvider = timeProvider;
     }
 
     /**
@@ -161,7 +168,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
             }
 
             Instant expiresAt = Instant.ofEpochSecond(requiredLongClaim(payload, "exp"));
-            if (!expiresAt.isAfter(Instant.now())) {
+            if (!expiresAt.isAfter(timeProvider.nowInstant())) {
                 throw ProblemException.forbidden("token_expired", "token is expired");
             }
 

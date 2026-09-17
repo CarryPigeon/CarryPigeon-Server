@@ -100,7 +100,6 @@ class DatabaseBackedUserProfileRepositoryTests {
         assertEquals(1, result.size());
         assertEquals(1001L, result.get(0).accountId());
         assertEquals(List.of(1001L, 1002L), databaseService.batchAccountIds);
-        assertEquals(0, databaseService.findAllCalls);
     }
 
     /**
@@ -113,17 +112,10 @@ class DatabaseBackedUserProfileRepositoryTests {
         private UserProfileRecord insertedRecord;
         private UserProfileRecord updatedRecord;
         private List<Long> batchAccountIds = List.of();
-        private int findAllCalls;
 
         @Override
         public Optional<UserProfileRecord> findByAccountId(long accountId) {
             return Optional.ofNullable(record);
-        }
-
-        @Override
-        public List<UserProfileRecord> findAll() {
-            findAllCalls++;
-            return record == null ? List.of() : List.of(record);
         }
 
         @Override

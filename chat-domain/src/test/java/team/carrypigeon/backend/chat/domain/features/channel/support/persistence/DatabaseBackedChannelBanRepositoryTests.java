@@ -55,6 +55,20 @@ class DatabaseBackedChannelBanRepositoryTests {
     }
 
     /**
+     * 验证依赖判断直接委托轻量存在性查询。
+     */
+    @Test
+    @DisplayName("exists by channel id delegates existence query")
+    void existsByChannelId_existingBan_returnsTrue() {
+        FakeChannelBanDatabaseService databaseService = new FakeChannelBanDatabaseService();
+        databaseService.exists = true;
+        DatabaseBackedChannelBanRepository repository = new DatabaseBackedChannelBanRepository(databaseService);
+
+        assertTrue(repository.existsByChannelId(1L));
+        assertEquals(1L, databaseService.existsChannelId);
+    }
+
+    /**
      * `FakeChannelBanDatabaseService` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -62,6 +76,8 @@ class DatabaseBackedChannelBanRepositoryTests {
 
         private ChannelBanRecord record;
         private ChannelBanRecord updatedRecord;
+        private boolean exists;
+        private Long existsChannelId;
 
         @Override
         public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
@@ -71,6 +87,12 @@ class DatabaseBackedChannelBanRepositoryTests {
         @Override
         public java.util.List<ChannelBanRecord> findByChannelId(long channelId) {
             return java.util.List.of();
+        }
+
+        @Override
+        public boolean existsByChannelId(long channelId) {
+            existsChannelId = channelId;
+            return exists;
         }
 
         @Override

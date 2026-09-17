@@ -10,7 +10,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.command.Uplo
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
@@ -23,13 +23,13 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
 
     private final ChannelMessagePolicyApi channelMessagePolicyApi;
     private final MessageAttachmentUploader messageAttachmentUploader;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
 
     public ChannelMessageAttachmentDomainApi(
             ChannelMessagePolicyApi channelMessagePolicyApi,
             FileReferenceApi fileReferenceApi,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
         this.channelMessagePolicyApi = channelMessagePolicyApi;

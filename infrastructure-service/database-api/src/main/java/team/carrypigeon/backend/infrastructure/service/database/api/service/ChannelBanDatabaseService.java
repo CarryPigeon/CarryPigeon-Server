@@ -25,6 +25,9 @@ public interface ChannelBanDatabaseService {
      */
     List<ChannelBanRecord> findByChannelId(long channelId);
 
+    /** 判断频道是否存在任意封禁记录。 */
+    boolean existsByChannelId(long channelId);
+
     /**
      * 写入新的封禁记录。
      *

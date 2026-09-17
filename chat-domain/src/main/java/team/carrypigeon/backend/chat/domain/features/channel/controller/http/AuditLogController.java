@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,6 +23,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  */
 @RestController
 @RequestMapping("/api/audit_logs")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "审计日志", description = "频道治理与消息操作审计日志查询能力。")
 public class AuditLogController {
 

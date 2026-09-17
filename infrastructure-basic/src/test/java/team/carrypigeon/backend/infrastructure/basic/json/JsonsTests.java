@@ -31,7 +31,7 @@ class JsonsTests {
      */
     @Test
     void toJson_map_returnsJsonString() {
-        String json = Jsons.toJson(objectMapper, Map.of("name", "carry"));
+        String json = JsonUtil.toJson(objectMapper, Map.of("name", "carry"));
 
         assertEquals("{\"name\":\"carry\"}", json);
     }
@@ -43,7 +43,7 @@ class JsonsTests {
      */
     @Test
     void fromJson_typeReference_returnsGenericValue() {
-        List<String> values = Jsons.fromJson(objectMapper, "[\"a\",\"b\"]", new TypeReference<>() {
+        List<String> values = JsonUtil.fromJson(objectMapper, "[\"a\",\"b\"]", new TypeReference<>() {
         });
 
         assertEquals(List.of("a", "b"), values);
@@ -56,7 +56,7 @@ class JsonsTests {
      */
     @Test
     void readTree_object_returnsJsonNode() {
-        JsonNode node = Jsons.readTree(objectMapper, "{\"id\":1}");
+        JsonNode node = JsonUtil.readTree(objectMapper, "{\"id\":1}");
 
         assertEquals(1, node.get("id").asInt());
     }
@@ -70,7 +70,7 @@ class JsonsTests {
     void fromJson_invalidJson_throwsInfrastructureException() {
         InfrastructureException exception = assertThrows(
                 InfrastructureException.class,
-                () -> Jsons.fromJson(objectMapper, "{", Map.class)
+                () -> JsonUtil.fromJson(objectMapper, "{", Map.class)
         );
 
         assertEquals(InfrastructureErrorCode.JSON_DESERIALIZE_FAILED, exception.getErrorCode());

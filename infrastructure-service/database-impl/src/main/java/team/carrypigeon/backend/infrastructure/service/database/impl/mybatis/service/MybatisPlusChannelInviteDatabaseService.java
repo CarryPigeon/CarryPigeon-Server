@@ -60,6 +60,15 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
     }
 
     /**
+     * 判断频道是否存在邀请或申请记录。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return execute(() -> channelInviteMapper.existsByChannelId(channelId),
+                "failed to query channel invite existence");
+    }
+
+    /**
      * 插入新的邀请记录。
      */
     @Override
@@ -73,6 +82,12 @@ public class MybatisPlusChannelInviteDatabaseService implements ChannelInviteDat
     @Override
     public void update(ChannelInviteRecord record) {
         executeVoid(() -> channelInviteMapper.update(toEntity(record)), "failed to update channel invite");
+    }
+
+    @Override
+    public boolean updateIfPending(ChannelInviteRecord record) {
+        return execute(() -> channelInviteMapper.updateIfPending(toEntity(record)) > 0,
+                "failed to conditionally update channel invite");
     }
 
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {

@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 
 /**
@@ -24,6 +26,14 @@ public interface MessageDatabaseService {
      * @return 命中时返回消息记录
      */
     java.util.Optional<MessageRecord> findById(long messageId);
+
+    /**
+     * 批量查询消息记录。
+     *
+     * @param messageIds 待查询消息 ID 集合
+     * @return 以消息 ID 为键的命中记录；不存在的消息不进入结果
+     */
+    Map<Long, MessageRecord> findByIds(Collection<Long> messageIds);
 
     /**
      * 更新已有消息记录。

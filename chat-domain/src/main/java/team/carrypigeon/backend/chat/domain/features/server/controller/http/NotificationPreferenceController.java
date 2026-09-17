@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +27,7 @@ import team.carrypigeon.backend.chat.domain.features.server.controller.dto.Updat
  */
 @RestController
 @RequestMapping("/api/notification_preferences")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "通知偏好", description = "服务级与频道级通知偏好查询和更新能力。")
 public class NotificationPreferenceController {
 

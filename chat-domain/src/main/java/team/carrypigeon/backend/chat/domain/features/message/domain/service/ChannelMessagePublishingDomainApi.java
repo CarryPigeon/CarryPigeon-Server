@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.Valid
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -60,7 +61,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     private final MessageIdempotencyRepository messageIdempotencyRepository;
     private final MessageDomainPluginApi messageDomainPluginApi;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelMessagePublishingDomainApi(
@@ -72,7 +73,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
             ApplicationEventPublisher eventPublisher,
             MessageDomainPluginApi messageDomainPluginApi,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelContextApi = channelContextApi;
@@ -212,16 +213,20 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                 channelContextApi.requireMemberChannel(source.channelId(), command.accountId());
                 data.put("forwarded_from", forwardSource(source));
             } else {
+                Map<Long, ChannelMessage> messagesById = messageRepository.findByIds(command.mergedMessageIds());
+                LinkedHashSet<Long> sourceChannelIds = new LinkedHashSet<>();
                 List<Map<String, Object>> sources = new ArrayList<>();
                 for (Long messageId : command.mergedMessageIds()) {
-                    ChannelMessage source = messageRepository.findById(messageId).orElse(null);
+                    ChannelMessage source = messagesById.get(messageId);
                     if (source == null) {
                         sources.add(Map.of("mid", Long.toString(messageId), "unavailable", true));
                         continue;
                     }
-                    channelContextApi.requireMemberChannel(source.channelId(), command.accountId());
+                    sourceChannelIds.add(source.channelId());
                     sources.add(forwardSource(source));
                 }
+                sourceChannelIds.forEach(channelId ->
+                        channelContextApi.requireMemberChannel(channelId, command.accountId()));
                 data.put("forwarded_messages", List.copyOf(sources));
             }
             ChannelMessage message = buildCanonicalMessage(

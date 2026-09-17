@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 
 /**
@@ -25,6 +27,14 @@ public interface MessageRepository {
      * @return 命中时返回消息
      */
     java.util.Optional<ChannelMessage> findById(long messageId);
+
+    /**
+     * 批量查询指定消息。
+     *
+     * @param messageIds 待查询消息 ID 集合
+     * @return 以消息 ID 为键的命中消息；不存在的消息不进入结果
+     */
+    Map<Long, ChannelMessage> findByIds(Collection<Long> messageIds);
 
     /**
      * 更新已存在的频道消息。

@@ -33,10 +33,7 @@ class AuthPersistenceConfigurationTests {
     @DisplayName("configuration with database service registers auth repositories")
     void configuration_withDatabaseService_registersAuthRepositories() {
         contextRunner
-                .withPropertyValues(
-                        "cp.infrastructure.service.database.enabled=true",
-                        "cp.infrastructure.service.database.health-query=SELECT 1"
-                )
+                .withPropertyValues("cp.infrastructure.service.database.enabled=true")
                 .withBean(AuthAccountDatabaseService.class, () -> mock(AuthAccountDatabaseService.class))
                 .withBean(AuthRefreshSessionDatabaseService.class, () -> mock(AuthRefreshSessionDatabaseService.class))
                 .run(context -> {

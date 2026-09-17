@@ -1,8 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
-import java.time.Clock;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -18,12 +16,10 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,6 +82,7 @@ class AuditLogDomainApiTests {
         assertEquals("7003", result.get(0).auditId());
         assertEquals("7001", result.get(1).auditId());
         assertEquals(List.of(9L, 10L), auditLogRepository.queriedChannelIds);
+        assertEquals(1, auditLogRepository.batchQueryCount);
     }
 
     /**
@@ -168,7 +165,7 @@ class AuditLogDomainApiTests {
      */
     private static final class StubUserProfileRepository implements UserProfileRepository {
         @Override public Optional<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountId(long accountId) { return Optional.empty(); }
-        @Override public List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findAll() { return List.of(); }
+        @Override public List<team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile> findByAccountIds(List<Long> accountIds) { return List.of(); }
         @Override public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile save(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) { return userProfile; }
         @Override public team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile update(team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile userProfile) { return userProfile; }
     }
@@ -181,12 +178,23 @@ class AuditLogDomainApiTests {
         private List<ChannelAuditLog> logs = List.of();
         private List<Long> queriedChannelIds = new java.util.ArrayList<>();
         private String lastActionType;
+        private int batchQueryCount;
         @Override public void append(ChannelAuditLog channelAuditLog) { }
         @Override public List<ChannelAuditLog> list(Long cursorAuditId, int limit, Long channelId, Long actorAccountId, String actionType, Instant fromTime, Instant toTime) {
             queriedChannelIds.add(channelId);
             this.lastActionType = actionType;
             return logs.stream()
                     .filter(log -> channelId == null || log.channelId() == channelId)
+                    .limit(limit)
+                    .toList();
+        }
+        @Override public List<ChannelAuditLog> listByChannelIds(Long cursorAuditId, int limit, java.util.Collection<Long> channelIds, Long actorAccountId, String actionType, Instant fromTime, Instant toTime) {
+            batchQueryCount++;
+            queriedChannelIds.addAll(channelIds);
+            this.lastActionType = actionType;
+            return logs.stream()
+                    .filter(log -> channelIds.contains(log.channelId()))
+                    .sorted(java.util.Comparator.comparingLong(ChannelAuditLog::auditId).reversed())
                     .limit(limit)
                     .toList();
         }

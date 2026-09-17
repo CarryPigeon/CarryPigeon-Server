@@ -22,10 +22,10 @@ class RealtimeWebSocketDebugLoggerTests {
     void sanitizeUri_sensitiveQuery_masksValues() {
         RealtimeWebSocketDebugLogger logger = new RealtimeWebSocketDebugLogger(true);
 
-        String sanitized = logger.sanitizeUri("/api/ws?access_token=abc&plain=1&secret=hidden");
+        String sanitized = logger.sanitizeUri("/api/ws?%61ccess_token=abc&plain=1&secret=hidden");
 
         assertThat(sanitized)
-                .isEqualTo("/api/ws?access_token=***&plain=1&secret=***")
+                .isEqualTo("/api/ws?%61ccess_token=***&plain=1&secret=***")
                 .doesNotContain("abc")
                 .doesNotContain("hidden");
     }

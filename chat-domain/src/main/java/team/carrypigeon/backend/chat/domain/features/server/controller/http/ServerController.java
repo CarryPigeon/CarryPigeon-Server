@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +37,7 @@ public class ServerController {
      *
      * @return 客户端握手阶段的发现信息
      */
+    @PermitAll
     @GetMapping
     @Operation(summary = "读取服务发现文档", description = "返回客户端握手与登录前置阶段所需的服务发现信息。")
     @ApiResponses({

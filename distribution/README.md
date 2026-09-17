@@ -28,6 +28,7 @@ with the following structure:
 Before first launch, edit `config/application.yaml` and fill at least:
 
 - `cp.chat.auth.jwt.secret`
+- `cp.chat.file.share-key.secret`
 - `cp.chat.server.id`
 - external dependency addresses or ports when they are not the local defaults, such as `spring.datasource.url`, `spring.data.redis.*`, and `cp.infrastructure.service.storage.*`
 
@@ -94,7 +95,7 @@ To verify deployment readiness with required YAML values filled, run:
 bash distribution/target/full-distribution/full-distribution/bin/verify.sh --strict-config
 ```
 
-The verifier requires Java and runs the same plugin classpath preflight used by normal startup. It validates plugin
+The verifier requires Java; on Unix-like systems it also requires `curl` for the background readiness probe. It runs the same plugin classpath preflight used by normal startup. It validates plugin
 JAR ownership, Boot AutoConfiguration metadata, exact `required_host_artifacts`, duplicate plugin classes, forbidden
 bundled host/shared classes, and conflicting top-level Maven artifact versions. This phase does not create the Spring
 context and does not connect to MySQL, Redis, MinIO, mail, or other external services.
@@ -141,6 +142,12 @@ Background startup writes:
 
 - PID file: `run/application.pid`
 - stdout log: `service-logs/application-stdout.log` (unless `CP_LOG_HOME` overrides it)
+- Windows stderr log: `service-logs/application-stderr.log` (unless `CP_LOG_HOME` overrides it)
+
+The background launcher reports success only after `GET /internal/readiness` returns HTTP 204. The default probe URL is
+`http://127.0.0.1:${SERVER_PORT:-8080}/internal/readiness`; set `CP_READINESS_URL` to the complete URL when the HTTP
+address cannot be derived from `SERVER_PORT`. This endpoint represents completion of startup-time plugin and required
+initialization checks; it is not a continuous MySQL, Redis, MinIO, or SMTP monitor.
 
 When using the repository-level wrapper `bash bin/linux/dist-start-background.sh`, these files are located under:
 
@@ -176,6 +183,8 @@ The unit file is only a template. Adjust install paths, user, and group before e
 - Application runtime configuration lives in `config/application.yaml`.
 - The application still requires valid runtime configuration and, in normal service mode, reachable external dependencies such as MySQL, Redis, and MinIO.
 - The package launchers now point Spring to `config/application.yaml` and `config/log4j2-spring.xml`, so the packaged `config/` directory is part of the real runtime path. The packaged `config/application.yaml` is an external override file; development defaults remain inside the application jar.
+- The packaged application configuration defines explicit MySQL, Redis, MinIO, and SMTP timeouts, multipart limits, and realtime event-retention/account limits. Keep these values aligned when producing environment-specific overrides.
+- Compressed `.log.gz` archives are retained for 30 days by default while active `.log` files are protected. Override the Log4j2 duration with `-Dcp.log.retention=7d` or `CP_LOG_RETENTION=7d`.
 - The package now includes a verification entrypoint, a `systemd` example, and a minimal release-artifact workflow, but it still does not replace public checksum publishing, artifact signing, or multi-node orchestration.
 - A plugin SHA-256 printed by preflight is a runtime fingerprint of the inspected JAR, not a publisher signature or an external trust proof.
 - GitHub Actions now includes a dedicated `Distribution Release` workflow that builds the package and uploads the zip, checksum, and manifest as workflow artifacts.

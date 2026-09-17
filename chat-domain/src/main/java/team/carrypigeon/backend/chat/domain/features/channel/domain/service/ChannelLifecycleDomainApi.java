@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -45,7 +45,7 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
     private final ChannelProjectionMapper channelProjectionMapper;
     private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelLifecycleDomainApi(
@@ -58,7 +58,7 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
             ChannelGovernancePolicy channelGovernancePolicy,
             ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
@@ -132,9 +132,7 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
             }
             requireChannelDeleteSafe(channel.id());
             try {
-                channelMemberRepository.findByChannelId(channel.id()).forEach(member ->
-                        channelMemberRepository.delete(channel.id(), member.accountId())
-                );
+                channelMemberRepository.deleteByChannelId(channel.id());
                 channelRepository.delete(channel.id());
             } catch (ProblemException exception) {
                 throw exception;
@@ -207,9 +205,9 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
     }
 
     private void requireChannelDeleteSafe(long channelId) {
-        if (!channelInviteRepository.findByChannelId(channelId).isEmpty()
-                || !channelBanRepository.findByChannelId(channelId).isEmpty()
-                || !channelAuditLogRepository.list(null, 1, channelId, null, null, null, null).isEmpty()) {
+        if (channelInviteRepository.existsByChannelId(channelId)
+                || channelBanRepository.existsByChannelId(channelId)
+                || channelAuditLogRepository.existsByChannelId(channelId)) {
             throw ProblemException.conflict(
                     "channel_delete_blocked",
                     "channel contains dependent data and cannot be deleted"

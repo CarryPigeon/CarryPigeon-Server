@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.basic.logging;
 
 /**
+ * TODO 命名规范化
  * 日志上下文字段名规范。
  * 职责：统一 MDC key，避免不同模块各自定义日志字段名。
  * 边界：这里只定义字段名，不决定具体业务何时写入字段值。

@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
@@ -19,9 +21,14 @@ public record RealtimeServerProperties(
         @DefaultValue("10")
         int authenticationTimeoutSeconds,
         @DefaultValue("60")
-        int readIdleTimeoutSeconds
+        int readIdleTimeoutSeconds,
+        @DefaultValue("1h")
+        Duration eventRetention,
+        @DefaultValue("10000")
+        int maxEventAccounts
 ) {
 
+    @ConstructorBinding
     public RealtimeServerProperties {
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("host must not be blank");
@@ -44,6 +51,36 @@ public record RealtimeServerProperties(
         if (readIdleTimeoutSeconds <= 0) {
             throw new IllegalArgumentException("readIdleTimeoutSeconds must be greater than 0");
         }
+        if (eventRetention == null || eventRetention.isZero() || eventRetention.isNegative()) {
+            throw new IllegalArgumentException("eventRetention must be positive");
+        }
+        if (maxEventAccounts <= 0) {
+            throw new IllegalArgumentException("maxEventAccounts must be greater than 0");
+        }
+    }
+
+    public RealtimeServerProperties(
+            boolean enabled,
+            String host,
+            int port,
+            String path,
+            int bossThreads,
+            int workerThreads,
+            int authenticationTimeoutSeconds,
+            int readIdleTimeoutSeconds
+    ) {
+        this(
+                enabled,
+                host,
+                port,
+                path,
+                bossThreads,
+                workerThreads,
+                authenticationTimeoutSeconds,
+                readIdleTimeoutSeconds,
+                Duration.ofHours(1),
+                10_000
+        );
     }
 
 }

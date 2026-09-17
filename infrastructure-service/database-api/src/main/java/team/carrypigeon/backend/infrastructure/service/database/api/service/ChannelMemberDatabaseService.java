@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 
@@ -43,6 +45,11 @@ public interface ChannelMemberDatabaseService {
      */
     void update(ChannelMemberRecord record);
 
+    /** 在同一事务内将所有权从当前 OWNER 转移到目标成员。 */
+    default boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
+        return false;
+    }
+
     /**
      * 删除已存在的成员记录。
      *
@@ -50,6 +57,13 @@ public interface ChannelMemberDatabaseService {
      * @param accountId 账户 ID
      */
     void delete(long channelId, long accountId);
+
+    /**
+     * 删除频道下全部成员记录。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 
     /**
      * 查询频道下的全部成员记录。
@@ -68,4 +82,7 @@ public interface ChannelMemberDatabaseService {
     List<Long> findAccountIdsByChannelId(long channelId);
 
     List<Long> findChannelIdsByAccountId(long accountId);
+
+    /** 批量读取频道 owner，返回频道到 owner 账户的映射。 */
+    Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds);
 }

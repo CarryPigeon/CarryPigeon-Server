@@ -91,8 +91,8 @@ class LocalHttpDebugConfigurationTests {
     void doFilter_requestWithSensitiveQuery_logsSanitizedSummary() throws ServletException, IOException {
         LocalHttpRequestDebugLoggingFilter filter = new LocalHttpRequestDebugLoggingFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/server");
-        request.setQueryString("access_token=secret-token&plain=1");
-        request.addHeader("Origin", "http://127.0.0.1:5173");
+        request.setQueryString("%61ccess_token=secret-token&plain=1");
+        request.addHeader("Origin", "http://127.0.0.1:5173\r\nforged-header");
         request.addHeader("User-Agent", "local-client");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -107,8 +107,8 @@ class LocalHttpDebugConfigurationTests {
         assertThat(filter.buildRequestSummary(request, response, 12L, null))
                 .contains("Action: local_http_request_completed")
                 .contains("method=GET")
-                .contains("origin=http://127.0.0.1:5173")
-                .contains("access_token=***")
+                .contains("origin=http://127.0.0.1:5173 forged-header")
+                .contains("%61ccess_token=***")
                 .doesNotContain("secret-token");
     }
 

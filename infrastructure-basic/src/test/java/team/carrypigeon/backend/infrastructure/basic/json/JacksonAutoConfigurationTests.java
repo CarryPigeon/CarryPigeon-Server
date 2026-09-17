@@ -29,7 +29,7 @@ class JacksonAutoConfigurationTests {
     @Test
     void objectMapper_serializesSnakeCaseFieldNames() {
         contextRunner.run(context -> {
-            JsonProvider jsonProvider = context.getBean(JsonProvider.class);
+            JsonProviderImpl jsonProvider = context.getBean(JsonProviderImpl.class);
             String json = jsonProvider.toJson(new SnakeCaseProbe("carry-user"));
 
             assertThat(json).contains("\"display_name\":\"carry-user\"");
@@ -42,7 +42,7 @@ class JacksonAutoConfigurationTests {
     @Test
     void objectMapper_serializesInstantAsEpochMillis() {
         contextRunner.run(context -> {
-            JsonProvider jsonProvider = context.getBean(JsonProvider.class);
+            JsonProviderImpl jsonProvider = context.getBean(JsonProviderImpl.class);
             String json = jsonProvider.toJson(new InstantProbe(Instant.parse("2026-04-22T00:00:00Z")));
 
             assertThat(json).isEqualTo("{\"created_at\":1776816000000}");

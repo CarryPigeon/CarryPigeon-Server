@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**
  * 实时 WebSocket 本地调试日志器。
@@ -28,13 +29,13 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void handshakeRequest(ChannelHandlerContext context, FullHttpRequest request, String expectedPath, boolean matched) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         log.info("Action: local_ws_handshake_request_received"
-                + " method=" + request.method().name()
+                + " method=" + sanitizeValue(request.method().name())
                 + " uri=" + sanitizeUri(request.uri())
-                + " expectedPath=" + expectedPath
+                + " expectedPath=" + sanitizeValue(expectedPath)
                 + " matched=" + matched
                 + " origin=" + safeHeader(request, "Origin")
                 + " upgrade=" + safeHeader(request, "Upgrade")
@@ -44,7 +45,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void handshakeComplete(ChannelHandlerContext context, WebSocketServerProtocolHandler.HandshakeComplete event) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         log.info("Action: local_ws_handshake_completed"
@@ -57,7 +58,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void frameReceived(ChannelHandlerContext context, RealtimeClientMessage request, int textLength) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         log.info("Action: local_ws_frame_received"
@@ -71,7 +72,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void frameRejected(ChannelHandlerContext context, String reason, Throwable failure) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         log.info("Action: local_ws_frame_rejected"
@@ -84,7 +85,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void authResult(ChannelHandlerContext context, RealtimeClientMessage request, boolean reauth, boolean success, String reason) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
@@ -101,7 +102,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void channelInactive(ChannelHandlerContext context) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
@@ -114,7 +115,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     void exceptionCaught(ChannelHandlerContext context, Throwable failure) {
-        if (!enabled) {
+        if (!isEnabled()) {
             return;
         }
         log.info("Action: local_ws_channel_exception"
@@ -127,23 +128,7 @@ final class RealtimeWebSocketDebugLogger {
     }
 
     String sanitizeUri(String uri) {
-        if (uri == null || uri.isBlank()) {
-            return "";
-        }
-        int queryIndex = uri.indexOf('?');
-        if (queryIndex < 0) {
-            return sanitizeValue(uri);
-        }
-        String path = uri.substring(0, queryIndex);
-        String query = uri.substring(queryIndex + 1);
-        return sanitizeValue(path + "?" + sanitizeQuery(query));
-    }
-
-    String sanitizeQuery(String query) {
-        if (query == null || query.isBlank()) {
-            return "";
-        }
-        return query.replaceAll("(?i)(access_token|refresh_token|token|password|secret|code)=([^&]*)", "$1=***");
+        return LogValueSanitizer.uri(uri);
     }
 
     /**
@@ -198,9 +183,10 @@ final class RealtimeWebSocketDebugLogger {
      * @return 可安全写入日志的文本
      */
     private String sanitizeValue(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        return value.replaceAll("[\\r\\n\\t]+", " ").trim();
+        return LogValueSanitizer.singleLine(value);
+    }
+
+    private boolean isEnabled() {
+        return enabled && log.isInfoEnabled();
     }
 }

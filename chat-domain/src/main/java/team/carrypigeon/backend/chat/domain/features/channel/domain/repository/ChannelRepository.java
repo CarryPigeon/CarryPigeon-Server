@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 
@@ -33,6 +35,12 @@ public interface ChannelRepository {
      * @return 命中时返回频道，未命中时返回空
      */
     Optional<Channel> findById(long channelId);
+
+    default Map<Long, Channel> findByIds(Collection<Long> channelIds) {
+        return channelIds.stream().map(id -> findById(id).map(channel -> Map.entry(id, channel)))
+                .flatMap(Optional::stream)
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
 
     default List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
         throw new UnsupportedOperationException("channel discover is not supported");

@@ -15,7 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Mess
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 
 /**
  * 消息持久化装配配置。
@@ -33,7 +33,7 @@ public class MessagePersistenceConfiguration {
      * @return 面向领域的消息仓储实现
      */
     @Bean
-    public MessageRepository messageRepository(MessageDatabaseService messageDatabaseService, JsonProvider jsonProvider) {
+    public MessageRepository messageRepository(MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider) {
         return new DatabaseBackedMessageRepository(messageDatabaseService, jsonProvider);
     }
 

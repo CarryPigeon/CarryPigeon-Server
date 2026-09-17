@@ -203,6 +203,20 @@ class MybatisPlusChannelDatabaseServiceTests {
         assertEquals(false, record.requiresApplication());
     }
 
+    /** 验证频道集合查询一次委托 mapper 并按 ID 建立索引。 */
+    @Test
+    @DisplayName("find channels by ids returns indexed records")
+    void findByIds_existingRows_returnsIndexedRecords() {
+        ChannelMapper channelMapper = mock(ChannelMapper.class);
+        ChannelEntity second = entity();
+        second.setId(2L);
+        when(channelMapper.findByIds(List.of(1L, 2L))).thenReturn(List.of(entity(), second));
+        MybatisPlusChannelDatabaseService service = new MybatisPlusChannelDatabaseService(channelMapper);
+
+        assertEquals(2, service.findByIds(List.of(1L, 2L)).size());
+        verify(channelMapper).findByIds(List.of(1L, 2L));
+    }
+
     private static ChannelEntity entity() {
         ChannelEntity entity = new ChannelEntity();
         entity.setId(1L);

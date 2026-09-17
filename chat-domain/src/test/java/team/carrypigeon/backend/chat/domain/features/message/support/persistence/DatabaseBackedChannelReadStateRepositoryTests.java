@@ -108,6 +108,12 @@ class DatabaseBackedChannelReadStateRepositoryTests {
         }
 
         @Override
+        public boolean advanceIfNewer(ChannelReadStateRecord record) {
+            upserted = record;
+            return true;
+        }
+
+        @Override
         public List<ChannelUnreadRecord> listUnreadsByAccountId(long accountId) {
             unreadAccountId = accountId;
             return unreadResults;

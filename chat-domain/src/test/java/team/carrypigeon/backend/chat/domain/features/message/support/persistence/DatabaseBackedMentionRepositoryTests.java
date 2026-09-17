@@ -57,18 +57,21 @@ class DatabaseBackedMentionRepositoryTests {
     }
 
     /**
-     * 验证 `save` 在 `delegatesToDatabaseService` 场景下的测试契约。
+     * 验证批量保存会保持提及顺序并委托一次数据库服务调用。
      */
     @Test
-    @DisplayName("save delegates to database service")
-    void save_delegatesToDatabaseService() {
+    @DisplayName("save all delegates ordered records to database service")
+    void saveAll_multipleMentions_delegatesOrderedRecordsToDatabaseService() {
         RecordingMentionDatabaseService databaseService = new RecordingMentionDatabaseService();
         DatabaseBackedMentionRepository repository = new DatabaseBackedMentionRepository(databaseService);
 
-        repository.save(new Mention(12L, 9L, 5002L, 1002L, "user", 1001L, Instant.parse("2026-04-24T12:01:00Z"), false));
+        repository.saveAll(List.of(
+                new Mention(12L, 9L, 5002L, 1002L, "user", 1001L, Instant.parse("2026-04-24T12:01:00Z"), false),
+                new Mention(13L, 9L, 5002L, 1002L, "user", 1003L, Instant.parse("2026-04-24T12:01:01Z"), false)
+        ));
 
-        assertEquals(12L, databaseService.insertedRecord.mentionId());
-        assertEquals(5002L, databaseService.insertedRecord.messageId());
+        assertEquals(List.of(12L, 13L), databaseService.insertedRecords.stream().map(MentionRecord::mentionId).toList());
+        assertEquals(5002L, databaseService.insertedRecords.getFirst().messageId());
     }
 
     /**
@@ -114,7 +117,7 @@ class DatabaseBackedMentionRepositoryTests {
         private boolean unreadOnly;
         private Long channelId;
         private List<MentionRecord> records = List.of();
-        private MentionRecord insertedRecord;
+        private List<MentionRecord> insertedRecords = List.of();
         private long deletedMessageId;
         private boolean markAsReadResult;
         private long markAsReadAccountId;
@@ -125,8 +128,8 @@ class DatabaseBackedMentionRepositoryTests {
         private Long markAllChannelId;
 
         @Override
-        public void insert(MentionRecord record) {
-            this.insertedRecord = record;
+        public void insertAll(List<MentionRecord> records) {
+            this.insertedRecords = List.copyOf(records);
         }
 
         @Override

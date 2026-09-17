@@ -4,6 +4,7 @@ import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import io.minio.errors.ErrorResponseException;
 import io.minio.messages.ErrorResponse;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealth;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
@@ -47,30 +48,30 @@ public class MinioStorageHealthService implements StorageHealthService {
         if (ex instanceof ErrorResponseException errorResponseException) {
             return minioErrorDiagnostic(errorResponseException);
         }
-        return ex.getClass().getSimpleName()
-                + ": " + safeValue(ex.getMessage(), "no message")
+        return LogValueSanitizer.singleLine(ex.getClass().getSimpleName()
+                + ": " + valueOrFallback(ex.getMessage(), "no message")
                 + ", endpoint=" + properties.endpoint()
-                + ", bucket=" + properties.bucket();
+                + ", bucket=" + properties.bucket());
     }
 
     private String minioErrorDiagnostic(ErrorResponseException ex) {
         ErrorResponse errorResponse = ex.errorResponse();
-        String code = errorResponse == null ? "unknown" : safeValue(errorResponse.code(), "unknown");
-        String message = errorResponse == null ? "no message" : safeValue(errorResponse.message(), "no message");
-        String requestId = errorResponse == null ? "unknown" : safeValue(errorResponse.requestId(), "unknown");
-        String resource = errorResponse == null ? "unknown" : safeValue(errorResponse.resource(), "unknown");
+        String code = errorResponse == null ? "unknown" : valueOrFallback(errorResponse.code(), "unknown");
+        String message = errorResponse == null ? "no message" : valueOrFallback(errorResponse.message(), "no message");
+        String requestId = errorResponse == null ? "unknown" : valueOrFallback(errorResponse.requestId(), "unknown");
+        String resource = errorResponse == null ? "unknown" : valueOrFallback(errorResponse.resource(), "unknown");
         int httpStatus = ex.response() == null ? 0 : ex.response().code();
-        return "MinIO "
+        return LogValueSanitizer.singleLine("MinIO "
                 + "code=" + code
                 + ", message=" + message
                 + ", httpStatus=" + httpStatus
                 + ", endpoint=" + properties.endpoint()
                 + ", bucket=" + properties.bucket()
                 + ", resource=" + resource
-                + ", requestId=" + requestId;
+                + ", requestId=" + requestId);
     }
 
-    private static String safeValue(String value, String fallback) {
+    private static String valueOrFallback(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
 }

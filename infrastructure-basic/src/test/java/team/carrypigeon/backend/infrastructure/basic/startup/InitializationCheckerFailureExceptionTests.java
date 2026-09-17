@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * 边界：不验证异常传播链，只验证消息语义。
  */
 @Tag("unit")
-class InitializationCheckFailureExceptionTests {
+class InitializationCheckerFailureExceptionTests {
 
     /**
      * 测试异常消息格式。

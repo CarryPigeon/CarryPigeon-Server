@@ -3,6 +3,9 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
@@ -11,6 +14,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 频道数据库服务。
@@ -63,6 +67,18 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     @Override
     public Optional<ChannelRecord> findById(long channelId) {
         return execute(() -> Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord), "failed to query channel by id");
+    }
+
+    @Override
+    public Map<Long, ChannelRecord> findByIds(Collection<Long> channelIds) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return Map.of();
+        }
+        return execute(() -> SqlInClauseBatches.partition(channelIds).stream()
+                        .flatMap(batch -> channelMapper.findByIds(batch).stream())
+                        .map(this::toRecord)
+                        .collect(Collectors.toMap(ChannelRecord::id, record -> record)),
+                "failed to query channels by ids");
     }
 
     /**

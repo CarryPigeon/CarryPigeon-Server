@@ -1,12 +1,14 @@
 package team.carrypigeon.backend.chat.domain.features.message.support.persistence;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
@@ -21,9 +23,9 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     private static final TypeReference<List<Long>> MENTIONS_TYPE = new TypeReference<>() { };
 
     private final MessageDatabaseService messageDatabaseService;
-    private final JsonProvider jsonProvider;
+    private final JsonProviderImpl jsonProvider;
 
-    public DatabaseBackedMessageRepository(MessageDatabaseService messageDatabaseService, JsonProvider jsonProvider) {
+    public DatabaseBackedMessageRepository(MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider) {
         this.messageDatabaseService = messageDatabaseService;
         this.jsonProvider = jsonProvider;
     }
@@ -37,6 +39,16 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     @Override
     public java.util.Optional<ChannelMessage> findById(long messageId) {
         return messageDatabaseService.findById(messageId).map(this::toDomainMessage);
+    }
+
+    /**
+     * 批量读取消息并映射为领域对象。
+     * 输出：数据库未命中的消息 ID 不进入结果映射。
+     */
+    @Override
+    public Map<Long, ChannelMessage> findByIds(Collection<Long> messageIds) {
+        return messageDatabaseService.findByIds(messageIds).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> toDomainMessage(entry.getValue())));
     }
 
     @Override

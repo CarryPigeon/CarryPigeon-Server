@@ -1,30 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration>
-    <properties>
+<Configuration status="WARN" name="CarryPigeonLogging">
+    <Properties>
         <!-- 职责：统一定义项目日志输出目录；可通过 -Dcp.log.home 或 CP_LOG_HOME 覆盖。 -->
-        <property name="LOG_HOME">${sys:cp.log.home:-${env:CP_LOG_HOME:-./service-logs}}</property>
-    </properties>
+        <Property name="LOG_HOME">${sys:cp.log.home:-${env:CP_LOG_HOME:-./service-logs}}</Property>
+        <!-- 职责：限制压缩归档保留时间；可通过 -Dcp.log.retention 或 CP_LOG_RETENTION 覆盖。 -->
+        <Property name="LOG_RETENTION">${sys:cp.log.retention:-${env:CP_LOG_RETENTION:-30d}}</Property>
+        <!-- 职责：统一文本日志字段顺序；使用 logger name 避免调用者位置解析的栈回溯成本。 -->
+        <Property name="TEXT_LOG_PATTERN">%d{ISO8601} %-5level [%t] trace_id=%X{trace_id} request_id=%X{request_id} route=%X{route} uid=%X{uid} %logger{48} - %msg%n%throwable</Property>
+    </Properties>
 
     <Appenders>
         <!-- 控制台日志用于开发期与容器环境快速观测。 -->
         <Console name="consoleAppender" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%style{%d{ISO8601}}{bright,green} %highlight{%-5level} [%style{%t}{bright,blue}] %style{%X{trace_id} %X{request_id} %X{route} %X{uid}}{bright,magenta} %style{%C{}}{bright,yellow}: %msg%n%style{%throwable}{red}"
-                    disableAnsi="false" noConsoleNoAnsi="false"/>
+                    pattern="%style{%d{ISO8601}}{bright,green} %highlight{%-5level} [%style{%t}{bright,blue}] %style{trace_id=%X{trace_id} request_id=%X{request_id} route=%X{route} uid=%X{uid}}{bright,magenta} %style{%logger{48}}{bright,yellow} - %msg%n%style{%throwable}{red}"
+                    charset="UTF-8" disableAnsi="false" noConsoleNoAnsi="true"/>
         </Console>
 
         <!-- 全量文件日志用于完整追溯，属于固定基础设施能力。 -->
         <RollingFile name="allFileAppender"
                      fileName="${LOG_HOME}/all.log"
                      filePattern="${LOG_HOME}/$${date:yyyy-MM}/all-%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout>
-                <pattern>%d %p [%t] %X{trace_id} %X{request_id} %X{route} %X{uid} %C{} - %m%n</pattern>
-            </PatternLayout>
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
-                <TimeBasedTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
-            <DefaultRolloverStrategy max="100"/>
+            <DefaultRolloverStrategy max="100">
+                <!-- 统一清理所有 appender 的过期压缩归档，不触碰当前活动日志。 -->
+                <Delete basePath="${LOG_HOME}" maxDepth="2">
+                    <IfFileName regex=".*\.log\.gz"/>
+                    <IfLastModified age="${LOG_RETENTION}"/>
+                </Delete>
+            </DefaultRolloverStrategy>
         </RollingFile>
 
         <!-- debug 日志单独分流，避免在问题排查时与其它级别混杂。 -->
@@ -34,12 +42,10 @@
             <Filters>
                 <ThresholdFilter level="info" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
-            <PatternLayout>
-                <pattern>%d %p [%t] %X{trace_id} %X{request_id} %X{route} %X{uid} %C{} - %m%n</pattern>
-            </PatternLayout>
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
-                <TimeBasedTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <DefaultRolloverStrategy max="100"/>
         </RollingFile>
@@ -51,13 +57,12 @@
             <Filters>
                 <ThresholdFilter level="warn" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
-            <PatternLayout>
-                <pattern>%d %p [%t] %X{trace_id} %X{request_id} %X{route} %X{uid} %C{} - %m%n</pattern>
-            </PatternLayout>
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
+            <DefaultRolloverStrategy max="100"/>
         </RollingFile>
 
         <!-- warn 日志单独分流，用于保留需要关注但未失败的运行信号。 -->
@@ -67,12 +72,10 @@
             <Filters>
                 <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
-            <PatternLayout>
-                <pattern>%d %p [%t] %X{trace_id} %X{request_id} %X{route} %X{uid} %C{} - %m%n</pattern>
-            </PatternLayout>
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
-                <TimeBasedTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <DefaultRolloverStrategy max="100"/>
         </RollingFile>
@@ -81,12 +84,10 @@
         <RollingFile name="errorFileAppender"
                      fileName="${LOG_HOME}/error.log"
                      filePattern="${LOG_HOME}/$${date:yyyy-MM}/error-%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout>
-                <pattern>%d %p [%t] %X{trace_id} %X{request_id} %X{route} %X{uid} %C{} - %m%n</pattern>
-            </PatternLayout>
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
-                <TimeBasedTriggeringPolicy/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <DefaultRolloverStrategy max="100"/>
         </RollingFile>
@@ -95,11 +96,13 @@
         <RollingFile name="errorJsonAppender"
                      fileName="${LOG_HOME}/error-json.log"
                      filePattern="${LOG_HOME}/error-json-%d{yyyy-MM-dd}-%i.log.gz">
-            <JSONLayout compact="true" eventEol="true" locationInfo="true"/>
+            <JSONLayout compact="true" eventEol="true" properties="true"
+                        locationInfo="false" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
+            <DefaultRolloverStrategy max="100"/>
         </RollingFile>
     </Appenders>
 

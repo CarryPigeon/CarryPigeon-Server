@@ -117,6 +117,16 @@ HTTP 失败统一返回标准错误对象：
 - OpenAPI JSON：`/v3/api-docs`
 - OpenAPI YAML：`/v3/api-docs.yaml`
 
+### 1.7 内部 Readiness
+
+- **方法**：`GET`
+- **路径**：`/internal/readiness`
+- **认证**：不经过 `/api/**` 业务鉴权；部署层必须限制为本机或内部网络访问
+- **已就绪**：`204 No Content`
+- **未就绪**：`503 Service Unavailable`
+
+该入口无响应正文且从 OpenAPI 隐藏，只表达 Spring 宿主已启动并完成启动期插件初始化与必需初始化检查。它不是 liveness，也不承诺持续探测 MySQL、Redis、MinIO 或 SMTP；运行期依赖监控应由部署监控体系另行承担。
+
 ## 2. 服务发现与 Gate
 
 ### 2.1 获取服务发现文档
@@ -252,6 +262,7 @@ HTTP 失败统一返回标准错误对象：
 说明：
 
 - 该接口当前会触发真实邮件发送。
+- 收件邮箱去除首尾空白后最长 320 字符，必须为基础 `local@domain` 结构且不得包含空白或 CR/LF。
 - 运行前提：需要启用 `cp.infrastructure.service.mail.enabled=true`，并提供有效的 `spring.mail.*` 与 `cp.infrastructure.service.mail.from-address` 配置。
 - 若邮件服务未启用或投递失败，接口返回 `503 Service Unavailable`，`error.reason` 分别为 `mail_service_unavailable` 或 `email_delivery_failed`。
 
@@ -461,6 +472,7 @@ required gate 不满足时返回：
 请求：
 
 - multipart 字段 `background` 为必填。
+- 文件大小不得超过 10 MiB；Servlet multipart 层的 100 MiB 是通用协议硬上限，不替代该 feature 规则。
 
 成功响应示例：
 
@@ -840,6 +852,7 @@ ReplyText 请求示例：
 
 - multipart 字段 `file` 为必填。
 - `message_type` 可选，允许值为 `file` 或 `voice`，默认 `file`。
+- `file` 最大 100 MiB，`voice` 最大 20 MiB；超限返回 `422 validation_failed`。
 
 ### 6.5 撤回消息
 
@@ -1012,6 +1025,8 @@ ReplyText 请求示例：
 { "filename": "demo.pdf", "mime_type": "application/pdf", "size_bytes": 123 }
 ```
 
+`size_bytes` 不得超过 100 MiB；后续原始 `PUT` 内容长度必须与申请值一致。服务端生成的对象键遵守 storage-api 公共子集：最多 1024 UTF-8 字节、必须为相对键，且不得包含控制字符、空路径段、`.` 或 `..` 路径段。
+
 成功响应示例：
 
 ```json
@@ -1049,6 +1064,7 @@ ReplyText 请求示例：
 - 对象内容可直接读取时返回 `200` 与二进制内容。
 - 对象服务提供预签名 URL 时返回 `302`，`Location` 指向对象下载地址。
 - 文件不存在返回 `404 not_found`。
+- storage-api 的预签名 TTL 只接受 1 秒至 7 天范围内的整秒 Duration；具体接口使用的 TTL 由服务端流程决定，客户端不能提交任意 TTL。
 
 ### 7.6 查询通知偏好
 
@@ -1110,8 +1126,11 @@ ReplyText 请求示例：
 - **默认开关**：`cp.chat.server.realtime.enabled=true`
 - **首帧鉴权时限**：`cp.chat.server.realtime.authentication-timeout-seconds=10`
 - **读空闲时限**：`cp.chat.server.realtime.read-idle-timeout-seconds=60`
+- **断线事件保留时间**：`cp.chat.server.realtime.event-retention=1h`
+- **断线事件账号上限**：`cp.chat.server.realtime.max-event-accounts=10000`
 - **公开发现语义**：realtime 开关关闭时，`GET /api/server` 当前返回 `ws_url=null`，并将 `capabilities.websocket=false`
 - **广播退化语义**：当 realtime 未装配时，消息与频道 realtime 发布器退化为空实现，主业务链路继续运行但不会产生实际推送
+- **资源退化语义**：事件过期或账号窗口被淘汰时沿用完整同步语义；不可写连接会被主动关闭，已记录事件可在客户端重连后按恢复协议续传
 
 ### 8.1 连接与认证
 

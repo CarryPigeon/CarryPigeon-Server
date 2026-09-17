@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealth;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
@@ -40,7 +40,7 @@ class CacheServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).hasSingleBean(CacheService.class);
                     assertThat(context).hasSingleBean(CacheHealthService.class);
-                    assertThat(context).hasSingleBean(InitializationCheck.class);
+                    assertThat(context).hasSingleBean(InitializationChecker.class);
                 });
     }
 
@@ -57,7 +57,7 @@ class CacheServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(CacheService.class);
                     assertThat(context).doesNotHaveBean(CacheHealthService.class);
-                    assertThat(context).doesNotHaveBean(InitializationCheck.class);
+                    assertThat(context).doesNotHaveBean(InitializationChecker.class);
                 });
     }
 

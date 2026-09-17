@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.health;
 
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceProperties;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 
 /**
@@ -12,12 +11,12 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcCl
  */
 public class JdbcDatabaseHealthService implements DatabaseHealthService {
 
-    private final JdbcClientSupport jdbcClientSupport;
-    private final DatabaseServiceProperties properties;
+    private static final String HEALTH_QUERY = "SELECT 1";
 
-    public JdbcDatabaseHealthService(JdbcClientSupport jdbcClientSupport, DatabaseServiceProperties properties) {
+    private final JdbcClientSupport jdbcClientSupport;
+
+    public JdbcDatabaseHealthService(JdbcClientSupport jdbcClientSupport) {
         this.jdbcClientSupport = jdbcClientSupport;
-        this.properties = properties;
     }
 
     /**
@@ -29,7 +28,7 @@ public class JdbcDatabaseHealthService implements DatabaseHealthService {
     @Override
     public DatabaseHealth check() {
         try {
-            Integer result = jdbcClientSupport.queryInteger(properties.healthQuery());
+            Integer result = jdbcClientSupport.queryInteger(HEALTH_QUERY);
             return new DatabaseHealth(result != null, "database health query completed");
         } catch (RuntimeException ex) {
             return new DatabaseHealth(false, "database health query failed: " + ex.getClass().getSimpleName());

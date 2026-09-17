@@ -8,7 +8,12 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mentio
  */
 public interface MentionRepository {
 
-    void save(Mention mention);
+    /**
+     * 批量保存消息产生的提及记录。
+     *
+     * @param mentions 按消息声明顺序生成的提及记录
+     */
+    void saveAll(List<Mention> mentions);
 
     /**
      * 删除指定消息产生的提及记录。

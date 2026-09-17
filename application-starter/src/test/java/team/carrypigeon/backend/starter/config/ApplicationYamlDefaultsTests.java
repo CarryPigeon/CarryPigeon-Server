@@ -52,6 +52,23 @@ class ApplicationYamlDefaultsTests {
     }
 
     /**
+     * 验证 Hikari 超时使用其 long 型属性要求的毫秒值，避免 Spring 上下文绑定失败。
+     */
+    @Test
+    @DisplayName("application yaml hikari timeouts use milliseconds")
+    void applicationYaml_hikariTimeouts_useMilliseconds() throws IOException {
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream("application.yaml")) {
+            assertThat(inputStream).isNotNull();
+            String yaml = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+
+            assertThat(yaml).contains("connection-timeout: 10000");
+            assertThat(yaml).contains("validation-timeout: 5000");
+            assertThat(yaml).doesNotContain("connection-timeout: 10s");
+            assertThat(yaml).doesNotContain("validation-timeout: 5s");
+        }
+    }
+
+    /**
      * 验证分发包外部配置模板提供完整应用配置入口。
      */
     @Test

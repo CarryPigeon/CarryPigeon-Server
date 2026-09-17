@@ -34,6 +34,11 @@ public interface ChannelInviteRepository {
         return List.of();
     }
 
+    /** 判断频道是否存在任意邀请或申请依赖。 */
+    default boolean existsByChannelId(long channelId) {
+        return !findByChannelId(channelId).isEmpty();
+    }
+
     /**
      * 保存新的邀请记录。
      *
@@ -47,4 +52,12 @@ public interface ChannelInviteRepository {
      * @param channelInvite 邀请记录
      */
     void update(ChannelInvite channelInvite);
+
+    /**
+     * 仅当申请仍处于待处理状态时更新。
+     */
+    default boolean updateIfPending(ChannelInvite channelInvite) {
+        update(channelInvite);
+        return true;
+    }
 }

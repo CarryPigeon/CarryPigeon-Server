@@ -10,12 +10,14 @@ import org.springframework.dao.DataRetrievalFailureException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelOwnerProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -36,7 +38,7 @@ class MybatisPlusChannelMemberDatabaseServiceTests {
     @DisplayName("exists existing membership returns true")
     void exists_existingMembership_returnsTrue() {
         ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
-        when(channelMemberMapper.countMembership(1L, 1001L)).thenReturn(1L);
+        when(channelMemberMapper.existsMembership(1L, 1001L)).thenReturn(true);
         MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
 
         assertTrue(service.exists(1L, 1001L));
@@ -128,6 +130,20 @@ class MybatisPlusChannelMemberDatabaseServiceTests {
     }
 
     /**
+     * 验证频道级删除只向 mapper 下发一次频道条件。
+     */
+    @Test
+    @DisplayName("delete by channel id delegates to mapper")
+    void deleteByChannelId_validChannel_delegatesToMapper() {
+        ChannelMemberMapper channelMemberMapper = mock(ChannelMemberMapper.class);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(channelMemberMapper);
+
+        service.deleteByChannelId(1L);
+
+        verify(channelMemberMapper).deleteByChannelId(1L);
+    }
+
+    /**
      * 验证删除成员记录失败时会包装成稳定数据库服务异常。
      */
     @Test
@@ -211,5 +227,37 @@ class MybatisPlusChannelMemberDatabaseServiceTests {
 
         assertEquals("failed to query channel member account ids", exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    /** 验证原成员已不再是 OWNER 时拒绝并发所有权转移。 */
+    @Test
+    @DisplayName("transfer ownership stale owner returns false")
+    void transferOwnership_staleOwner_returnsFalse() {
+        ChannelMemberMapper mapper = mock(ChannelMemberMapper.class);
+        when(mapper.demoteOwnerIfCurrent(1L, 1001L)).thenReturn(0);
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(mapper);
+
+        assertFalse(service.transferOwnership(1L, 1001L, 1002L));
+    }
+
+    /** 验证频道 owner 集合通过单次 mapper 查询转换为频道到账户映射。 */
+    @Test
+    @DisplayName("find owner account ids by channel ids maps projection")
+    void findOwnerAccountIdsByChannelIds_existingRows_mapsProjection() {
+        ChannelMemberMapper mapper = mock(ChannelMemberMapper.class);
+        ChannelOwnerProjection first = new ChannelOwnerProjection();
+        first.setChannelId(1L);
+        first.setAccountId(1001L);
+        ChannelOwnerProjection second = new ChannelOwnerProjection();
+        second.setChannelId(9L);
+        second.setAccountId(1002L);
+        when(mapper.findOwnerAccountIdsByChannelIds(List.of(1L, 9L))).thenReturn(List.of(first, second));
+        MybatisPlusChannelMemberDatabaseService service = new MybatisPlusChannelMemberDatabaseService(mapper);
+
+        var result = service.findOwnerAccountIdsByChannelIds(List.of(1L, 9L));
+
+        assertEquals(1001L, result.get(1L));
+        assertEquals(1002L, result.get(9L));
+        verify(mapper).findOwnerAccountIdsByChannelIds(List.of(1L, 9L));
     }
 }

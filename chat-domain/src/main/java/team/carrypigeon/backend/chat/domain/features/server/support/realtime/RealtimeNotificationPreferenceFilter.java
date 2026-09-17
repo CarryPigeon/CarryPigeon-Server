@@ -3,13 +3,15 @@ package team.carrypigeon.backend.chat.domain.features.server.support.realtime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 实时通知偏好过滤器。
@@ -29,12 +31,12 @@ public class RealtimeNotificationPreferenceFilter {
     private static final RealtimeNotificationPreferenceFilter ALLOW_ALL = new RealtimeNotificationPreferenceFilter();
 
     private final NotificationPreferenceRepository notificationPreferenceRepository;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final boolean allowAll;
 
     public RealtimeNotificationPreferenceFilter(
             NotificationPreferenceRepository notificationPreferenceRepository,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         this.notificationPreferenceRepository = Objects.requireNonNull(notificationPreferenceRepository, "notificationPreferenceRepository");
         this.timeProvider = Objects.requireNonNull(timeProvider, "timeProvider");
@@ -73,13 +75,27 @@ public class RealtimeNotificationPreferenceFilter {
         }
         List<Long> normalizedRecipients = recipientAccountIds.stream()
                 .filter(Objects::nonNull)
+                .distinct()
                 .toList();
         if (allowAll || eventType == null || !FILTERED_EVENT_TYPES.contains(eventType)) {
             return normalizedRecipients;
         }
+        Map<Long, NotificationChannelPreference> channelPreferences = channelId == null
+                ? Map.of()
+                : notificationPreferenceRepository.listChannelPreferencesByAccountIds(normalizedRecipients).values().stream()
+                        .flatMap(Collection::stream)
+                        .filter(preference -> preference.channelId() == channelId)
+                        .collect(Collectors.toMap(
+                                NotificationChannelPreference::accountId,
+                                Function.identity(),
+                                (first, ignored) -> first
+                        ));
+        Map<Long, NotificationServerPreference> serverPreferences = notificationPreferenceRepository
+                .findServerPreferencesByAccountIds(normalizedRecipients);
+        long[] nowMillisSnapshot = {Long.MIN_VALUE};
         List<Long> allowedRecipients = new ArrayList<>();
         for (Long accountId : normalizedRecipients) {
-            if (allows(accountId, channelId, eventType)) {
+            if (allows(accountId, eventType, channelPreferences, serverPreferences, nowMillisSnapshot)) {
                 allowedRecipients.add(accountId);
             }
         }
@@ -91,37 +107,22 @@ public class RealtimeNotificationPreferenceFilter {
      * 规则：频道偏好优先；频道为 inherit 或不存在时回落到账户级偏好。
      *
      * @param accountId 接收账号 ID
-     * @param channelId 事件所属频道 ID，可为空
      * @param eventType realtime event 类型
      * @return 允许接收时返回 true
      */
-    private boolean allows(long accountId, Long channelId, String eventType) {
-        Optional<NotificationChannelPreference> channelPreference = findChannelPreference(accountId, channelId);
-        if (channelPreference.isPresent() && !"inherit".equals(channelPreference.get().mode())) {
-            return allowsMode(channelPreference.get().mode(), channelPreference.get().mutedUntil(), eventType);
+    private boolean allows(long accountId, String eventType,
+                           Map<Long, NotificationChannelPreference> channelPreferences,
+                           Map<Long, NotificationServerPreference> serverPreferences,
+                           long[] nowMillisSnapshot) {
+        NotificationChannelPreference channelPreference = channelPreferences.get(accountId);
+        if (channelPreference != null && !"inherit".equals(channelPreference.mode())) {
+            return allowsMode(channelPreference.mode(), channelPreference.mutedUntil(), eventType, nowMillisSnapshot);
         }
-        NotificationServerPreference serverPreference = notificationPreferenceRepository.findServerPreferenceByAccountId(accountId).orElse(null);
+        NotificationServerPreference serverPreference = serverPreferences.get(accountId);
         if (serverPreference == null) {
             return true;
         }
-        return allowsMode(serverPreference.mode(), serverPreference.mutedUntil(), eventType);
-    }
-
-    /**
-     * 查找账号在指定频道上的通知偏好。
-     * 约束：无频道上下文的事件不能使用频道级偏好。
-     *
-     * @param accountId 接收账号 ID
-     * @param channelId 事件所属频道 ID
-     * @return 频道级通知偏好
-     */
-    private Optional<NotificationChannelPreference> findChannelPreference(long accountId, Long channelId) {
-        if (channelId == null) {
-            return Optional.empty();
-        }
-        return notificationPreferenceRepository.listChannelPreferencesByAccountId(accountId).stream()
-                .filter(preference -> preference.channelId() == channelId)
-                .findFirst();
+        return allowsMode(serverPreference.mode(), serverPreference.mutedUntil(), eventType, nowMillisSnapshot);
     }
 
     /**
@@ -133,7 +134,7 @@ public class RealtimeNotificationPreferenceFilter {
      * @param eventType realtime event 类型
      * @return 当前模式允许投递时返回 true
      */
-    private boolean allowsMode(String mode, long mutedUntil, String eventType) {
+    private boolean allowsMode(String mode, long mutedUntil, String eventType, long[] nowMillisSnapshot) {
         if ("all".equals(mode)) {
             return true;
         }
@@ -141,7 +142,7 @@ public class RealtimeNotificationPreferenceFilter {
             return "mention.created".equals(eventType);
         }
         if ("muted".equals(mode)) {
-            return !isMuteActive(mutedUntil);
+            return !isMuteActive(mutedUntil, nowMillisSnapshot);
         }
         return true;
     }
@@ -153,7 +154,13 @@ public class RealtimeNotificationPreferenceFilter {
      * @param mutedUntil 静音截止毫秒时间戳
      * @return 静音仍生效时返回 true
      */
-    private boolean isMuteActive(long mutedUntil) {
-        return mutedUntil == 0L || mutedUntil > timeProvider.nowMillis();
+    private boolean isMuteActive(long mutedUntil, long[] nowMillisSnapshot) {
+        if (mutedUntil == 0L) {
+            return true;
+        }
+        if (nowMillisSnapshot[0] == Long.MIN_VALUE) {
+            nowMillisSnapshot[0] = timeProvider.nowMillis();
+        }
+        return mutedUntil > nowMillisSnapshot[0];
     }
 }

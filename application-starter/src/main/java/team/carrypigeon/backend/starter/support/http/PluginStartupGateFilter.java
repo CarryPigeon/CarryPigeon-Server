@@ -16,10 +16,23 @@ import team.carrypigeon.backend.starter.bootstrap.plugin.PluginReadinessGate;
  */
 public final class PluginStartupGateFilter extends OncePerRequestFilter {
 
+    private static final String READINESS_PATH = "/internal/readiness";
+
     private final PluginReadinessGate readinessGate;
 
     public PluginStartupGateFilter(PluginReadinessGate readinessGate) {
         this.readinessGate = readinessGate;
+    }
+
+    /**
+     * readiness 入口必须直接读取门禁状态，避免被同一门禁提前拦截。
+     *
+     * @param request 当前 HTTP 请求
+     * @return readiness 请求返回 true，其余请求返回 false
+     */
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
+        return READINESS_PATH.equals(request.getRequestURI());
     }
 
     @Override

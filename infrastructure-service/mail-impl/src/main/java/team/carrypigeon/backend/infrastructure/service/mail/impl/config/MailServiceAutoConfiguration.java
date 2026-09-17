@@ -6,12 +6,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.smtp.SmtpMailHealthService;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.smtp.SmtpMailSenderService;
-import team.carrypigeon.backend.infrastructure.service.mail.impl.startup.MailInitializationCheck;
+import team.carrypigeon.backend.infrastructure.service.mail.impl.startup.MailInitializationChecker;
 
 /**
  * 邮件服务自动配置。
@@ -56,7 +56,7 @@ public class MailServiceAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean(name = "mailInitializationCheck")
-    public InitializationCheck mailInitializationCheck(MailHealthService mailHealthService) {
-        return new MailInitializationCheck(mailHealthService);
+    public InitializationChecker mailInitializationCheck(MailHealthService mailHealthService) {
+        return new MailInitializationChecker(mailHealthService);
     }
 }

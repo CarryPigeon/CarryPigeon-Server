@@ -1,6 +1,5 @@
 package team.carrypigeon.tests.starter.config.initialization;
 
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -10,7 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.SmartLifecycle;
 import team.carrypigeon.backend.starter.config.initialization.InitializationCheckConfiguration;
 import org.springframework.context.annotation.Bean;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckFailureException;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
@@ -26,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * 边界：不接入真实外部服务，只验证执行器装配与失败语义。
  */
 @Tag("smoke")
-class InitializationCheckConfigurationTests {
+class InitializationCheckerConfigurationTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(InitializationCheckConfiguration.class));
@@ -94,12 +93,12 @@ class InitializationCheckConfigurationTests {
     static class PassingChecksConfiguration {
 
         @Bean
-        InitializationCheck databaseInitializationCheck() {
+        InitializationChecker databaseInitializationCheck() {
             return namedPassingCheck("database", "database ready");
         }
 
         @Bean
-        InitializationCheck cacheInitializationCheck() {
+        InitializationChecker cacheInitializationCheck() {
             return namedPassingCheck("cache", "cache ready");
         }
     }
@@ -108,13 +107,13 @@ class InitializationCheckConfigurationTests {
     static class FailingRequiredCheckConfiguration {
 
         @Bean
-        InitializationCheck databaseInitializationCheck() {
+        InitializationChecker databaseInitializationCheck() {
             return namedPassingCheck("database", "database ready");
         }
 
         @Bean
-        InitializationCheck storageInitializationCheck() {
-            return new InitializationCheck() {
+        InitializationChecker storageInitializationCheck() {
+            return new InitializationChecker() {
                 @Override
                 public String name() {
                     return "storage";
@@ -134,8 +133,8 @@ class InitializationCheckConfigurationTests {
         private static final TestSmartLifecycle LIFECYCLE = new TestSmartLifecycle();
 
         @Bean
-        InitializationCheck databaseInitializationCheck() {
-            return new InitializationCheck() {
+        InitializationChecker databaseInitializationCheck() {
+            return new InitializationChecker() {
                 @Override
                 public String name() {
                     return "database";
@@ -154,8 +153,8 @@ class InitializationCheckConfigurationTests {
         }
     }
 
-    private static InitializationCheck namedPassingCheck(String name, String message) {
-        return new InitializationCheck() {
+    private static InitializationChecker namedPassingCheck(String name, String message) {
+        return new InitializationChecker() {
             @Override
             public String name() {
                 return name;

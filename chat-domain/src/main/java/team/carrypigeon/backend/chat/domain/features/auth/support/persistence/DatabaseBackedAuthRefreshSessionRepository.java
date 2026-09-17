@@ -61,6 +61,11 @@ public class DatabaseBackedAuthRefreshSessionRepository implements AuthRefreshSe
         authRefreshSessionDatabaseService.revoke(sessionId);
     }
 
+    @Override
+    public boolean revokeIfActive(long sessionId) {
+        return authRefreshSessionDatabaseService.revokeIfActive(sessionId);
+    }
+
     private AuthRefreshSession toDomainModel(AuthRefreshSessionRecord record) {
         return new AuthRefreshSession(
                 record.id(),

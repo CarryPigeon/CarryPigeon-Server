@@ -43,14 +43,6 @@ public class ChannelPinManagementDomainApi implements ChannelPinManagementApi {
         Channel channel = membershipService.requireChannel(command.channelId());
         requireModerationPermission(channel, command.operatorAccountId());
 
-        Optional<ChannelPin> existingPin = channelPinRepository.findByChannelIdAndMessageId(
-                channel.id(), command.messageId()
-        );
-        if (existingPin.isEmpty() && channelPinRepository.countByChannelId(channel.id()) >= MAX_PINS_PER_CHANNEL) {
-            throw ProblemException.validationFailed("pin_limit_reached", "channel pin limit is reached");
-        }
-        existingPin.ifPresent(pin -> channelPinRepository.delete(channel.id(), pin.messageId()));
-
         ChannelPin pin = new ChannelPin(
                 command.pinId(),
                 channel.id(),
@@ -59,7 +51,9 @@ public class ChannelPinManagementDomainApi implements ChannelPinManagementApi {
                 normalizeNote(command.note()),
                 command.pinnedAt()
         );
-        channelPinRepository.save(pin);
+        if (!channelPinRepository.replaceWithinLimit(pin, MAX_PINS_PER_CHANNEL)) {
+            throw ProblemException.validationFailed("pin_limit_reached", "channel pin limit is reached");
+        }
         return toReference(pin);
     }
 

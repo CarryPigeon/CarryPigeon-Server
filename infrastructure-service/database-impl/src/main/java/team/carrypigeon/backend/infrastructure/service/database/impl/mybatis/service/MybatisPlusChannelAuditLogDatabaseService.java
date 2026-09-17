@@ -2,6 +2,8 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
+import java.util.Comparator;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
@@ -9,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelAuditLogEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 频道审计日志数据库服务。
@@ -36,6 +39,15 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
         executeVoid(() -> channelAuditLogMapper.insert(toEntity(record)), "failed to insert channel audit log");
     }
 
+    /**
+     * 判断频道是否存在审计日志记录。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return execute(() -> channelAuditLogMapper.existsByChannelId(channelId),
+                "failed to query channel audit log existence");
+    }
+
     @Override
     public List<ChannelAuditLogReadRecord> list(
             Long cursorAuditId,
@@ -46,9 +58,33 @@ public class MybatisPlusChannelAuditLogDatabaseService implements ChannelAuditLo
             Instant fromTime,
             Instant toTime
     ) {
-        return execute(() -> channelAuditLogMapper.list(cursorAuditId, limit, channelId, actorAccountId, actionType, fromTime, toTime)
+        Collection<Long> channelIds = channelId == null ? null : List.of(channelId);
+        return execute(() -> channelAuditLogMapper.listByChannelIds(cursorAuditId, limit, channelIds, actorAccountId, actionType, fromTime, toTime)
                 .stream()
                 .map(this::toReadRecord)
+                .toList(), "failed to query channel audit logs");
+    }
+
+    @Override
+    public List<ChannelAuditLogReadRecord> listByChannelIds(
+            Long cursorAuditId,
+            int limit,
+            Collection<Long> channelIds,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    ) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return List.of();
+        }
+        return execute(() -> SqlInClauseBatches.partition(channelIds).stream()
+                .flatMap(batch -> channelAuditLogMapper.listByChannelIds(
+                        cursorAuditId, limit, batch, actorAccountId, actionType, fromTime, toTime
+                ).stream())
+                .map(this::toReadRecord)
+                .sorted(Comparator.comparingLong(ChannelAuditLogReadRecord::auditId).reversed())
+                .limit(limit)
                 .toList(), "failed to query channel audit logs");
     }
 

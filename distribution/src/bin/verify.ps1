@@ -134,13 +134,21 @@ if ($LASTEXITCODE -ne 0) {
 if ($StrictConfig) {
     $configFile = Join-Path $BaseDir 'config/application.yaml'
     $jwtSecret = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.auth.jwt.secret'
+    $fileShareKeySecret = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.file.share-key.secret'
     $serverId = Get-YamlScalar -Path $configFile -PropertyPath 'cp.chat.server.id'
 
     Require-ConfigValue -Value $jwtSecret -Name 'cp.chat.auth.jwt.secret'
+    Require-ConfigValue -Value $fileShareKeySecret -Name 'cp.chat.file.share-key.secret'
     Require-ConfigValue -Value $serverId -Name 'cp.chat.server.id'
 
     if ($jwtSecret.Length -lt 32) {
         throw 'cp.chat.auth.jwt.secret must be at least 32 characters.'
+    }
+    if ($fileShareKeySecret.Length -lt 32) {
+        throw 'cp.chat.file.share-key.secret must be at least 32 characters.'
+    }
+    if ($fileShareKeySecret -eq $jwtSecret) {
+        throw 'cp.chat.file.share-key.secret must not reuse cp.chat.auth.jwt.secret.'
     }
 }
 

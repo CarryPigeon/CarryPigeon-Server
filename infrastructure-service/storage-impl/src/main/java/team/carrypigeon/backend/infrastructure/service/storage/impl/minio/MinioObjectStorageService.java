@@ -8,8 +8,8 @@ import io.minio.StatObjectResponse;
 import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
-import java.time.Instant;
 import java.util.Optional;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.exception.StorageServiceException;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -29,10 +29,16 @@ public class MinioObjectStorageService implements ObjectStorageService {
 
     private final MinioClient minioClient;
     private final MinioStorageProperties properties;
+    private final TimeProviderImpl timeProvider;
 
-    public MinioObjectStorageService(MinioClient minioClient, MinioStorageProperties properties) {
+    public MinioObjectStorageService(
+            MinioClient minioClient,
+            MinioStorageProperties properties,
+            TimeProviderImpl timeProvider
+    ) {
         this.minioClient = minioClient;
         this.properties = properties;
+        this.timeProvider = timeProvider;
     }
 
     /**
@@ -119,7 +125,7 @@ public class MinioObjectStorageService implements ObjectStorageService {
                             .expiry((int) command.ttl().toSeconds())
                             .build()
             );
-            return new PresignedUrl(java.net.URI.create(url), Instant.now().plus(command.ttl()));
+            return new PresignedUrl(java.net.URI.create(url), timeProvider.nowInstant().plus(command.ttl()));
         } catch (Exception ex) {
             throw new StorageServiceException("failed to create presigned url for object: " + command.objectKey(), ex);
         }

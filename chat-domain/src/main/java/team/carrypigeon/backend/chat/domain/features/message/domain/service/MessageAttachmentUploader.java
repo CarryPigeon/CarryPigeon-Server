@@ -18,6 +18,8 @@ class MessageAttachmentUploader {
 
     private static final String FILE_MESSAGE_TYPE = "file";
     private static final String VOICE_MESSAGE_TYPE = "voice";
+    private static final long MAX_FILE_SIZE_BYTES = 100L * 1024 * 1024;
+    private static final long MAX_VOICE_SIZE_BYTES = 20L * 1024 * 1024;
 
     private final FileReferenceApi fileReferenceApi;
     private final IdGenerator idGenerator;
@@ -64,6 +66,10 @@ class MessageAttachmentUploader {
             throw ProblemException.validationFailed("size must be greater than 0");
         }
         String normalizedMessageType = normalizeAttachmentMessageType(messageType);
+        long maxSize = VOICE_MESSAGE_TYPE.equals(normalizedMessageType) ? MAX_VOICE_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
+        if (size > maxSize) {
+            throw ProblemException.validationFailed("size must be less than or equal to " + maxSize);
+        }
         String normalizedFilename = fileReferenceApi.normalizeMessageAttachmentFilename(filename);
         String resolvedContentType = resolveContentType(normalizedMessageType, contentType);
         String objectKey = fileReferenceApi.buildMessageAttachmentObjectKey(

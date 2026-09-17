@@ -14,8 +14,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -38,7 +38,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
             ChannelContextApi channelContextApi,
             TransactionRunner transactionRunner,
             ApplicationEventPublisher eventPublisher,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         this.messageRepository = messageRepository;
         this.readStateRepository = readStateRepository;
@@ -72,9 +72,13 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
                     current == null ? readTime : current.createdAt(),
                     readTime
             );
-            readStateRepository.upsert(updated);
-            afterCommitPublisher.publishReadStateUpdatedAfterCommit(afterCommit, updated);
-            return toResult(updated);
+            if (readStateRepository.advanceIfNewer(updated)) {
+                afterCommitPublisher.publishReadStateUpdatedAfterCommit(afterCommit, updated);
+                return toResult(updated);
+            }
+            return readStateRepository.findByChannelIdAndAccountId(command.channelId(), command.accountId())
+                    .map(this::toResult)
+                    .orElseGet(() -> toResult(updated));
         });
     }
 
@@ -83,7 +87,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
         requirePositive(accountId, "accountId");
         return readStateRepository.listUnreadsByAccountId(accountId).stream()
                 .map(item -> new ChannelUnreadResult(
-                        Ids.toString(item.channelId()),
+                        IdUtil.toString(item.channelId()),
                         item.unreadCount(),
                         item.lastReadTime() == null ? 0L : item.lastReadTime().toEpochMilli()
                 ))
@@ -108,9 +112,9 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
 
     private ChannelReadStateResult toResult(ChannelReadState readState) {
         return new ChannelReadStateResult(
-                Ids.toString(readState.channelId()),
-                Ids.toString(readState.accountId()),
-                Ids.toString(readState.lastReadMessageId()),
+                IdUtil.toString(readState.channelId()),
+                IdUtil.toString(readState.accountId()),
+                IdUtil.toString(readState.lastReadMessageId()),
                 readState.lastReadTime().toEpochMilli()
         );
     }

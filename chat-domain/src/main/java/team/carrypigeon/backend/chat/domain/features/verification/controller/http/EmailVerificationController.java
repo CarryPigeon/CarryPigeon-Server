@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,7 @@ public class EmailVerificationController {
      * @param request 验证码请求
      * @return HTTP 204
      */
+    @PermitAll
     @PostMapping("/email_codes")
     @Operation(summary = "发送邮箱验证码", description = "为目标邮箱签发一次性验证码。")
     @ApiResponses({

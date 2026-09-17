@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -70,6 +71,31 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
     }
 
     /**
+     * 验证频道偏好按账户与频道复合键精确读取并映射记录。
+     */
+    @Test
+    @DisplayName("find channel preference exact key maps entity")
+    void findChannelPreference_exactKey_mapsEntity() {
+        NotificationPreferenceMapper mapper = mock(NotificationPreferenceMapper.class);
+        NotificationChannelPreferenceEntity entity = new NotificationChannelPreferenceEntity();
+        entity.setAccountId(1001L);
+        entity.setChannelId(9L);
+        entity.setMode("muted");
+        entity.setMutedUntil(100L);
+        entity.setCreatedAt(Instant.parse("2026-04-24T12:00:00Z"));
+        entity.setUpdatedAt(Instant.parse("2026-04-24T12:01:00Z"));
+        when(mapper.findChannelPreference(1001L, 9L)).thenReturn(entity);
+        MybatisPlusNotificationPreferenceDatabaseService service =
+                new MybatisPlusNotificationPreferenceDatabaseService(mapper);
+
+        NotificationChannelPreferenceRecord record = service.findChannelPreference(1001L, 9L).orElseThrow();
+
+        assertEquals("muted", record.mode());
+        assertEquals(100L, record.mutedUntil());
+        verify(mapper).findChannelPreference(1001L, 9L);
+    }
+
+    /**
      * 验证 `upsertServerPreference` 在 `delegatesToMapper` 场景下的测试契约。
      */
     @Test
@@ -125,5 +151,25 @@ class MybatisPlusNotificationPreferenceDatabaseServiceTests {
         assertEquals(record.mutedUntil(), entity.getMutedUntil());
         assertEquals(record.createdAt(), entity.getCreatedAt());
         assertEquals(record.updatedAt(), entity.getUpdatedAt());
+    }
+
+    /** 验证账户级偏好可以一次查询并按账户 ID 建立索引。 */
+    @Test
+    @DisplayName("find server preferences batches account ids")
+    void findServerPreferencesByAccountIds_existingRows_indexesByAccountId() {
+        NotificationPreferenceMapper mapper = mock(NotificationPreferenceMapper.class);
+        NotificationServerPreferenceEntity entity = new NotificationServerPreferenceEntity();
+        entity.setAccountId(1001L);
+        entity.setMode("all");
+        entity.setMutedUntil(0L);
+        entity.setCreatedAt(Instant.parse("2026-04-24T12:00:00Z"));
+        entity.setUpdatedAt(Instant.parse("2026-04-24T12:00:00Z"));
+        when(mapper.findServerPreferencesByAccountIds(List.of(1001L, 1002L))).thenReturn(List.of(entity));
+        MybatisPlusNotificationPreferenceDatabaseService service = new MybatisPlusNotificationPreferenceDatabaseService(mapper);
+
+        Map<Long, NotificationServerPreferenceRecord> result = service.findServerPreferencesByAccountIds(List.of(1001L, 1002L));
+
+        assertEquals("all", result.get(1001L).mode());
+        assertEquals(1, result.size());
     }
 }

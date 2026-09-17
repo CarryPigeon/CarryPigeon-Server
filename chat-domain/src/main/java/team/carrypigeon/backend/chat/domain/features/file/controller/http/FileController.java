@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +30,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransfe
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.FileUploadResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 文件 HTTP 入口。
@@ -63,6 +65,7 @@ public class FileController {
      * @param servletRequest 当前 HTTP 请求，用于读取认证主体
      * @return 文件上传授权响应
      */
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/uploads")
     @Operation(summary = "申请文件上传", description = "生成同源上传入口与稳定 share_key。")
     @ApiResponses({
@@ -77,7 +80,7 @@ public class FileController {
                 request.sizeBytes()
         );
         return new FileUploadResponse(
-                Ids.toString(result.fileId()),
+                IdUtil.toString(result.fileId()),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
                         "PUT",
@@ -97,6 +100,7 @@ public class FileController {
      * @param request 当前 HTTP 请求，提供认证主体和上传内容流
      * @return HTTP 204
      */
+    @PreAuthorize("isAuthenticated()")
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
     @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "文件内容写入成功")})
@@ -125,6 +129,7 @@ public class FileController {
      * @param request 当前 HTTP 请求，用于需要认证的下载场景
      * @return 文件内容响应或下载重定向响应
      */
+    @PermitAll
     @GetMapping("/download/{shareKey}")
     @Operation(summary = "获取文件下载", description = "按 share_key 返回下载入口。")
     @ApiResponses({

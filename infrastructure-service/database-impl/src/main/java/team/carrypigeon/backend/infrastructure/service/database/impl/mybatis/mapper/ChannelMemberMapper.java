@@ -8,6 +8,7 @@ import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelOwnerProjection;
 
 /**
  * 频道成员 Mapper。
@@ -37,11 +38,13 @@ public interface ChannelMemberMapper {
      * @return 命中数量
      */
     @Select("""
-            SELECT COUNT(1)
-            FROM chat_channel_member
-            WHERE channel_id = #{channelId} AND account_id = #{accountId}
+            SELECT EXISTS (
+                SELECT 1
+                FROM chat_channel_member
+                WHERE channel_id = #{channelId} AND account_id = #{accountId}
+            )
             """)
-    long countMembership(@Param("channelId") long channelId, @Param("accountId") long accountId);
+    boolean existsMembership(@Param("channelId") long channelId, @Param("accountId") long accountId);
 
     /**
      * 查询活跃成员实体。
@@ -72,6 +75,18 @@ public interface ChannelMemberMapper {
             """)
     int updateMembership(ChannelMemberEntity entity);
 
+    @Update("""
+            UPDATE chat_channel_member SET role = 'ADMIN'
+            WHERE channel_id = #{channelId} AND account_id = #{accountId} AND role = 'OWNER'
+            """)
+    int demoteOwnerIfCurrent(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
+    @Update("""
+            UPDATE chat_channel_member SET role = 'OWNER'
+            WHERE channel_id = #{channelId} AND account_id = #{accountId} AND role IN ('ADMIN', 'MEMBER')
+            """)
+    int promoteToOwnerIfMember(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
     /**
      * 删除活跃成员实体。
      *
@@ -84,6 +99,13 @@ public interface ChannelMemberMapper {
             WHERE channel_id = #{channelId} AND account_id = #{accountId}
             """)
     int deleteMembership(@Param("channelId") long channelId, @Param("accountId") long accountId);
+
+    /** 删除频道下全部成员关系。 */
+    @Delete("""
+            DELETE FROM chat_channel_member
+            WHERE channel_id = #{channelId}
+            """)
+    int deleteByChannelId(@Param("channelId") long channelId);
 
     /**
      * 查询频道下的全部活跃成员实体。
@@ -120,4 +142,17 @@ public interface ChannelMemberMapper {
             ORDER BY channel_id ASC
             """)
     List<Long> findChannelIdsByAccountId(@Param("accountId") long accountId);
+
+    @Select("""
+            <script>
+            SELECT channel_id, account_id
+            FROM chat_channel_member
+            WHERE role = 'OWNER'
+              AND channel_id IN
+            <foreach collection="channelIds" item="channelId" open="(" separator="," close=")">
+              #{channelId}
+            </foreach>
+            </script>
+            """)
+    List<ChannelOwnerProjection> findOwnerAccountIdsByChannelIds(@Param("channelIds") java.util.Collection<Long> channelIds);
 }

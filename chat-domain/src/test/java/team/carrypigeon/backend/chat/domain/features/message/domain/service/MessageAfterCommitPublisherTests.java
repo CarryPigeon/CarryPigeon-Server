@@ -15,7 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.event.Messag
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -105,7 +105,7 @@ class MessageAfterCommitPublisherTests {
         private final List<Object> events = new ArrayList<>();
         private final MessageAfterCommitPublisher publisher = new MessageAfterCommitPublisher(
                 events::add,
-                new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC))
+                new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC))
         );
     }
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -35,6 +36,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 @Validated
 @RestController
 @RequestMapping("/api/messages")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "消息资源", description = "按消息 ID 执行转发操作。")
 public class MessageController {
 

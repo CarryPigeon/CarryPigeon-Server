@@ -90,6 +90,20 @@ class DatabaseBackedChannelMemberRepositoryTests {
     }
 
     /**
+     * 验证频道级成员删除直接委托集合删除契约，不先读取成员列表。
+     */
+    @Test
+    @DisplayName("delete by channel id delegates collection delete")
+    void deleteByChannelId_existingMembers_delegatesCollectionDelete() {
+        FakeChannelMemberDatabaseService databaseService = new FakeChannelMemberDatabaseService();
+        DatabaseBackedChannelMemberRepository repository = new DatabaseBackedChannelMemberRepository(databaseService);
+
+        repository.deleteByChannelId(1L);
+
+        assertEquals(1L, databaseService.deletedAllChannelId);
+    }
+
+    /**
      * 验证按频道查询成员列表时会转换为完整领域成员集合。
      */
     @Test
@@ -121,6 +135,7 @@ class DatabaseBackedChannelMemberRepositoryTests {
         private ChannelMemberRecord updatedRecord;
         private Long deletedChannelId;
         private Long deletedAccountId;
+        private Long deletedAllChannelId;
 
         @Override
         public boolean exists(long channelId, long accountId) {
@@ -149,6 +164,11 @@ class DatabaseBackedChannelMemberRepositoryTests {
         }
 
         @Override
+        public void deleteByChannelId(long channelId) {
+            this.deletedAllChannelId = channelId;
+        }
+
+        @Override
         public List<ChannelMemberRecord> findByChannelId(long channelId) {
             return records;
         }
@@ -161,6 +181,13 @@ class DatabaseBackedChannelMemberRepositoryTests {
         @Override
         public List<Long> findChannelIdsByAccountId(long accountId) {
             return List.of();
+        }
+
+        @Override
+        public java.util.Map<Long, Long> findOwnerAccountIdsByChannelIds(java.util.Collection<Long> channelIds) {
+            return records.stream()
+                    .filter(item -> "OWNER".equals(item.role()))
+                    .collect(java.util.stream.Collectors.toMap(ChannelMemberRecord::channelId, ChannelMemberRecord::accountId));
         }
     }
 }

@@ -30,6 +30,9 @@ public interface ChannelInviteDatabaseService {
      */
     List<ChannelInviteRecord> findByChannelId(long channelId);
 
+    /** 判断频道是否存在任意邀请或申请记录。 */
+    boolean existsByChannelId(long channelId);
+
     /**
      * 写入新的邀请记录。
      *
@@ -43,4 +46,14 @@ public interface ChannelInviteDatabaseService {
      * @param record 待更新邀请记录
      */
     void update(ChannelInviteRecord record);
+
+    /**
+     * 仅当当前状态仍为 PENDING 时更新申请，避免并发审批覆盖彼此结果。
+     *
+     * @return 实际更新一行时返回 {@code true}
+     */
+    default boolean updateIfPending(ChannelInviteRecord record) {
+        update(record);
+        return true;
+    }
 }

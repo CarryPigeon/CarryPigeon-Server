@@ -19,7 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.M
 import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -40,7 +40,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
     private final MessageMentionManager messageMentionManager;
     private final MessageAfterCommitPublisher messageAfterCommitPublisher;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelMessageLifecycleDomainApi(
@@ -51,7 +51,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
             MentionRepository mentionRepository,
             ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelContextApi = channelContextApi;

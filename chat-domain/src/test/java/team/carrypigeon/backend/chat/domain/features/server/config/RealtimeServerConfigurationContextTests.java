@@ -27,12 +27,11 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.model.Notific
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.infrastructure.basic.config.BasicInfrastructureAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.id.IdAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.json.JacksonAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginAutoConfiguration;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeAutoConfiguration;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,8 +72,8 @@ class RealtimeServerConfigurationContextTests {
     static class TestSupportConfiguration {
 
         @Bean
-        TimeProvider timeProvider(Clock clock) {
-            return new TimeProvider(clock);
+        TimeProviderImpl timeProvider(Clock clock) {
+            return new TimeProviderImpl(clock);
         }
 
         @Bean
@@ -125,6 +124,11 @@ class RealtimeServerConfigurationContextTests {
                 }
 
                 @Override
+                public java.util.Optional<NotificationChannelPreference> findChannelPreference(long accountId, long channelId) {
+                    return java.util.Optional.empty();
+                }
+
+                @Override
                 public NotificationServerPreference upsertServerPreference(NotificationServerPreference preference) {
                     return preference;
                 }
@@ -145,7 +149,7 @@ class RealtimeServerConfigurationContextTests {
                 }
 
                 @Override
-                public java.util.List<UserProfile> findAll() {
+                public java.util.List<UserProfile> findByAccountIds(java.util.List<Long> accountIds) {
                     return java.util.List.of();
                 }
 

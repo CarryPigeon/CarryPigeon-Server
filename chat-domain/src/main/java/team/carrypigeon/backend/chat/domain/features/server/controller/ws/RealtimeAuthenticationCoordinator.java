@@ -15,7 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentit
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 实时连接认证协调器。
@@ -24,7 +24,7 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
  */
 final class RealtimeAuthenticationCoordinator {
 
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
@@ -33,7 +33,7 @@ final class RealtimeAuthenticationCoordinator {
     private final RealtimeFrameCodec frameCodec;
 
     RealtimeAuthenticationCoordinator(
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,

@@ -23,7 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -47,7 +47,7 @@ public class ChannelApplicationFlowDomainApi implements ChannelApplicationFlowAp
     private final ChannelAfterCommitPublisher channelAfterCommitPublisher;
     private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelApplicationFlowDomainApi(
@@ -59,7 +59,7 @@ public class ChannelApplicationFlowDomainApi implements ChannelApplicationFlowAp
             ChannelGovernancePolicy channelGovernancePolicy,
             ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
@@ -270,13 +270,13 @@ public class ChannelApplicationFlowDomainApi implements ChannelApplicationFlowAp
                 case "reject" -> ChannelInviteStatus.DECLINED;
                 default -> throw ProblemException.validationFailed("decision must be approve or reject");
             };
-            if (decidedStatus == ChannelInviteStatus.ACCEPTED
-                    && !channelMemberRepository.exists(channel.id(), invite.inviteeAccountId())) {
+            boolean applicantAlreadyMember = channelMemberRepository.exists(
+                    channel.id(), invite.inviteeAccountId());
+            if (decidedStatus == ChannelInviteStatus.ACCEPTED && !applicantAlreadyMember) {
                 channelGovernancePolicy.requireBanInactive(
                         channelBanRepository.findByChannelIdAndBannedAccountId(channel.id(), invite.inviteeAccountId()).orElse(null),
                         now()
                 );
-                channelMemberRepository.save(newMember(channel.id(), invite.inviteeAccountId(), ChannelMemberRole.MEMBER));
             }
             ChannelInvite updated = new ChannelInvite(
                     invite.channelId(),
@@ -288,10 +288,18 @@ public class ChannelApplicationFlowDomainApi implements ChannelApplicationFlowAp
                     invite.createdAt(),
                     now()
             );
-            channelInviteRepository.update(updated);
-            channelAfterCommitPublisher.publishChannelChangedAfterCommit(afterCommit, channel, "applications", snapshotChannelRecipientAccountIds(channel.id()));
+            if (!channelInviteRepository.updateIfPending(updated)) {
+                throw ProblemException.conflict("application_already_processed", "channel application is already processed");
+            }
+            if (decidedStatus == ChannelInviteStatus.ACCEPTED && !applicantAlreadyMember) {
+                channelMemberRepository.save(newMember(channel.id(), invite.inviteeAccountId(), ChannelMemberRole.MEMBER));
+            }
+            List<Long> recipientAccountIds = snapshotChannelRecipientAccountIds(channel.id());
+            channelAfterCommitPublisher.publishChannelChangedAfterCommit(
+                    afterCommit, channel, "applications", recipientAccountIds);
             if (decidedStatus == ChannelInviteStatus.ACCEPTED) {
-                channelAfterCommitPublisher.publishChannelChangedAfterCommit(afterCommit, channel, "members", snapshotChannelRecipientAccountIds(channel.id()));
+                channelAfterCommitPublisher.publishChannelChangedAfterCommit(
+                        afterCommit, channel, "members", recipientAccountIds);
             }
             channelAfterCommitPublisher.publishChannelsChangedAfterCommit(afterCommit, invite.inviteeAccountId());
             return toApplicationResult(updated, null);

@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +33,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RegisterResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.RevokeRefreshTokenRequest;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 鉴权 HTTP 入口。
@@ -75,9 +77,10 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "注册成功")
     })
+    @PermitAll
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         RegisterResult result = authAccountDomainApi.register(new RegisterCommand(request.username().trim(), request.password()));
-        return ResponseEntity.status(201).body(new RegisterResponse(Ids.toString(result.accountId()), result.username()));
+        return ResponseEntity.status(201).body(new RegisterResponse(IdUtil.toString(result.accountId()), result.username()));
     }
 
     /**
@@ -91,6 +94,7 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
     })
+    @PermitAll
     public AuthSessionTokenResponse login(@Valid @RequestBody LoginRequest request) {
         AuthTokenResult result = authSessionDomainApi.login(new LoginCommand(request.username().trim(), request.password()));
         return toSessionTokenResponse(result);
@@ -109,6 +113,7 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
     })
+    @PermitAll
     public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
         pluginCatalogApi.requireRequiredPluginsSatisfied(
                 request.client().installedPlugins() == null
@@ -134,6 +139,7 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
     })
+    @PermitAll
     public AuthSessionTokenResponse refresh(@Valid @RequestBody RefreshAccessTokenRequest request) {
         AuthSessionTokenResult result = authSessionDomainApi.refreshTokenSession(new RefreshTokenCommand(request.refreshToken()));
         return toSessionTokenResponse(result);
@@ -152,6 +158,7 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "撤销成功")
     })
+    @PermitAll
     public ResponseEntity<Void> revoke(@Valid @RequestBody RevokeRefreshTokenRequest request) {
         authSessionDomainApi.logout(new LogoutCommand(request.refreshToken()));
         return ResponseEntity.noContent().build();
@@ -163,7 +170,7 @@ public class AuthController {
                 result.accessToken(),
                 result.expiresIn(),
                 result.refreshToken(),
-                Ids.toString(result.accountId()),
+                IdUtil.toString(result.accountId()),
                 result.newUser()
         );
     }
@@ -174,7 +181,7 @@ public class AuthController {
                 result.accessToken(),
                 result.expiresIn(),
                 result.refreshToken(),
-                Ids.toString(result.accountId()),
+                IdUtil.toString(result.accountId()),
                 false
         );
     }

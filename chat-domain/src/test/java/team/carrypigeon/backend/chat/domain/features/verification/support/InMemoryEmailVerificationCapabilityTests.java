@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
@@ -31,7 +31,7 @@ class InMemoryEmailVerificationCapabilityTests {
     void issueAndVerifyCode_sendsMailAndInvalidatesCodeAfterSuccess() {
         RecordingMailSenderService mailSenderService = new RecordingMailSenderService();
         InMemoryEmailVerificationCapability service = new InMemoryEmailVerificationCapability(
-                new TimeProvider(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC)),
                 mailSenderService
         );
 
@@ -59,7 +59,7 @@ class InMemoryEmailVerificationCapabilityTests {
     @DisplayName("issue code mail failure rolls back issued code")
     void issueCode_mailFailure_rollsBackIssuedCode() {
         InMemoryEmailVerificationCapability service = new InMemoryEmailVerificationCapability(
-                new TimeProvider(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC)),
                 command -> {
                     throw new IllegalStateException("smtp down");
                 }
@@ -80,7 +80,7 @@ class InMemoryEmailVerificationCapabilityTests {
     @DisplayName("issue code without mail sender throws mail service unavailable")
     void issueCode_withoutMailSender_throwsMailServiceUnavailable() {
         InMemoryEmailVerificationCapability service = new InMemoryEmailVerificationCapability(
-                new TimeProvider(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC))
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-06-02T06:00:00Z"), ZoneOffset.UTC))
         );
 
         ProblemException exception = assertThrows(

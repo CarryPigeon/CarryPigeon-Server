@@ -46,4 +46,18 @@ class PluginStartupGateFilterTests {
 
         assertEquals(200, response.getStatus());
     }
+
+    /**
+     * 验证 readiness 请求绕过通用门禁，由专用控制器表达真实状态。
+     */
+    @Test
+    void filter_readinessRequest_skipsStartupGate() throws Exception {
+        PluginStartupGateFilter filter = new PluginStartupGateFilter(new PluginReadinessGate());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/internal/readiness");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertEquals(200, response.getStatus());
+    }
 }

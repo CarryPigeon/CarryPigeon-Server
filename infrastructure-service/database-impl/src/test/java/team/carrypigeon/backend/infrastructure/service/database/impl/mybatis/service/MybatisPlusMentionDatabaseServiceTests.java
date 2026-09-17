@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -29,20 +30,27 @@ import static org.mockito.Mockito.when;
 class MybatisPlusMentionDatabaseServiceTests {
 
     /**
-     * 验证插入提及时会完整映射 record 字段到实体。
+     * 验证批量插入提及时会按输入顺序完整映射 record 字段到实体。
      */
     @Test
-    @DisplayName("insert valid record maps all fields")
-    void insert_validRecord_mapsAllFields() {
+    @DisplayName("insert all valid records maps ordered fields")
+    void insertAll_validRecords_mapsOrderedFields() {
         MentionMapper mapper = mock(MentionMapper.class);
-        when(mapper.insert(any(MentionEntity.class))).thenReturn(1);
+        when(mapper.insertAll(any())).thenReturn(2);
         MybatisPlusMentionDatabaseService service = new MybatisPlusMentionDatabaseService(mapper);
+        MentionRecord second = new MentionRecord(
+                12L, 9L, 5001L, 1002L, "user", 1003L,
+                Instant.parse("2026-04-24T12:00:01Z"), false
+        );
 
-        service.insert(record());
+        service.insertAll(List.of(record(), second));
 
-        ArgumentCaptor<MentionEntity> captor = ArgumentCaptor.forClass(MentionEntity.class);
-        verify(mapper).insert(captor.capture());
-        MentionEntity entity = captor.getValue();
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<MentionEntity>> captor = ArgumentCaptor.forClass(List.class);
+        verify(mapper).insertAll(captor.capture());
+        List<MentionEntity> entities = captor.getValue();
+        assertEquals(List.of(11L, 12L), entities.stream().map(MentionEntity::getMentionId).toList());
+        MentionEntity entity = entities.getFirst();
         assertEquals(11L, entity.getMentionId());
         assertEquals(9L, entity.getChannelId());
         assertEquals(5001L, entity.getMessageId());
@@ -51,6 +59,20 @@ class MybatisPlusMentionDatabaseServiceTests {
         assertEquals(1001L, entity.getTargetAccountId());
         assertEquals(Instant.parse("2026-04-24T12:00:00Z"), entity.getCreatedAt());
         assertEquals(false, entity.getRead());
+    }
+
+    /**
+     * 验证空提及集合不会生成非法批量 INSERT 或访问 mapper。
+     */
+    @Test
+    @DisplayName("insert all empty records skips mapper")
+    void insertAll_emptyRecords_skipsMapper() {
+        MentionMapper mapper = mock(MentionMapper.class);
+        MybatisPlusMentionDatabaseService service = new MybatisPlusMentionDatabaseService(mapper);
+
+        service.insertAll(List.of());
+
+        verifyNoInteractions(mapper);
     }
 
     /**

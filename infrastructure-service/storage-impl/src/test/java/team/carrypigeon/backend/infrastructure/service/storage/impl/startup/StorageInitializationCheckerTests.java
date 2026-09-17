@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealth;
-import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 边界：不验证具体 MinIO 细节，只验证 passed/failed 映射与名称契约。
  */
 @Tag("contract")
-class StorageInitializationCheckTests {
+class StorageInitializationCheckerTests {
 
     /**
      * 验证健康检查通过时会映射为 passed 的初始化检查结果。
@@ -25,7 +24,7 @@ class StorageInitializationCheckTests {
     @Test
     @DisplayName("check available health returns passed result")
     void check_availableHealth_returnsPassedResult() {
-        StorageInitializationCheck check = new StorageInitializationCheck(() -> new StorageHealth(true, "storage bucket ready"));
+        StorageInitializationChecker check = new StorageInitializationChecker(() -> new StorageHealth(true, "storage bucket ready"));
 
         InitializationCheckResult result = check.check();
 
@@ -41,7 +40,7 @@ class StorageInitializationCheckTests {
     @Test
     @DisplayName("check unavailable health returns failed result")
     void check_unavailableHealth_returnsFailedResult() {
-        StorageInitializationCheck check = new StorageInitializationCheck(() -> new StorageHealth(false, "storage bucket missing"));
+        StorageInitializationChecker check = new StorageInitializationChecker(() -> new StorageHealth(false, "storage bucket missing"));
 
         InitializationCheckResult result = check.check();
 

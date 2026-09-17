@@ -28,6 +28,14 @@ public interface ChannelPinMapper {
             """)
     int insert(ChannelPinEntity entity);
 
+    @Select("""
+            SELECT message_id
+            FROM chat_channel_pin
+            WHERE channel_id = #{channelId}
+            FOR UPDATE
+            """)
+    List<Long> lockMessageIdsByChannelId(@Param("channelId") long channelId);
+
     @Delete("""
             DELETE FROM chat_channel_pin
             WHERE channel_id = #{channelId} AND message_id = #{messageId}

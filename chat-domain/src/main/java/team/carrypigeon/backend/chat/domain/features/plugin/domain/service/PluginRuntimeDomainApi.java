@@ -21,11 +21,11 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.Plu
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.SystemPlugin;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.SystemPluginContext;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.PluginRuntimeStatusResult;
-import team.carrypigeon.backend.infrastructure.basic.InfrastructureBasics;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginConfigurationProvider;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifest;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestException;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.PluginMigrationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -47,9 +47,9 @@ public class PluginRuntimeDomainApi implements PluginRuntimeApi {
     private final Optional<DataSource> dataSource;
     private final Optional<TransactionRunner> transactionRunner;
     private final ApplicationContext applicationContext;
-    private final InfrastructureBasics infrastructureBasics;
     private final Map<String, SystemPlugin> startedPlugins = new LinkedHashMap<>();
     private final List<PluginRuntimeStatusResult> statuses = new ArrayList<>();
+    private final TimeProviderImpl timeProvider;
     private boolean started;
 
     public PluginRuntimeDomainApi(
@@ -61,8 +61,7 @@ public class PluginRuntimeDomainApi implements PluginRuntimeApi {
             Optional<DataSource> dataSource,
             Optional<TransactionRunner> transactionRunner,
             ApplicationContext applicationContext,
-            InfrastructureBasics infrastructureBasics
-    ) {
+            TimeProviderImpl timeProvider) {
         this.manifestCatalog = manifestCatalog;
         this.configurationProvider = configurationProvider;
         this.systemPlugins = List.copyOf(systemPlugins == null ? List.of() : systemPlugins);
@@ -71,7 +70,7 @@ public class PluginRuntimeDomainApi implements PluginRuntimeApi {
         this.dataSource = dataSource;
         this.transactionRunner = transactionRunner;
         this.applicationContext = applicationContext;
-        this.infrastructureBasics = infrastructureBasics;
+        this.timeProvider = timeProvider;
     }
 
     @Override
@@ -247,7 +246,7 @@ public class PluginRuntimeDomainApi implements PluginRuntimeApi {
                         migration.migrationVersion(),
                         migration.description(),
                         migration.checksum(),
-                        infrastructureBasics.time().nowInstant(),
+                        timeProvider.nowInstant(),
                         true
                 ));
             };

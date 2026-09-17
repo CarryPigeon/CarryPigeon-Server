@@ -2,6 +2,7 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogReadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelAuditLogWriteRecord;
 
@@ -19,10 +20,24 @@ public interface ChannelAuditLogDatabaseService {
      */
     void insert(ChannelAuditLogWriteRecord record);
 
+    /** 判断频道是否存在任意审计日志记录。 */
+    boolean existsByChannelId(long channelId);
+
     List<ChannelAuditLogReadRecord> list(
             Long cursorAuditId,
             int limit,
             Long channelId,
+            Long actorAccountId,
+            String actionType,
+            Instant fromTime,
+            Instant toTime
+    );
+
+    /** 按频道集合批量查询审计日志。 */
+    List<ChannelAuditLogReadRecord> listByChannelIds(
+            Long cursorAuditId,
+            int limit,
+            Collection<Long> channelIds,
             Long actorAccountId,
             String actionType,
             Instant fromTime,

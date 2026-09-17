@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
+import org.springframework.transaction.annotation.Transactional;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelPinRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelPinDatabaseService;
@@ -36,6 +37,26 @@ public class MybatisPlusChannelPinDatabaseService implements ChannelPinDatabaseS
     @Override
     public void insert(ChannelPinRecord record) {
         executeVoid(() -> channelPinMapper.insert(toEntity(record)), "failed to insert channel pin");
+    }
+
+    /**
+     * 使用行/间隙锁串行化同一频道的置顶变更，避免并发请求突破数量上限。
+     */
+    @Override
+    @Transactional
+    public boolean replaceWithinLimit(ChannelPinRecord record, long maxPins) {
+        return execute(() -> {
+            List<Long> messageIds = channelPinMapper.lockMessageIdsByChannelId(record.channelId());
+            boolean replacing = messageIds.contains(record.messageId());
+            if (!replacing && messageIds.size() >= maxPins) {
+                return false;
+            }
+            if (replacing) {
+                channelPinMapper.delete(record.channelId(), record.messageId());
+            }
+            channelPinMapper.insert(toEntity(record));
+            return true;
+        }, "failed to replace channel pin");
     }
 
     /**

@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -49,6 +50,20 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
 
         assertEquals("PENDING", record.status());
         assertEquals(1001L, record.inviterAccountId());
+    }
+
+    /**
+     * 验证存在邀请记录时轻量存在性查询返回 true。
+     */
+    @Test
+    @DisplayName("exists by channel id existing row returns true")
+    void existsByChannelId_existingRow_returnsTrue() {
+        ChannelInviteMapper mapper = mock(ChannelInviteMapper.class);
+        when(mapper.existsByChannelId(1L)).thenReturn(true);
+        MybatisPlusChannelInviteDatabaseService service = new MybatisPlusChannelInviteDatabaseService(mapper);
+
+        assertTrue(service.existsByChannelId(1L));
+        verify(mapper).existsByChannelId(1L);
     }
 
     /**
@@ -101,5 +116,21 @@ class MybatisPlusChannelInviteDatabaseServiceTests {
 
         assertEquals("failed to update channel invite", exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    /** 验证条件更新未命中时向上层报告申请已被其它审批处理。 */
+    @Test
+    @DisplayName("update if pending stale application returns false")
+    void updateIfPending_staleApplication_returnsFalse() {
+        ChannelInviteMapper mapper = mock(ChannelInviteMapper.class);
+        when(mapper.updateIfPending(any())).thenReturn(0);
+        MybatisPlusChannelInviteDatabaseService service = new MybatisPlusChannelInviteDatabaseService(mapper);
+
+        boolean updated = service.updateIfPending(new ChannelInviteRecord(
+                1L, 3001L, 1002L, 1001L, "ACCEPTED",
+                Instant.parse("2026-04-24T12:10:00Z"), Instant.parse("2026-04-24T12:11:00Z")
+        ));
+
+        assertFalse(updated);
     }
 }

@@ -15,6 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -71,6 +72,20 @@ class MybatisPlusChannelBanDatabaseServiceTests {
         assertEquals(9L, record.channelId());
         assertEquals(1002L, record.bannedAccountId());
         assertEquals("spam", record.reason());
+    }
+
+    /**
+     * 验证存在封禁记录时轻量存在性查询返回 true。
+     */
+    @Test
+    @DisplayName("exists by channel id existing row returns true")
+    void existsByChannelId_existingRow_returnsTrue() {
+        ChannelBanMapper mapper = mock(ChannelBanMapper.class);
+        when(mapper.existsByChannelId(1L)).thenReturn(true);
+        MybatisPlusChannelBanDatabaseService service = new MybatisPlusChannelBanDatabaseService(mapper);
+
+        assertTrue(service.existsByChannelId(1L));
+        verify(mapper).existsByChannelId(1L);
     }
 
     /**

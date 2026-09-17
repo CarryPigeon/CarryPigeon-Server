@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 分发脚本插件预检契约测试。
- * 职责：防止 Linux 与 PowerShell verify 入口遗漏正式 Java 插件预检或错误排除插件目录。
+ * 职责：防止 Linux 与 PowerShell 分发入口遗漏正式插件预检或回退到日志文本 readiness。
  */
 @Tag("contract")
 class DistributionPluginPreflightScriptTests {
@@ -29,6 +29,26 @@ class DistributionPluginPreflightScriptTests {
         assertTrue(shell.contains("team.carrypigeon.backend.starter.PluginPreflightCommand"));
         assertTrue(powerShell.contains("$LibDir, $PluginDir"));
         assertTrue(powerShell.contains("team.carrypigeon.backend.starter.PluginPreflightCommand"));
+    }
+
+    /**
+     * 验证后台启动脚本调用正式 readiness 端点，并允许部署环境覆盖探测地址。
+     */
+    @Test
+    void backgroundScripts_runtimeReadiness_probeHttpEndpoint() throws IOException {
+        Path distributionRoot = locateDistributionRoot();
+        String shell = Files.readString(distributionRoot.resolve("src/bin/start-background.sh"));
+        String verifyShell = Files.readString(distributionRoot.resolve("src/bin/verify.sh"));
+        String powerShell = Files.readString(distributionRoot.resolve("src/bin/start-background.ps1"));
+
+        assertTrue(shell.contains("CP_READINESS_URL"));
+        assertTrue(shell.contains("/internal/readiness"));
+        assertTrue(shell.contains("curl --fail --silent --show-error --max-time 2"));
+        assertTrue(verifyShell.contains("command -v curl"));
+        assertTrue(powerShell.contains("CP_READINESS_URL"));
+        assertTrue(powerShell.contains("/internal/readiness"));
+        assertTrue(powerShell.contains("Invoke-WebRequest"));
+        assertTrue(powerShell.contains("StatusCode -eq 204"));
     }
 
     private Path locateDistributionRoot() {

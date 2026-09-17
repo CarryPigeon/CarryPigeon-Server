@@ -53,7 +53,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Messag
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
@@ -89,8 +88,8 @@ import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExcep
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -827,7 +826,7 @@ class MessageBusinessChainTests {
 
         final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-        final JsonProvider jsonProvider = new JsonProvider(objectMapper);
+        final JsonProviderImpl jsonProvider = new JsonProviderImpl(objectMapper);
         final RequestAuthenticationContext authRequestContext = new RequestAuthenticationContext();
         final IncrementingIdGenerator idGenerator = new IncrementingIdGenerator(7001L);
         final InMemoryChannelRepository channelRepository = new InMemoryChannelRepository();
@@ -841,7 +840,7 @@ class MessageBusinessChainTests {
         final TestObjectStorageService storageService = new TestObjectStorageService();
         final RecordingRealtimeEventApi publisher = new RecordingRealtimeEventApi();
         final TestRealtimeDomainEventPublisher eventPublisher = new TestRealtimeDomainEventPublisher(publisher);
-        final TimeProvider timeProvider = new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
+        final TimeProviderImpl timeProvider = new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
         final TransactionRunner transactionRunner = new NoopTransactionRunner();
 
         private final MockMvc account1001Mvc;
@@ -1179,6 +1178,17 @@ class MessageBusinessChainTests {
         }
 
         @Override
+        public Map<Long, ChannelMessage> findByIds(java.util.Collection<Long> messageIds) {
+            return messageIds.stream()
+                    .filter(messagesById::containsKey)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toMap(
+                            java.util.function.Function.identity(),
+                            messagesById::get
+                    ));
+        }
+
+        @Override
         public ChannelMessage update(ChannelMessage message) {
             messagesById.put(message.messageId(), message);
             return message;
@@ -1263,8 +1273,8 @@ class MessageBusinessChainTests {
         final List<Mention> mentions = new ArrayList<>();
 
         @Override
-        public void save(Mention mention) {
-            mentions.add(mention);
+        public void saveAll(List<Mention> mentions) {
+            this.mentions.addAll(mentions);
         }
 
         @Override
@@ -1339,8 +1349,8 @@ class MessageBusinessChainTests {
         }
 
         @Override
-        public List<UserProfile> findAll() {
-            return List.of();
+        public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+            return accountIds.stream().map(this::profile).toList();
         }
 
         @Override

@@ -1,12 +1,15 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
 import io.minio.MinioClient;
+import java.time.Clock;
+import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
@@ -43,11 +46,17 @@ class StorageServiceAutoConfigurationTests {
                         "cp.infrastructure.service.storage.bucket=carrypigeon"
                 )
                 .withBean(MinioClient.class, () -> mock(MinioClient.class))
+                .withBean(TimeProviderImpl.class, () -> new TimeProviderImpl(Clock.systemUTC()))
                 .run(context -> {
                     assertThat(context).hasSingleBean(MinioClient.class);
                     assertThat(context).hasSingleBean(ObjectStorageService.class);
                     assertThat(context).hasSingleBean(StorageHealthService.class);
-                    assertThat(context).hasSingleBean(InitializationCheck.class);
+                    assertThat(context).hasSingleBean(InitializationChecker.class);
+                    assertThat(context).hasBean("minioHttpClient");
+                    OkHttpClient client = context.getBean("minioHttpClient", OkHttpClient.class);
+                    assertThat(client.connectTimeoutMillis()).isEqualTo(5000);
+                    assertThat(client.readTimeoutMillis()).isEqualTo(30000);
+                    assertThat(client.writeTimeoutMillis()).isEqualTo(30000);
                 });
     }
 
@@ -70,7 +79,7 @@ class StorageServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(ObjectStorageService.class);
                     assertThat(context).doesNotHaveBean(StorageHealthService.class);
-                    assertThat(context).doesNotHaveBean(InitializationCheck.class);
+                    assertThat(context).doesNotHaveBean(InitializationChecker.class);
                 });
     }
 }

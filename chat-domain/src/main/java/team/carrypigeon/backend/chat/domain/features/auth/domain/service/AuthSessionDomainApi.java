@@ -25,7 +25,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -46,7 +46,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     private final AuthTokenSettings authTokenSettings;
     private final AuthPasswordLoginPolicy passwordLoginPolicy;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
 
@@ -62,7 +62,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
             AuthTokenSettings authTokenSettings,
             AuthPasswordLoginPolicy passwordLoginPolicy,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner,
             EmailVerificationApi emailVerificationApi
     ) {
@@ -156,7 +156,9 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     public void logout(LogoutCommand command) {
         transactionRunner.runInTransaction(() -> {
             ValidRefreshSession validSession = requireValidRefreshSession(command.refreshToken());
-            authRefreshSessionRepository.revoke(validSession.session().id());
+            if (!authRefreshSessionRepository.revokeIfActive(validSession.session().id())) {
+                throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
+            }
             return null;
         });
     }

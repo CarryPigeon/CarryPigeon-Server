@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.startup;
 
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealth;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
@@ -10,11 +10,11 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealt
  * 职责：将邮件健康检查适配为共享启动检查契约。
  * 边界：只负责契约转换，不暴露 SMTP 连接细节。
  */
-public class MailInitializationCheck implements InitializationCheck {
+public class MailInitializationChecker implements InitializationChecker {
 
     private final MailHealthService mailHealthService;
 
-    public MailInitializationCheck(MailHealthService mailHealthService) {
+    public MailInitializationChecker(MailHealthService mailHealthService) {
         this.mailHealthService = mailHealthService;
     }
 

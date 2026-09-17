@@ -26,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.service.Chan
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserAccountProvisioningDomainApi;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -62,7 +62,7 @@ final class AuthDomainApiTestSupport {
                 new ChannelAccountProvisioningDomainApi(channelRepository, channelMemberRepository),
                 new PrefixPasswordHasher(),
                 new IncrementingIdGenerator(),
-                new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                 transactionRunner,
                 new NoopEmailVerificationApi()
         );
@@ -91,7 +91,7 @@ final class AuthDomainApiTestSupport {
                 ),
                 new AuthPasswordLoginPolicy(true),
                 new IncrementingIdGenerator(),
-                new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                 transactionRunner,
                 new NoopEmailVerificationApi()
         );
@@ -215,6 +215,16 @@ final class AuthDomainApiTestSupport {
                     BASE_TIME
             ));
         }
+
+        @Override
+        public boolean revokeIfActive(long sessionId) {
+            AuthRefreshSession session = sessions.get(sessionId);
+            if (session == null || session.revoked() || !session.expiresAt().isAfter(BASE_TIME)) {
+                return false;
+            }
+            revoke(sessionId);
+            return true;
+        }
     }
 
     /**
@@ -232,8 +242,10 @@ final class AuthDomainApiTestSupport {
         }
 
         @Override
-        public List<UserProfile> findAll() {
-            return new java.util.ArrayList<>(profiles.values());
+        public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+            return profiles.values().stream()
+                    .filter(profile -> accountIds.contains(profile.accountId()))
+                    .toList();
         }
 
         @Override

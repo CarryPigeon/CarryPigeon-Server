@@ -12,10 +12,19 @@ import java.time.Duration;
  */
 public record PresignedUrlCommand(String objectKey, Duration ttl) {
 
+    private static final Duration MIN_TTL = Duration.ofSeconds(1);
+    private static final Duration MAX_TTL = Duration.ofDays(7);
+
     public PresignedUrlCommand {
         PutObjectCommand.validateObjectKey(objectKey);
         if (ttl == null || ttl.isZero() || ttl.isNegative()) {
             throw new IllegalArgumentException("presigned url ttl must be positive");
+        }
+        if (ttl.compareTo(MIN_TTL) < 0 || ttl.compareTo(MAX_TTL) > 0) {
+            throw new IllegalArgumentException("presigned url ttl must be between 1 second and 7 days");
+        }
+        if (ttl.getNano() != 0) {
+            throw new IllegalArgumentException("presigned url ttl must use whole seconds");
         }
     }
 }

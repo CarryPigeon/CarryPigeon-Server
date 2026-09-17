@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -27,7 +28,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Upda
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道生命周期 HTTP 入口。
@@ -37,6 +38,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Validated
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道与成员", description = "频道查询、成员治理、申请、发现与封禁能力。")
 public class ChannelLifecycleController {
 
@@ -110,7 +112,7 @@ public class ChannelLifecycleController {
 
     private ChannelSummaryResponse toChannelSummaryResponse(ChannelResult result) {
         return new ChannelSummaryResponse(
-                Ids.toString(result.channelId()),
+                IdUtil.toString(result.channelId()),
                 result.name(),
                 result.brief(),
                 result.avatar(),

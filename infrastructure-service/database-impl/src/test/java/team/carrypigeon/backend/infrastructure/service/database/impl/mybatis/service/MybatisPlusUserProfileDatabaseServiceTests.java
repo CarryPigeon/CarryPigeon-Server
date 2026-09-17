@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -18,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 /**
@@ -74,22 +77,6 @@ class MybatisPlusUserProfileDatabaseServiceTests {
     }
 
     /**
-     * 验证查询全部资料时会按记录映射返回结果。
-     */
-    @Test
-    @DisplayName("find all maps all rows")
-    void findAll_mapsAllRows() {
-        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
-        when(userProfileMapper.selectList(any())).thenReturn(java.util.List.of(entity()));
-        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
-
-        java.util.List<UserProfileRecord> records = service.findAll();
-
-        assertEquals(1, records.size());
-        assertEquals(1001L, records.get(0).accountId());
-    }
-
-    /**
      * 验证按账户 ID 集合查询会返回批量查询结果。
      */
     @Test
@@ -117,6 +104,23 @@ class MybatisPlusUserProfileDatabaseServiceTests {
         java.util.List<UserProfileRecord> records = service.findByAccountIds(java.util.List.of());
 
         assertEquals(0, records.size());
+    }
+
+    /**
+     * 验证批量资料查询对去重后的 501 个账号按 500 上限分片。
+     */
+    @Test
+    @DisplayName("find by account ids more than limit partitions distinct ids")
+    void findByAccountIds_moreThanLimit_partitionsDistinctIds() {
+        UserProfileMapper userProfileMapper = mock(UserProfileMapper.class);
+        when(userProfileMapper.selectList(any())).thenReturn(List.of());
+        MybatisPlusUserProfileDatabaseService service = new MybatisPlusUserProfileDatabaseService(userProfileMapper);
+        List<Long> accountIds = new java.util.ArrayList<>(LongStream.rangeClosed(1L, 501L).boxed().toList());
+        accountIds.add(1L);
+
+        service.findByAccountIds(accountIds);
+
+        verify(userProfileMapper, times(2)).selectList(any());
     }
 
     /**

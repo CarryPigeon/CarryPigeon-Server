@@ -18,12 +18,14 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.model.Notific
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 /**
  * NotificationPreferenceDomainApi 契约测试。
  * 职责：验证服务端与频道级通知偏好的默认值、持久化归一化和成员权限边界。
@@ -66,6 +68,26 @@ class NotificationPreferenceDomainApiTests {
     }
 
     /**
+     * 验证新建服务级偏好时创建与更新时间共享同一操作快照，且时钟只读取一次。
+     */
+    @Test
+    @DisplayName("update server preference new record reuses operation time")
+    void updateServerPreference_newRecord_reusesOperationTime() {
+        RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
+        TimeProviderImpl timeProvider = mock(TimeProviderImpl.class);
+        Instant operationTime = Instant.parse("2026-04-24T12:00:00Z");
+        when(timeProvider.nowInstant()).thenReturn(operationTime);
+        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
+                repository, mock(ChannelContextApi.class), timeProvider);
+
+        service.updateServerPreference(new UpdateNotificationServerPreferenceCommand(1001L, "all", 0L));
+
+        assertEquals(operationTime, repository.serverPreference.createdAt());
+        assertEquals(operationTime, repository.serverPreference.updatedAt());
+        verify(timeProvider).nowInstant();
+    }
+
+    /**
      * 验证非频道成员不能更新该频道的通知偏好。
      */
     @Test
@@ -83,8 +105,30 @@ class NotificationPreferenceDomainApiTests {
         assertEquals("not_channel_member", exception.reason());
     }
 
-    private static TimeProvider timeProvider() {
-        return new TimeProvider(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC));
+    /**
+     * 验证更新频道偏好只精确读取目标频道，且保留已有记录的创建时间。
+     */
+    @Test
+    @DisplayName("update channel preference existing preference uses exact lookup")
+    void updateChannelPreference_existingPreference_usesExactLookup() {
+        RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
+        repository.channelPreference = new NotificationChannelPreference(
+                1001L, 9L, "all", 0L,
+                Instant.parse("2026-04-23T12:00:00Z"),
+                Instant.parse("2026-04-23T12:00:00Z")
+        );
+        NotificationPreferenceDomainApi service = new NotificationPreferenceDomainApi(
+                repository, mock(ChannelContextApi.class), timeProvider());
+
+        service.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(1001L, 9L, "muted", 0L));
+
+        assertEquals(1, repository.channelPreferenceLookupCount);
+        assertEquals(0, repository.channelPreferenceListCount);
+        assertEquals(Instant.parse("2026-04-23T12:00:00Z"), repository.channelPreference.createdAt());
+    }
+
+    private static TimeProviderImpl timeProvider() {
+        return new TimeProviderImpl(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC));
     }
 
     /**
@@ -94,6 +138,8 @@ class NotificationPreferenceDomainApiTests {
     private static final class RecordingNotificationPreferenceRepository implements NotificationPreferenceRepository {
         private NotificationServerPreference serverPreference;
         private NotificationChannelPreference channelPreference;
+        private int channelPreferenceLookupCount;
+        private int channelPreferenceListCount;
 
         @Override
         public Optional<NotificationServerPreference> findServerPreferenceByAccountId(long accountId) {
@@ -102,7 +148,15 @@ class NotificationPreferenceDomainApiTests {
 
         @Override
         public List<NotificationChannelPreference> listChannelPreferencesByAccountId(long accountId) {
+            channelPreferenceListCount++;
             return channelPreference == null ? List.of() : List.of(channelPreference);
+        }
+
+        @Override
+        public Optional<NotificationChannelPreference> findChannelPreference(long accountId, long channelId) {
+            channelPreferenceLookupCount++;
+            return Optional.ofNullable(channelPreference)
+                    .filter(preference -> preference.accountId() == accountId && preference.channelId() == channelId);
         }
 
         @Override

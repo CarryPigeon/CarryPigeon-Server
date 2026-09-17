@@ -40,6 +40,14 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     /**
+     * 判断频道是否存在封禁记录，不加载完整记录集合。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return channelBanDatabaseService.existsByChannelId(channelId);
+    }
+
+    /**
      * 持久化新的封禁记录。
      */
     @Override

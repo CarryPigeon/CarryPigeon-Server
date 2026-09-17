@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import java.util.Arrays;
@@ -29,7 +31,7 @@ import team.carrypigeon.backend.chat.domain.features.user.controller.dto.PatchCu
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileListResponse;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileResponse;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 用户资料 HTTP 入口。
@@ -39,6 +41,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Validated
 @RestController
 @RequestMapping("/api/users")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "用户资料", description = "当前登录用户资料读取与更新能力。")
 public class UserProfileController {
 
@@ -66,6 +69,7 @@ public class UserProfileController {
      * @param request 当前 HTTP 请求
      * @return 统一响应包装的用户资料
      */
+    @PreAuthorize("isAuthenticated() and principal.accountId == #accountId")
     @GetMapping("/{accountId}")
     @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取用户公开资料。")
     @ApiResponses({
@@ -145,7 +149,7 @@ public class UserProfileController {
 
     private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {
         return new UserPublicProfileResponse(
-                Ids.toString(result.accountId()),
+                IdUtil.toString(result.accountId()),
                 result.nickname(),
                 result.avatarUrl()
         );
@@ -169,7 +173,7 @@ public class UserProfileController {
                         if (value.isBlank()) {
                             throw new IllegalArgumentException("blank id segment");
                         }
-                        return Ids.parse(value);
+                        return IdUtil.parse(value);
                     })
                     .toList();
         } catch (IllegalArgumentException exception) {

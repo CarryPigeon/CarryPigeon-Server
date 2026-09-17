@@ -53,4 +53,17 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
             @Param("type") String type,
             @Param("limit") int limit
     );
+
+    @Select("""
+            <script>
+            SELECT id, conversation_id, name, brief, avatar, type,
+                   is_default AS default_channel, created_at, updated_at
+            FROM chat_channel
+            WHERE id IN
+            <foreach collection="channelIds" item="channelId" open="(" separator="," close=")">
+              #{channelId}
+            </foreach>
+            </script>
+            """)
+    List<ChannelEntity> findByIds(@Param("channelIds") java.util.Collection<Long> channelIds);
 }

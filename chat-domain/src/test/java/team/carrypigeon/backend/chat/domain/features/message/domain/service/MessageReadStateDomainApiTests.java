@@ -24,7 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeE
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.chat.domain.support.TestRealtimeDomainEventPublisher;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -233,7 +233,7 @@ class MessageReadStateDomainApiTests {
                     channelContextApi,
                     transactionRunner,
                     new TestRealtimeDomainEventPublisher(events),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC))
+                    new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC))
             );
         }
     }
@@ -255,6 +255,14 @@ class MessageReadStateDomainApiTests {
         @Override
         public Optional<ChannelMessage> findById(long messageId) {
             return message == null || message.messageId() != messageId ? Optional.empty() : Optional.of(message);
+        }
+
+        @Override
+        public java.util.Map<Long, ChannelMessage> findByIds(java.util.Collection<Long> messageIds) {
+            if (message == null || !messageIds.contains(message.messageId())) {
+                return java.util.Map.of();
+            }
+            return java.util.Map.of(message.messageId(), message);
         }
 
         @Override
@@ -314,6 +322,15 @@ class MessageReadStateDomainApiTests {
             current = readState;
             upsertCount++;
             return readState;
+        }
+
+        @Override
+        public boolean advanceIfNewer(ChannelReadState readState) {
+            if (current != null && current.lastReadMessageId() >= readState.lastReadMessageId()) {
+                return false;
+            }
+            upsert(readState);
+            return true;
         }
 
         @Override

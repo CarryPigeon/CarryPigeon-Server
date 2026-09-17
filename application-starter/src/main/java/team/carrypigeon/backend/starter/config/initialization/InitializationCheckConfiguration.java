@@ -3,7 +3,7 @@ package team.carrypigeon.backend.starter.config.initialization;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckRunner;
 
 /**
@@ -17,11 +17,11 @@ public class InitializationCheckConfiguration {
     /**
      * 创建初始化检查执行器。
      *
-     * @param initializationChecks 当前上下文中的初始化检查集合
+     * @param initializationCheckers 当前上下文中的初始化检查集合
      * @return 初始化检查执行器
      */
     @Bean
-    public InitializationCheckRunner initializationCheckRunner(List<InitializationCheck> initializationChecks) {
-        return new InitializationCheckRunner(initializationChecks);
+    public InitializationCheckRunner initializationCheckRunner(List<InitializationChecker> initializationCheckers) {
+        return new InitializationCheckRunner(initializationCheckers);
     }
 }

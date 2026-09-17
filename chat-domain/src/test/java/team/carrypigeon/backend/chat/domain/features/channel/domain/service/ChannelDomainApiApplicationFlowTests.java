@@ -150,11 +150,35 @@ class ChannelDomainApiApplicationFlowTests {
         var result = service.decideChannelApplication(new DecideChannelApplicationCommand(1001L, 9L, 3001L, "approve"));
 
         assertEquals("ACCEPTED", result.status());
-        assertEquals(true, context.channelMemberRepository.exists(9L, 1002L));
+        assertTrue(context.channelMemberRepository.findByChannelIdAndAccountId(9L, 1002L).isPresent());
         assertEquals(ChannelInviteStatus.ACCEPTED, context.channelInviteRepository.updatedInvite.status());
+        assertEquals(1, context.channelMemberRepository.existsCalls);
+        assertEquals(1, context.channelMemberRepository.findAccountIdsCalls);
         assertTrue(context.realtimeEventApi.channelChangedScopes.contains("applications"));
         assertTrue(context.realtimeEventApi.channelChangedScopes.contains("members"));
         assertTrue(context.realtimeEventApi.channelsChangedAccountIds.contains(1002L));
+    }
+
+    /** 验证并发审批已抢先修改状态时返回冲突，且不会新增频道成员。 */
+    @Test
+    @DisplayName("decide channel application concurrent decision throws conflict")
+    void decideChannelApplication_concurrentDecision_throwsConflict() {
+        TestContext context = newContext();
+        context.channelRepository.channels.put(9L, privateChannel(9L, "project-alpha"));
+        context.channelMemberRepository.save(new ChannelMember(9L, 1001L, ChannelMemberRole.OWNER, BASE_TIME, null));
+        context.channelInviteRepository.savedInvite = new ChannelInvite(
+                9L, 3001L, 1002L, 1002L, ChannelInviteStatus.PENDING, BASE_TIME, null
+        );
+        context.channelInviteRepository.updateIfPendingResult = false;
+        ChannelApplicationFlowDomainApi service = context.createApplicationFlowService();
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.decideChannelApplication(new DecideChannelApplicationCommand(1001L, 9L, 3001L, "approve"))
+        );
+
+        assertEquals("application_already_processed", exception.reason());
+        assertEquals(false, context.channelMemberRepository.exists(9L, 1002L));
     }
 
     /**

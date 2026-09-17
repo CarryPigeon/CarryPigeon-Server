@@ -16,7 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.repository.User
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -208,7 +208,7 @@ class UserProfileDomainApiTests {
         private final InMemoryUserProfileRepository repository = new InMemoryUserProfileRepository();
         private final UserProfileDomainApi service = new UserProfileDomainApi(
                 repository,
-                new TimeProvider(Clock.fixed(UPDATED_TIME, ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(UPDATED_TIME, ZoneOffset.UTC)),
                 new NoopTransactionRunner()
         );
     }
@@ -227,8 +227,10 @@ class UserProfileDomainApiTests {
         }
 
         @Override
-        public java.util.List<UserProfile> findAll() {
-            return new java.util.ArrayList<>(profiles.values());
+        public java.util.List<UserProfile> findByAccountIds(java.util.List<Long> accountIds) {
+            return profiles.values().stream()
+                    .filter(profile -> accountIds.contains(profile.accountId()))
+                    .toList();
         }
 
         @Override

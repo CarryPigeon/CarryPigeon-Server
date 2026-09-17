@@ -16,8 +16,8 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.command.Publi
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,12 +38,12 @@ class RealtimeEventDomainApiTests {
         RealtimeSessionRegistry registry = new RealtimeSessionRegistry();
         EmbeddedChannel channel = new EmbeddedChannel();
         registry.register(1001L, channel);
-        JsonProvider jsonProvider = new JsonProvider(new ObjectMapper().findAndRegisterModules());
+        JsonProviderImpl jsonProvider = new JsonProviderImpl(new ObjectMapper().findAndRegisterModules());
         RealtimeEventDomainApi api = new RealtimeEventDomainApi(
                 registry,
                 RealtimeNotificationPreferenceFilter.allowAll(),
                 jsonProvider,
-                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 new IdGenerator() {
                     @Override public long nextLongId() { return 9001L; }
                 }

@@ -7,7 +7,7 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeE
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.service.UserProfileDomainApi;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -23,7 +23,7 @@ public final class TestFeatureApis {
     public static UserProfileApi userProfiles(UserProfileRepository repository) {
         return new UserProfileDomainApi(
                 repository,
-                new TimeProvider(Clock.systemUTC()),
+                new TimeProviderImpl(Clock.systemUTC()),
                 new DirectTransactionRunner()
         );
     }

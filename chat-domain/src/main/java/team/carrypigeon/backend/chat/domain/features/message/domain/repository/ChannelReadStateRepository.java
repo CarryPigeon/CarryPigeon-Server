@@ -14,5 +14,7 @@ public interface ChannelReadStateRepository {
 
     ChannelReadState upsert(ChannelReadState readState);
 
+    boolean advanceIfNewer(ChannelReadState readState);
+
     List<ChannelUnread> listUnreadsByAccountId(long accountId);
 }

@@ -9,7 +9,6 @@ User=carrypigeon
 Group=carrypigeon
 WorkingDirectory=/opt/carrypigeon
 ExecStart=/usr/bin/env bash /opt/carrypigeon/bin/start.sh
-ExecStop=/usr/bin/env bash /opt/carrypigeon/bin/stop.sh
 Restart=on-failure
 RestartSec=5s
 TimeoutStartSec=90

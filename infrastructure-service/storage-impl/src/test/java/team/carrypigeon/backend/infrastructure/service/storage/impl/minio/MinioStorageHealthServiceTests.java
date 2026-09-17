@@ -94,6 +94,26 @@ class MinioStorageHealthServiceTests {
     }
 
     /**
+     * 验证客户端异常中的控制字符和超长文本被收敛为有界单行诊断。
+     */
+    @Test
+    @DisplayName("check unsafe client failure returns sanitized diagnostic")
+    void check_unsafeClientFailure_returnsSanitizedDiagnostic() throws Exception {
+        MinioClient minioClient = mock(MinioClient.class);
+        when(minioClient.bucketExists(any(BucketExistsArgs.class)))
+                .thenThrow(new IllegalStateException("first\r\nsecond" + "x".repeat(600)));
+        MinioStorageHealthService service = new MinioStorageHealthService(minioClient, PROPERTIES);
+
+        StorageHealth result = service.check();
+
+        assertFalse(result.available());
+        assertFalse(result.message().contains("\r"));
+        assertFalse(result.message().contains("\n"));
+        assertTrue(result.message().length() <= 550);
+        assertTrue(result.message().endsWith("..."));
+    }
+
+    /**
      * 验证 MinIO 错误响应会保留错误码、请求标识和连接目标，便于启动失败日志直接定位配置问题。
      */
     @Test

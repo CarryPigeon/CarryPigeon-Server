@@ -19,26 +19,12 @@ public interface UserProfileDatabaseService {
     Optional<UserProfileRecord> findByAccountId(long accountId);
 
     /**
-     * 查询全部用户资料记录。
-     *
-     * @return 用户资料记录列表
-     */
-    List<UserProfileRecord> findAll();
-
-    /**
      * 按账户 ID 集合查询用户资料记录。
      *
      * @param accountIds 目标账户 ID 集合
      * @return 命中的用户资料记录列表
      */
-    default List<UserProfileRecord> findByAccountIds(List<Long> accountIds) {
-        if (accountIds == null || accountIds.isEmpty()) {
-            return List.of();
-        }
-        return findAll().stream()
-                .filter(record -> accountIds.contains(record.accountId()))
-                .toList();
-    }
+    List<UserProfileRecord> findByAccountIds(List<Long> accountIds);
 
     /**
      * 写入新的用户资料。

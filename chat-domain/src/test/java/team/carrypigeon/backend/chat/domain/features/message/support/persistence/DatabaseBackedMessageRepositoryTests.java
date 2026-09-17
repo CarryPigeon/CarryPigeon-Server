@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
@@ -32,7 +32,7 @@ class DatabaseBackedMessageRepositoryTests {
     void save_canonicalMessage_mapsCanonicalFields() {
         RecordingService service = new RecordingService();
         DatabaseBackedMessageRepository repository = repository(service);
-        JsonProvider jsonProvider = new JsonProvider(new ObjectMapper());
+        JsonProviderImpl jsonProvider = new JsonProviderImpl(new ObjectMapper());
         ChannelMessage message = message(MessageStatus.SENT);
 
         ChannelMessage result = repository.save(message);
@@ -88,7 +88,7 @@ class DatabaseBackedMessageRepositoryTests {
     private static final Instant BASE_TIME = Instant.parse("2026-04-22T00:00:00Z");
 
     private DatabaseBackedMessageRepository repository(RecordingService service) {
-        return new DatabaseBackedMessageRepository(service, new JsonProvider(new ObjectMapper()));
+        return new DatabaseBackedMessageRepository(service, new JsonProviderImpl(new ObjectMapper()));
     }
 
     private ChannelMessage message(MessageStatus status) {
@@ -121,6 +121,13 @@ class DatabaseBackedMessageRepositoryTests {
         @Override
         public Optional<MessageRecord> findById(long messageId) {
             return findResult;
+        }
+
+        @Override
+        public Map<Long, MessageRecord> findByIds(java.util.Collection<Long> messageIds) {
+            return findResult.filter(record -> messageIds.contains(record.messageId()))
+                    .map(record -> Map.of(record.messageId(), record))
+                    .orElseGet(Map::of);
         }
 
         @Override

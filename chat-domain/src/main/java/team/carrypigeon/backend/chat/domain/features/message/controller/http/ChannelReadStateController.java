@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
@@ -26,13 +27,13 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Unre
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UnreadListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UpdateChannelReadStateRequest;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 
 /**
  * 频道读状态 HTTP 入口。
  */
 @RestController
 @RequestMapping("/api")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道读状态", description = "频道已读状态与未读计数能力。")
 @Validated
 public class ChannelReadStateController {

@@ -5,11 +5,16 @@
 spring:
   datasource:
     # 职责：定义 MySQL JDBC 连接地址。
-    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
     # 职责：定义 MySQL 连接用户名。
     username: carrypigeon
     # 职责：定义 MySQL 连接密码。
     password: carrypigeon123
+    hikari:
+      # 职责：限制从连接池获取连接的等待时间，单位毫秒。
+      connection-timeout: 10000
+      # 职责：限制数据库连接校验时间，单位毫秒。
+      validation-timeout: 5000
   data:
     redis:
       # 职责：定义 Redis 主机地址。
@@ -18,6 +23,10 @@ spring:
       port: 6379
       # 职责：定义 Redis 访问密码。
       password: carrypigeon123
+      # 职责：限制 Redis 建连等待时间。
+      connect-timeout: 5s
+      # 职责：限制单条 Redis 命令等待时间。
+      timeout: 3s
   mail:
     # 职责：定义 SMTP 主机地址；默认不启用邮件服务，保持为空。
     host: ""
@@ -27,6 +36,26 @@ spring:
     username: ""
     # 职责：定义 SMTP 认证密码。
     password: ""
+    properties:
+      mail:
+        smtp:
+          # 职责：控制 SMTP 是否启用账号认证。
+          auth: true
+          # 职责：限制 SMTP 建连等待时间，单位毫秒。
+          connectiontimeout: 5000
+          # 职责：限制 SMTP 读取等待时间，单位毫秒。
+          timeout: 10000
+          # 职责：限制 SMTP 写入等待时间，单位毫秒。
+          writetimeout: 10000
+          starttls:
+            # 职责：控制 SMTP 是否启用 STARTTLS。
+            enable: true
+  servlet:
+    multipart:
+      # 职责：限制背景图与消息附件 multipart 单文件大小。
+      max-file-size: 100MB
+      # 职责：为单文件 multipart 请求保留协议头开销。
+      max-request-size: 101MB
 
 cp:
   local-dev:
@@ -82,6 +111,10 @@ cp:
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
         worker-threads: 0
+        # 职责：限制单进程断线续传事件在内存中的保留时间。
+        event-retention: 1h
+        # 职责：限制单进程保留断线事件窗口的账号总数。
+        max-event-accounts: 10000
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。
@@ -92,8 +125,6 @@ cp:
       database:
         # 职责：控制数据库服务实现是否参与当前运行时装配。
         enabled: true
-        # 职责：定义数据库健康检查使用的最小 SQL。
-        health-query: SELECT 1
       cache:
         # 职责：控制缓存服务实现是否参与当前运行时装配。
         enabled: true
@@ -110,6 +141,12 @@ cp:
         secret-key: carrypigeon123
         # 职责：定义当前对象存储默认 bucket。
         bucket: carrypigeon
+        # 职责：限制 MinIO 建连等待时间。
+        connect-timeout: 5s
+        # 职责：限制 MinIO 单次读取停顿时间。
+        read-timeout: 30s
+        # 职责：限制 MinIO 单次写入停顿时间。
+        write-timeout: 30s
       mail:
         # 职责：控制邮件服务实现是否参与当前运行时装配。
         enabled: false

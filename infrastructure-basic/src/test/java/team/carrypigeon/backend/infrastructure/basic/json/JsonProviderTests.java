@@ -22,7 +22,7 @@ class JsonProviderTests {
      */
     @Test
     void toJson_map_returnsJsonStringWithoutExternalObjectMapper() {
-        JsonProvider jsonProvider = new JsonProvider(new ObjectMapper());
+        JsonProvider jsonProvider = new JsonProviderImpl(new ObjectMapper());
 
         assertEquals("{\"id\":1}", jsonProvider.toJson(Map.of("id", 1)));
     }

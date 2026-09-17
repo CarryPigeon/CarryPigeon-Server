@@ -63,6 +63,16 @@ public interface ChannelInviteMapper {
             """)
     java.util.List<ChannelInviteEntity> findByChannelId(@Param("channelId") long channelId);
 
+    /** 短路判断频道下是否存在邀请或申请记录。 */
+    @Select("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM chat_channel_invite
+                WHERE channel_id = #{channelId}
+            )
+            """)
+    boolean existsByChannelId(@Param("channelId") long channelId);
+
     /**
      * 更新邀请记录。
      *
@@ -80,4 +90,19 @@ public interface ChannelInviteMapper {
             WHERE channel_id = #{channelId} AND invitee_account_id = #{inviteeAccountId}
             """)
     int update(ChannelInviteEntity entity);
+
+    @Update("""
+            UPDATE chat_channel_invite
+            SET application_id = #{applicationId},
+                inviter_account_id = #{inviterAccountId},
+                reason = #{reason},
+                status = #{status},
+                created_at = #{createdAt},
+                responded_at = #{respondedAt}
+            WHERE channel_id = #{channelId}
+              AND application_id = #{applicationId}
+              AND invitee_account_id = #{inviteeAccountId}
+              AND status = 'PENDING'
+            """)
+    int updateIfPending(ChannelInviteEntity entity);
 }

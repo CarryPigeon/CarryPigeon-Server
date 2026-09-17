@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
@@ -43,7 +43,7 @@ class MailServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).hasSingleBean(MailSenderService.class);
                     assertThat(context).hasSingleBean(MailHealthService.class);
-                    assertThat(context).hasSingleBean(InitializationCheck.class);
+                    assertThat(context).hasSingleBean(InitializationChecker.class);
                 });
     }
 
@@ -60,7 +60,7 @@ class MailServiceAutoConfigurationTests {
                 .run(context -> {
                     assertThat(context).doesNotHaveBean(MailSenderService.class);
                     assertThat(context).doesNotHaveBean(MailHealthService.class);
-                    assertThat(context).doesNotHaveBean(InitializationCheck.class);
+                    assertThat(context).doesNotHaveBean(InitializationChecker.class);
                 });
     }
 }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.core.Ordered;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -22,6 +23,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  */
 @Tag("contract")
 class HttpRequestMdcFilterTests {
+
+    /**
+     * 验证 MDC 过滤器在常规业务和请求摘要过滤器之前建立日志上下文。
+     */
+    @Test
+    @DisplayName("filter order establishes mdc before regular filters")
+    void getOrder_default_runsBeforeRegularFilters() {
+        assertEquals(Ordered.HIGHEST_PRECEDENCE + 1, new HttpRequestMdcFilter().getOrder());
+    }
 
     /**
      * 验证过滤器会为请求写入最小上下文，并在请求结束后清理。
@@ -67,6 +77,27 @@ class HttpRequestMdcFilterTests {
     }
 
     /**
+     * 验证请求作用域隔离线程已有字段，并在请求结束后恢复外层上下文。
+     */
+    @Test
+    @DisplayName("doFilter isolates and restores outer mdc context")
+    void doFilter_existingOuterContext_isolatesAndRestoresContext() throws ServletException, IOException {
+        MDC.put(LogKeys.UID, "outer-user");
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/server");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        CapturingFilterChain chain = new CapturingFilterChain();
+
+        try {
+            new HttpRequestMdcFilter().doFilter(request, response, chain);
+
+            assertNull(chain.uid);
+            assertEquals("outer-user", MDC.get(LogKeys.UID));
+        } finally {
+            MDC.clear();
+        }
+    }
+
+    /**
      * `CapturingFilterChain` 测试辅助类型。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -74,12 +105,14 @@ class HttpRequestMdcFilterTests {
         private String requestId;
         private String traceId;
         private String route;
+        private String uid;
 
         @Override
         public void doFilter(jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response) {
             requestId = MDC.get(LogKeys.REQUEST_ID);
             traceId = MDC.get(LogKeys.TRACE_ID);
             route = MDC.get(LogKeys.ROUTE);
+            uid = MDC.get(LogKeys.UID);
         }
     }
 }

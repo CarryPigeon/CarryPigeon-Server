@@ -19,21 +19,23 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
     }
 
     /**
-     * 写入一条新的提及记录。
-     * 副作用：会持久化提及的来源消息、目标账户和已读状态。
+     * 批量写入消息产生的提及记录。
+     * 副作用：一次适配调用持久化提及的来源消息、目标账户和已读状态。
      */
     @Override
-    public void save(Mention mention) {
-        mentionDatabaseService.insert(new team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord(
-                mention.mentionId(),
-                mention.channelId(),
-                mention.messageId(),
-                mention.fromAccountId(),
-                mention.targetType(),
-                mention.targetAccountId(),
-                mention.createdAt(),
-                mention.read()
-        ));
+    public void saveAll(List<Mention> mentions) {
+        mentionDatabaseService.insertAll(mentions.stream()
+                .map(mention -> new team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord(
+                        mention.mentionId(),
+                        mention.channelId(),
+                        mention.messageId(),
+                        mention.fromAccountId(),
+                        mention.targetType(),
+                        mention.targetAccountId(),
+                        mention.createdAt(),
+                        mention.read()
+                ))
+                .toList());
     }
 
     /**

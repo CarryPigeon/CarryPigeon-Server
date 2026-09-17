@@ -24,7 +24,7 @@ class TimeProviderTests {
      */
     @Test
     void nowMillis_fixedClock_returnsConfiguredMillis() {
-        TimeProvider timeProvider = new TimeProvider(Clock.fixed(Instant.ofEpochMilli(1000), ZoneOffset.UTC));
+        TimeProvider timeProvider = new TimeProviderImpl(Clock.fixed(Instant.ofEpochMilli(1000), ZoneOffset.UTC));
 
         assertEquals(1000, timeProvider.nowMillis());
     }
@@ -36,7 +36,7 @@ class TimeProviderTests {
      */
     @Test
     void nowLocalDateTime_fixedClock_returnsConfiguredLocalDateTime() {
-        TimeProvider timeProvider = new TimeProvider(Clock.fixed(Instant.ofEpochMilli(1000), ZoneOffset.UTC));
+        TimeProvider timeProvider = new TimeProviderImpl(Clock.fixed(Instant.ofEpochMilli(1000), ZoneOffset.UTC));
 
         assertEquals(LocalDateTime.of(1970, 1, 1, 0, 0, 1), timeProvider.nowLocalDateTime());
     }

@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -58,12 +60,25 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
         channelMemberDatabaseService.update(toRecord(channelMember));
     }
 
+    @Override
+    public boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
+        return channelMemberDatabaseService.transferOwnership(channelId, previousOwnerAccountId, targetAccountId);
+    }
+
     /**
      * 删除成员关系。
      */
     @Override
     public void delete(long channelId, long accountId) {
         channelMemberDatabaseService.delete(channelId, accountId);
+    }
+
+    /**
+     * 删除频道下全部成员关系，避免领域层先加载成员再逐条删除。
+     */
+    @Override
+    public void deleteByChannelId(long channelId) {
+        channelMemberDatabaseService.deleteByChannelId(channelId);
     }
 
     /**
@@ -91,6 +106,11 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     @Override
     public List<Long> findChannelIdsByAccountId(long accountId) {
         return channelMemberDatabaseService.findChannelIdsByAccountId(accountId);
+    }
+
+    @Override
+    public Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds) {
+        return channelMemberDatabaseService.findOwnerAccountIdsByChannelIds(channelIds);
     }
 
     private ChannelMember toDomain(ChannelMemberRecord record) {

@@ -67,6 +67,7 @@ class ChannelMessagePublishingDomainApiForwardTests {
         assertEquals(true, sources.get(1).get("unavailable"));
         assertEquals("5001", sources.get(2).get("mid"));
         assertEquals("转发 3 条消息", result.preview());
+        assertEquals(1, fixture.messageRepository.findByIdsCalls);
     }
 
     /**

@@ -39,7 +39,6 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.Chann
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistry;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.MessageDomainPluginDomainApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
@@ -57,8 +56,8 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.command.Publi
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -98,7 +97,7 @@ final class MessageDomainApiTestSupport {
         final InMemoryMessageIdempotencyRepository messageIdempotencyRepository = new InMemoryMessageIdempotencyRepository();
         final RecordingRealtimeEventApi publisher = new RecordingRealtimeEventApi();
         final TestRealtimeDomainEventPublisher eventPublisher = new TestRealtimeDomainEventPublisher(publisher);
-        final JsonProvider jsonProvider = jsonProvider();
+        final JsonProviderImpl jsonProvider = jsonProvider();
         final ChannelMessagePublishingDomainApi publishingApi;
         final ChannelMessageLifecycleDomainApi lifecycleApi;
         final ChannelMessageTimelineDomainApi timelineApi;
@@ -134,7 +133,7 @@ final class MessageDomainApiTestSupport {
                     eventPublisher,
                     new MessageDomainPluginDomainApi(pluginRegistry),
                     new FixedIdGenerator(),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                    new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
             );
             this.lifecycleApi = new ChannelMessageLifecycleDomainApi(
@@ -145,7 +144,7 @@ final class MessageDomainApiTestSupport {
                     mentionRepository,
                     eventPublisher,
                     new FixedIdGenerator(),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                    new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
             );
             this.timelineApi = new ChannelMessageTimelineDomainApi(
@@ -156,7 +155,7 @@ final class MessageDomainApiTestSupport {
                     channelMessagePolicyApi,
                     TestFeatureApis.fileReferences(),
                     new FixedIdGenerator(),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                    new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     objectStorageServiceProvider
             );
             this.pinApi = new ChannelPinDomainApi(
@@ -165,7 +164,7 @@ final class MessageDomainApiTestSupport {
                     messageRepository,
                     eventPublisher,
                     new FixedIdGenerator(),
-                    new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
+                    new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC)),
                     transactionRunner
             );
         }
@@ -298,10 +297,10 @@ final class MessageDomainApiTestSupport {
         return new ChannelMessagePluginRegistration(descriptor, plugin);
     }
 
-    static JsonProvider jsonProvider() {
+    static JsonProviderImpl jsonProvider() {
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-        return new JsonProvider(objectMapper);
+        return new JsonProviderImpl(objectMapper);
     }
 
     static ObjectProvider<ObjectStorageService> objectProvider(ObjectStorageService storageService) {
@@ -447,16 +446,9 @@ final class MessageDomainApiTestSupport {
     static final class InMemoryMentionRepository implements MentionRepository {
 
         final List<Mention> mentions = new ArrayList<>();
-        Integer failOnSaveCall;
-        private int saveCalls;
-
         @Override
-        public void save(Mention mention) {
-            saveCalls++;
-            if (failOnSaveCall != null && saveCalls == failOnSaveCall) {
-                throw new IllegalStateException("mention persistence failed");
-            }
-            mentions.add(mention);
+        public void saveAll(List<Mention> mentions) {
+            this.mentions.addAll(mentions);
         }
 
         @Override
@@ -502,6 +494,7 @@ final class MessageDomainApiTestSupport {
         Long lastSearchBeforeMessageId;
         Long lastSearchAfterMessageId;
         final Map<Long, ChannelMessage> messagesById = new HashMap<>();
+        int findByIdsCalls;
 
         @Override
         public ChannelMessage save(ChannelMessage message) {
@@ -513,6 +506,18 @@ final class MessageDomainApiTestSupport {
         @Override
         public Optional<ChannelMessage> findById(long messageId) {
             return Optional.ofNullable(messagesById.get(messageId));
+        }
+
+        @Override
+        public Map<Long, ChannelMessage> findByIds(java.util.Collection<Long> messageIds) {
+            findByIdsCalls++;
+            return messageIds.stream()
+                    .filter(messagesById::containsKey)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toMap(
+                            java.util.function.Function.identity(),
+                            messagesById::get
+                    ));
         }
 
         @Override
@@ -817,8 +822,10 @@ final class MessageDomainApiTestSupport {
             }
 
             @Override
-            public List<UserProfile> findAll() {
-                return List.of();
+            public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+                return accountIds.stream()
+                        .map(accountId -> findByAccountId(accountId).orElseThrow())
+                        .toList();
             }
 
             @Override

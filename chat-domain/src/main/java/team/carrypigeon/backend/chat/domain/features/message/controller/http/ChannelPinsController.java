@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
@@ -29,7 +30,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelP
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道置顶消息 HTTP 入口。
@@ -38,6 +39,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
  */
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道置顶", description = "频道消息置顶、取消置顶与置顶列表查询能力。")
 @Validated
 public class ChannelPinsController {
@@ -142,9 +144,9 @@ public class ChannelPinsController {
 
     private ChannelPinItemResponse toPinResponse(ChannelPinResult result) {
         return new ChannelPinItemResponse(
-                Ids.toString(result.channelId()),
-                Ids.toString(result.messageId()),
-                Ids.toString(result.pinnedByAccountId()),
+                IdUtil.toString(result.channelId()),
+                IdUtil.toString(result.messageId()),
+                IdUtil.toString(result.pinnedByAccountId()),
                 result.pinnedAt().toEpochMilli(),
                 result.note()
         );

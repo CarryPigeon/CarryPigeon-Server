@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -30,7 +30,7 @@ class ServerEntranceDomainApiTests {
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
                 realtimeProperties(true),
-                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
                 pluginCatalog(java.util.List.of("mc-bind"))
         );
 
@@ -58,7 +58,7 @@ class ServerEntranceDomainApiTests {
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
                 realtimeProperties(false),
-                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
                 pluginCatalog(java.util.List.of())
         );
 

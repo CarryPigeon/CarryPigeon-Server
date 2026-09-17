@@ -15,7 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.Ema
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -30,7 +30,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     private final AuthAccountProvisioner authAccountProvisioner;
     private final PasswordHasher passwordHasher;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
 
@@ -41,7 +41,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             ChannelAccountProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner,
             EmailVerificationApi emailVerificationApi
     ) {

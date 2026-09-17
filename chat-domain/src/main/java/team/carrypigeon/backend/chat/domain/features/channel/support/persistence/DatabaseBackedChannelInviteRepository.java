@@ -49,6 +49,14 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
     }
 
     /**
+     * 判断频道是否存在邀请或申请记录，不加载完整记录集合。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return channelInviteDatabaseService.existsByChannelId(channelId);
+    }
+
+    /**
      * 持久化新的邀请或申请记录。
      */
     @Override
@@ -62,6 +70,11 @@ public class DatabaseBackedChannelInviteRepository implements ChannelInviteRepos
     @Override
     public void update(ChannelInvite channelInvite) {
         channelInviteDatabaseService.update(toRecord(channelInvite));
+    }
+
+    @Override
+    public boolean updateIfPending(ChannelInvite channelInvite) {
+        return channelInviteDatabaseService.updateIfPending(toRecord(channelInvite));
     }
 
     private ChannelInvite toDomain(ChannelInviteRecord record) {

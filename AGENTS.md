@@ -1,7 +1,6 @@
 # Repository Guidelines
 
 ## Project Status
-- This repository is in a rewrite-style refactor stage.
 - Current architecture and rules are defined in `docs/`.
 - Do not restore old module structure or old dependencies by default.
 - Do not introduce new architecture ideas unless explicitly approved.

@@ -123,6 +123,11 @@ class DatabaseBackedChannelRepositoryTests {
         }
 
         @Override
+        public java.util.Map<Long, ChannelRecord> findByIds(java.util.Collection<Long> channelIds) {
+            return record == null ? java.util.Map.of() : java.util.Map.of(record.id(), record);
+        }
+
+        @Override
         public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
             return discoverRecords;
         }

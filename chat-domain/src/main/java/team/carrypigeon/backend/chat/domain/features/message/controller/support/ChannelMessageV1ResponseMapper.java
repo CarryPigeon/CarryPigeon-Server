@@ -4,7 +4,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * canonical 消息 Wire 映射器。
@@ -22,14 +22,14 @@ public class ChannelMessageV1ResponseMapper {
      */
     public ChannelMessageV1Response toResponse(ChannelMessageResult result) {
         return new ChannelMessageV1Response(
-                Ids.toString(result.messageId()),
-                Ids.toString(result.senderId()),
-                Ids.toString(result.channelId()),
+                IdUtil.toString(result.messageId()),
+                IdUtil.toString(result.senderId()),
+                IdUtil.toString(result.channelId()),
                 result.domain(),
                 result.domainVersion(),
                 result.data(),
                 result.sendTime().toEpochMilli(),
-                result.mentions().stream().map(Ids::toString).toList(),
+                result.mentions().stream().map(IdUtil::toString).toList(),
                 result.preview(),
                 result.status().name().toLowerCase(Locale.ROOT)
         );

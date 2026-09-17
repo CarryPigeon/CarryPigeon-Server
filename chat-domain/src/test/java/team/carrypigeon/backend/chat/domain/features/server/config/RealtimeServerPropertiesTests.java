@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
+import java.time.Duration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -31,6 +32,8 @@ class RealtimeServerPropertiesTests {
         assertEquals("/api/ws", properties.path());
         assertEquals(10, properties.authenticationTimeoutSeconds());
         assertEquals(60, properties.readIdleTimeoutSeconds());
+        assertEquals(Duration.ofHours(1), properties.eventRetention());
+        assertEquals(10_000, properties.maxEventAccounts());
     }
 
     /**
@@ -58,6 +61,26 @@ class RealtimeServerPropertiesTests {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new RealtimeServerProperties(true, "0.0.0.0", 18080, "/api/ws", 1, 0, 10, 0)
+        );
+    }
+
+    /**
+     * 验证事件保留时间和账号窗口总数必须为正数。
+     */
+    @Test
+    @DisplayName("constructor invalid event limits throws exception")
+    void constructor_invalidEventLimits_throwsException() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new RealtimeServerProperties(
+                        true, "0.0.0.0", 18080, "/api/ws", 1, 0, 10, 60, Duration.ZERO, 10_000
+                )
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new RealtimeServerProperties(
+                        true, "0.0.0.0", 18080, "/api/ws", 1, 0, 10, 60, Duration.ofHours(1), 0
+                )
         );
     }
 }

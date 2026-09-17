@@ -1,10 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.server.controller.ws.RealtimeServerMessage;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
@@ -62,20 +61,17 @@ public class RealtimeEventDomainApi implements RealtimeEventApi {
                 command.payload(),
                 recipients
         ));
-        String frameText = jsonProvider.toJson(new RealtimeServerMessage(
-                "event",
-                null,
-                Map.of(
-                        "event_id", eventId,
-                        "event_type", command.eventType(),
-                        "server_time", serverTime,
-                        "payload", command.payload()
-                ),
-                null
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("type", "event");
+        envelope.put("id", null);
+        envelope.put("data", Map.of(
+                "event_id", eventId,
+                "event_type", command.eventType(),
+                "server_time", serverTime,
+                "payload", command.payload()
         ));
-        for (Long recipient : recipients) {
-            realtimeSessionRegistry.getChannels(recipient)
-                    .forEach(channel -> channel.writeAndFlush(new TextWebSocketFrame(frameText)));
-        }
+        envelope.put("error", null);
+        String frameText = jsonProvider.toJson(envelope);
+        realtimeSessionRegistry.writeText(recipients, frameText);
     }
 }

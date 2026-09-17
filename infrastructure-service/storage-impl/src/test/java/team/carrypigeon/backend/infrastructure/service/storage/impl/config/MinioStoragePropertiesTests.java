@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 
@@ -28,6 +29,9 @@ class MinioStoragePropertiesTests {
         assertEquals("carrypigeon", properties.bucket());
         assertEquals("", properties.accessKey());
         assertEquals("", properties.secretKey());
+        assertEquals(Duration.ofSeconds(5), properties.connectTimeout());
+        assertEquals(Duration.ofSeconds(30), properties.readTimeout());
+        assertEquals(Duration.ofSeconds(30), properties.writeTimeout());
     }
 
     /**
@@ -49,6 +53,26 @@ class MinioStoragePropertiesTests {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new MinioStorageProperties(true, "http://127.0.0.1:9000", "test-access", "", "carrypigeon")
+        );
+    }
+
+    /**
+     * 测试非正网络超时在配置对象创建阶段被拒绝。
+     */
+    @Test
+    void constructor_nonPositiveTimeout_throwsException() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MinioStorageProperties(
+                        true,
+                        "http://127.0.0.1:9000",
+                        "test-access",
+                        "test-secret",
+                        "carrypigeon",
+                        Duration.ZERO,
+                        Duration.ofSeconds(30),
+                        Duration.ofSeconds(30)
+                )
         );
     }
 }

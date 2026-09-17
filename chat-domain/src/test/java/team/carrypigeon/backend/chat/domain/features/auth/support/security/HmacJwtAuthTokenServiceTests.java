@@ -2,8 +2,10 @@ package team.carrypigeon.backend.chat.domain.features.auth.support.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -14,7 +16,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class HmacJwtAuthTokenServiceTests {
 
     private static final String SECRET = "0123456789abcdef0123456789abcdef";
+    private static final Instant NOW = Instant.parse("2026-09-09T10:00:00Z");
 
     /**
      * 验证签名正确但缺少 exp 声明的 token 会返回 invalid_token，而不是未分类运行时异常。
@@ -67,10 +71,30 @@ class HmacJwtAuthTokenServiceTests {
         assertEquals("token is invalid", exception.getMessage());
     }
 
+    /**
+     * 验证过期时间等于统一当前时刻时会稳定返回 token_expired。
+     */
+    @Test
+    @DisplayName("parse access token expiry at current time throws token expired problem")
+    void parseAccessToken_expiryAtCurrentTime_throwsTokenExpiredProblem() {
+        HmacJwtAuthTokenService service = service();
+        Map<String, Object> payload = validPayload();
+        payload.put("exp", NOW.getEpochSecond());
+
+        ProblemException exception = assertThrows(
+                ProblemException.class,
+                () -> service.parseAccessToken(signedToken(payload))
+        );
+
+        assertEquals("token_expired", exception.reason());
+        assertEquals("token is expired", exception.getMessage());
+    }
+
     private HmacJwtAuthTokenService service() {
         return new HmacJwtAuthTokenService(
                 new AuthJwtProperties("carrypigeon", SECRET, Duration.ofMinutes(30), Duration.ofDays(14)),
-                jsonProvider()
+                jsonProvider(),
+                new TimeProviderImpl(Clock.fixed(NOW, ZoneOffset.UTC))
         );
     }
 
@@ -81,20 +105,20 @@ class HmacJwtAuthTokenServiceTests {
         payload.put("username", "carry-user");
         payload.put("typ", "access");
         payload.put("sid", 0L);
-        payload.put("exp", Instant.now().plusSeconds(3600).getEpochSecond());
+        payload.put("exp", NOW.plusSeconds(3600).getEpochSecond());
         return payload;
     }
 
     private String signedToken(Map<String, Object> payload) {
-        JsonProvider jsonProvider = jsonProvider();
+        JsonProviderImpl jsonProvider = jsonProvider();
         String header = base64Url(jsonProvider.toJson(Map.of("alg", "HS256", "typ", "JWT")).getBytes(StandardCharsets.UTF_8));
         String body = base64Url(jsonProvider.toJson(payload).getBytes(StandardCharsets.UTF_8));
         String signingInput = header + "." + body;
         return signingInput + "." + base64Url(sign(signingInput));
     }
 
-    private JsonProvider jsonProvider() {
-        return new JsonProvider(new ObjectMapper().findAndRegisterModules());
+    private JsonProviderImpl jsonProvider() {
+        return new JsonProviderImpl(new ObjectMapper().findAndRegisterModules());
     }
 
     private byte[] sign(String signingInput) {

@@ -14,6 +14,7 @@ import jakarta.validation.constraints.Positive;
 import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -55,6 +56,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 @Validated
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道消息", description = "频道消息历史查询、搜索与发送能力。")
 public class ChannelMessageController {
 

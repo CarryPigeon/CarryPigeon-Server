@@ -16,8 +16,8 @@ import team.carrypigeon.backend.chat.domain.features.server.support.realtime.Rea
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * Netty 实时通道处理器。
@@ -35,9 +35,9 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final RealtimeResumeCoordinator resumeCoordinator;
 
     public RealtimeChannelHandler(
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry
@@ -55,9 +55,9 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     }
 
     public RealtimeChannelHandler(
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
@@ -76,9 +76,9 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     }
 
     public RealtimeChannelHandler(
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,

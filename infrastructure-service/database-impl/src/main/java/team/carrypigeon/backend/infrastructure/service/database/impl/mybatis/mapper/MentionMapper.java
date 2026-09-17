@@ -16,6 +16,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 public interface MentionMapper {
 
     @Insert("""
+            <script>
             INSERT INTO chat_mention (
                 mention_id,
                 channel_id,
@@ -26,18 +27,22 @@ public interface MentionMapper {
                 created_at,
                 is_read
             )
-            VALUES (
-                #{mentionId},
-                #{channelId},
-                #{messageId},
-                #{fromAccountId},
-                #{targetType},
-                #{targetAccountId},
-                #{createdAt},
-                #{read}
-            )
+            VALUES
+            <foreach collection="mentions" item="mention" separator=",">
+              (
+                #{mention.mentionId},
+                #{mention.channelId},
+                #{mention.messageId},
+                #{mention.fromAccountId},
+                #{mention.targetType},
+                #{mention.targetAccountId},
+                #{mention.createdAt},
+                #{mention.read}
+              )
+            </foreach>
+            </script>
             """)
-    int insert(MentionEntity entity);
+    int insertAll(@Param("mentions") List<MentionEntity> mentions);
 
     @Delete("""
             DELETE FROM chat_mention
@@ -76,7 +81,6 @@ public interface MentionMapper {
             SET is_read = TRUE
             WHERE mention_id = #{mentionId}
               AND target_account_id = #{accountId}
-              AND is_read = FALSE
             """)
     int markAsRead(@Param("accountId") long accountId, @Param("mentionId") long mentionId);
 

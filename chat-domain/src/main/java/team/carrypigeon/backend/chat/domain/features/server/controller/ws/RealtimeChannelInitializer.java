@@ -11,8 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServe
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 实时通道初始化器。
@@ -22,9 +22,9 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final RealtimeServerProperties properties;
-    private final JsonProvider jsonProvider;
+    private final JsonProviderImpl jsonProvider;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeSessionRegistry realtimeSessionRegistry;
@@ -32,9 +32,9 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry,
@@ -52,9 +52,9 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
-            JsonProvider jsonProvider,
+            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
             RealtimeSessionRegistry realtimeSessionRegistry

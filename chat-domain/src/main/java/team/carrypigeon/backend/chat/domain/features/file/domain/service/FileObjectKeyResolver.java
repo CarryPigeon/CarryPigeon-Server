@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 文件对象 key 解析协作对象。
@@ -17,13 +18,16 @@ class FileObjectKeyResolver {
 
     private final ChannelContextApi channelContextApi;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
+    private final TimeProviderImpl timeProvider;
 
     FileObjectKeyResolver(
             ChannelContextApi channelContextApi,
-            FileUploadShareKeyCodec uploadShareKeyCodec
+            FileUploadShareKeyCodec uploadShareKeyCodec,
+            TimeProviderImpl timeProvider
     ) {
         this.channelContextApi = channelContextApi;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
+        this.timeProvider = timeProvider;
     }
 
     boolean isServerAvatar(String shareKey) {
@@ -76,7 +80,7 @@ class FileObjectKeyResolver {
             authorizeAttachmentDownload(requiredAccountId, attachmentObjectKey.get());
             return attachmentObjectKey.get();
         }
-        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey);
+        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
         if (issuedShareKey.ownerAccountId() != requiredAccountId) {
             throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
         }
@@ -119,7 +123,7 @@ class FileObjectKeyResolver {
         if (!shareKey.startsWith("shr_")) {
             throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
         }
-        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey);
+        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
         if (issuedShareKey.ownerAccountId() != accountId) {
             throw ProblemException.forbidden("file_upload_forbidden", "file upload is not granted to current account");
         }

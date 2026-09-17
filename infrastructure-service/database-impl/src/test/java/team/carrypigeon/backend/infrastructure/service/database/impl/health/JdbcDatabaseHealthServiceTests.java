@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
-import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceProperties;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,8 +20,6 @@ import static org.mockito.Mockito.when;
 @Tag("contract")
 class JdbcDatabaseHealthServiceTests {
 
-    private static final DatabaseServiceProperties PROPERTIES = new DatabaseServiceProperties(true, "SELECT 1");
-
     /**
      * 验证健康查询返回整数时会映射为 available=true。
      */
@@ -31,7 +28,7 @@ class JdbcDatabaseHealthServiceTests {
     void check_nonNullQueryResult_returnsAvailableHealth() {
         JdbcClientSupport jdbcClientSupport = mock(JdbcClientSupport.class);
         when(jdbcClientSupport.queryInteger("SELECT 1")).thenReturn(1);
-        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport, PROPERTIES);
+        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport);
 
         DatabaseHealth result = service.check();
 
@@ -47,7 +44,7 @@ class JdbcDatabaseHealthServiceTests {
     void check_nullQueryResult_returnsUnavailableHealth() {
         JdbcClientSupport jdbcClientSupport = mock(JdbcClientSupport.class);
         when(jdbcClientSupport.queryInteger("SELECT 1")).thenReturn(null);
-        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport, PROPERTIES);
+        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport);
 
         DatabaseHealth result = service.check();
 
@@ -63,7 +60,7 @@ class JdbcDatabaseHealthServiceTests {
     void check_queryFailure_returnsUnavailableHealth() {
         JdbcClientSupport jdbcClientSupport = mock(JdbcClientSupport.class);
         when(jdbcClientSupport.queryInteger("SELECT 1")).thenThrow(new IllegalStateException("db down"));
-        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport, PROPERTIES);
+        JdbcDatabaseHealthService service = new JdbcDatabaseHealthService(jdbcClientSupport);
 
         DatabaseHealth result = service.check();
 

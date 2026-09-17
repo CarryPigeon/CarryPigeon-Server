@@ -64,6 +64,12 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
         executeVoid(() -> authRefreshSessionMapper.revokeById(sessionId), "failed to revoke auth refresh session");
     }
 
+    @Override
+    public boolean revokeIfActive(long sessionId) {
+        return execute(() -> authRefreshSessionMapper.revokeIfActive(sessionId),
+                "failed to atomically revoke auth refresh session") > 0;
+    }
+
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();

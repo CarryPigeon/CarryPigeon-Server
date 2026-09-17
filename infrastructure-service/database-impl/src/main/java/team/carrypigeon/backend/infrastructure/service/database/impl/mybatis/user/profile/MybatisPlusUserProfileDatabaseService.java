@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
@@ -9,6 +10,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.user.profile
 import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 用户资料数据库服务。
@@ -35,21 +37,6 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
     }
 
     /**
-     * 查询全部用户资料记录。
-     * 输出：按账户 ID 升序返回稳定结果。
-     */
-    @Override
-    public List<UserProfileRecord> findAll() {
-        return execute(
-                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
-                        .orderByAsc(UserProfileEntity::getAccountId)).stream()
-                        .map(UserProfileEntity::toRecord)
-                        .toList(),
-                "failed to query user profiles"
-        );
-    }
-
-    /**
      * 按账户 ID 集合查询资料记录。
      * 输出：按账户 ID 升序返回稳定结果，空集合直接返回空列表。
      */
@@ -59,10 +46,12 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
             return List.of();
         }
         return execute(
-                () -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
-                        .in(UserProfileEntity::getAccountId, accountIds)
-                        .orderByAsc(UserProfileEntity::getAccountId)).stream()
+                () -> SqlInClauseBatches.partition(accountIds).stream()
+                        .flatMap(batch -> userProfileMapper.selectList(new LambdaQueryWrapper<UserProfileEntity>()
+                                .in(UserProfileEntity::getAccountId, batch)
+                                .orderByAsc(UserProfileEntity::getAccountId)).stream())
                         .map(UserProfileEntity::toRecord)
+                        .sorted(Comparator.comparingLong(UserProfileRecord::accountId))
                         .toList(),
                 "failed to query user profiles by account ids"
         );

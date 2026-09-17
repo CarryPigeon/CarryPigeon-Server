@@ -30,17 +30,6 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     }
 
     /**
-     * 查询所有用户资料快照。
-     * 边界：这里只做读取与模型转换，不承担权限裁剪。
-     */
-    @Override
-    public List<UserProfile> findAll() {
-        return userProfileDatabaseService.findAll().stream()
-                .map(this::toDomainModel)
-                .toList();
-    }
-
-    /**
      * 按账户 ID 集合查询资料。
      * 边界：批量过滤下推到 database-api，避免领域服务读取全部用户资料。
      */

@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,6 +16,19 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
  */
 @Mapper
 public interface MessageMapper extends BaseMapper<MessageEntity> {
+
+    @Select("""
+            <script>
+            SELECT message_id, sender_id, channel_id, domain, domain_version,
+                   data, send_time, mentions, preview, status
+            FROM chat_message
+            WHERE message_id IN
+            <foreach collection="messageIds" item="messageId" open="(" separator="," close=")">
+              #{messageId}
+            </foreach>
+            </script>
+            """)
+    List<MessageEntity> findByIds(@Param("messageIds") Collection<Long> messageIds);
 
     @Select("""
             <script>

@@ -9,13 +9,16 @@ import io.minio.StatObjectResponse;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
 import java.io.ByteArrayInputStream;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.exception.StorageServiceException;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -44,6 +47,8 @@ import static org.mockito.Mockito.when;
 @Tag("contract")
 class MinioObjectStorageServiceTests {
 
+    private static final Instant NOW = Instant.parse("2026-09-09T10:00:00Z");
+
     private static final MinioStorageProperties PROPERTIES = new MinioStorageProperties(
             true,
             "http://127.0.0.1:9000",
@@ -59,7 +64,7 @@ class MinioObjectStorageServiceTests {
     @DisplayName("put valid command delegates bucket key and content metadata")
     void put_validCommand_delegatesBucketKeyAndContentMetadata() throws Exception {
         MinioClient minioClient = mock(MinioClient.class);
-        MinioObjectStorageService service = new MinioObjectStorageService(minioClient, PROPERTIES);
+        MinioObjectStorageService service = service(minioClient);
         byte[] content = "hello minio".getBytes();
 
         StorageObject result = service.put(new PutObjectCommand(
@@ -92,7 +97,7 @@ class MinioObjectStorageServiceTests {
         when(statObjectResponse.contentType()).thenReturn("image/png");
         when(statObjectResponse.size()).thenReturn(1024L);
         when(minioClient.statObject(any(StatObjectArgs.class))).thenReturn(statObjectResponse);
-        MinioObjectStorageService service = new MinioObjectStorageService(minioClient, PROPERTIES);
+        MinioObjectStorageService service = service(minioClient);
 
         Optional<StorageObject> result = service.get(new GetObjectCommand("attachments/image.png"));
 
@@ -117,7 +122,7 @@ class MinioObjectStorageServiceTests {
         when(errorResponse.code()).thenReturn("NoSuchKey");
         when(cause.errorResponse()).thenReturn(errorResponse);
         when(minioClient.statObject(any(StatObjectArgs.class))).thenThrow(cause);
-        MinioObjectStorageService service = new MinioObjectStorageService(minioClient, PROPERTIES);
+        MinioObjectStorageService service = service(minioClient);
 
         Optional<StorageObject> result = service.get(new GetObjectCommand("attachments/missing.png"));
 
@@ -133,7 +138,7 @@ class MinioObjectStorageServiceTests {
         MinioClient minioClient = mock(MinioClient.class);
         RuntimeException cause = new RuntimeException("delete failed");
         org.mockito.Mockito.doThrow(cause).when(minioClient).removeObject(any(RemoveObjectArgs.class));
-        MinioObjectStorageService service = new MinioObjectStorageService(minioClient, PROPERTIES);
+        MinioObjectStorageService service = service(minioClient);
 
         StorageServiceException exception = assertThrows(
                 StorageServiceException.class,
@@ -153,7 +158,7 @@ class MinioObjectStorageServiceTests {
         MinioClient minioClient = mock(MinioClient.class);
         when(minioClient.getPresignedObjectUrl(any(GetPresignedObjectUrlArgs.class)))
                 .thenReturn("https://example.com/presigned/object");
-        MinioObjectStorageService service = new MinioObjectStorageService(minioClient, PROPERTIES);
+        MinioObjectStorageService service = service(minioClient);
 
         PresignedUrl result = service.createPresignedUrl(new PresignedUrlCommand("attachments/report.pdf", Duration.ofMinutes(5)));
 
@@ -164,6 +169,14 @@ class MinioObjectStorageServiceTests {
         assertEquals("carrypigeon", args.bucket());
         assertEquals("attachments/report.pdf", args.object());
         assertEquals("https://example.com/presigned/object", result.url().toString());
-        assertTrue(result.expiresAt().isAfter(Instant.now().plusSeconds(240)));
+        assertEquals(NOW.plus(Duration.ofMinutes(5)), result.expiresAt());
+    }
+
+    private static MinioObjectStorageService service(MinioClient minioClient) {
+        return new MinioObjectStorageService(
+                minioClient,
+                PROPERTIES,
+                new TimeProviderImpl(Clock.fixed(NOW, ZoneOffset.UTC))
+        );
     }
 }

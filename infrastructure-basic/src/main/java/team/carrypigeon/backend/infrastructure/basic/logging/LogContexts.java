@@ -43,13 +43,18 @@ public final class LogContexts {
 
     /**
      * 向 MDC 写入单个字段。
-     * 约束：空值与空白值会被直接忽略，避免污染日志上下文。
+     * 约束：值会先转换为有长度上限的单行文本；空值会移除旧字段，避免线程复用时残留上下文。
      */
     public static void put(String key, String value) {
-        if (value == null || value.isBlank()) {
+        if (key == null || key.isBlank()) {
             return;
         }
-        MDC.put(key, value);
+        String sanitizedValue = LogValueSanitizer.singleLine(value);
+        if (sanitizedValue.isEmpty()) {
+            MDC.remove(key);
+            return;
+        }
+        MDC.put(key, sanitizedValue);
     }
 
     /**
@@ -74,5 +79,48 @@ public final class LogContexts {
      */
     public static void clear() {
         MDC.clear();
+    }
+
+    /**
+     * 打开隔离的 MDC 作用域。
+     * 语义：进入时保存并清空当前线程上下文，关闭时清理内部字段并恢复外层上下文。
+     * 约束：作用域必须由创建线程关闭，推荐使用 try-with-resources。
+     *
+     * @return 当前线程的日志上下文作用域
+     */
+    public static Scope openScope() {
+        return new Scope();
+    }
+
+    /**
+     * 可关闭的 MDC 隔离作用域。
+     * 职责：保证线程复用和嵌套日志边界不会互相泄漏或误删上下文字段。
+     */
+    public static final class Scope implements AutoCloseable {
+
+        private final Thread owner = Thread.currentThread();
+        private final Map<String, String> previousContext;
+        private boolean closed;
+
+        private Scope() {
+            Map<String, String> currentContext = MDC.getCopyOfContextMap();
+            this.previousContext = currentContext == null ? Map.of() : Map.copyOf(currentContext);
+            MDC.clear();
+        }
+
+        @Override
+        public void close() {
+            if (Thread.currentThread() != owner) {
+                throw new IllegalStateException("Log context scope must be closed by its owner thread");
+            }
+            if (closed) {
+                return;
+            }
+            MDC.clear();
+            if (!previousContext.isEmpty()) {
+                MDC.setContextMap(previousContext);
+            }
+            closed = true;
+        }
     }
 }

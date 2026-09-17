@@ -19,14 +19,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.support.TestFeatureApis;
 import team.carrypigeon.backend.chat.domain.support.TestRealtimeDomainEventPublisher;
@@ -158,8 +157,8 @@ final class ChannelDomainApiTestSupport {
             return new ChannelGovernancePolicy();
         }
 
-        private TimeProvider timeProvider() {
-            return new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
+        private TimeProviderImpl timeProvider() {
+            return new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
         }
     }
 
@@ -239,9 +238,15 @@ final class ChannelDomainApiTestSupport {
     static final class InMemoryChannelMemberRepository implements ChannelMemberRepository {
 
         final Map<Long, List<ChannelMember>> membersByChannelId = new HashMap<>();
+        int existsCalls;
+        int findAccountIdsCalls;
+        int deleteByChannelIdCalls;
+        int findOwnerAccountIdsCalls;
+        int findByChannelIdCalls;
 
         @Override
         public boolean exists(long channelId, long accountId) {
+            existsCalls++;
             return membersByChannelId.getOrDefault(channelId, List.of()).stream()
                     .anyMatch(member -> member.accountId() == accountId);
         }
@@ -267,6 +272,12 @@ final class ChannelDomainApiTestSupport {
         }
 
         @Override
+        public void deleteByChannelId(long channelId) {
+            deleteByChannelIdCalls++;
+            membersByChannelId.remove(channelId);
+        }
+
+        @Override
         public Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
             return membersByChannelId.getOrDefault(channelId, List.of()).stream()
                     .filter(member -> member.accountId() == accountId)
@@ -275,14 +286,29 @@ final class ChannelDomainApiTestSupport {
 
         @Override
         public List<ChannelMember> findByChannelId(long channelId) {
+            findByChannelIdCalls++;
             return membersByChannelId.getOrDefault(channelId, List.of()).stream().toList();
         }
 
         @Override
         public List<Long> findAccountIdsByChannelId(long channelId) {
+            findAccountIdsCalls++;
             return membersByChannelId.getOrDefault(channelId, List.of()).stream()
                     .map(ChannelMember::accountId)
                     .toList();
+        }
+
+        @Override
+        public Map<Long, Long> findOwnerAccountIdsByChannelIds(java.util.Collection<Long> channelIds) {
+            findOwnerAccountIdsCalls++;
+            Map<Long, Long> owners = new HashMap<>();
+            for (Long channelId : channelIds) {
+                membersByChannelId.getOrDefault(channelId, List.of()).stream()
+                        .filter(member -> member.role() == ChannelMemberRole.OWNER)
+                        .findFirst()
+                        .ifPresent(owner -> owners.put(channelId, owner.accountId()));
+            }
+            return owners;
         }
     }
 
@@ -294,6 +320,7 @@ final class ChannelDomainApiTestSupport {
 
         ChannelInvite savedInvite;
         ChannelInvite updatedInvite;
+        boolean updateIfPendingResult = true;
 
         @Override
         public Optional<ChannelInvite> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
@@ -331,6 +358,15 @@ final class ChannelDomainApiTestSupport {
         public void update(ChannelInvite channelInvite) {
             updatedInvite = channelInvite;
             savedInvite = channelInvite;
+        }
+
+        @Override
+        public boolean updateIfPending(ChannelInvite channelInvite) {
+            if (!updateIfPendingResult) {
+                return false;
+            }
+            update(channelInvite);
+            return true;
         }
     }
 
@@ -383,8 +419,10 @@ final class ChannelDomainApiTestSupport {
         }
 
         @Override
-        public List<UserProfile> findAll() {
-            return new ArrayList<>(profiles.values());
+        public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+            return profiles.values().stream()
+                    .filter(profile -> accountIds.contains(profile.accountId()))
+                    .toList();
         }
 
         @Override

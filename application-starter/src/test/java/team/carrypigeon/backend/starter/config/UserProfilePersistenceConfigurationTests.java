@@ -31,10 +31,7 @@ class UserProfilePersistenceConfigurationTests {
     @DisplayName("configuration with database service registers user profile repository")
     void configuration_withDatabaseService_registersUserProfileRepository() {
         contextRunner
-                .withPropertyValues(
-                        "cp.infrastructure.service.database.enabled=true",
-                        "cp.infrastructure.service.database.health-query=SELECT 1"
-                )
+                .withPropertyValues("cp.infrastructure.service.database.enabled=true")
                 .withBean(UserProfileDatabaseService.class, () -> mock(UserProfileDatabaseService.class))
                 .run(context -> assertThat(context).hasSingleBean(UserProfileRepository.class));
     }

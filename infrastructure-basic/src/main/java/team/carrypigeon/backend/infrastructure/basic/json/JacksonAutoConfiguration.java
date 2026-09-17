@@ -36,7 +36,7 @@ public class JacksonAutoConfiguration {
      * @return JSON 能力对外入口
      */
     @Bean
-    public JsonProvider jsonProvider(ObjectMapper objectMapper) {
-        return new JsonProvider(objectMapper);
+    public JsonProviderImpl jsonProvider(ObjectMapper objectMapper) {
+        return new JsonProviderImpl(objectMapper);
     }
 }

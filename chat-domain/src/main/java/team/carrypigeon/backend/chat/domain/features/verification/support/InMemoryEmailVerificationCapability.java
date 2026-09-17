@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
@@ -22,14 +22,14 @@ public class InMemoryEmailVerificationCapability implements EmailVerificationCap
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
     private final Map<String, EmailCodeEntry> issuedCodes = new ConcurrentHashMap<>();
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final MailSenderService mailSenderService;
 
-    public InMemoryEmailVerificationCapability(TimeProvider timeProvider) {
+    public InMemoryEmailVerificationCapability(TimeProviderImpl timeProvider) {
         this(timeProvider, null);
     }
 
-    public InMemoryEmailVerificationCapability(TimeProvider timeProvider, MailSenderService mailSenderService) {
+    public InMemoryEmailVerificationCapability(TimeProviderImpl timeProvider, MailSenderService mailSenderService) {
         this.timeProvider = timeProvider;
         this.mailSenderService = mailSenderService;
     }

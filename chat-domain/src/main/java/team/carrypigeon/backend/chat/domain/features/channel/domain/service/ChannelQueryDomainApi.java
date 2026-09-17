@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.AuditLogResult;
@@ -23,10 +23,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.service.ChannelGovernancePolicy;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道查询领域服务。
@@ -83,9 +82,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         }
         ChannelMember operator = requireMember(channel.id(), query.accountId());
         channelGovernancePolicy.requireCanListMembers(operator);
-        return channelMemberRepository.findByChannelId(channel.id()).stream()
-                .map(this::toMemberResult)
-                .toList();
+        return channelProjectionMapper.toMemberResults(channelMemberRepository.findByChannelId(channel.id()));
     }
 
     /**
@@ -138,10 +135,16 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
             requireMember(query.channelId(), query.accountId());
             return listAuditLogsByChannel(query, query.channelId(), actionType, fromTime, toTime);
         }
-        return channelMemberRepository.findChannelIdsByAccountId(query.accountId()).stream()
-                .flatMap(channelId -> listAuditLogsByChannel(query, channelId, actionType, fromTime, toTime).stream())
-                .sorted(Comparator.comparingLong((AuditLogResult result) -> Long.parseLong(result.auditId())).reversed())
-                .limit(query.limit() + 1L)
+        return channelAuditLogRepository.listByChannelIds(
+                        query.cursorAuditId(),
+                        query.limit() + 1,
+                        channelMemberRepository.findChannelIdsByAccountId(query.accountId()),
+                        query.actorAccountId(),
+                        actionType,
+                        fromTime,
+                        toTime
+                ).stream()
+                .map(this::toAuditLogResult)
                 .toList();
     }
 
@@ -154,17 +157,26 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
      */
     public List<ChannelResult> listChannels(long accountId) {
         requirePositive(accountId, "accountId");
-        ArrayList<ChannelResult> channels = new ArrayList<>();
-        channelRepository.findDefaultChannel().ifPresent(channel -> channels.add(toResult(channel)));
+        Map<Long, Channel> visibleChannels = new LinkedHashMap<>();
+        channelRepository.findDefaultChannel().ifPresent(channel -> visibleChannels.put(channel.id(), channel));
         channelRepository.findSystemChannel()
                 .filter(channel -> channelMemberRepository.exists(channel.id(), accountId))
-                .ifPresent(channel -> channels.add(toResult(channel)));
-        for (Long channelId : channelMemberRepository.findChannelIdsByAccountId(accountId)) {
-            channelRepository.findById(channelId)
-                    .filter(channel -> channels.stream().noneMatch(existing -> existing.channelId() == channel.id()))
-                    .ifPresent(channel -> channels.add(toResult(channel)));
+                .ifPresent(channel -> visibleChannels.putIfAbsent(channel.id(), channel));
+        List<Long> memberChannelIds = channelMemberRepository.findChannelIdsByAccountId(accountId);
+        Map<Long, Channel> memberChannels = channelRepository.findByIds(memberChannelIds);
+        for (Long channelId : memberChannelIds) {
+            Channel channel = memberChannels.get(channelId);
+            if (channel != null) {
+                visibleChannels.putIfAbsent(channel.id(), channel);
+            }
         }
-        return channels;
+        Map<Long, Long> ownerIds = channelMemberRepository.findOwnerAccountIdsByChannelIds(visibleChannels.keySet());
+        return visibleChannels.values().stream()
+                .map(channel -> channelProjectionMapper.toResult(
+                        channel,
+                        ownerIds.containsKey(channel.id()) ? IdUtil.toString(ownerIds.get(channel.id())) : ""
+                ))
+                .toList();
     }
 
     /**
@@ -209,7 +221,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
                         query.limit() + 1
                 ).stream()
                 .map(channel -> new DiscoverChannelResult(
-                        Ids.toString(channel.id()),
+                        IdUtil.toString(channel.id()),
                         channel.name(),
                         channel.brief(),
                         channel.avatar(),
@@ -276,9 +288,9 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
      */
     private AuditLogResult toAuditLogResult(ChannelAuditLog log) {
         return new AuditLogResult(
-                Ids.toString(log.auditId()),
-                Ids.toString(log.channelId()),
-                log.actorAccountId() == null ? null : Ids.toString(log.actorAccountId()),
+                IdUtil.toString(log.auditId()),
+                IdUtil.toString(log.channelId()),
+                log.actorAccountId() == null ? null : IdUtil.toString(log.actorAccountId()),
                 channelAuditActionMapper.toClientAction(log.actionType()),
                 log.metadata(),
                 log.createdAt().toEpochMilli()

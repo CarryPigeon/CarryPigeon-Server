@@ -10,7 +10,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.repository.User
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -24,12 +24,12 @@ public class UserProfileDomainApi implements UserProfileApi {
     private static final String USER_PROFILE_NOT_FOUND_MESSAGE = "user profile does not exist";
 
     private final UserProfileRepository userProfileRepository;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileDomainApi(
             UserProfileRepository userProfileRepository,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.userProfileRepository = userProfileRepository;

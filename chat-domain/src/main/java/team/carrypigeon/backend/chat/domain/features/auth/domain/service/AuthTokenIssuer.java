@@ -8,7 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 鉴权 token 签发协作对象。
@@ -22,7 +22,7 @@ class AuthTokenIssuer {
     private final AuthTokenCodec authTokenCodec;
     private final AuthTokenSettings authTokenSettings;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
 
     AuthTokenIssuer(
             AuthRefreshSessionRepository authRefreshSessionRepository,
@@ -30,7 +30,7 @@ class AuthTokenIssuer {
             AuthTokenCodec authTokenCodec,
             AuthTokenSettings authTokenSettings,
             IdGenerator idGenerator,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         this.authRefreshSessionRepository = authRefreshSessionRepository;
         this.tokenHasher = tokenHasher;

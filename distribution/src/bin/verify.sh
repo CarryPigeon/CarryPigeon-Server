@@ -134,18 +134,33 @@ if ! command -v java >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl executable not found in PATH; background readiness probe cannot run" >&2
+  exit 1
+fi
+
 PLUGIN_CLASSPATH="$APP_JAR:$BASE_DIR/lib/*:$BASE_DIR/plugins/*"
 java -cp "$PLUGIN_CLASSPATH" team.carrypigeon.backend.starter.PluginPreflightCommand
 
 if [ "$STRICT_CONFIG" -eq 1 ]; then
   JWT_SECRET=$(yaml_value "$BASE_DIR/config/application.yaml" "cp.chat.auth.jwt.secret")
+  FILE_SHARE_KEY_SECRET=$(yaml_value "$BASE_DIR/config/application.yaml" "cp.chat.file.share-key.secret")
   SERVER_ID=$(yaml_value "$BASE_DIR/config/application.yaml" "cp.chat.server.id")
 
   require_config_value "$JWT_SECRET" "cp.chat.auth.jwt.secret"
+  require_config_value "$FILE_SHARE_KEY_SECRET" "cp.chat.file.share-key.secret"
   require_config_value "$SERVER_ID" "cp.chat.server.id"
 
   if [ "${#JWT_SECRET}" -lt 32 ]; then
     echo "cp.chat.auth.jwt.secret must be at least 32 characters." >&2
+    exit 1
+  fi
+  if [ "${#FILE_SHARE_KEY_SECRET}" -lt 32 ]; then
+    echo "cp.chat.file.share-key.secret must be at least 32 characters." >&2
+    exit 1
+  fi
+  if [ "$FILE_SHARE_KEY_SECRET" = "$JWT_SECRET" ]; then
+    echo "cp.chat.file.share-key.secret must not reuse cp.chat.auth.jwt.secret." >&2
     exit 1
   fi
 fi

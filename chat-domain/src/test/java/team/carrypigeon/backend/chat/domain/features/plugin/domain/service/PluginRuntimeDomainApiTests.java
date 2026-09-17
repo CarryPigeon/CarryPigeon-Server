@@ -15,12 +15,12 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.Plu
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.PluginMigrationContext;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.SystemPlugin;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.SystemPluginContext;
-import team.carrypigeon.backend.infrastructure.basic.InfrastructureBasics;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginConfigurationProvider;
 import team.carrypigeon.backend.infrastructure.basic.plugin.PluginProperties;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifest;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestCatalog;
 import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManifestException;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.PluginMigrationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
 
@@ -223,7 +223,7 @@ class PluginRuntimeDomainApiTests {
                 dataSource,
                 Optional.empty(),
                 mock(ApplicationContext.class),
-                mock(InfrastructureBasics.class)
+                mock(TimeProviderImpl.class)
         );
     }
 

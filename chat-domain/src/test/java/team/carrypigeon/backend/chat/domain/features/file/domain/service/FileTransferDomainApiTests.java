@@ -13,11 +13,9 @@ import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
-import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
-import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileShareKeyCodec;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
@@ -30,6 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 /**
  * `FileTransferDomainApi` 契约测试。
  * 职责：验证当前测试类覆盖对象的关键成功路径、失败路径或边界行为。
@@ -51,6 +52,23 @@ class FileTransferDomainApiTests {
         assertEquals(7001L, result.fileId());
         assertTrue(result.shareKey().startsWith("shr_"));
         assertEquals("/api/files/uploads/" + result.shareKey(), result.uploadUrl());
+    }
+
+    /**
+     * 验证上传授权中的签名载荷与响应只共享一次绝对过期时间计算。
+     */
+    @Test
+    @DisplayName("create upload grant computes expiry once")
+    void createUploadGrant_validInput_computesExpiryOnce() {
+        TimeProviderImpl timeProvider = mock(TimeProviderImpl.class);
+        Instant now = Instant.parse("2026-04-23T00:00:00Z");
+        when(timeProvider.nowInstant()).thenReturn(now, now.plusSeconds(1));
+        FileTransferDomainApi service = createService(new RecordingObjectStorageService(), timeProvider);
+
+        FileUploadGrantResult result = service.createUploadGrant(1001L, "image.png", "image/png", 123L);
+
+        assertEquals(now.plusSeconds(600), result.expiresAt());
+        verify(timeProvider, times(1)).nowInstant();
     }
 
     /**
@@ -188,11 +206,21 @@ class FileTransferDomainApiTests {
     }
 
     private FileTransferDomainApi createService(RecordingObjectStorageService storageService) {
+        return createService(
+                storageService,
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-04-23T00:00:00Z"), ZoneOffset.UTC))
+        );
+    }
+
+    private FileTransferDomainApi createService(
+            RecordingObjectStorageService storageService,
+            TimeProviderImpl timeProvider
+    ) {
         return new FileTransferDomainApi(
                 new StaticObjectProvider(storageService),
                 mock(ChannelContextApi.class),
                 new FixedIdGenerator(),
-                new TimeProvider(Clock.fixed(Instant.parse("2026-04-23T00:00:00Z"), ZoneOffset.UTC)),
+                timeProvider,
                 new FileUploadShareKeyCodec("0123456789abcdef0123456789abcdef")
         );
     }

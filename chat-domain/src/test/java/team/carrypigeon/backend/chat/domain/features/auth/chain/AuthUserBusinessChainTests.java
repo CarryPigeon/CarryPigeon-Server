@@ -61,7 +61,7 @@ import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExcep
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -569,7 +569,7 @@ class AuthUserBusinessChainTests {
         private final MockMvc userMvc;
 
         private Fixture() {
-            TimeProvider timeProvider = new TimeProvider(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
+            TimeProviderImpl timeProvider = new TimeProviderImpl(Clock.fixed(BASE_TIME, ZoneOffset.UTC));
             TransactionRunner transactionRunner = new NoopTransactionRunner();
             PasswordHasher passwordHasher = new PrefixPasswordHasher();
             TokenHasher tokenHasher = token -> "hash::" + token;
@@ -728,6 +728,16 @@ class AuthUserBusinessChainTests {
                     BASE_TIME
             ));
         }
+
+        @Override
+        public boolean revokeIfActive(long sessionId) {
+            AuthRefreshSession session = sessions.get(sessionId);
+            if (session == null || session.revoked() || !session.expiresAt().isAfter(BASE_TIME)) {
+                return false;
+            }
+            revoke(sessionId);
+            return true;
+        }
     }
 
     /**
@@ -744,8 +754,10 @@ class AuthUserBusinessChainTests {
         }
 
         @Override
-        public List<UserProfile> findAll() {
-            return new ArrayList<>(profilesByAccountId.values());
+        public List<UserProfile> findByAccountIds(List<Long> accountIds) {
+            return profilesByAccountId.values().stream()
+                    .filter(profile -> accountIds.contains(profile.accountId()))
+                    .toList();
         }
 
         @Override

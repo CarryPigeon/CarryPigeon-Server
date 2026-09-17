@@ -47,6 +47,18 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     int upsertState(ChannelReadStateEntity entity);
 
+    @org.apache.ibatis.annotations.Update("""
+            INSERT INTO chat_channel_read_state (
+                channel_id, account_id, last_read_message_id, last_read_time, created_at, updated_at
+            ) VALUES (
+                #{channelId}, #{accountId}, #{lastReadMessageId}, #{lastReadTime}, #{createdAt}, #{updatedAt}
+            ) ON DUPLICATE KEY UPDATE
+                last_read_time = IF(VALUES(last_read_message_id) > last_read_message_id, VALUES(last_read_time), last_read_time),
+                updated_at = IF(VALUES(last_read_message_id) > last_read_message_id, VALUES(updated_at), updated_at),
+                last_read_message_id = IF(VALUES(last_read_message_id) > last_read_message_id, VALUES(last_read_message_id), last_read_message_id)
+            """)
+    int advanceIfNewer(ChannelReadStateEntity entity);
+
     @Select("""
             <script>
             SELECT

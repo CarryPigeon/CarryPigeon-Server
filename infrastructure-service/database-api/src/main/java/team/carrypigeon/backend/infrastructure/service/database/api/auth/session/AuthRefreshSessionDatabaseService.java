@@ -30,4 +30,12 @@ public interface AuthRefreshSessionDatabaseService {
      * @param sessionId 刷新会话 ID
      */
     void revoke(long sessionId);
+
+    /**
+     * 仅在会话仍处于可用状态时原子撤销会话。
+     *
+     * @param sessionId 会话 ID
+     * @return 成功抢占撤销权时返回 true；已被其它请求撤销时返回 false
+     */
+    boolean revokeIfActive(long sessionId);
 }

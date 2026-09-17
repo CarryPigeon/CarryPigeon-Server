@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.startup;
 
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealth;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
@@ -10,11 +10,11 @@ import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHea
  * 职责：将缓存健康检查适配为共享启动检查契约。
  * 边界：只负责契约转换，不暴露 Redis 连接细节。
  */
-public class CacheInitializationCheck implements InitializationCheck {
+public class CacheInitializationChecker implements InitializationChecker {
 
     private final CacheHealthService cacheHealthService;
 
-    public CacheInitializationCheck(CacheHealthService cacheHealthService) {
+    public CacheInitializationChecker(CacheHealthService cacheHealthService) {
         this.cacheHealthService = cacheHealthService;
     }
 

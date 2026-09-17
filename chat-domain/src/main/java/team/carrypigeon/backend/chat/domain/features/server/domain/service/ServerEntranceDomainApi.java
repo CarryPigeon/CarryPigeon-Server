@@ -8,7 +8,7 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.projection.Se
 import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 服务基础领域服务。
@@ -25,7 +25,7 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
     private final ServerIdentityProvider serverIdentityProvider;
     private final String applicationName;
     private final RealtimeDiscoverySettings realtimeDiscoverySettings;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final PluginCatalogApi pluginCatalogApi;
 
     @Autowired
@@ -33,7 +33,7 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
             ServerIdentityProvider serverIdentityProvider,
             @Value("${spring.application.name:CarryPigeonBackend}") String applicationName,
             RealtimeDiscoverySettings realtimeDiscoverySettings,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             PluginCatalogApi pluginCatalogApi
     ) {
         this.serverIdentityProvider = serverIdentityProvider;

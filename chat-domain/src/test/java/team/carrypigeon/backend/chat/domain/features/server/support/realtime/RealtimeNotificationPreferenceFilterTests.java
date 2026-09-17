@@ -12,9 +12,13 @@ import org.junit.jupiter.api.Test;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * RealtimeNotificationPreferenceFilter 契约测试。
@@ -108,8 +112,28 @@ class RealtimeNotificationPreferenceFilterTests {
         assertEquals(List.of(1001L), filter.filterRecipients(9L, "channel.changed", List.of(1001L)));
     }
 
-    private static TimeProvider timeProvider() {
-        return new TimeProvider(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC));
+    /**
+     * 验证重复接收账号只保留首次位置，且一次过滤只读取一次当前时间。
+     */
+    @Test
+    @DisplayName("filter recipients duplicate accounts deduplicates and reads time once")
+    void filterRecipients_duplicateAccounts_deduplicatesAndReadsTimeOnce() {
+        RecordingNotificationPreferenceRepository repository = new RecordingNotificationPreferenceRepository();
+        repository.channelPreferences.add(channelPreference(1001L, 9L, "muted", 100L));
+        repository.channelPreferences.add(channelPreference(1002L, 9L, "muted", 100L));
+        TimeProviderImpl timeProvider = mock(TimeProviderImpl.class);
+        when(timeProvider.nowMillis()).thenReturn(200L);
+        RealtimeNotificationPreferenceFilter filter = new RealtimeNotificationPreferenceFilter(repository, timeProvider);
+
+        List<Long> result = filter.filterRecipients(
+                9L, "message.created", List.of(1001L, 1002L, 1001L, 1002L));
+
+        assertEquals(List.of(1001L, 1002L), result);
+        verify(timeProvider, times(1)).nowMillis();
+    }
+
+    private static TimeProviderImpl timeProvider() {
+        return new TimeProviderImpl(Clock.fixed(Instant.parse("2026-04-24T12:00:00Z"), ZoneOffset.UTC));
     }
 
     private static NotificationServerPreference serverPreference(long accountId, String mode, long mutedUntil) {
@@ -152,6 +176,13 @@ class RealtimeNotificationPreferenceFilterTests {
             return channelPreferences.stream()
                     .filter(preference -> preference.accountId() == accountId)
                     .toList();
+        }
+
+        @Override
+        public Optional<NotificationChannelPreference> findChannelPreference(long accountId, long channelId) {
+            return channelPreferences.stream()
+                    .filter(preference -> preference.accountId() == accountId && preference.channelId() == channelId)
+                    .findFirst();
         }
 
         @Override

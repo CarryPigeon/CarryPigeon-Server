@@ -22,11 +22,17 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
-     * 插入一条提及记录。
+     * 单条 SQL 批量插入提及记录；空集合不访问 Mapper。
      */
     @Override
-    public void insert(MentionRecord record) {
-        executeVoid(() -> mentionMapper.insert(toEntity(record)), "failed to insert mention");
+    public void insertAll(List<MentionRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        executeVoid(
+                () -> mentionMapper.insertAll(records.stream().map(this::toEntity).toList()),
+                "failed to batch insert mentions"
+        );
     }
 
     /**

@@ -50,4 +50,36 @@ class StorageModelsTests {
         assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand(" "));
         assertThrows(IllegalArgumentException.class, () -> new PresignedUrlCommand("files/a.txt", Duration.ZERO));
     }
+
+    /**
+     * 验证对象键拒绝超长、控制字符、绝对路径和不稳定路径段。
+     */
+    @Test
+    void constructor_unsafeObjectKeys_rejected() {
+        assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand("/files/a.txt"));
+        assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand("files//a.txt"));
+        assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand("files/../a.txt"));
+        assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand("files/a\nb.txt"));
+        assertThrows(IllegalArgumentException.class, () -> new GetObjectCommand("界".repeat(342)));
+    }
+
+    /**
+     * 验证预签名有效期只接受整秒且位于一秒到七天之间。
+     */
+    @Test
+    void constructor_outOfRangeOrFractionalTtl_rejected() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PresignedUrlCommand("files/a.txt", Duration.ofMillis(500))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PresignedUrlCommand("files/a.txt", Duration.ofMillis(1500))
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new PresignedUrlCommand("files/a.txt", Duration.ofDays(7).plusSeconds(1))
+        );
+        assertEquals(Duration.ofDays(7), new PresignedUrlCommand("files/a.txt", Duration.ofDays(7)).ttl());
+    }
 }

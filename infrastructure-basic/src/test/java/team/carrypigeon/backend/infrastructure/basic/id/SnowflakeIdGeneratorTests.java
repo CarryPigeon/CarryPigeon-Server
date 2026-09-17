@@ -44,7 +44,7 @@ class SnowflakeIdGeneratorTests {
 
         String stringId = idGenerator.nextStringId();
 
-        assertEquals(Ids.toString(Ids.parse(stringId)), stringId);
+        assertEquals(IdUtil.toString(IdUtil.parse(stringId)), stringId);
         assertTrue(stringId.chars().allMatch(Character::isDigit));
     }
 }

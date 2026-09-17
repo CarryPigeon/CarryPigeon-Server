@@ -13,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.event.ReadSt
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
@@ -24,9 +24,9 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 class MessageAfterCommitPublisher {
 
     private final ApplicationEventPublisher eventPublisher;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
 
-    MessageAfterCommitPublisher(ApplicationEventPublisher eventPublisher, TimeProvider timeProvider) {
+    MessageAfterCommitPublisher(ApplicationEventPublisher eventPublisher, TimeProviderImpl timeProvider) {
         this.eventPublisher = eventPublisher;
         this.timeProvider = timeProvider;
     }

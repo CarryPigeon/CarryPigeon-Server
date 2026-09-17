@@ -4,7 +4,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 
 /**
  * WebSocket v1 帧编解码器。
@@ -13,9 +13,9 @@ import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
  */
 final class RealtimeFrameCodec {
 
-    private final JsonProvider jsonProvider;
+    private final JsonProviderImpl jsonProvider;
 
-    RealtimeFrameCodec(JsonProvider jsonProvider) {
+    RealtimeFrameCodec(JsonProviderImpl jsonProvider) {
         this.jsonProvider = jsonProvider;
     }
 

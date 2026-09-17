@@ -13,8 +13,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthToken
 import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AccessTokenAuthenticationDomainApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * RealtimeChannelHandler 测试支持。
@@ -38,11 +38,11 @@ final class RealtimeChannelHandlerTestSupport {
             int authenticationTimeoutSeconds,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi
     ) {
-        JsonProvider jsonProvider = jsonProvider();
+        JsonProviderImpl jsonProvider = jsonProvider();
         return new EmbeddedChannel(new RealtimeChannelHandler(
                 jsonProvider,
                 () -> 9001L,
-                new TimeProvider(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2026-04-22T00:00:00Z"), ZoneOffset.UTC)),
                 accessTokenAuthenticationApi,
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 registry,
@@ -51,10 +51,10 @@ final class RealtimeChannelHandlerTestSupport {
         ));
     }
 
-    static JsonProvider jsonProvider() {
+    static JsonProviderImpl jsonProvider() {
         ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
         objectMapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
-        return new JsonProvider(objectMapper);
+        return new JsonProviderImpl(objectMapper);
     }
 
     private static AuthTokenCodec authTokenCodec() {

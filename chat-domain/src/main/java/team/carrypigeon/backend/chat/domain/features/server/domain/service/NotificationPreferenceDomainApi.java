@@ -11,8 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.model.Notific
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * 通知偏好领域服务。
@@ -25,12 +25,12 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
 
     private final NotificationPreferenceRepository notificationPreferenceRepository;
     private final ChannelContextApi channelContextApi;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
 
     public NotificationPreferenceDomainApi(
             NotificationPreferenceRepository notificationPreferenceRepository,
             ChannelContextApi channelContextApi,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         this.notificationPreferenceRepository = notificationPreferenceRepository;
         this.channelContextApi = channelContextApi;
@@ -51,7 +51,7 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
                 .map(preference -> new NotificationPreferencesResult.ServerPreferenceResult(preference.mode(), preference.mutedUntil()))
                 .orElseGet(() -> new NotificationPreferencesResult.ServerPreferenceResult("all", 0L));
         List<NotificationPreferencesResult.ChannelPreferenceResult> channels = notificationPreferenceRepository.listChannelPreferencesByAccountId(accountId).stream()
-                .map(preference -> new NotificationPreferencesResult.ChannelPreferenceResult(Ids.toString(preference.channelId()), preference.mode(), preference.mutedUntil()))
+                .map(preference -> new NotificationPreferencesResult.ChannelPreferenceResult(IdUtil.toString(preference.channelId()), preference.mode(), preference.mutedUntil()))
                 .toList();
         return new NotificationPreferencesResult(server, channels);
     }
@@ -68,12 +68,13 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
         String mode = normalizeMode(command.mode(), SERVER_MODES, "mode");
         long mutedUntil = normalizeMutedUntil(command.mutedUntil());
         NotificationServerPreference existing = notificationPreferenceRepository.findServerPreferenceByAccountId(command.accountId()).orElse(null);
+        java.time.Instant updatedAt = timeProvider.nowInstant();
         notificationPreferenceRepository.upsertServerPreference(new NotificationServerPreference(
                 command.accountId(),
                 mode,
                 mutedUntil,
-                existing == null ? timeProvider.nowInstant() : existing.createdAt(),
-                timeProvider.nowInstant()
+                existing == null ? updatedAt : existing.createdAt(),
+                updatedAt
         ));
     }
 
@@ -91,17 +92,17 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
         channelContextApi.requireMemberChannel(command.channelId(), command.accountId());
         String mode = normalizeMode(command.mode(), CHANNEL_MODES, "mode");
         long mutedUntil = normalizeMutedUntil(command.mutedUntil());
-        NotificationChannelPreference existing = notificationPreferenceRepository.listChannelPreferencesByAccountId(command.accountId()).stream()
-                .filter(preference -> preference.channelId() == command.channelId())
-                .findFirst()
+        NotificationChannelPreference existing = notificationPreferenceRepository
+                .findChannelPreference(command.accountId(), command.channelId())
                 .orElse(null);
+        java.time.Instant updatedAt = timeProvider.nowInstant();
         notificationPreferenceRepository.upsertChannelPreference(new NotificationChannelPreference(
                 command.accountId(),
                 command.channelId(),
                 mode,
                 mutedUntil,
-                existing == null ? timeProvider.nowInstant() : existing.createdAt(),
-                timeProvider.nowInstant()
+                existing == null ? updatedAt : existing.createdAt(),
+                updatedAt
         ));
     }
 

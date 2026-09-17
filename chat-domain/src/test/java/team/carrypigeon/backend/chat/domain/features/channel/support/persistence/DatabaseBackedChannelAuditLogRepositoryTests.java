@@ -11,6 +11,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * DatabaseBackedChannelAuditLogRepository 契约测试。
@@ -62,6 +63,20 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
     }
 
     /**
+     * 验证删除安全检查使用审计日志存在性契约。
+     */
+    @Test
+    @DisplayName("exists by channel id delegates existence query")
+    void existsByChannelId_existingAuditLog_returnsTrue() {
+        FakeChannelAuditLogDatabaseService databaseService = new FakeChannelAuditLogDatabaseService();
+        databaseService.exists = true;
+        DatabaseBackedChannelAuditLogRepository repository = new DatabaseBackedChannelAuditLogRepository(databaseService);
+
+        assertTrue(repository.existsByChannelId(1L));
+        assertEquals(1L, databaseService.existsChannelId);
+    }
+
+    /**
      * `FakeChannelAuditLogDatabaseService` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -69,6 +84,8 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
 
         private ChannelAuditLogWriteRecord insertedRecord;
         private List<ChannelAuditLogReadRecord> readRecords = List.of();
+        private boolean exists;
+        private Long existsChannelId;
 
         @Override
         public void insert(ChannelAuditLogWriteRecord record) {
@@ -76,7 +93,18 @@ class DatabaseBackedChannelAuditLogRepositoryTests {
         }
 
         @Override
+        public boolean existsByChannelId(long channelId) {
+            existsChannelId = channelId;
+            return exists;
+        }
+
+        @Override
         public List<ChannelAuditLogReadRecord> list(Long cursorAuditId, int limit, Long channelId, Long actorAccountId, String actionType, Instant fromTime, Instant toTime) {
+            return readRecords;
+        }
+
+        @Override
+        public List<ChannelAuditLogReadRecord> listByChannelIds(Long cursorAuditId, int limit, java.util.Collection<Long> channelIds, Long actorAccountId, String actionType, Instant fromTime, Instant toTime) {
             return readRecords;
         }
     }

@@ -18,7 +18,7 @@ final class RealtimeChannelLogContext {
         AuthenticatedAccount principal = context.channel()
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
-        try {
+        try (LogContexts.Scope ignored = LogContexts.openScope()) {
             LogContexts.traceId(context.channel().attr(RealtimeChannelSession.TRACE_ID_KEY).get());
             LogContexts.requestId(context.channel().attr(RealtimeChannelSession.REQUEST_ID_KEY).get());
             LogContexts.route(context.channel().attr(RealtimeChannelSession.ROUTE_KEY).get());
@@ -26,8 +26,6 @@ final class RealtimeChannelLogContext {
                 LogContexts.uid(Long.toString(principal.accountId()));
             }
             action.run();
-        } finally {
-            LogContexts.clear();
         }
     }
 }

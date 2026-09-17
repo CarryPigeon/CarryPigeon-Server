@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.support.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.support.InMemoryEmailVerificationCapability;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
@@ -30,7 +30,7 @@ public class EmailVerificationConfiguration {
     public EmailVerificationCapability emailVerificationCapability(
             ObjectProvider<CacheService> cacheServiceProvider,
             ObjectProvider<MailSenderService> mailSenderServiceProvider,
-            TimeProvider timeProvider
+            TimeProviderImpl timeProvider
     ) {
         CacheService cacheService = cacheServiceProvider.getIfAvailable();
         MailSenderService mailSenderService = mailSenderServiceProvider.getIfAvailable();

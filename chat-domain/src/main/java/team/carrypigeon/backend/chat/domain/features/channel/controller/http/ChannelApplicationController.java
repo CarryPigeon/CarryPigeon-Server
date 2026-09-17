@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,13 +27,14 @@ import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.Chan
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.CreateChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.DecideChannelApplicationRequest;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道申请 HTTP 入口。
  */
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道申请", description = "入群申请与审批能力。")
 @Validated
 public class ChannelApplicationController {
@@ -106,9 +108,9 @@ public class ChannelApplicationController {
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {
         return new ChannelApplicationResponse(
-                Ids.toString(result.applicationId()),
-                Ids.toString(result.channelId()),
-                Ids.toString(result.accountId()),
+                IdUtil.toString(result.applicationId()),
+                IdUtil.toString(result.channelId()),
+                IdUtil.toString(result.accountId()),
                 result.reason(),
                 result.applyTime().toEpochMilli(),
                 result.status().toLowerCase()

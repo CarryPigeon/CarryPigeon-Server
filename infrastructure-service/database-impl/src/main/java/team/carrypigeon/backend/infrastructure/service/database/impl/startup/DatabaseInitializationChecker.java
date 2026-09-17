@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.startup;
 
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
@@ -10,11 +10,11 @@ import team.carrypigeon.backend.infrastructure.service.database.api.health.Datab
  * 职责：将数据库健康检查适配为共享启动检查契约。
  * 边界：只负责契约转换，不承载 JDBC 检查细节。
  */
-public class DatabaseInitializationCheck implements InitializationCheck {
+public class DatabaseInitializationChecker implements InitializationChecker {
 
     private final DatabaseHealthService databaseHealthService;
 
-    public DatabaseInitializationCheck(DatabaseHealthService databaseHealthService) {
+    public DatabaseInitializationChecker(DatabaseHealthService databaseHealthService) {
         this.databaseHealthService = databaseHealthService;
     }
 

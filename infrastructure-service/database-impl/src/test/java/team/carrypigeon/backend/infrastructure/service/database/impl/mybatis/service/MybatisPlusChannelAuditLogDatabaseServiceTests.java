@@ -2,6 +2,8 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Collection;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -16,12 +18,14 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 /**
  * MybatisPlusChannelAuditLogDatabaseService 契约测试。
@@ -84,6 +88,20 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
     }
 
     /**
+     * 验证存在审计日志时轻量存在性查询返回 true。
+     */
+    @Test
+    @DisplayName("exists by channel id existing row returns true")
+    void existsByChannelId_existingRow_returnsTrue() {
+        ChannelAuditLogMapper mapper = mock(ChannelAuditLogMapper.class);
+        when(mapper.existsByChannelId(1L)).thenReturn(true);
+        MybatisPlusChannelAuditLogDatabaseService service = new MybatisPlusChannelAuditLogDatabaseService(mapper);
+
+        assertTrue(service.existsByChannelId(1L));
+        verify(mapper).existsByChannelId(1L);
+    }
+
+    /**
      * 验证 `listQuery` 在 `mapsEntitiesToRecords` 场景下的测试契约。
      */
     @Test
@@ -97,12 +115,40 @@ class MybatisPlusChannelAuditLogDatabaseServiceTests {
         entity.setActionType("MEMBER_BANNED");
         entity.setMetadata("{}");
         entity.setCreatedAt(Instant.parse("2026-04-24T12:00:00Z"));
-        when(channelAuditLogMapper.list(eq(null), eq(50), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(List.of(entity));
+        when(channelAuditLogMapper.listByChannelIds(eq(null), eq(50), eq(null), eq(null), eq(null), eq(null), eq(null))).thenReturn(List.of(entity));
         MybatisPlusChannelAuditLogDatabaseService service = new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
 
         ChannelAuditLogReadRecord record = service.list(null, 50, null, null, null, null, null).getFirst();
 
         assertEquals(7001L, record.auditId());
         assertEquals("MEMBER_BANNED", record.actionType());
+    }
+
+    /** 验证超大频道集合分片查询后仍按审计 ID 全局排序并截断。 */
+    @Test
+    @DisplayName("list by channel ids oversized collection merges batches")
+    void listByChannelIds_oversizedCollection_mergesBatches() {
+        ChannelAuditLogMapper mapper = mock(ChannelAuditLogMapper.class);
+        when(mapper.listByChannelIds(eq(null), eq(2), any(Collection.class), eq(null), eq(null), eq(null), eq(null)))
+                .thenAnswer(invocation -> {
+                    Collection<Long> channelIds = invocation.getArgument(2);
+                    ChannelAuditLogEntity entity = new ChannelAuditLogEntity();
+                    entity.setAuditId(channelIds.contains(1L) ? 7001L : 7003L);
+                    entity.setChannelId(channelIds.iterator().next());
+                    entity.setActorAccountId(1001L);
+                    entity.setActionType("MEMBER_MUTED");
+                    entity.setMetadata("{}");
+                    entity.setCreatedAt(Instant.parse("2026-04-24T12:00:00Z"));
+                    return List.of(entity);
+                });
+        MybatisPlusChannelAuditLogDatabaseService service = new MybatisPlusChannelAuditLogDatabaseService(mapper);
+        List<Long> channelIds = LongStream.rangeClosed(1L, 501L).boxed().toList();
+
+        List<ChannelAuditLogReadRecord> result = service.listByChannelIds(
+                null, 2, channelIds, null, null, null, null
+        );
+
+        assertEquals(List.of(7003L, 7001L), result.stream().map(ChannelAuditLogReadRecord::auditId).toList());
+        verify(mapper, times(2)).listByChannelIds(eq(null), eq(2), any(Collection.class), eq(null), eq(null), eq(null), eq(null));
     }
 }

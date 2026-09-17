@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
@@ -18,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 /**
@@ -71,6 +74,26 @@ class MybatisPlusMessageDatabaseServiceTests {
         assertEquals("Core:Text", record.domain());
         assertEquals("{\"text\":\"hello world\"}", record.data());
         assertEquals("[\"1002\"]", record.mentions());
+    }
+
+    /**
+     * 验证批量消息查询按 500 个 ID 分片，避免生成超长 IN 条件。
+     */
+    @Test
+    @DisplayName("find by ids more than batch limit partitions mapper calls")
+    void findByIds_moreThanBatchLimit_partitionsMapperCalls() {
+        MessageMapper messageMapper = mock(MessageMapper.class);
+        when(messageMapper.findByIds(any())).thenReturn(List.of());
+        MybatisPlusMessageDatabaseService service = new MybatisPlusMessageDatabaseService(messageMapper);
+        List<Long> messageIds = LongStream.rangeClosed(1L, 501L).boxed().toList();
+
+        service.findByIds(messageIds);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<Long>> captor = ArgumentCaptor.forClass(Collection.class);
+        verify(messageMapper, times(2)).findByIds(captor.capture());
+        assertEquals(500, captor.getAllValues().get(0).size());
+        assertEquals(1, captor.getAllValues().get(1).size());
     }
 
     /**

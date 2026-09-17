@@ -3,10 +3,7 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
     <!--
-      Project-level Maven settings:
-      - use Aliyun public mirror for dependency and plugin resolution
-      - keep mirror id "alimaven" for consistency
-      - the local repository is provided via -Dmaven.repo.local or .mvn/maven.config
+    阿里云镜像配置
     -->
     <mirrors>
         <mirror>

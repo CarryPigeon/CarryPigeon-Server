@@ -18,7 +18,7 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.service.Serve
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.advice.GlobalExceptionHandler;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,7 +75,7 @@ class ServerControllerTests {
                 new ServerIdentityProperties("550e8400-e29b-41d4-a716-446655440000"),
                 "CarryPigeonBackend",
                 realtimeProperties(realtimeEnabled),
-                new TimeProvider(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
+                new TimeProviderImpl(Clock.fixed(Instant.parse("2024-04-20T12:00:00Z"), ZoneOffset.UTC)),
                 pluginCatalogApi
         );
     }

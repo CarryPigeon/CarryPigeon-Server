@@ -32,4 +32,9 @@ public interface AuthRefreshSessionRepository {
      * @param sessionId 刷新会话 ID
      */
     void revoke(long sessionId);
+
+    /**
+     * 原子消费仍有效的刷新会话，避免并发请求重复轮换同一 refresh token。
+     */
+    boolean revokeIfActive(long sessionId);
 }

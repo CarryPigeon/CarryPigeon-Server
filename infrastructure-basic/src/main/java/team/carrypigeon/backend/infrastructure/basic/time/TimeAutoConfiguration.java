@@ -21,4 +21,9 @@ public class TimeAutoConfiguration {
     public Clock systemClock() {
         return Clock.systemDefaultZone();
     }
+
+    @Bean
+    public TimeProvider timeProvider(Clock clock){
+        return new TimeProviderImpl(clock);
+    }
 }

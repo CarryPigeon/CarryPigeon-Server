@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,6 +26,7 @@ import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAcco
  */
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 public class ChannelNotificationPreferenceController {
 
     private final NotificationPreferenceApi notificationPreferenceApi;

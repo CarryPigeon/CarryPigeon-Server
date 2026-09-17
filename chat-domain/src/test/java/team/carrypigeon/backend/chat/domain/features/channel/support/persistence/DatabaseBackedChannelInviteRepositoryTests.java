@@ -65,6 +65,20 @@ class DatabaseBackedChannelInviteRepositoryTests {
     }
 
     /**
+     * 验证依赖判断直接委托轻量存在性查询。
+     */
+    @Test
+    @DisplayName("exists by channel id delegates existence query")
+    void existsByChannelId_existingInvite_returnsTrue() {
+        FakeChannelInviteDatabaseService databaseService = new FakeChannelInviteDatabaseService();
+        databaseService.exists = true;
+        DatabaseBackedChannelInviteRepository repository = new DatabaseBackedChannelInviteRepository(databaseService);
+
+        assertTrue(repository.existsByChannelId(1L));
+        assertEquals(1L, databaseService.existsChannelId);
+    }
+
+    /**
      * `FakeChannelInviteDatabaseService` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -72,6 +86,8 @@ class DatabaseBackedChannelInviteRepositoryTests {
 
         private ChannelInviteRecord record;
         private ChannelInviteRecord updatedRecord;
+        private boolean exists;
+        private Long existsChannelId;
 
         @Override
         public Optional<ChannelInviteRecord> findByChannelIdAndInviteeAccountId(long channelId, long inviteeAccountId) {
@@ -86,6 +102,12 @@ class DatabaseBackedChannelInviteRepositoryTests {
         @Override
         public java.util.List<ChannelInviteRecord> findByChannelId(long channelId) {
             return java.util.List.of();
+        }
+
+        @Override
+        public boolean existsByChannelId(long channelId) {
+            existsChannelId = channelId;
+            return exists;
         }
 
         @Override

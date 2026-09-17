@@ -8,6 +8,7 @@ import io.minio.MinioClient;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -20,6 +21,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObje
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioStorageHealthService;
@@ -56,7 +58,11 @@ class MinioObjectStorageServiceEnvTests {
         MinioStorageHealthService healthService = new MinioStorageHealthService(minioClient, properties);
         assumeTrue(healthService.check().available(), "real MinIO bucket is not available");
 
-        MinioObjectStorageService storageService = new MinioObjectStorageService(minioClient, properties);
+        MinioObjectStorageService storageService = new MinioObjectStorageService(
+                minioClient,
+                properties,
+                new TimeProviderImpl(Clock.systemUTC())
+        );
         String objectKey = namespacedKey("storage-round-trip", "payload.txt");
         byte[] content = "hello env storage".getBytes(StandardCharsets.UTF_8);
 

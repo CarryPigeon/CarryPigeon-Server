@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import org.springframework.core.Ordered;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
@@ -16,10 +17,20 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
  * 边界：这里只处理协议层日志上下文，不承载认证、鉴权或业务决策逻辑。
  */
 @Component
-public class HttpRequestMdcFilter extends OncePerRequestFilter {
+public class HttpRequestMdcFilter extends OncePerRequestFilter implements Ordered {
 
     public static final String TRACE_ID_HEADER = "X-Trace-Id";
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
+
+    /**
+     * 让请求上下文先于常规业务与摘要日志过滤器建立，同时为更高优先级的启动门禁保留顺序空间。
+     *
+     * @return HTTP MDC 过滤器顺序
+     */
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE + 1;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -29,13 +40,11 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String requestId = resolveRequestId(request);
         String traceId = resolveTraceId(request, requestId);
-        try {
+        try (LogContexts.Scope ignored = LogContexts.openScope()) {
             LogContexts.requestId(requestId);
             LogContexts.traceId(traceId);
             LogContexts.route(resolveRoute(request));
             filterChain.doFilter(request, response);
-        } finally {
-            LogContexts.clear();
         }
     }
 

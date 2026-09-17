@@ -47,6 +47,23 @@ class SmtpMailHealthServiceTests {
     }
 
     /**
+     * 验证 SMTP 异常消息会被转换为有界单行诊断。
+     */
+    @Test
+    @DisplayName("check unsafe failure returns sanitized diagnostic")
+    void check_unsafeFailure_returnsSanitizedDiagnostic() {
+        SmtpMailHealthService service = new SmtpMailHealthService(
+                new MessageFailingJavaMailSenderImpl("first\r\nsecond" + "x".repeat(600))
+        );
+
+        MailHealth health = service.check();
+
+        assertFalse(health.message().contains("\r"));
+        assertFalse(health.message().contains("\n"));
+        assertTrue(health.message().endsWith("..."));
+    }
+
+    /**
      * `SuccessfulJavaMailSenderImpl` 测试替身。
      * 职责：隔离外部依赖，使测试只验证当前契约边界。
      */
@@ -66,6 +83,24 @@ class SmtpMailHealthServiceTests {
         @Override
         public void testConnection() {
             throw new IllegalStateException("smtp down");
+        }
+    }
+
+    /**
+     * 可配置异常消息的 SMTP 测试替身。
+     * 职责：验证不可信底层诊断文本的日志安全边界。
+     */
+    private static final class MessageFailingJavaMailSenderImpl extends JavaMailSenderImpl {
+
+        private final String message;
+
+        private MessageFailingJavaMailSenderImpl(String message) {
+            this.message = message;
+        }
+
+        @Override
+        public void testConnection() {
+            throw new IllegalStateException(message);
         }
     }
 }

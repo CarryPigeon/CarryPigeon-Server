@@ -2,7 +2,10 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
+import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 
 /**
  * 频道成员仓储抽象。
@@ -47,6 +50,20 @@ public interface ChannelMemberRepository {
         throw new UnsupportedOperationException("channel member update is not supported");
     }
 
+    /** 在持久化层原子完成所有权转移。 */
+    default boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
+        Optional<ChannelMember> previous = findByChannelIdAndAccountId(channelId, previousOwnerAccountId);
+        Optional<ChannelMember> target = findByChannelIdAndAccountId(channelId, targetAccountId);
+        if (previous.isEmpty() || target.isEmpty() || previousOwnerAccountId == targetAccountId) {
+            return false;
+        }
+        update(new ChannelMember(previous.get().channelId(), previous.get().accountId(),
+                ChannelMemberRole.ADMIN, previous.get().joinedAt(), previous.get().mutedUntil()));
+        update(new ChannelMember(target.get().channelId(), target.get().accountId(),
+                ChannelMemberRole.OWNER, target.get().joinedAt(), target.get().mutedUntil()));
+        return true;
+    }
+
     /**
      * 删除已存在的活跃成员投影。
      *
@@ -55,6 +72,16 @@ public interface ChannelMemberRepository {
      */
     default void delete(long channelId, long accountId) {
         throw new UnsupportedOperationException("channel member delete is not supported");
+    }
+
+    /**
+     * 删除频道下的全部成员关系。
+     * 默认实现保持内存替身兼容，持久化适配器应覆盖为集合级删除。
+     *
+     * @param channelId 频道 ID
+     */
+    default void deleteByChannelId(long channelId) {
+        findByChannelId(channelId).forEach(member -> delete(channelId, member.accountId()));
     }
 
     /**
@@ -77,5 +104,15 @@ public interface ChannelMemberRepository {
 
     default List<Long> findChannelIdsByAccountId(long accountId) {
         return List.of();
+    }
+
+    default Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds) {
+        return channelIds.stream()
+                .map(channelId -> findByChannelId(channelId).stream()
+                        .filter(member -> member.role() == ChannelMemberRole.OWNER)
+                        .findFirst()
+                        .map(owner -> Map.entry(channelId, owner.accountId())))
+                .flatMap(Optional::stream)
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 }

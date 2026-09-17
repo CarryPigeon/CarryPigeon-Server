@@ -8,7 +8,12 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Mentio
  */
 public interface MentionDatabaseService {
 
-    void insert(MentionRecord record);
+    /**
+     * 批量写入提及记录；空集合不产生数据库访问。
+     *
+     * @param records 待写入记录
+     */
+    void insertAll(List<MentionRecord> records);
 
     void deleteByMessageId(long messageId);
 

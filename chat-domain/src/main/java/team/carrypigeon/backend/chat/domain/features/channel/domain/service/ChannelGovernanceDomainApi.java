@@ -29,7 +29,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -54,7 +54,7 @@ public class ChannelGovernanceDomainApi implements ChannelGovernanceApi {
     private final ChannelProjectionMapper channelProjectionMapper;
     private final ChannelCommandValidator channelCommandValidator = new ChannelCommandValidator();
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelGovernanceDomainApi(
@@ -66,7 +66,7 @@ public class ChannelGovernanceDomainApi implements ChannelGovernanceApi {
             ChannelGovernancePolicy channelGovernancePolicy,
             ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
@@ -165,8 +165,9 @@ public class ChannelGovernanceDomainApi implements ChannelGovernanceApi {
                     target.joinedAt(),
                     target.mutedUntil()
             );
-            channelMemberRepository.update(previousOwner);
-            channelMemberRepository.update(newOwner);
+            if (!channelMemberRepository.transferOwnership(channel.id(), operator.accountId(), target.accountId())) {
+                throw ProblemException.conflict("ownership_transfer_conflict", "channel ownership changed concurrently");
+            }
             appendAuditLog(
                     channel.id(),
                     operator.accountId(),

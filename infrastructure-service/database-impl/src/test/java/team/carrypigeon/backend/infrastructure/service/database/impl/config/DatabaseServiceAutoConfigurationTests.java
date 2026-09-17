@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.PlatformTransactionManager;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheck;
+import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.auth.session.AuthRefreshSessionDatabaseService;
@@ -55,16 +55,13 @@ class DatabaseServiceAutoConfigurationTests {
 
     /**
      * 测试启用数据库服务时的自动配置。
-     * 输入：启用开关、健康检查 SQL、JdbcClient、MyBatis mapper mock 与事务管理器。
+     * 输入：启用开关、JdbcClient、MyBatis mapper mock 与事务管理器。
      * 期望：成功装配数据库健康检查、事务运行器与业务数据库服务 Bean。
      */
     @Test
     void autoConfiguration_enabled_registersDatabaseBeans() {
         contextRunner
-                .withPropertyValues(
-                        "cp.infrastructure.service.database.enabled=true",
-                        "cp.infrastructure.service.database.health-query=SELECT 1"
-                )
+                .withPropertyValues("cp.infrastructure.service.database.enabled=true")
                 .withBean(JdbcClient.class, () -> mock(JdbcClient.class))
                 .withBean(AuthAccountMapper.class, () -> mock(AuthAccountMapper.class))
                 .withBean(AuthRefreshSessionMapper.class, () -> mock(AuthRefreshSessionMapper.class))
@@ -97,7 +94,7 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).hasSingleBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).hasSingleBean(UserProfileDatabaseService.class);
                     assertThat(context).hasSingleBean(DatabaseHealthService.class);
-                    assertThat(context).hasSingleBean(InitializationCheck.class);
+                    assertThat(context).hasSingleBean(InitializationChecker.class);
                     assertThat(context).hasSingleBean(TransactionRunner.class);
                     assertThat(context).hasSingleBean(JdbcClientSupport.class);
                 });
@@ -144,7 +141,7 @@ class DatabaseServiceAutoConfigurationTests {
                     assertThat(context).doesNotHaveBean(NotificationPreferenceDatabaseService.class);
                     assertThat(context).doesNotHaveBean(UserProfileDatabaseService.class);
                     assertThat(context).doesNotHaveBean(DatabaseHealthService.class);
-                    assertThat(context).doesNotHaveBean(InitializationCheck.class);
+                    assertThat(context).doesNotHaveBean(InitializationChecker.class);
                     assertThat(context).doesNotHaveBean(TransactionRunner.class);
                     assertThat(context).doesNotHaveBean(JdbcClientSupport.class);
                 });

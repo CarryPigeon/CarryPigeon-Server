@@ -1,6 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.server.support.persistence;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
@@ -37,6 +40,27 @@ public class DatabaseBackedNotificationPreferenceRepository implements Notificat
     @Override
     public List<NotificationChannelPreference> listChannelPreferencesByAccountId(long accountId) {
         return notificationPreferenceDatabaseService.listChannelPreferencesByAccountId(accountId).stream().map(this::toDomain).toList();
+    }
+
+    /**
+     * 精确查询账户在指定频道的通知偏好。
+     */
+    @Override
+    public Optional<NotificationChannelPreference> findChannelPreference(long accountId, long channelId) {
+        return notificationPreferenceDatabaseService.findChannelPreference(accountId, channelId).map(this::toDomain);
+    }
+
+    @Override
+    public Map<Long, NotificationServerPreference> findServerPreferencesByAccountIds(Collection<Long> accountIds) {
+        return notificationPreferenceDatabaseService.findServerPreferencesByAccountIds(accountIds).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> toDomain(entry.getValue())));
+    }
+
+    @Override
+    public Map<Long, List<NotificationChannelPreference>> listChannelPreferencesByAccountIds(Collection<Long> accountIds) {
+        return notificationPreferenceDatabaseService.listChannelPreferencesByAccountIds(accountIds).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        entry -> entry.getValue().stream().map(this::toDomain).toList()));
     }
 
     /**

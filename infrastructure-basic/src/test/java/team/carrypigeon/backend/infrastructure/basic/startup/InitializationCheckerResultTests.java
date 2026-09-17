@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 边界：只验证结果模型本身，不验证具体检查实现。
  */
 @Tag("unit")
-class InitializationCheckResultTests {
+class InitializationCheckerResultTests {
 
     /**
      * 测试成功结果工厂方法。

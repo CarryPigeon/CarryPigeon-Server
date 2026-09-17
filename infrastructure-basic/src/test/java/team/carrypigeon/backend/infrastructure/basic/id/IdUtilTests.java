@@ -12,14 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * 边界：只验证项目侧字符串编码与解析契约，不验证具体雪花算法实现。
  */
 @Tag("unit")
-class IdsTests {
+class IdUtilTests {
 
     /**
      * 验证 long 类型雪花 ID 会被稳定编码为十进制字符串。
      */
     @Test
     void toString_positiveLongId_returnsDecimalString() {
-        assertEquals("723155640365318144", Ids.toString(723155640365318144L));
+        assertEquals("723155640365318144", IdUtil.toString(723155640365318144L));
     }
 
     /**
@@ -27,7 +27,7 @@ class IdsTests {
      */
     @Test
     void parse_decimalStringId_returnsLongValue() {
-        assertEquals(723155640365318144L, Ids.parse("723155640365318144"));
+        assertEquals(723155640365318144L, IdUtil.parse("723155640365318144"));
     }
 
     /**
@@ -35,6 +35,6 @@ class IdsTests {
      */
     @Test
     void parse_blankId_throwsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class, () -> Ids.parse(" "));
+        assertThrows(IllegalArgumentException.class, () -> IdUtil.parse(" "));
     }
 }

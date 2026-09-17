@@ -30,6 +30,43 @@ public interface NotificationPreferenceMapper {
             """)
     List<NotificationChannelPreferenceEntity> listChannelPreferencesByAccountId(@Param("accountId") long accountId);
 
+    @Select("""
+            SELECT account_id, channel_id, mode, muted_until, created_at, updated_at
+            FROM chat_notification_channel_preference
+            WHERE account_id = #{accountId}
+              AND channel_id = #{channelId}
+            LIMIT 1
+            """)
+    NotificationChannelPreferenceEntity findChannelPreference(
+            @Param("accountId") long accountId,
+            @Param("channelId") long channelId
+    );
+
+    @Select("""
+            <script>
+            SELECT account_id, mode, muted_until, created_at, updated_at
+            FROM chat_notification_server_preference
+            WHERE account_id IN
+            <foreach collection="accountIds" item="accountId" open="(" separator="," close=")">
+              #{accountId}
+            </foreach>
+            </script>
+            """)
+    List<NotificationServerPreferenceEntity> findServerPreferencesByAccountIds(@Param("accountIds") java.util.Collection<Long> accountIds);
+
+    @Select("""
+            <script>
+            SELECT account_id, channel_id, mode, muted_until, created_at, updated_at
+            FROM chat_notification_channel_preference
+            WHERE account_id IN
+            <foreach collection="accountIds" item="accountId" open="(" separator="," close=")">
+              #{accountId}
+            </foreach>
+            ORDER BY account_id ASC, channel_id ASC
+            </script>
+            """)
+    List<NotificationChannelPreferenceEntity> listChannelPreferencesByAccountIds(@Param("accountIds") java.util.Collection<Long> accountIds);
+
     @Insert("""
             INSERT INTO chat_notification_server_preference (
                 account_id, mode, muted_until, created_at, updated_at

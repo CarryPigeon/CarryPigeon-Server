@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
@@ -10,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.projection.File
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
@@ -31,7 +32,7 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     private final ObjectProvider<ObjectStorageService> objectStorageServiceProvider;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
     private final FileObjectKeyResolver fileObjectKeyResolver;
 
@@ -39,14 +40,14 @@ public class FileTransferDomainApi implements FileTransferApi {
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
             ChannelContextApi channelContextApi,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec
     ) {
         this.objectStorageServiceProvider = objectStorageServiceProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
-        this.fileObjectKeyResolver = new FileObjectKeyResolver(channelContextApi, uploadShareKeyCodec);
+        this.fileObjectKeyResolver = new FileObjectKeyResolver(channelContextApi, uploadShareKeyCodec, timeProvider);
     }
 
     /**
@@ -60,12 +61,13 @@ public class FileTransferDomainApi implements FileTransferApi {
         requirePositive(accountId, "accountId");
         validateUploadGrant(filename, mimeType, sizeBytes);
         long fileId = idGenerator.nextLongId();
-        String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes);
+        Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
+        String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
         return new FileUploadGrantResult(
                 fileId,
                 shareKey,
                 "/api/files/uploads/" + shareKey,
-                timeProvider.nowInstant().plus(UPLOAD_URL_TTL)
+                expiresAt
         );
     }
 

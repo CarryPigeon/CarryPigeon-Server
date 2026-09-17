@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.shared.controller;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 对外分页游标编解码器。
@@ -26,7 +26,7 @@ public final class OpaqueCursorCodec {
         if (snowflakeId == null) {
             return null;
         }
-        String raw = scope + ":" + Ids.toString(snowflakeId);
+        String raw = scope + ":" + IdUtil.toString(snowflakeId);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
 

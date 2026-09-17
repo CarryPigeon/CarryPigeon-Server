@@ -17,9 +17,8 @@ import team.carrypigeon.backend.chat.domain.features.plugin.support.message.Text
 import team.carrypigeon.backend.chat.domain.features.plugin.support.message.TextMessageTypePluginConfiguration;
 import team.carrypigeon.backend.chat.domain.features.plugin.support.message.VoiceChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.plugin.support.message.VoiceMessageTypePluginConfiguration;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
@@ -89,7 +88,7 @@ class PluginConfigurationContextTests {
     @DisplayName("configuration with storage exposes text file and voice plugins")
     void configuration_withStorage_exposesTextFileAndVoicePlugins() {
         PluginConfiguration configuration = new PluginConfiguration();
-        JsonProvider jsonProvider = new JsonProvider(new ObjectMapper());
+        JsonProviderImpl jsonProvider = new JsonProviderImpl(new ObjectMapper());
         ObjectStorageService objectStorageService = new StorageSupportConfiguration().objectStorageService();
         PluginGovernanceProperties governanceProperties = new PluginGovernanceProperties();
 
@@ -179,8 +178,8 @@ class PluginConfigurationContextTests {
     static class TestSupportConfiguration {
 
         @Bean
-        JsonProvider jsonProvider() {
-            return new JsonProvider(new ObjectMapper());
+        JsonProviderImpl jsonProvider() {
+            return new JsonProviderImpl(new ObjectMapper());
         }
 
         @Bean

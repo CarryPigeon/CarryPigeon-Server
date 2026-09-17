@@ -55,6 +55,16 @@ public interface ChannelBanMapper {
             """)
     java.util.List<ChannelBanEntity> findByChannelId(@Param("channelId") long channelId);
 
+    /** 短路判断频道下是否存在封禁记录。 */
+    @Select("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM chat_channel_ban
+                WHERE channel_id = #{channelId}
+            )
+            """)
+    boolean existsByChannelId(@Param("channelId") long channelId);
+
     /**
      * 更新封禁记录。
      *

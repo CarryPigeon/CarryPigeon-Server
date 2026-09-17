@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,13 +25,14 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Ment
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UpdateMentionReadStateRequest;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 提及收件箱 HTTP 入口。
  */
 @RestController
 @RequestMapping("/api/mentions")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "提及收件箱", description = "提及 inbox 列表能力。")
 public class MentionController {
 
@@ -130,11 +132,11 @@ public class MentionController {
 
     private MentionItemResponse toResponse(MentionResult result) {
         return new MentionItemResponse(
-                Ids.toString(result.mentionId()),
-                Ids.toString(result.channelId()),
-                Ids.toString(result.messageId()),
-                Ids.toString(result.fromAccountId()),
-                new MentionItemResponse.MentionTargetResponse(result.targetType(), Ids.toString(result.targetAccountId())),
+                IdUtil.toString(result.mentionId()),
+                IdUtil.toString(result.channelId()),
+                IdUtil.toString(result.messageId()),
+                IdUtil.toString(result.fromAccountId()),
+                new MentionItemResponse.MentionTargetResponse(result.targetType(), IdUtil.toString(result.targetAccountId())),
                 result.createdAt().toEpochMilli(),
                 result.read()
         );

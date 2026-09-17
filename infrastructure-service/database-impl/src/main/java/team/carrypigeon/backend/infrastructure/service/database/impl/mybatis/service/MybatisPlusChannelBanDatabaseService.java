@@ -48,6 +48,15 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     /**
+     * 判断频道是否存在封禁记录。
+     */
+    @Override
+    public boolean existsByChannelId(long channelId) {
+        return execute(() -> channelBanMapper.existsByChannelId(channelId),
+                "failed to query channel ban existence");
+    }
+
+    /**
      * 插入新的封禁记录。
      */
     @Override

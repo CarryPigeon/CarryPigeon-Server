@@ -27,6 +27,11 @@ public interface ChannelBanRepository {
         return List.of();
     }
 
+    /** 判断频道是否存在任意封禁记录依赖。 */
+    default boolean existsByChannelId(long channelId) {
+        return !findByChannelId(channelId).isEmpty();
+    }
+
     /**
      * 保存新的封禁记录。
      *

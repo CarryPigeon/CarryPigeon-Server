@@ -1,6 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.util.List;
+import java.util.Collection;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -10,6 +14,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Noti
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.NotificationChannelPreferenceEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.NotificationServerPreferenceEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.NotificationPreferenceMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 通知偏好数据库服务。
@@ -38,6 +43,42 @@ public class MybatisPlusNotificationPreferenceDatabaseService implements Notific
     @Override
     public List<NotificationChannelPreferenceRecord> listChannelPreferencesByAccountId(long accountId) {
         return execute(() -> notificationPreferenceMapper.listChannelPreferencesByAccountId(accountId).stream().map(this::toRecord).toList(), "failed to query channel notification preferences");
+    }
+
+    /**
+     * 按账户与频道复合键精确查询频道级偏好。
+     */
+    @Override
+    public Optional<NotificationChannelPreferenceRecord> findChannelPreference(long accountId, long channelId) {
+        return execute(
+                () -> Optional.ofNullable(notificationPreferenceMapper.findChannelPreference(accountId, channelId))
+                        .map(this::toRecord),
+                "failed to query channel notification preference"
+        );
+    }
+
+    @Override
+    public Map<Long, NotificationServerPreferenceRecord> findServerPreferencesByAccountIds(Collection<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return Map.of();
+        }
+        return execute(() -> SqlInClauseBatches.partition(accountIds).stream()
+                        .flatMap(batch -> notificationPreferenceMapper.findServerPreferencesByAccountIds(batch).stream())
+                        .map(this::toRecord)
+                        .collect(Collectors.toMap(NotificationServerPreferenceRecord::accountId, Function.identity())),
+                "failed to query server notification preferences");
+    }
+
+    @Override
+    public Map<Long, List<NotificationChannelPreferenceRecord>> listChannelPreferencesByAccountIds(Collection<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return Map.of();
+        }
+        return execute(() -> SqlInClauseBatches.partition(accountIds).stream()
+                        .flatMap(batch -> notificationPreferenceMapper.listChannelPreferencesByAccountIds(batch).stream())
+                        .map(this::toRecord)
+                        .collect(Collectors.groupingBy(NotificationChannelPreferenceRecord::accountId)),
+                "failed to query channel notification preferences");
     }
 
     /**

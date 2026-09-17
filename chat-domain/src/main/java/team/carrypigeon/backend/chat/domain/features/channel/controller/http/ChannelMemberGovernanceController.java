@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +29,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelMembersQuery;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道成员治理 HTTP 入口。
@@ -38,6 +39,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.Ids;
 @Validated
 @RestController
 @RequestMapping("/api/channels")
+@PreAuthorize("isAuthenticated()")
 @Tag(name = "频道与成员", description = "频道查询、成员治理、申请、发现与封禁能力。")
 public class ChannelMemberGovernanceController {
 
@@ -132,7 +134,7 @@ public class ChannelMemberGovernanceController {
 
     private ChannelMemberV1Response toChannelMemberV1Response(ChannelMemberResult result) {
         return new ChannelMemberV1Response(
-                Ids.toString(result.accountId()),
+                IdUtil.toString(result.accountId()),
                 result.role().toLowerCase(),
                 result.nickname(),
                 result.avatarUrl(),

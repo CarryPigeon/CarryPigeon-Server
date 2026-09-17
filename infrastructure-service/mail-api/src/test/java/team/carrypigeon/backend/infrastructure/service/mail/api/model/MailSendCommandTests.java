@@ -21,11 +21,48 @@ class MailSendCommandTests {
     @Test
     @DisplayName("constructor valid command keeps mail fields")
     void constructor_validCommand_keepsMailFields() {
-        MailSendCommand command = new MailSendCommand("user@example.com", "Verify", "Code: 123456");
+        MailSendCommand command = new MailSendCommand(" user@example.com ", " Verify ", " Code: 123456 ");
 
         assertEquals("user@example.com", command.to());
         assertEquals("Verify", command.subject());
         assertEquals("Code: 123456", command.text());
+    }
+
+    /**
+     * 验证收件人必须具备最小邮箱结构且不能注入换行。
+     */
+    @Test
+    @DisplayName("constructor unsafe recipient throws illegal argument")
+    void constructor_unsafeRecipient_throwsIllegalArgument() {
+        assertThrows(IllegalArgumentException.class, () -> new MailSendCommand("invalid", "Verify", "text"));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MailSendCommand("user@example.com\r\nBcc: attacker@example.com", "Verify", "text")
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MailSendCommand("a".repeat(310) + "@example.com", "Verify", "text")
+        );
+    }
+
+    /**
+     * 验证标题和正文的长度及邮件头换行边界。
+     */
+    @Test
+    @DisplayName("constructor oversized or multiline content throws illegal argument")
+    void constructor_oversizedOrMultilineContent_throwsIllegalArgument() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MailSendCommand("user@example.com", "subject\nBcc: attacker@example.com", "text")
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MailSendCommand("user@example.com", "s".repeat(256), "text")
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MailSendCommand("user@example.com", "Verify", "x".repeat(100_001))
+        );
     }
 
     /**

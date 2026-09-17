@@ -40,6 +40,12 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
         executeVoid(() -> channelReadStateMapper.upsertState(toEntity(record)), "failed to upsert channel read state");
     }
 
+    @Override
+    public boolean advanceIfNewer(ChannelReadStateRecord record) {
+        return execute(() -> channelReadStateMapper.advanceIfNewer(toEntity(record)),
+                "failed to advance channel read state") > 0;
+    }
+
     /**
      * 查询账户各频道未读统计。
      */

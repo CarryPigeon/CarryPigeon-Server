@@ -14,5 +14,7 @@ public interface ChannelReadStateDatabaseService {
 
     void upsert(ChannelReadStateRecord record);
 
+    boolean advanceIfNewer(ChannelReadStateRecord record);
+
     List<ChannelUnreadRecord> listUnreadsByAccountId(long accountId);
 }

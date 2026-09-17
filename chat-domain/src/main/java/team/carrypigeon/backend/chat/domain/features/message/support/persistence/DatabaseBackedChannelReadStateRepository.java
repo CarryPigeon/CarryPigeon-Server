@@ -40,6 +40,11 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
         return readState;
     }
 
+    @Override
+    public boolean advanceIfNewer(ChannelReadState readState) {
+        return channelReadStateDatabaseService.advanceIfNewer(toRecord(readState));
+    }
+
     /**
      * 查询账户各频道的未读统计投影。
      */

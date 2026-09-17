@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.projection.User
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
-import team.carrypigeon.backend.infrastructure.basic.id.Ids;
+import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 当前账号 HTTP 入口。
@@ -47,6 +48,7 @@ public class CurrentUserAccountController {
         this.authenticationContext = authenticationContext;
     }
 
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")
     @ApiResponses({
@@ -60,13 +62,14 @@ public class CurrentUserAccountController {
                 new GetCurrentUserProfileQuery(principal.accountId())
         );
         return new CurrentUserResponse(
-                Ids.toString(profile.accountId()),
+                IdUtil.toString(profile.accountId()),
                 authAccountApi.getAccountEmail(principal.accountId()),
                 profile.nickname(),
                 profile.avatarUrl()
         );
     }
 
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/email")
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})

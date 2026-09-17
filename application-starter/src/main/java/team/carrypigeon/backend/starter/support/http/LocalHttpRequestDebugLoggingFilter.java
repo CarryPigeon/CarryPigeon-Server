@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.filter.OncePerRequestFilter;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**
  * 本地 HTTP 请求调试日志过滤器。
@@ -32,7 +33,9 @@ public class LocalHttpRequestDebugLoggingFilter extends OncePerRequestFilter {
             throw exception;
         } finally {
             long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
-            log.info(buildRequestSummary(request, response, durationMs, failure));
+            if (log.isInfoEnabled()) {
+                log.info("{}", buildRequestSummary(request, response, durationMs, failure));
+            }
         }
     }
 
@@ -43,30 +46,19 @@ public class LocalHttpRequestDebugLoggingFilter extends OncePerRequestFilter {
             Exception failure
     ) {
         return "Action: local_http_request_completed"
-                + " method=" + request.getMethod()
-                + " uri=" + request.getRequestURI()
-                + " query=" + sanitizeQuery(request.getQueryString())
+                + " method=" + LogValueSanitizer.singleLine(request.getMethod())
+                + " uri=" + LogValueSanitizer.uri(request.getRequestURI())
+                + " query=" + LogValueSanitizer.query(request.getQueryString())
                 + " origin=" + safeHeader(request, "Origin")
                 + " accessControlRequestMethod=" + safeHeader(request, "Access-Control-Request-Method")
                 + " status=" + response.getStatus()
                 + " durationMs=" + durationMs
-                + " remoteAddr=" + request.getRemoteAddr()
+                + " remoteAddr=" + LogValueSanitizer.singleLine(request.getRemoteAddr())
                 + " userAgent=" + safeHeader(request, "User-Agent")
                 + " failure=" + (failure == null ? "" : failure.getClass().getSimpleName());
     }
 
     private String safeHeader(HttpServletRequest request, String name) {
-        String value = request.getHeader(name);
-        return value == null || value.isBlank() ? "" : value;
-    }
-
-    private String sanitizeQuery(String query) {
-        if (query == null || query.isBlank()) {
-            return "";
-        }
-        return query.replaceAll(
-                "(?i)(access_token|refresh_token|token|password|secret|code)=([^&]*)",
-                "$1=***"
-        );
+        return LogValueSanitizer.singleLine(request.getHeader(name));
     }
 }

@@ -24,4 +24,11 @@ public interface AuthRefreshSessionMapper extends BaseMapper<AuthRefreshSessionE
             WHERE id = #{id}
             """)
     int revokeById(long id);
+
+    @Update("""
+            UPDATE auth_refresh_session
+            SET revoked = true, updated_at = CURRENT_TIMESTAMP(6)
+            WHERE id = #{id} AND revoked = false AND expires_at > CURRENT_TIMESTAMP(6)
+            """)
+    int revokeIfActive(long id);
 }

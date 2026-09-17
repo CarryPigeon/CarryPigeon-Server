@@ -19,7 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListCh
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -36,7 +36,7 @@ public class ChannelPinDomainApi implements ChannelPinApi {
     private final MessageRepository messageRepository;
     private final MessageAfterCommitPublisher messageAfterCommitPublisher;
     private final IdGenerator idGenerator;
-    private final TimeProvider timeProvider;
+    private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelPinDomainApi(
@@ -45,7 +45,7 @@ public class ChannelPinDomainApi implements ChannelPinApi {
             MessageRepository messageRepository,
             ApplicationEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProvider timeProvider,
+            TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelContextApi = channelContextApi;
