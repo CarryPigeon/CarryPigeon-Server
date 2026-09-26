@@ -18,7 +18,6 @@ public class UserProfileEntity {
 
     @TableId(value = "account_id", type = IdType.INPUT)
     private Long accountId;
-    private String nickname;
     private String avatarUrl;
     private String bio;
     private Long sex;
@@ -35,7 +34,6 @@ public class UserProfileEntity {
     public static UserProfileEntity fromRecord(UserProfileRecord record) {
         UserProfileEntity entity = new UserProfileEntity();
         entity.setAccountId(record.accountId());
-        entity.setNickname(record.nickname());
         entity.setAvatarUrl(record.avatarUrl());
         entity.setBio(record.bio());
         entity.setSex(record.sex());
@@ -53,7 +51,6 @@ public class UserProfileEntity {
     public UserProfileRecord toRecord() {
         return new UserProfileRecord(
                 accountId,
-                nickname,
                 avatarUrl,
                 bio,
                 sex == null ? 0L : sex,

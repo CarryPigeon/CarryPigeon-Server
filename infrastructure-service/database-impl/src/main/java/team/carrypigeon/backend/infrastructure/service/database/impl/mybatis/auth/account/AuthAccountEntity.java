@@ -20,6 +20,7 @@ public class AuthAccountEntity {
     private Long id;
     private String username;
     private String passwordHash;
+    private String email;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -34,6 +35,7 @@ public class AuthAccountEntity {
         entity.setId(record.id());
         entity.setUsername(record.username());
         entity.setPasswordHash(record.passwordHash());
+        entity.setEmail(record.email());
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;
@@ -49,6 +51,7 @@ public class AuthAccountEntity {
                 id,
                 username,
                 passwordHash,
+                email,
                 createdAt,
                 updatedAt
         );

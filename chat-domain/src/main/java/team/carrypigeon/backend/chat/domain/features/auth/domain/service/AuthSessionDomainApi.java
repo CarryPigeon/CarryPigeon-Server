@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service;
 
-import java.time.Instant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
@@ -19,8 +18,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
@@ -38,14 +35,12 @@ public class AuthSessionDomainApi implements AuthSessionApi {
 
     private final AuthAccountRepository authAccountRepository;
     private final AuthRefreshSessionRepository authRefreshSessionRepository;
-    private final AuthAccountProvisioner authAccountProvisioner;
     private final PasswordHasher passwordHasher;
     private final TokenHasher tokenHasher;
     private final AuthTokenCodec authTokenCodec;
     private final AuthTokenIssuer authTokenIssuer;
     private final AuthTokenSettings authTokenSettings;
     private final AuthPasswordLoginPolicy passwordLoginPolicy;
-    private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
@@ -54,8 +49,6 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     public AuthSessionDomainApi(
             AuthAccountRepository authAccountRepository,
             AuthRefreshSessionRepository authRefreshSessionRepository,
-            UserAccountProvisioningApi userAccountProvisioningApi,
-            ChannelAccountProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             TokenHasher tokenHasher,
             AuthTokenCodec authTokenCodec,
@@ -68,10 +61,6 @@ public class AuthSessionDomainApi implements AuthSessionApi {
     ) {
         this.authAccountRepository = authAccountRepository;
         this.authRefreshSessionRepository = authRefreshSessionRepository;
-        this.authAccountProvisioner = new AuthAccountProvisioner(
-                userAccountProvisioningApi,
-                channelAccountProvisioningApi
-        );
         this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
         this.authTokenCodec = authTokenCodec;
@@ -85,7 +74,6 @@ public class AuthSessionDomainApi implements AuthSessionApi {
         );
         this.authTokenSettings = authTokenSettings;
         this.passwordLoginPolicy = passwordLoginPolicy;
-        this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
         this.emailVerificationApi = emailVerificationApi;
@@ -96,39 +84,30 @@ public class AuthSessionDomainApi implements AuthSessionApi {
         if (!"email_code".equals(command.grantType())) {
             throw ProblemException.validationFailed("grant_type must be email_code");
         }
-        String normalizedEmail = normalizeEmail(command.email());
-        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(normalizedEmail, command.code()));
+        String email = command.email();
+        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(email, command.code()));
         return transactionRunner.runInTransaction(() -> {
-            AuthAccount existingAccount = authAccountRepository.findByUsername(normalizedEmail).orElse(null);
-            boolean newUser = existingAccount == null;
-            AuthAccount account = existingAccount;
+            AuthAccount account = authAccountRepository.findByEmail(email).orElse(null);
             if (account == null) {
-                Instant now = timeProvider.nowInstant();
-                account = authAccountRepository.save(new AuthAccount(
-                        idGenerator.nextLongId(),
-                        normalizedEmail,
-                        passwordHasher.hash("email-code-account::" + normalizedEmail),
-                        now,
-                        now
-                ));
-                authAccountProvisioner.provisionAccount(account, deriveNickname(normalizedEmail));
+                throw ProblemException.notFound("account_not_found");
             }
             AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
             return new AuthSessionTokenResult(
                     account.id(),
                     tokenPair.accessToken(),
                     authTokenSettings.accessTokenTtl().toSeconds(),
-                    tokenPair.refreshToken(),
-                    newUser
+                    tokenPair.refreshToken()
             );
         });
     }
 
     @Override
     public AuthTokenResult login(LoginCommand command) {
+        // 通过配置开关账号密码登录接口
         if (!passwordLoginPolicy.enabled()) {
             throw ProblemException.forbidden("password_login_disabled", "password login is disabled");
         }
+        // 拿取用户信息
         AuthAccount account = authAccountRepository.findByUsername(command.username())
                 .orElseThrow(() -> ProblemException.forbidden("invalid_credentials", "username or password is invalid"));
 
@@ -136,7 +115,10 @@ public class AuthSessionDomainApi implements AuthSessionApi {
             throw ProblemException.forbidden("invalid_credentials", "username or password is invalid");
         }
 
+        // 签发访问令牌和刷新令牌
         AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
+
+        // 响应并返回
         return toTokenResult(account, tokenPair);
     }
 
@@ -147,8 +129,7 @@ public class AuthSessionDomainApi implements AuthSessionApi {
                 result.accountId(),
                 result.accessToken(),
                 authTokenSettings.accessTokenTtl().toSeconds(),
-                result.refreshToken(),
-                false
+                result.refreshToken()
         );
     }
 
@@ -165,27 +146,36 @@ public class AuthSessionDomainApi implements AuthSessionApi {
 
     AuthTokenResult refresh(RefreshTokenCommand command) {
         return transactionRunner.runInTransaction(() -> {
+            // 从token查询会话
             ValidRefreshSession validSession = requireValidRefreshSession(command.refreshToken());
+            // 撤销会话
             authRefreshSessionRepository.revoke(validSession.session().id());
+            // 查询用户
             AuthAccount account = authAccountRepository.findById(validSession.accountId())
-                    .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
+                .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
+            // 创建新会话
             AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
+            // 返回最新的一组token
             return toTokenResult(account, tokenPair);
         });
     }
 
     private ValidRefreshSession requireValidRefreshSession(String refreshToken) {
+        // 解析refresh令牌
         AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
+        // 获取用户id
         long accountId = parseRefreshSubjectAccountId(claims);
+        // 查询会话是否真实存在
         AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
                 .orElseThrow(() -> ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid"));
-
+        // 判断session是否可用
         if (session.revoked()
                 || !session.expiresAt().isAfter(timeProvider.nowInstant())
                 || session.accountId() != accountId
                 || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
             throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
         }
+        // 返回对应的会话
         return new ValidRefreshSession(accountId, session);
     }
 
@@ -206,15 +196,6 @@ public class AuthSessionDomainApi implements AuthSessionApi {
         } catch (NumberFormatException exception) {
             throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
         }
-    }
-
-    private String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
-    }
-
-    private String deriveNickname(String email) {
-        int atIndex = email.indexOf('@');
-        return atIndex > 0 ? email.substring(0, atIndex) : email;
     }
 
     private AuthTokenResult toTokenResult(AuthAccount account, AuthTokenPair tokenPair) {

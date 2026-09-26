@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.auth.controller.dto;
+package team.carrypigeon.backend.chat.domain.features.user.controller.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,6 +20,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+import team.carrypigeon.backend.chat.domain.features.user.controller.dto.CurrentUserResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
@@ -47,7 +49,7 @@ public class UserProfileController {
 
     private final UserProfileApi userProfileDomainApi;
     private final RequestAuthenticationContext authRequestContext;
-
+    private final AuthAccountApi authAccountApi;
     /**
      * 创建用户资料 HTTP 入口。
      *
@@ -55,11 +57,12 @@ public class UserProfileController {
      * @param authRequestContext 请求认证上下文
      */
     public UserProfileController(
-            UserProfileApi userProfileDomainApi,
-            RequestAuthenticationContext authRequestContext
+        UserProfileApi userProfileDomainApi,
+        RequestAuthenticationContext authRequestContext, AuthAccountApi authAccountApi
     ) {
         this.userProfileDomainApi = userProfileDomainApi;
         this.authRequestContext = authRequestContext;
+        this.authAccountApi = authAccountApi;
     }
 
     /**
@@ -145,6 +148,27 @@ public class UserProfileController {
                 )
         );
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/me")
+    @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "返回当前用户资料"),
+        @ApiResponse(responseCode = "401", description = "未认证"),
+        @ApiResponse(responseCode = "404", description = "资料不存在")
+    })
+    public CurrentUserResponse me(HttpServletRequest request) {
+        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        UserProfileResult profile = userProfileDomainApi.getCurrentUserProfile(
+            new GetCurrentUserProfileQuery(principal.accountId())
+        );
+        return new CurrentUserResponse(
+            IdUtil.toString(profile.accountId()),
+            authAccountApi.getAccountEmail(principal.accountId()),
+            profile.nickname(),
+            profile.avatarUrl()
+        );
     }
 
     private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {

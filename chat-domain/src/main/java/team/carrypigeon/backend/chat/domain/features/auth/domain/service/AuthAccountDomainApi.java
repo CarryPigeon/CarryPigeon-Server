@@ -60,20 +60,29 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     @Override
     public RegisterResult register(RegisterCommand command) {
         return transactionRunner.runInTransaction(() -> {
+            // 存在性校验，确保username和邮箱的唯一性
             authAccountRepository.findByUsername(command.username())
                     .ifPresent(existing -> {
                         throw ProblemException.validationFailed("username already exists");
                     });
-
+            authAccountRepository.findByEmail(command.email())
+                    .ifPresent(existing -> {
+                        throw ProblemException.validationFailed("email already exists");
+                    });
+            // 邮箱验证码校验
+            emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(command.email(), command.code()));
+            // 用户信息创建
             AuthAccount account = new AuthAccount(
                     idGenerator.nextLongId(),
                     command.username(),
                     passwordHasher.hash(command.password()),
+                    command.email(),
                     timeProvider.nowInstant(),
                     timeProvider.nowInstant()
             );
-
+            // 数据持久化
             AuthAccount savedAccount = authAccountRepository.save(account);
+            // 副作用创建用户信息表原始数据
             authAccountProvisioner.provisionAccount(savedAccount, savedAccount.username());
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });
@@ -88,29 +97,31 @@ public class AuthAccountDomainApi implements AuthAccountApi {
 
     @Override
     public void updateCurrentAccountEmail(UpdateCurrentAccountEmailCommand command) {
-        String normalizedEmail = normalizeEmail(command.email());
-        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(normalizedEmail, command.code()));
+        // 使用辅助临时变量
+        String email = command.email();
+        // 验证邮箱验证码
+        emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(email, command.code()));
+
         transactionRunner.runInTransaction(() -> {
+            // 获取当前用户
             AuthAccount existingAccount = authAccountRepository.findById(command.accountId())
                     .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
-            authAccountRepository.findByUsername(normalizedEmail)
+            // 判断新邮箱是否与已有邮箱绑定
+            authAccountRepository.findByEmail(email)
                     .filter(account -> account.id() != command.accountId())
                     .ifPresent(account -> {
                         throw ProblemException.validationFailed("email already exists");
                     });
+            // 更新用户邮箱
             authAccountRepository.update(new AuthAccount(
                     existingAccount.id(),
-                    normalizedEmail,
+                    existingAccount.username(),
                     existingAccount.passwordHash(),
+                    email,
                     existingAccount.createdAt(),
                     timeProvider.nowInstant()
             ));
-            return null;
         });
-    }
-
-    private String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
     }
 
 }

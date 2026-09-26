@@ -25,7 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.AuthController;
-import team.carrypigeon.backend.chat.domain.shared.controller.security.BearerAuthenticationInterceptor;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
@@ -592,8 +591,6 @@ class AuthUserBusinessChainTests {
             AuthSessionDomainApi sessionApi = new AuthSessionDomainApi(
                     accountRepository,
                     refreshSessionRepository,
-                    userProvisioningApi,
-                    channelProvisioningApi,
                     passwordHasher,
                     tokenHasher,
                     tokenService,
@@ -613,8 +610,7 @@ class AuthUserBusinessChainTests {
             MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
             this.authMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                             accountApi,
-                            sessionApi,
-                            pluginCatalogApi
+                            sessionApi
                     ))
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
@@ -631,10 +627,6 @@ class AuthUserBusinessChainTests {
                                     authRequestContext
                             )
                     )
-                    .addInterceptors(new BearerAuthenticationInterceptor(
-                            new AccessTokenAuthenticationDomainApi(tokenService),
-                            authRequestContext
-                    ))
                     .setMessageConverters(converter)
                     .setControllerAdvice(new GlobalExceptionHandler())
                     .build();

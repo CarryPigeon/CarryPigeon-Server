@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.Clock;
+import org.apache.logging.log4j.core.util.Clock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -46,7 +46,6 @@ class RealtimeServerConfigurationContextTests {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(
-                    BasicInfrastructureAutoConfiguration.class,
                     JacksonAutoConfiguration.class,
                     IdAutoConfiguration.class,
                     PluginAutoConfiguration.class,
@@ -72,8 +71,8 @@ class RealtimeServerConfigurationContextTests {
     static class TestSupportConfiguration {
 
         @Bean
-        TimeProviderImpl timeProvider(Clock clock) {
-            return new TimeProviderImpl(clock);
+        TimeProviderImpl timeProvider() {
+            return new TimeProviderImpl(java.time.Clock.systemDefaultZone());
         }
 
         @Bean

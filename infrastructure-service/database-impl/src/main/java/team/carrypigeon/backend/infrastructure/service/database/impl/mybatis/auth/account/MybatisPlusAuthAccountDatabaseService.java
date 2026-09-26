@@ -45,6 +45,16 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
                 "failed to query auth account by id");
     }
 
+    @Override
+    public Optional<AuthAccountRecord> findByEmail(String email) {
+        return execute(() -> {
+            AuthAccountEntity entity = authAccountMapper.selectOne(new LambdaQueryWrapper<AuthAccountEntity>()
+                    .eq(AuthAccountEntity::getEmail, email)
+                    .last(LIMIT_ONE));
+            return Optional.ofNullable(entity).map(AuthAccountEntity::toRecord);
+        }, "failed to query auth account by email");
+    }
+
     /**
      * 插入新的鉴权账户记录。
      */

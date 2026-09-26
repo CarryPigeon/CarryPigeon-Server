@@ -10,6 +10,7 @@ import java.time.Instant;
  * @param id 账户主键 ID
  * @param username 当前服务端内唯一用户名
  * @param passwordHash 已完成哈希处理的密码摘要
+ * @param email 邮箱
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -17,6 +18,7 @@ public record AuthAccountRecord(
         long id,
         String username,
         String passwordHash,
+        String email,
         Instant createdAt,
         Instant updatedAt
 ) {

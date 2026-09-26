@@ -24,6 +24,13 @@ public interface AuthAccountDatabaseService {
      * @return 命中时返回账户记录，未命中时返回空
      */
     Optional<AuthAccountRecord> findById(long accountId);
+    /**
+     * 按邮箱查询账户
+     *
+     * @param email 当前服务端内用户
+     * @return 命中时返回账户，未命中时返回空
+     * */
+    Optional<AuthAccountRecord> findByEmail(String email);
 
     /**
      * 写入新的鉴权账户记录。

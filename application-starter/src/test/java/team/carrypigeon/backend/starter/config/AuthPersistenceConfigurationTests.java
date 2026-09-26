@@ -4,7 +4,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import team.carrypigeon.backend.chat.domain.features.auth.config.AuthPersistenceConfiguration;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;

@@ -17,7 +17,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerInterceptor;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.UserProfileController;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.ProfileBackgroundController;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;

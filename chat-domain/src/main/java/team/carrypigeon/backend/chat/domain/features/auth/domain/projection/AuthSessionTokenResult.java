@@ -9,7 +9,6 @@ public record AuthSessionTokenResult(
         long accountId,
         String accessToken,
         long expiresIn,
-        String refreshToken,
-        boolean newUser
+        String refreshToken
 ) {
 }

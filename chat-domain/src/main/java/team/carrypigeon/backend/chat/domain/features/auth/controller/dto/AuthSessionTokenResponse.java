@@ -17,8 +17,6 @@ public record AuthSessionTokenResponse(
         @Schema(description = "刷新令牌", example = "eyJhbGciOiJIUzI1NiJ9.refresh.token")
         String refreshToken,
         @Schema(description = "当前用户 ID", example = "1001")
-        String uid,
-        @Schema(description = "是否为首次创建的新用户", example = "false")
-        boolean isNewUser
+        String uid
 ) {
 }

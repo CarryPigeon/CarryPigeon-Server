@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.auth.support.persistence;
 
 import java.util.Optional;
+
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountRecord;
@@ -11,6 +13,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.auth.account
  * 职责：在 auth feature 内完成领域账户模型与 database-api 契约模型之间的转换。
  * 边界：不包含 SQL 与数据库驱动细节，具体持久化由 database-impl 提供。
  */
+@Component
 public class DatabaseBackedAuthAccountRepository implements AuthAccountRepository {
 
     private final AuthAccountDatabaseService authAccountDatabaseService;
@@ -27,6 +30,11 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
     public Optional<AuthAccount> findByUsername(String username) {
         return authAccountDatabaseService.findByUsername(username)
                 .map(this::toDomainModel);
+    }
+
+    @Override
+    public Optional<AuthAccount> findByEmail(String email) {
+        return Optional.empty();
     }
 
     /**
@@ -62,6 +70,7 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
                 record.id(),
                 record.username(),
                 record.passwordHash(),
+                record.email(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -72,6 +81,7 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
                 account.id(),
                 account.username(),
                 account.passwordHash(),
+                account.email(),
                 account.createdAt(),
                 account.updatedAt()
         );

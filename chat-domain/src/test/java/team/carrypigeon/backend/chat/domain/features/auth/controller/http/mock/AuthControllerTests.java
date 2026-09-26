@@ -60,8 +60,7 @@ class AuthControllerTests {
         pluginCatalogApi = mock(PluginCatalogApi.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                         authAccountApi,
-                        authSessionApi,
-                        pluginCatalogApi
+                        authSessionApi
                 ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -271,8 +270,7 @@ class AuthControllerTests {
                 .login(any());
         MockMvc disabledLoginMvc = MockMvcBuilders.standaloneSetup(new AuthController(
                         authAccountApi,
-                        authSessionApi,
-                        pluginCatalogApi
+                        authSessionApi
                 ))
                 .setMessageConverters(snakeCaseConverter())
                 .setControllerAdvice(new GlobalExceptionHandler())

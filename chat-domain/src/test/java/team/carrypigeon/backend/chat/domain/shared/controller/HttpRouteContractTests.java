@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelApplicationController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelBansController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelLifecycleController;

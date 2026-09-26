@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
  * 职责：收敛项目中的当前时间读取逻辑，降低直接调用系统时间的分散性。
  * 依赖：基于全局 Clock 提供时间读取能力。
  */
+@Component
 public class TimeProviderImpl implements TimeProvider{
 
     private final Clock clock;

@@ -8,5 +8,5 @@ package team.carrypigeon.backend.chat.domain.features.auth.domain.command;
  * @param username 待注册用户名
  * @param password 明文密码输入
  */
-public record RegisterCommand(String username, String password) {
+public record RegisterCommand(String username, String password,String email,String code) {
 }

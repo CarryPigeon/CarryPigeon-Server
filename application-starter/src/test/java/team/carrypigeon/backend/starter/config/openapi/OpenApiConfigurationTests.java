@@ -21,7 +21,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.CurrentUserAccountController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.AuditLogController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelLifecycleController;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ChannelMemberGovernanceController;

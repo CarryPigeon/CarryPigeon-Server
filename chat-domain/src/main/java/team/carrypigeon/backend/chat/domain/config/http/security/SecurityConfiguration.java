@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 边界：区分匿名与已认证，实现角色认证
  * */
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity(jsr250Enabled = true)
 public class SecurityConfiguration {
 
     @Bean
@@ -24,7 +24,7 @@ public class SecurityConfiguration {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(new JsonAuthenticationEntryPoint())

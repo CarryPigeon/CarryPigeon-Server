@@ -19,6 +19,14 @@ public interface AuthAccountRepository {
     Optional<AuthAccount> findByUsername(String username);
 
     /**
+     * 按邮箱查询账户
+     *
+     * @param email 当前服务端内用户
+     * @return 命中时返回账户，未命中时返回空
+     * */
+    Optional<AuthAccount> findByEmail(String email);
+
+    /**
      * 按账户 ID 查询账户。
      *
      * @param accountId 账户 ID
