@@ -61,7 +61,6 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     private UserProfile toDomainModel(UserProfileRecord record) {
         return new UserProfile(
                 record.accountId(),
-                record.nickname(),
                 record.avatarUrl(),
                 record.bio(),
                 record.sex(),
@@ -74,7 +73,6 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
     private UserProfileRecord toWriteRecord(UserProfile userProfile) {
         return new UserProfileRecord(
                 userProfile.accountId(),
-                userProfile.nickname(),
                 userProfile.avatarUrl(),
                 userProfile.bio(),
                 userProfile.sex(),

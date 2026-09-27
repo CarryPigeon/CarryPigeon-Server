@@ -28,7 +28,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListChannelPinsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelPinApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 

@@ -125,7 +125,6 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("iss", properties.issuer());
         payload.put("sub", String.valueOf(account.id()));
-        payload.put("username", account.username());
         payload.put("typ", tokenType);
         payload.put("sid", refreshSessionId);
         payload.put("exp", expiresAt.getEpochSecond());
@@ -176,7 +175,6 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
             requirePositiveAccountSubject(subject);
             return new AuthTokenClaims(
                     subject,
-                    requiredStringClaim(payload, "username"),
                     requiredStringClaim(payload, "typ"),
                     requiredLongClaim(payload, "sid"),
                     expiresAt

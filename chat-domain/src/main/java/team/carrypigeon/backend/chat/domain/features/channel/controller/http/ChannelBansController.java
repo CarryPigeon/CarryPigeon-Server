@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.BanChannelMemberV1Request;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelBanListItemResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelBanListResponse;
@@ -29,8 +30,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Unba
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelBansQuery;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -47,17 +46,14 @@ public class ChannelBansController {
 
     private final ChannelQueryApi channelQueryDomainApi;
     private final ChannelGovernanceApi channelGovernanceDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     @Autowired
     public ChannelBansController(
             ChannelQueryApi channelQueryDomainApi,
-            ChannelGovernanceApi channelGovernanceDomainApi,
-            RequestAuthenticationContext authRequestContext
+            ChannelGovernanceApi channelGovernanceDomainApi
     ) {
         this.channelQueryDomainApi = channelQueryDomainApi;
         this.channelGovernanceDomainApi = channelGovernanceDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -69,12 +65,11 @@ public class ChannelBansController {
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @Valid @RequestBody BanChannelMemberV1Request body,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         ChannelBanResult result = channelGovernanceDomainApi.banChannelMemberUntil(
                 new BanChannelMemberUntilCommand(
-                        principal.accountId(),
+                        cpPrincipal.accountId(),
                         channelId,
                         targetAccountId,
                         body.reason(),
@@ -98,12 +93,11 @@ public class ChannelBansController {
     @ApiResponses({@ApiResponse(responseCode = "204", description = "解除成功")})
     public ResponseEntity<Void> unbanChannelMember(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal,
+            @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelGovernanceDomainApi.unbanChannelMember(
-                new UnbanChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
+                new UnbanChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
     }
@@ -115,11 +109,10 @@ public class ChannelBansController {
     @Operation(summary = "获取禁言列表", description = "按频道返回封禁列表。")
     public ChannelBanListResponse listChannelBans(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         return new ChannelBanListResponse(channelQueryDomainApi.listChannelBans(
-                new ListChannelBansQuery(principal.accountId(), channelId)
+                new ListChannelBansQuery(cpPrincipal.accountId(), channelId)
         ).stream().map(this::toChannelBanListItemResponse).toList());
     }
 

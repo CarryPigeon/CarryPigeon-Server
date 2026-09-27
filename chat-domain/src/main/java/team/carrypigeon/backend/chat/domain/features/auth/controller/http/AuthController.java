@@ -10,8 +10,10 @@ import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
@@ -19,8 +21,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 import java.util.Locale;
@@ -38,7 +38,6 @@ public class AuthController {
 
     private final AuthAccountApi authAccountDomainApi;
     private final AuthSessionApi authSessionDomainApi;
-    private final RequestAuthenticationContext authenticationContext;
     private final AuthAccountApi authAccountApi;
 
     /**
@@ -49,11 +48,11 @@ public class AuthController {
      */
     public AuthController(
         AuthAccountApi authAccountDomainApi,
-        AuthSessionApi authSessionDomainApi, RequestAuthenticationContext authenticationContext, AuthAccountApi authAccountApi
+        AuthSessionApi authSessionDomainApi,
+        AuthAccountApi authAccountApi
     ) {
         this.authAccountDomainApi = authAccountDomainApi;
         this.authSessionDomainApi = authSessionDomainApi;
-        this.authenticationContext = authenticationContext;
         this.authAccountApi = authAccountApi;
     }
 
@@ -153,19 +152,24 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * 更新用户邮箱
+     *
+     * @param request 用于获取当前用户的request
+     * @param body 具体的参数
+     * */
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/email")
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})
     public ResponseEntity<Void> updateEmail(
         HttpServletRequest request,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal,
         @Valid @RequestBody UpdateCurrentAccountEmailRequest body
     ) {
-        // 获取当前用户
-        AuthenticatedAccount principal = authenticationContext.requirePrincipal(request);
         // 更新数据
         authAccountApi.updateCurrentAccountEmail(new UpdateCurrentAccountEmailCommand(
-            principal.accountId(),
+            cpPrincipal.accountId(),
             body.email().trim().toLowerCase(Locale.ROOT),
             body.code()
         ));

@@ -77,8 +77,7 @@ final class RealtimeAuthenticationCoordinator {
         try {
             AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
             AuthenticatedAccount principal = new AuthenticatedAccount(
-                    authentication.accountId(),
-                    authentication.username()
+                    authentication.accountId()
             );
             replacePrincipal(context, principal);
             cancelAuthenticationTimeout(context);

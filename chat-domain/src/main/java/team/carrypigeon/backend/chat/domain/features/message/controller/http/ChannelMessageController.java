@@ -15,6 +15,7 @@ import java.io.IOException;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +26,7 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
@@ -66,7 +66,6 @@ public class ChannelMessageController {
     private final ChannelMessageTimelineApi channelMessageTimelineApi;
     private final ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
     private final ChannelMessageLifecycleApi channelMessageLifecycleApi;
-    private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
     public ChannelMessageController(
@@ -74,14 +73,12 @@ public class ChannelMessageController {
             ChannelMessageTimelineApi channelMessageTimelineApi,
             ChannelMessageAttachmentApi channelMessageAttachmentDomainApi,
             ChannelMessageLifecycleApi channelMessageLifecycleApi,
-            RequestAuthenticationContext authRequestContext,
             ChannelMessageV1ResponseMapper responseMapper
     ) {
         this.channelMessagePublishingApi = channelMessagePublishingApi;
         this.channelMessageTimelineApi = channelMessageTimelineApi;
         this.channelMessageAttachmentDomainApi = channelMessageAttachmentDomainApi;
         this.channelMessageLifecycleApi = channelMessageLifecycleApi;
-        this.authRequestContext = authRequestContext;
         this.responseMapper = responseMapper;
     }
 
@@ -91,7 +88,7 @@ public class ChannelMessageController {
      * @param channelId 频道 ID
      * @param cursor 游标消息 ID
      * @param limit 查询条数
-     * @param request 当前 HTTP 请求
+     * @param cpPrincipal 当前认证用户
      * @return 统一响应包装的历史消息结果
      */
     @GetMapping("/{channelId}/messages")
@@ -100,28 +97,27 @@ public class ChannelMessageController {
             @ApiResponse(responseCode = "200", description = "返回 `items + next_cursor + has_more` 分页对象；失败时返回标准 HTTP 错误响应")
     })
     public CursorPageResponse<ChannelMessageV1Response> getChannelMessages(
-            @Parameter(description = "目标频道 ID", example = "2001")
+        @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @Parameter(description = "历史消息排他游标；为空表示从最新消息开始", example = "Y2hhbm5lbF9tZXNzYWdlczo1MDAw")
+        @Parameter(description = "历史消息排他游标；为空表示从最新消息开始", example = "Y2hhbm5lbF9tZXNzYWdlczo1MDAw")
             @RequestParam(required = false) String cursor,
-            @RequestParam(name = "around_mid", required = false) String aroundMid,
-            @RequestParam(required = false) Integer before,
-            @RequestParam(required = false) Integer after,
-            @Parameter(description = "返回条数，范围 1..50", example = "20")
+        @RequestParam(name = "around_mid", required = false) String aroundMid,
+        @RequestParam(required = false) Integer before,
+        @RequestParam(required = false) Integer after,
+        @Parameter(description = "返回条数，范围 1..50", example = "20")
             @RequestParam(defaultValue = "20") @Min(value = 1, message = "limit must be between 1 and 50")
             @Max(value = 50, message = "limit must be between 1 and 50") int limit,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        ) {
         ChannelMessageHistoryResult result = channelMessageTimelineApi.getChannelMessageHistory(
                 new GetChannelMessageHistoryQuery(
-                        principal.accountId(),
-                        channelId,
-                        decodeCursor(HISTORY_CURSOR_SCOPE, cursor),
-                        parseOptionalSnowflake(aroundMid, "around_mid", false),
-                        before,
-                        after,
-                        limit
+                    cpPrincipal.accountId(),
+                    channelId,
+                    decodeCursor(HISTORY_CURSOR_SCOPE, cursor),
+                    parseOptionalSnowflake(aroundMid, "around_mid", false),
+                    before,
+                    after,
+                    limit
                 )
         );
         return CursorPageResponse.of(
@@ -136,7 +132,7 @@ public class ChannelMessageController {
      * @param channelId 频道 ID
      * @param keyword 搜索关键字
      * @param limit 返回条数
-     * @param request 当前 HTTP 请求
+     * @param cpPrincipal 当前认证用户
      * @return 统一响应包装的搜索结果
      */
     @GetMapping("/{channelId}/messages/search")
@@ -158,9 +154,8 @@ public class ChannelMessageController {
             @Parameter(description = "返回条数，范围 1..50", example = "20")
             @RequestParam(defaultValue = "20") @Min(value = 1, message = "limit must be between 1 and 50")
             @Max(value = 50, message = "limit must be between 1 and 50") int limit,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         String effectiveKeyword = q != null && !q.isBlank() ? q : keyword;
         if (effectiveKeyword == null || effectiveKeyword.isBlank()) {
             throw ProblemException.validationFailed("q must not be blank");
@@ -170,30 +165,21 @@ public class ChannelMessageController {
         }
         ChannelMessageSearchResult result = channelMessageTimelineApi.searchChannelMessages(
                 new SearchChannelMessagesQuery(
-                        principal.accountId(),
-                        channelId,
-                        effectiveKeyword,
-                        decodeCursor(SEARCH_CURSOR_SCOPE, cursor),
-                        parseOptionalSnowflake(senderUid, "sender_uid", false),
-                        domain,
-                        parseOptionalSnowflake(beforeMid, "before_mid", false),
-                        parseOptionalSnowflake(afterMid, "after_mid", false),
-                        limit
+                    cpPrincipal.accountId(),
+                    channelId,
+                    effectiveKeyword,
+                    decodeCursor(SEARCH_CURSOR_SCOPE, cursor),
+                    parseOptionalSnowflake(senderUid, "sender_uid", false),
+                    domain,
+                    parseOptionalSnowflake(beforeMid, "before_mid", false),
+                    parseOptionalSnowflake(afterMid, "after_mid", false),
+                    limit
                 )
         );
         boolean hasMore = result.messages().size() > limit;
         java.util.List<ChannelMessageResult> pageItems = hasMore ? result.messages().subList(0, limit) : result.messages();
-        String nextCursor = hasMore ? encodeCursor(SEARCH_CURSOR_SCOPE, pageItems.get(pageItems.size() - 1).messageId()) : null;
+        String nextCursor = hasMore ? encodeCursor(SEARCH_CURSOR_SCOPE, pageItems.getLast().messageId()) : null;
         return CursorPageResponse.of(pageItems.stream().map(responseMapper::toResponse).toList(), nextCursor, hasMore);
-    }
-
-    public CursorPageResponse<ChannelMessageV1Response> searchChannelMessages(
-            long channelId,
-            String keyword,
-            int limit,
-            HttpServletRequest request
-    ) {
-        return searchChannelMessages(channelId, keyword, null, null, null, null, null, null, limit, request);
     }
 
     @PostMapping("/{channelId}/messages")
@@ -205,18 +191,17 @@ public class ChannelMessageController {
     public ResponseEntity<ChannelMessageV1Response> sendChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         ChannelMessageResult result = channelMessagePublishingApi.sendChannelMessage(
                 new SendChannelMessageCommand(
-                        principal.accountId(),
-                        channelId,
-                        requestBody.domain(),
-                        requestBody.domainVersion(),
-                        requestBody.data(),
-                        parseMentionIds(requestBody.mentions()),
-                        requestBody.clientMessageId()
+                    cpPrincipal.accountId(),
+                    channelId,
+                    requestBody.domain(),
+                    requestBody.domainVersion(),
+                    requestBody.data(),
+                    parseMentionIds(requestBody.mentions()),
+                    requestBody.clientMessageId()
                 )
         );
         return ResponseEntity.status(201).body(responseMapper.toResponse(result));
@@ -228,13 +213,12 @@ public class ChannelMessageController {
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @RequestParam(name = "message_type", required = false) String messageType,
             @RequestPart("file") MultipartFile file,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         try {
             MessageAttachmentUploadResult result = channelMessageAttachmentDomainApi.uploadMessageAttachment(
                     new UploadMessageAttachmentCommand(
-                            principal.accountId(),
+                            cpPrincipal.accountId(),
                             channelId,
                             messageType,
                             file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename(),
@@ -262,7 +246,7 @@ public class ChannelMessageController {
      *
      * @param channelId 频道 ID
      * @param messageId 消息 ID
-     * @param request 当前 HTTP 请求
+     * @param cpPrincipal 当前认证的用户
      * @return 撤回后的消息响应
      */
     @PostMapping("/{channelId}/messages/{messageId}/recall")
@@ -270,11 +254,10 @@ public class ChannelMessageController {
     public ChannelMessageV1Response recallChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         ChannelMessageResult result = channelMessageLifecycleApi.recallChannelMessage(
-                new RecallChannelMessageCommand(principal.accountId(), channelId, messageId)
+                new RecallChannelMessageCommand(cpPrincipal.accountId(), channelId, messageId)
         );
         return responseMapper.toResponse(result);
     }

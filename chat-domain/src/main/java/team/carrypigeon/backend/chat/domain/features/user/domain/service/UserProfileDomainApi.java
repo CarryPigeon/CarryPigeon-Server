@@ -88,7 +88,6 @@ public class UserProfileDomainApi implements UserProfileApi {
                     .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
 
             UserProfile updatedProfile = existingProfile.updateProfile(
-                    command.nickname(),
                     command.avatarUrl(),
                     command.bio(),
                     command.sex(),
@@ -103,7 +102,6 @@ public class UserProfileDomainApi implements UserProfileApi {
     private UserProfileResult toResult(UserProfile userProfile) {
         return new UserProfileResult(
                 userProfile.accountId(),
-                userProfile.nickname(),
                 userProfile.avatarUrl(),
                 userProfile.bio(),
                 userProfile.sex(),

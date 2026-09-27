@@ -5,12 +5,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelMemberListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelMemberV1Response;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelGovernanceApi;
@@ -27,8 +28,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Kick
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.PromoteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListChannelMembersQuery;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -45,17 +44,14 @@ public class ChannelMemberGovernanceController {
 
     private final ChannelQueryApi channelQueryDomainApi;
     private final ChannelGovernanceApi channelGovernanceDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     @Autowired
     public ChannelMemberGovernanceController(
             ChannelQueryApi channelQueryDomainApi,
-            ChannelGovernanceApi channelGovernanceDomainApi,
-            RequestAuthenticationContext authRequestContext
+            ChannelGovernanceApi channelGovernanceDomainApi
     ) {
         this.channelQueryDomainApi = channelQueryDomainApi;
         this.channelGovernanceDomainApi = channelGovernanceDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -67,11 +63,10 @@ public class ChannelMemberGovernanceController {
     public ChannelMemberListResponse listChannelMembers(
             @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         List<ChannelMemberResult> result = channelQueryDomainApi.listChannelMembers(
-                new ListChannelMembersQuery(principal.accountId(), channelId)
+                new ListChannelMembersQuery(cpPrincipal.accountId(), channelId)
         );
         return new ChannelMemberListResponse(result.stream().map(this::toChannelMemberV1Response).toList());
     }
@@ -85,11 +80,10 @@ public class ChannelMemberGovernanceController {
     public ResponseEntity<Void> promoteChannelMemberV1(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelGovernanceDomainApi.promoteChannelMember(
-                new PromoteChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
+                new PromoteChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
     }
@@ -103,11 +97,10 @@ public class ChannelMemberGovernanceController {
     public ResponseEntity<Void> demoteChannelAdminV1(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelGovernanceDomainApi.demoteChannelAdmin(
-                new DemoteChannelAdminCommand(principal.accountId(), channelId, targetAccountId)
+                new DemoteChannelAdminCommand(cpPrincipal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
     }
@@ -123,11 +116,10 @@ public class ChannelMemberGovernanceController {
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelGovernanceDomainApi.kickChannelMember(
-                new KickChannelMemberCommand(principal.accountId(), channelId, targetAccountId)
+                new KickChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
         );
         return ResponseEntity.noContent().build();
     }
@@ -136,7 +128,6 @@ public class ChannelMemberGovernanceController {
         return new ChannelMemberV1Response(
                 IdUtil.toString(result.accountId()),
                 result.role().toLowerCase(),
-                result.nickname(),
                 result.avatarUrl(),
                 result.joinedAt()
         );

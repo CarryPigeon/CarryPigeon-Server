@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.ProfileBackgroundUploadResponse;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
 import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 

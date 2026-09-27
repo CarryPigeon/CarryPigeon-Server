@@ -13,8 +13,6 @@ public record ChannelMemberV1Response(
         String uid,
         @Schema(description = "频道角色", example = "owner")
         String role,
-        @Schema(description = "用户昵称", example = "Alice")
-        String nickname,
         @Schema(description = "用户头像相对路径", example = "avatars/u/1001.png")
         String avatar,
         @Schema(description = "加入时间（epoch 毫秒）", example = "1700000000000")

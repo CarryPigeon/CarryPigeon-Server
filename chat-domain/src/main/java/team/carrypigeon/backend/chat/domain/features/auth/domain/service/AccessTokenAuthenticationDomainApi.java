@@ -26,7 +26,6 @@ public class AccessTokenAuthenticationDomainApi implements AccessTokenAuthentica
         AuthTokenClaims claims = authTokenCodec.parseAccessToken(accessToken);
         return new AccessTokenAuthenticationResult(
                 parseAccountId(claims.subject()),
-                claims.username(),
                 claims.expiresAt()
         );
     }

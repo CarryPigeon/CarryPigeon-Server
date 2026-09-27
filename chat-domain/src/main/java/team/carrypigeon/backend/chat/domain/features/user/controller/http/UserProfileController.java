@@ -5,12 +5,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
-import java.util.Arrays;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,11 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.CurrentUserResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
@@ -32,7 +31,6 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfile
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.PatchCurrentUserProfileRequest;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileListResponse;
 import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileResponse;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -48,20 +46,18 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 public class UserProfileController {
 
     private final UserProfileApi userProfileDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
     private final AuthAccountApi authAccountApi;
     /**
      * 创建用户资料 HTTP 入口。
      *
      * @param userProfileDomainApi 用户资料领域 API
-     * @param authRequestContext 请求认证上下文
+     * @param authAccountApi       认证账户 API
      */
     public UserProfileController(
         UserProfileApi userProfileDomainApi,
-        RequestAuthenticationContext authRequestContext, AuthAccountApi authAccountApi
+        AuthAccountApi authAccountApi
     ) {
         this.userProfileDomainApi = userProfileDomainApi;
-        this.authRequestContext = authRequestContext;
         this.authAccountApi = authAccountApi;
     }
 
@@ -69,10 +65,8 @@ public class UserProfileController {
      * 按账户 ID 查询用户资料。
      *
      * @param accountId 账户 ID
-     * @param request 当前 HTTP 请求
      * @return 统一响应包装的用户资料
      */
-    @PreAuthorize("isAuthenticated() and principal.accountId == #accountId")
     @GetMapping("/{accountId}")
     @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取用户公开资料。")
     @ApiResponses({
@@ -82,20 +76,18 @@ public class UserProfileController {
     })
     public UserPublicProfileResponse getByAccountId(
             @Parameter(description = "目标账户 ID", example = "1001")
-            @PathVariable @Positive(message = "accountId must be greater than 0") long accountId,
-            HttpServletRequest request
+            @PathVariable @Positive(message = "accountId must be greater than 0") long accountId
     ) {
-        authRequestContext.requirePrincipal(request);
         UserProfileResult result = userProfileDomainApi.getUserProfileByAccountId(
                 new GetUserProfileByAccountIdQuery(accountId)
         );
-        return toPublicResponse(result);
+        return new UserPublicProfileResponse(result.accountId()+"",result.avatarUrl());
     }
 
     /**
      * 按 ID 批量查询用户公开资料。
      *
-     * @param request 当前 HTTP 请求
+     * @param ids 要查询的账户 ID 列表
      * @return 公开资料列表外壳
      */
     @GetMapping
@@ -106,13 +98,14 @@ public class UserProfileController {
             @ApiResponse(responseCode = "422", description = "ids 缺失或格式非法")
     })
     public UserPublicProfileListResponse list(
-            @RequestParam(required = false) String ids,
-            HttpServletRequest request
+            @RequestParam List<Long> ids
     ) {
-        authRequestContext.requirePrincipal(request);
-        List<Long> accountIds = parseIds(ids);
-        List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(accountIds).stream()
-                .map(this::toPublicResponse)
+        List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(ids).stream()
+                .map(user -> new UserPublicProfileResponse(
+                        IdUtil.toString(user.accountId()),
+                        user.avatarUrl()
+                    )
+                )
                 .toList();
         return new UserPublicProfileListResponse(result);
     }
@@ -120,7 +113,6 @@ public class UserProfileController {
     /**
      * 按 v1 协议更新当前登录用户公开资料。
      *
-     * @param request 当前 HTTP 请求
      * @param body 用户资料更新请求
      * @return HTTP 204
      */
@@ -133,18 +125,17 @@ public class UserProfileController {
             @ApiResponse(responseCode = "422", description = "请求体字段非法")
     })
     public ResponseEntity<Void> patchCurrentUserProfile(
-            HttpServletRequest request,
+            @AuthenticationPrincipal CpPrincipal cpPrincipal,
             @Valid @RequestBody PatchCurrentUserProfileRequest body
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         userProfileDomainApi.updateCurrentUserProfile(
                 new UpdateCurrentUserProfileCommand(
-                        principal.accountId(),
-                        body.username(),
-                        body.avatar(),
-                        body.brief(),
-                        body.sex() == null ? 0L : body.sex(),
-                        body.birthday() == null ? 0L : body.birthday()
+                    cpPrincipal.accountId(),
+                    body.username(),
+                    body.avatar(),
+                    body.brief(),
+                    body.sex() == null ? 0L : body.sex(),
+                    body.birthday() == null ? 0L : body.birthday()
                 )
         );
         return ResponseEntity.noContent().build();
@@ -158,50 +149,14 @@ public class UserProfileController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "资料不存在")
     })
-    public CurrentUserResponse me(HttpServletRequest request) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+    public CurrentUserResponse me(@AuthenticationPrincipal CpPrincipal cpPrincipal) {
         UserProfileResult profile = userProfileDomainApi.getCurrentUserProfile(
-            new GetCurrentUserProfileQuery(principal.accountId())
+            new GetCurrentUserProfileQuery(cpPrincipal.accountId())
         );
         return new CurrentUserResponse(
             IdUtil.toString(profile.accountId()),
-            authAccountApi.getAccountEmail(principal.accountId()),
-            profile.nickname(),
+            authAccountApi.getAccountEmail(cpPrincipal.accountId()),
             profile.avatarUrl()
         );
-    }
-
-    private UserPublicProfileResponse toPublicResponse(UserProfileResult result) {
-        return new UserPublicProfileResponse(
-                IdUtil.toString(result.accountId()),
-                result.nickname(),
-                result.avatarUrl()
-        );
-    }
-
-    /**
-     * 解析用户资料批量查询的账号 ID 列表。
-     * 失败语义：缺失或任一 ID 不是十进制雪花 ID 时返回统一校验问题。
-     *
-     * @param ids 逗号分隔的账号 ID 字符串
-     * @return 账号 ID 列表
-     */
-    private List<Long> parseIds(String ids) {
-        if (ids == null || ids.isBlank()) {
-            throw ProblemException.validationFailed("ids must not be blank");
-        }
-        try {
-            return Arrays.stream(ids.split(",", -1))
-                    .map(String::trim)
-                    .map(value -> {
-                        if (value.isBlank()) {
-                            throw new IllegalArgumentException("blank id segment");
-                        }
-                        return IdUtil.parse(value);
-                    })
-                    .toList();
-        } catch (IllegalArgumentException exception) {
-            throw ProblemException.validationFailed("ids must be decimal snowflake strings");
-        }
     }
 }

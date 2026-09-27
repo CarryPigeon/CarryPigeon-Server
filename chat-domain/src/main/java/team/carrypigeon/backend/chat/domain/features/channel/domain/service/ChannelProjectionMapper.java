@@ -75,7 +75,6 @@ class ChannelProjectionMapper {
     private ChannelMemberResult toMemberResult(ChannelMember member, UserProfileResult userProfile) {
         return new ChannelMemberResult(
                 member.accountId(),
-                userProfile == null ? "" : userProfile.nickname(),
                 userProfile == null ? "" : userProfile.avatarUrl(),
                 member.role().name(),
                 member.joinedAt(),

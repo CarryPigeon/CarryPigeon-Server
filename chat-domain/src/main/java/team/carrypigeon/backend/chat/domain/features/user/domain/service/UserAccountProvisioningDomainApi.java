@@ -24,7 +24,6 @@ public class UserAccountProvisioningDomainApi implements UserAccountProvisioning
     public void initializeProfile(InitializeUserAccountProfileCommand command) {
         userProfileRepository.save(UserProfile.initial(
                 command.accountId(),
-                command.nickname(),
                 command.createdAt(),
                 command.updatedAt()
         ));

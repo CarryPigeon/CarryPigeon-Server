@@ -8,16 +8,16 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.server.controller.dto.UpdateChannelNotificationPreferenceRequest;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 
 /**
  * 频道级通知偏好 HTTP 入口。
@@ -30,14 +30,11 @@ import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAcco
 public class ChannelNotificationPreferenceController {
 
     private final NotificationPreferenceApi notificationPreferenceApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     public ChannelNotificationPreferenceController(
-            NotificationPreferenceApi notificationPreferenceApi,
-            RequestAuthenticationContext authRequestContext
+            NotificationPreferenceApi notificationPreferenceApi
     ) {
         this.notificationPreferenceApi = notificationPreferenceApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -48,13 +45,12 @@ public class ChannelNotificationPreferenceController {
     @Operation(summary = "更新频道通知偏好", description = "更新当前账户在指定频道中的通知偏好。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "频道通知偏好更新成功")})
     public ResponseEntity<Void> updateChannelNotificationPreference(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @Valid @RequestBody UpdateChannelNotificationPreferenceRequest body,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @Valid @RequestBody UpdateChannelNotificationPreferenceRequest body,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        ) {
         notificationPreferenceApi.updateChannelPreference(new UpdateNotificationChannelPreferenceCommand(
-                principal.accountId(), channelId, body.mode(), body.mutedUntil()
+            cpPrincipal.accountId(), channelId, body.mode(), body.mutedUntil()
         ));
         return ResponseEntity.noContent().build();
     }

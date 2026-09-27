@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.ChannelSummaryResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.CreateChannelRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.dto.UpdateChannelProfileRequest;
@@ -26,8 +27,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.command.Crea
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.DeleteChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.command.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelResult;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -43,15 +42,12 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 public class ChannelLifecycleController {
 
     private final ChannelLifecycleApi channelLifecycleDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     @Autowired
     public ChannelLifecycleController(
-            ChannelLifecycleApi channelLifecycleDomainApi,
-            RequestAuthenticationContext authRequestContext
+            ChannelLifecycleApi channelLifecycleDomainApi
     ) {
         this.channelLifecycleDomainApi = channelLifecycleDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -62,11 +58,10 @@ public class ChannelLifecycleController {
     @ApiResponses({@ApiResponse(responseCode = "201", description = "频道创建成功")})
     public ResponseEntity<ChannelSummaryResponse> createChannel(
             @Valid @RequestBody CreateChannelRequest body,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         ChannelResult result = channelLifecycleDomainApi.createChannel(new CreateChannelCommand(
-                principal.accountId(),
+                cpPrincipal.accountId(),
                 body.name(),
                 body.brief(),
                 body.avatar()
@@ -82,10 +77,9 @@ public class ChannelLifecycleController {
     @ApiResponses({@ApiResponse(responseCode = "204", description = "频道删除成功")})
     public ResponseEntity<Void> deleteChannel(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
-        channelLifecycleDomainApi.deleteChannel(new DeleteChannelCommand(principal.accountId(), channelId));
+        channelLifecycleDomainApi.deleteChannel(new DeleteChannelCommand(cpPrincipal.accountId(), channelId));
         return ResponseEntity.noContent().build();
     }
 
@@ -98,11 +92,10 @@ public class ChannelLifecycleController {
     public ResponseEntity<Void> updateChannelProfile(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @Valid @RequestBody UpdateChannelProfileRequest body,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelLifecycleDomainApi.updateChannelProfile(new UpdateChannelProfileCommand(
-                principal.accountId(),
+                cpPrincipal.accountId(),
                 channelId,
                 body.name(),
                 body.brief()

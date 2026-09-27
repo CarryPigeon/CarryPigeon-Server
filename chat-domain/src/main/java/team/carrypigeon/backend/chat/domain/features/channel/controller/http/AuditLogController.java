@@ -1,15 +1,14 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.AuditLogResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.query.ListAuditLogsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelQueryApi;
@@ -30,30 +29,26 @@ public class AuditLogController {
     private static final String AUDIT_CURSOR_SCOPE = "audit_logs";
 
     private final ChannelQueryApi channelQueryDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     public AuditLogController(
-            ChannelQueryApi channelQueryDomainApi,
-            RequestAuthenticationContext authRequestContext
+            ChannelQueryApi channelQueryDomainApi
     ) {
         this.channelQueryDomainApi = channelQueryDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     @GetMapping
     public CursorPageResponse<AuditLogItemResponse> listAuditLogs(
-            @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "50") int limit,
-            @RequestParam(name = "cid", required = false) String channelId,
-            @RequestParam(name = "actor_uid", required = false) String actorUid,
-            @RequestParam(name = "action", required = false) String action,
-            @RequestParam(name = "from_time", required = false) Long fromTime,
-            @RequestParam(name = "to_time", required = false) Long toTime,
-            HttpServletRequest request
+        @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "50") int limit,
+        @RequestParam(name = "cid", required = false) String channelId,
+        @RequestParam(name = "actor_uid", required = false) String actorUid,
+        @RequestParam(name = "action", required = false) String action,
+        @RequestParam(name = "from_time", required = false) Long fromTime,
+        @RequestParam(name = "to_time", required = false) Long toTime,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         List<AuditLogResult> items = channelQueryDomainApi.listAuditLogs(new ListAuditLogsQuery(
-                principal.accountId(),
+                cpPrincipal.accountId(),
                 OpaqueCursorCodec.decode(AUDIT_CURSOR_SCOPE, cursor),
                 limit,
                 parseOptionalSnowflake(channelId, false),

@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.RequestAuthenticationContext;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
@@ -43,17 +44,14 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 public class FileController {
 
     private final FileTransferApi fileTransferDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     /**
      * 创建文件 HTTP 入口。
      *
      * @param fileTransferDomainApi 文件传输领域 API
-     * @param authRequestContext 请求认证上下文
      */
-    public FileController(FileTransferApi fileTransferDomainApi, RequestAuthenticationContext authRequestContext) {
+    public FileController(FileTransferApi fileTransferDomainApi) {
         this.fileTransferDomainApi = fileTransferDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -62,7 +60,7 @@ public class FileController {
      * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
      *
      * @param request 上传申请请求
-     * @param servletRequest 当前 HTTP 请求，用于读取认证主体
+     * @param principal 当前认证主体
      * @return 文件上传授权响应
      */
     @PreAuthorize("isAuthenticated()")
@@ -71,8 +69,10 @@ public class FileController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回上传授权结果")
     })
-    public FileUploadResponse createUpload(@Valid @RequestBody CreateFileUploadRequest request, HttpServletRequest servletRequest) {
-        var principal = authRequestContext.requirePrincipal(servletRequest);
+    public FileUploadResponse createUpload(
+        @Valid @RequestBody CreateFileUploadRequest request,
+        @AuthenticationPrincipal CpPrincipal principal
+    ) {
         FileUploadGrantResult result = fileTransferDomainApi.createUploadGrant(
                 principal.accountId(),
                 request.filename(),
@@ -104,8 +104,11 @@ public class FileController {
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
     @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "文件内容写入成功")})
-    public ResponseEntity<Void> uploadFile(@PathVariable String shareKey, HttpServletRequest request) {
-        var principal = authRequestContext.requirePrincipal(request);
+    public ResponseEntity<Void> uploadFile(
+        @PathVariable String shareKey,
+        @AuthenticationPrincipal CpPrincipal principal,
+        HttpServletRequest request
+    ) {
         try {
             fileTransferDomainApi.uploadFile(
                     principal.accountId(),
@@ -126,7 +129,7 @@ public class FileController {
      * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
      *
      * @param shareKey 下载 share key
-     * @param request 当前 HTTP 请求，用于需要认证的下载场景
+     * @param principal 认证主体
      * @return 文件内容响应或下载重定向响应
      */
     @PermitAll
@@ -139,22 +142,26 @@ public class FileController {
             @ApiResponse(responseCode = "302", description = "重定向到对象下载地址"),
             @ApiResponse(responseCode = "404", description = "文件不存在")
     })
-    public ResponseEntity<?> download(@PathVariable String shareKey, HttpServletRequest request) {
+    public ResponseEntity<?> download(
+        @PathVariable String shareKey,
+        @AuthenticationPrincipal CpPrincipal principal
+    ) {
         Long accountId = null;
         if (!fileTransferDomainApi.isServerAvatar(shareKey)) {
-            accountId = authRequestContext.requirePrincipal(request).accountId();
+            accountId = principal.accountId();
         }
         FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(accountId, shareKey)
                 .orElseThrow(() -> ProblemException.notFound("file does not exist"));
+        String type = downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType();
         if (downloadResult.content().isPresent()) {
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType())
+                    .header(HttpHeaders.CONTENT_TYPE, type)
                     .header(HttpHeaders.CONTENT_LENGTH, Long.toString(downloadResult.size()))
                     .body(new InputStreamResource(downloadResult.content().orElseThrow()));
         }
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header(HttpHeaders.LOCATION, downloadResult.redirectUrl().orElseThrow().toString())
-                .header(HttpHeaders.CONTENT_TYPE, downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType())
+                .header(HttpHeaders.CONTENT_TYPE, type)
                 .build();
     }
 }

@@ -29,7 +29,6 @@ public class DomainCatalogController {
     /**
      * 创建 Domain 目录 HTTP 入口。
      *
-     * @param messagePluginCatalogDomainApi 消息插件目录领域 API
      */
     public DomainCatalogController(PluginCatalogApi pluginCatalogApi) {
         this.pluginCatalogApi = pluginCatalogApi;
