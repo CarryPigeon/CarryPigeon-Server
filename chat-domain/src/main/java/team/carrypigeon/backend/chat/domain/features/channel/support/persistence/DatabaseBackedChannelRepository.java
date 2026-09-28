@@ -98,7 +98,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     private Channel toDomainModel(ChannelRecord record) {
         return new Channel(
                 record.id(),
-                record.conversationId(),
                 record.name(),
                 record.brief(),
                 record.avatar(),
@@ -124,7 +123,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     private ChannelRecord toRecord(Channel channel) {
         return new ChannelRecord(
                 channel.id(),
-                channel.conversationId(),
                 channel.name(),
                 channel.brief(),
                 channel.avatar(),

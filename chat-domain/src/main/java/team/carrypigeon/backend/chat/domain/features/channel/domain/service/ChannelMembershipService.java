@@ -35,6 +35,6 @@ public class ChannelMembershipService {
     }
 
     ChannelMessagingContext toContext(Channel channel) {
-        return new ChannelMessagingContext(channel.id(), channel.conversationId(), channel.type());
+        return new ChannelMessagingContext(channel.id(), channel.type());
     }
 }

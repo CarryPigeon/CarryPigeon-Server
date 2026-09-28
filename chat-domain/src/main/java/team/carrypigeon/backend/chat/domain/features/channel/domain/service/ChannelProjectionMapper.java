@@ -38,7 +38,6 @@ class ChannelProjectionMapper {
     ChannelResult toResult(Channel channel, String ownerUid) {
         return new ChannelResult(
                 channel.id(),
-                channel.conversationId(),
                 channel.name(),
                 channel.brief(),
                 channel.avatar(),

@@ -57,8 +57,7 @@ public interface UserProfileApi {
      * 约束：昵称、头像、简介等字段必须满足领域资料规则。
      *
      * @param command 当前用户资料更新业务命令
-     * @return 更新后的用户资料投影
      */
-    UserProfileResult updateCurrentUserProfile(UpdateCurrentUserProfileCommand command);
+    void updateCurrentUserProfile(UpdateCurrentUserProfileCommand command);
 
 }

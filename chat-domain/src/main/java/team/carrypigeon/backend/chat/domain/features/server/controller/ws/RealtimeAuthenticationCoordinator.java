@@ -9,11 +9,12 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
@@ -61,7 +62,7 @@ final class RealtimeAuthenticationCoordinator {
             ChannelHandlerContext context,
             RealtimeClientMessage request,
             boolean reauth,
-            Consumer<AuthenticatedAccount> afterAuthenticated
+            Consumer<CpPrincipal> afterAuthenticated
     ) {
         String accessToken = request.accessToken();
         if (accessToken == null || accessToken.isBlank()) {
@@ -76,7 +77,7 @@ final class RealtimeAuthenticationCoordinator {
         }
         try {
             AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
-            AuthenticatedAccount principal = new AuthenticatedAccount(
+            CpPrincipal principal = new CpPrincipal(
                     authentication.accountId()
             );
             replacePrincipal(context, principal);
@@ -149,7 +150,7 @@ final class RealtimeAuthenticationCoordinator {
         cancelAuthenticationTimeout(context);
         cancelAccessTokenExpiration(context);
         debugLogger.channelInactive(context);
-        AuthenticatedAccount principal = context.channel()
+        CpPrincipal principal = context.channel()
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
         if (principal != null) {
@@ -157,8 +158,8 @@ final class RealtimeAuthenticationCoordinator {
         }
     }
 
-    private void replacePrincipal(ChannelHandlerContext context, AuthenticatedAccount principal) {
-        AuthenticatedAccount previousPrincipal = context.channel()
+    private void replacePrincipal(ChannelHandlerContext context, CpPrincipal principal) {
+        CpPrincipal previousPrincipal = context.channel()
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
         if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {

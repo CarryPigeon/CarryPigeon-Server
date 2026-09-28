@@ -20,6 +20,7 @@ public class EmailVerificationConfiguration {
 
     /**
      * 创建邮箱验证码内部 capability。
+     * TODO 思考是否保留
      *
      * @param cacheServiceProvider 缓存服务提供器
      * @param mailSenderServiceProvider 邮件发送服务提供器

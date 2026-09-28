@@ -18,7 +18,6 @@ public class ChannelEntity {
 
     @TableId(value = "id", type = IdType.INPUT)
     private Long id;
-    private Long conversationId;
     private String name;
     private String brief;
     private String avatar;

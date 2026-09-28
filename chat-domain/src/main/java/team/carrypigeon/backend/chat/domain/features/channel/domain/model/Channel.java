@@ -8,7 +8,6 @@ import java.time.Instant;
  * 边界：当前阶段只覆盖群聊频道，不展开复杂频道管理规则。
  *
  * @param id 频道 ID
- * @param conversationId 对应会话 ID，V0 中保持最小建模字段
  * @param name 频道名称
  * @param brief 频道简介
  * @param avatar 频道头像相对路径
@@ -20,7 +19,6 @@ import java.time.Instant;
  */
 public record Channel(
         long id,
-        long conversationId,
         String name,
         String brief,
         String avatar,

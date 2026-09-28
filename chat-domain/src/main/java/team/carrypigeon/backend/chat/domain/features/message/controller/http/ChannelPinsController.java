@@ -4,12 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelPinListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.PinChannelMessageRequest;
@@ -28,7 +29,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListChannelPinsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelPinApi;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -46,20 +46,16 @@ public class ChannelPinsController {
     private static final String PIN_CURSOR_SCOPE = "channel_pins";
 
     private final ChannelPinApi channelPinDomainApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     /**
      * 创建频道置顶消息 HTTP 入口。
      *
      * @param channelPinDomainApi 频道置顶领域 API
-     * @param authRequestContext 请求认证上下文
      */
     public ChannelPinsController(
-            ChannelPinApi channelPinDomainApi,
-            RequestAuthenticationContext authRequestContext
+            ChannelPinApi channelPinDomainApi
     ) {
         this.channelPinDomainApi = channelPinDomainApi;
-        this.authRequestContext = authRequestContext;
     }
 
     /**
@@ -68,18 +64,16 @@ public class ChannelPinsController {
      * @param channelId 频道 ID
      * @param messageId 消息 ID
      * @param requestBody 置顶备注请求体
-     * @param request 当前 HTTP 请求
      * @return 置顶结果
      */
     @PostMapping("/{channelId}/pins/{messageId}")
     @Operation(summary = "置顶频道消息", description = "置顶指定消息。")
     public ChannelPinItemResponse pinChannelMessage(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            @RequestBody(required = false) PinChannelMessageRequest requestBody,
-            HttpServletRequest request
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
+        @RequestBody(required = false) PinChannelMessageRequest requestBody,
+        @AuthenticationPrincipal CpPrincipal principal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         ChannelPinResult result = channelPinDomainApi.pinChannelMessage(
                 new PinChannelMessageCommand(principal.accountId(), channelId, messageId, requestBody == null ? null : requestBody.note())
         );
@@ -91,7 +85,6 @@ public class ChannelPinsController {
      *
      * @param channelId 频道 ID
      * @param messageId 消息 ID
-     * @param request 当前 HTTP 请求
      * @return 空响应
      */
     @DeleteMapping("/{channelId}/pins/{messageId}")
@@ -100,9 +93,8 @@ public class ChannelPinsController {
     public ResponseEntity<Void> unpinChannelMessage(
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            HttpServletRequest request
+            @AuthenticationPrincipal CpPrincipal principal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         channelPinDomainApi.unpinChannelMessage(
                 new UnpinChannelMessageCommand(principal.accountId(), channelId, messageId)
         );
@@ -115,18 +107,16 @@ public class ChannelPinsController {
      * @param channelId 频道 ID
      * @param cursor 分页游标
      * @param limit 查询条数
-     * @param request 当前 HTTP 请求
      * @return 置顶消息分页结果
      */
     @GetMapping("/{channelId}/pins")
     @Operation(summary = "获取频道置顶列表", description = "按频道返回置顶消息列表。")
     public ChannelPinListResponse listChannelPins(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
-            HttpServletRequest request
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
+        @AuthenticationPrincipal CpPrincipal principal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
         var items = channelPinDomainApi.listChannelPins(new ListChannelPinsQuery(
                 principal.accountId(),
                 channelId,
@@ -136,7 +126,7 @@ public class ChannelPinsController {
         boolean hasMore = items.size() > limit;
         var pageItems = hasMore ? items.subList(0, limit) : items;
         String nextCursor = hasMore && !pageItems.isEmpty()
-                ? OpaqueCursorCodec.encode(PIN_CURSOR_SCOPE, pageItems.get(pageItems.size() - 1).messageId())
+                ? OpaqueCursorCodec.encode(PIN_CURSOR_SCOPE, pageItems.getLast().messageId())
                 : null;
         return new ChannelPinListResponse(pageItems.stream().map(this::toPinResponse).toList(), nextCursor, hasMore);
     }

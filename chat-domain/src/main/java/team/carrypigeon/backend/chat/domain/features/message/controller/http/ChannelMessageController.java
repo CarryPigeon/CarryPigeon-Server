@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
@@ -84,6 +83,7 @@ public class ChannelMessageController {
 
     /**
      * 查询频道历史消息。
+     * 有两种查询模式，一种是cursor模式，从cursor消息向前查询，一种是around模式，查询目标消息前后的消息。
      *
      * @param channelId 频道 ID
      * @param cursor 游标消息 ID

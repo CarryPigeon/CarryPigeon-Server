@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import io.netty.channel.ChannelHandlerContext;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /**
@@ -15,7 +15,7 @@ final class RealtimeChannelLogContext {
     }
 
     static void run(ChannelHandlerContext context, Runnable action) {
-        AuthenticatedAccount principal = context.channel()
+        CpPrincipal principal = context.channel()
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
         try (LogContexts.Scope ignored = LogContexts.openScope()) {

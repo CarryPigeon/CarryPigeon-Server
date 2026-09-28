@@ -2,6 +2,9 @@ package team.carrypigeon.backend.chat.domain.features.user.support.persistence;
 
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
@@ -12,6 +15,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.user.profile
  * 职责：在 user feature 内完成领域模型与 database-api 契约模型之间的转换。
  * 边界：不包含 SQL 与数据库驱动细节，具体持久化由 database-impl 提供。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedUserProfileRepository implements UserProfileRepository {
 
     private final UserProfileDatabaseService userProfileDatabaseService;

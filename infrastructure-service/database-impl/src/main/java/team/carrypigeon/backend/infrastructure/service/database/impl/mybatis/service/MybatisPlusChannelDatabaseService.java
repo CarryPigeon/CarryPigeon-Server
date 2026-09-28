@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.springframework.dao.DataAccessException;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
@@ -122,8 +121,6 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
         try {
             return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
         } catch (RuntimeException exception) {
             throw new DatabaseServiceException(errorMessage, exception);
         }
@@ -139,7 +136,6 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     private ChannelRecord toRecord(ChannelEntity entity) {
         return new ChannelRecord(
                 entity.getId(),
-                entity.getConversationId(),
                 entity.getName(),
                 entity.getBrief(),
                 entity.getAvatar(),
@@ -164,7 +160,6 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     private ChannelEntity toEntity(ChannelRecord record) {
         ChannelEntity entity = new ChannelEntity();
         entity.setId(record.id());
-        entity.setConversationId(record.conversationId());
         entity.setName(record.name());
         entity.setBrief(record.brief());
         entity.setAvatar(record.avatar());

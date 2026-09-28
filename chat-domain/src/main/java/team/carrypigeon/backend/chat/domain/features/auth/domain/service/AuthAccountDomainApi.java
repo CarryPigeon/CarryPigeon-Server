@@ -7,6 +7,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.command.Registe
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.UpdateCurrentAccountEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
@@ -89,10 +90,15 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     }
 
     @Override
-    public String getAccountEmail(long accountId) {
-        return authAccountRepository.findById(accountId)
-                .orElseThrow(() -> ProblemException.notFound("auth account does not exist"))
-                .username();
+    public AuthPublicAccount getAccount(long accountId) {
+        AuthAccount account = authAccountRepository.findById(accountId)
+            .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
+        return new AuthPublicAccount(
+                account.id(),
+                account.username(),
+                account.email(),
+                account.createdAt()
+        );
     }
 
     @Override

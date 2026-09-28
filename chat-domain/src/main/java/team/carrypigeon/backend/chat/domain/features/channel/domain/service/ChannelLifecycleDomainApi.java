@@ -99,7 +99,6 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
             long channelId = nextId();
             Channel channel = new Channel(
                     channelId,
-                    channelId,
                     command.name().trim(),
                     normalizeNullableText(command.brief()),
                     normalizeNullableText(command.avatar()),
@@ -162,7 +161,6 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
             channelGovernancePolicy.requireCanUpdateChannelProfile(channel, operator);
             Channel updated = new Channel(
                     channel.id(),
-                    channel.conversationId(),
                     command.name().trim(),
                     normalizeNullableText(command.brief()),
                     channel.avatar(),

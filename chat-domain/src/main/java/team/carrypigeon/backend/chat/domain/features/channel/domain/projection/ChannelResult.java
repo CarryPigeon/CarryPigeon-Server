@@ -20,7 +20,6 @@ import java.time.Instant;
  */
 public record ChannelResult(
         long channelId,
-        long conversationId,
         String name,
         String brief,
         String avatar,

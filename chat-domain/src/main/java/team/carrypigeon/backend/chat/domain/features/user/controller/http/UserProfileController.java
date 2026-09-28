@@ -21,16 +21,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.CurrentUserResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
+import team.carrypigeon.backend.chat.domain.features.user.controller.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.PatchCurrentUserProfileRequest;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileListResponse;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.UserPublicProfileResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -62,30 +59,40 @@ public class UserProfileController {
     }
 
     /**
-     * 按账户 ID 查询用户资料。
+     * 按账户 ID 查询用户详细资料
      *
      * @param accountId 账户 ID
      * @return 统一响应包装的用户资料
      */
-    @GetMapping("/{accountId}")
+    @GetMapping("/{accountId}/detail")
     @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取用户公开资料。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回用户公开资料"),
             @ApiResponse(responseCode = "401", description = "未认证"),
             @ApiResponse(responseCode = "404", description = "资料不存在")
     })
-    public UserPublicProfileResponse getByAccountId(
+    public UserDetailProfileResponse getByAccountId(
             @Parameter(description = "目标账户 ID", example = "1001")
             @PathVariable @Positive(message = "accountId must be greater than 0") long accountId
     ) {
         UserProfileResult result = userProfileDomainApi.getUserProfileByAccountId(
                 new GetUserProfileByAccountIdQuery(accountId)
         );
-        return new UserPublicProfileResponse(result.accountId()+"",result.avatarUrl());
+        AuthPublicAccount account = authAccountApi.getAccount(accountId);
+        return new UserDetailProfileResponse(
+                result.accountId() + "",
+                account.username(),
+                result.avatarUrl(),
+                account.email(),
+                result.bio(),
+                result.sex(),
+                result.birthday()
+        );
     }
 
     /**
-     * 按 ID 批量查询用户公开资料。
+     * 按 ID 批量查询用户公开简略资料，主要用于群聊列表展示
+     * 因此返回值不包含bio等个性化冗杂信息
      *
      * @param ids 要查询的账户 ID 列表
      * @return 公开资料列表外壳
@@ -103,6 +110,7 @@ public class UserProfileController {
         List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(ids).stream()
                 .map(user -> new UserPublicProfileResponse(
                         IdUtil.toString(user.accountId()),
+                        authAccountApi.getAccount(user.accountId()).username(),
                         user.avatarUrl()
                     )
                 )
@@ -112,6 +120,7 @@ public class UserProfileController {
 
     /**
      * 按 v1 协议更新当前登录用户公开资料。
+     * 不包含用户名、邮箱和密码等account表信息
      *
      * @param body 用户资料更新请求
      * @return HTTP 204
@@ -131,7 +140,6 @@ public class UserProfileController {
         userProfileDomainApi.updateCurrentUserProfile(
                 new UpdateCurrentUserProfileCommand(
                     cpPrincipal.accountId(),
-                    body.username(),
                     body.avatar(),
                     body.brief(),
                     body.sex() == null ? 0L : body.sex(),
@@ -149,14 +157,7 @@ public class UserProfileController {
         @ApiResponse(responseCode = "401", description = "未认证"),
         @ApiResponse(responseCode = "404", description = "资料不存在")
     })
-    public CurrentUserResponse me(@AuthenticationPrincipal CpPrincipal cpPrincipal) {
-        UserProfileResult profile = userProfileDomainApi.getCurrentUserProfile(
-            new GetCurrentUserProfileQuery(cpPrincipal.accountId())
-        );
-        return new CurrentUserResponse(
-            IdUtil.toString(profile.accountId()),
-            authAccountApi.getAccountEmail(cpPrincipal.accountId()),
-            profile.avatarUrl()
-        );
+    public UserDetailProfileResponse me(@AuthenticationPrincipal CpPrincipal cpPrincipal) {
+        return this.getByAccountId(cpPrincipal.accountId());
     }
 }

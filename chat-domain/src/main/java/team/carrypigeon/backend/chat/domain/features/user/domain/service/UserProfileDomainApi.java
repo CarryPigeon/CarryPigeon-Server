@@ -80,10 +80,9 @@ public class UserProfileDomainApi implements UserProfileApi {
      * 更新当前登录用户资料。
      *
      * @param command 更新命令
-     * @return 更新后的资料结果
      */
-    public UserProfileResult updateCurrentUserProfile(UpdateCurrentUserProfileCommand command) {
-        return transactionRunner.runInTransaction(() -> {
+    public void updateCurrentUserProfile(UpdateCurrentUserProfileCommand command) {
+        transactionRunner.runInTransaction(() -> {
             UserProfile existingProfile = userProfileRepository.findByAccountId(command.accountId())
                     .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
 

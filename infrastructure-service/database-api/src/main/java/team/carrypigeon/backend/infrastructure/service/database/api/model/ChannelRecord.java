@@ -8,7 +8,6 @@ import java.time.Instant;
  * 边界：只服务 database-api 最小数据库契约，不承载额外业务语义。
  *
  * @param id 频道 ID
- * @param conversationId 会话 ID
  * @param name 频道名称
  * @param brief 频道简介
  * @param avatar 频道头像相对路径
@@ -19,7 +18,6 @@ import java.time.Instant;
  */
 public record ChannelRecord(
         long id,
-        long conversationId,
         String name,
         String brief,
         String avatar,

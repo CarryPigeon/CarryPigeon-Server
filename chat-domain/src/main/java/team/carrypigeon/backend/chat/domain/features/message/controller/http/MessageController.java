@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -11,13 +10,14 @@ import jakarta.validation.constraints.Positive;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.ForwardChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
@@ -40,23 +40,19 @@ import org.springframework.web.bind.annotation.PostMapping;
 public class MessageController {
 
     private final ChannelMessagePublishingApi channelMessagePublishingApi;
-    private final RequestAuthenticationContext authRequestContext;
     private final ChannelMessageV1ResponseMapper responseMapper;
 
     /**
      * 创建消息资源 HTTP 入口。
      *
      * @param channelMessagePublishingApi 频道消息发布领域 API
-     * @param authRequestContext 请求认证上下文
      * @param responseMapper v1 消息响应映射器
      */
     public MessageController(
             ChannelMessagePublishingApi channelMessagePublishingApi,
-            RequestAuthenticationContext authRequestContext,
             ChannelMessageV1ResponseMapper responseMapper
     ) {
         this.channelMessagePublishingApi = channelMessagePublishingApi;
-        this.authRequestContext = authRequestContext;
         this.responseMapper = responseMapper;
     }
 
@@ -67,18 +63,16 @@ public class MessageController {
      *
      * @param messageId 源消息 ID
      * @param body 转发请求
-     * @param request 当前 HTTP 请求
      * @return 转发后创建的消息响应
      */
     @PostMapping("/{messageId}/forward")
     @ApiResponses({@ApiResponse(responseCode = "201", description = "转发消息创建成功")})
     public ResponseEntity<ChannelMessageV1Response> forwardMessage(
-            @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-            @Valid @NotNull(message = "request body must not be null") @RequestBody ForwardChannelMessageRequest body,
-            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKeyHeader,
-            HttpServletRequest request
-    ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(request);
+        @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
+        @Valid @NotNull(message = "request body must not be null") @RequestBody ForwardChannelMessageRequest body,
+        @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKeyHeader,
+        @AuthenticationPrincipal CpPrincipal principal
+        ) {
         ChannelMessageResult result = channelMessagePublishingApi.forwardChannelMessage(new ForwardChannelMessageCommand(
                 principal.accountId(),
                 messageId,

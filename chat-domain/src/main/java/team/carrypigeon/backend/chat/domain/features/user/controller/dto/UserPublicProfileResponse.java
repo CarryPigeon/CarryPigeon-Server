@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record UserPublicProfileResponse(
         @Schema(description = "用户 ID", example = "1001")
         String uid,
+        @Schema(description = "用户名", example = "Alice")
+        String username,
         @Schema(description = "用户头像相对路径", example = "avatars/u/1001.png")
         String avatar
 ) {

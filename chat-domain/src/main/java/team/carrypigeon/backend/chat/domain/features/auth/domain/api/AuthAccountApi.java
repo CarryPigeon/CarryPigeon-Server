@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.domain.api;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.UpdateCurrentAccountEmailCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 
 /**
@@ -27,12 +28,12 @@ public interface AuthAccountApi {
     RegisterResult register(RegisterCommand command);
 
     /**
-     * 查询账号当前邮箱登录标识。
+     * 获取当前账户公开信息
      *
      * @param accountId 账号 ID
-     * @return 当前邮箱登录标识
+     * @return 当前账户公开信息
      */
-    String getAccountEmail(long accountId);
+    AuthPublicAccount getAccount(long accountId);
 
     /**
      * 使用邮箱验证码更新当前账号的邮箱登录标识。

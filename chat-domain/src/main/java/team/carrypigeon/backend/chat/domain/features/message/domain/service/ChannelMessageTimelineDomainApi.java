@@ -39,8 +39,11 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
 
     @Override
     public ChannelMessageHistoryResult getChannelMessageHistory(GetChannelMessageHistoryQuery query) {
+        // 约束请求参数是否合理
         validateHistoryQuery(query);
+        // 权限校验，判断是否是成员
         ChannelMessagingContext channel = channelContextApi.requireMemberChannel(query.channelId(), query.accountId());
+
         if (query.aroundMessageId() != null) {
             ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
             if (targetMessage.channelId() != channel.id()) {

@@ -5,7 +5,7 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**
@@ -88,7 +88,7 @@ final class RealtimeWebSocketDebugLogger {
         if (!isEnabled()) {
             return;
         }
-        AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        CpPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
         log.info("Action: local_ws_auth_result"
                 + " type=" + (reauth ? "reauth" : "auth")
                 + " id=" + blankIfNull(request == null ? null : request.id())
@@ -105,7 +105,7 @@ final class RealtimeWebSocketDebugLogger {
         if (!isEnabled()) {
             return;
         }
-        AuthenticatedAccount principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        CpPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
         log.info("Action: local_ws_channel_inactive"
                 + " accountId=" + (principal == null ? "" : principal.accountId())
                 + " remoteAddr=" + remoteAddress(context)

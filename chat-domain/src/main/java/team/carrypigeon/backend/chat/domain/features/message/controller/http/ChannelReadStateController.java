@@ -9,6 +9,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import java.util.List;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.shared.domain.auth.AuthenticatedAccount;
+import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelReadStateResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelUnreadResult;
@@ -38,25 +40,21 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
 public class ChannelReadStateController {
 
     private final MessageReadStateApi messageReadStateApi;
-    private final RequestAuthenticationContext authRequestContext;
 
     public ChannelReadStateController(
-            MessageReadStateApi messageReadStateApi,
-            RequestAuthenticationContext authRequestContext
+            MessageReadStateApi messageReadStateApi
     ) {
         this.messageReadStateApi = messageReadStateApi;
-        this.authRequestContext = authRequestContext;
     }
 
     @PutMapping("/channels/{channelId}/read_state")
     @Operation(summary = "更新频道已读状态", description = "只前进不后退。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回已读状态")})
     public ChannelReadStateResponse updateReadState(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @Valid @RequestBody UpdateChannelReadStateRequest request,
-            HttpServletRequest servletRequest
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @Valid @RequestBody UpdateChannelReadStateRequest request,
+        @AuthenticationPrincipal CpPrincipal principal
     ) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
         ChannelReadStateResult result = messageReadStateApi.updateChannelReadState(new UpdateChannelReadStateCommand(
                 principal.accountId(),
                 channelId,
@@ -69,14 +67,14 @@ public class ChannelReadStateController {
     /**
      * 查询当前用户的频道未读聚合。
      *
-     * @param servletRequest 当前 HTTP 请求
      * @return 未读列表响应
      */
     @GetMapping("/unreads")
     @Operation(summary = "获取未读频道列表", description = "返回当前用户的频道未读聚合。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回未读列表")})
-    public UnreadListResponse listUnreads(HttpServletRequest servletRequest) {
-        AuthenticatedAccount principal = authRequestContext.requirePrincipal(servletRequest);
+    public UnreadListResponse listUnreads(
+        @AuthenticationPrincipal CpPrincipal principal
+    ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
                 .map(this::toResponse)
                 .toList();
