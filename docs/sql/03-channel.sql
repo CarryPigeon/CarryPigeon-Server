@@ -95,33 +95,6 @@ CREATE TABLE chat_channel_audit_log (
 CREATE INDEX idx_chat_channel_audit_log_channel_created_at
     ON chat_channel_audit_log (channel_id, created_at);
 
-CREATE TABLE chat_channel_pin (
-    pin_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    message_id BIGINT NOT NULL,
-    pinned_by_account_id BIGINT NOT NULL,
-    note VARCHAR(200) NOT NULL DEFAULT '',
-    pinned_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (channel_id, message_id),
-    CONSTRAINT fk_chat_channel_pin_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_channel_pin_pinned_by FOREIGN KEY (pinned_by_account_id) REFERENCES auth_account (id)
-);
-
-CREATE UNIQUE INDEX uk_chat_channel_pin_pin_id
-    ON chat_channel_pin (pin_id);
-
-CREATE INDEX idx_chat_channel_pin_channel_id_pinned_at
-    ON chat_channel_pin (channel_id, pinned_at DESC);
-
-CREATE INDEX idx_chat_channel_pin_channel_message_id
-    ON chat_channel_pin (channel_id, message_id DESC);
-
-CREATE INDEX idx_chat_channel_pin_message_id
-    ON chat_channel_pin (message_id);
-
-CREATE INDEX idx_chat_channel_pin_pinned_by_account_id
-    ON chat_channel_pin (pinned_by_account_id);
-
 INSERT INTO chat_channel (
     id,
     conversation_id,

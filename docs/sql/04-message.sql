@@ -57,9 +57,6 @@ CREATE TABLE chat_message_idempotency (
 CREATE INDEX idx_chat_message_idempotency_message
     ON chat_message_idempotency (message_id);
 
-ALTER TABLE chat_channel_pin
-    ADD CONSTRAINT fk_chat_channel_pin_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id);
-
 CREATE TABLE chat_mention (
     mention_id BIGINT NOT NULL,
     channel_id BIGINT NOT NULL,

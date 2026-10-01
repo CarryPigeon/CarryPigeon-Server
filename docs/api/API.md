@@ -894,53 +894,7 @@ ReplyText 请求示例：
 - 同一幂等键用于不同的源消息、目标频道、附言或 `merged_mids` 时返回 `409 Conflict`，`reason = idempotency_key_reused`。
 - 幂等预留、消息写入和结果绑定位于同一数据库事务；事务回滚后该键可以重新提交，不会留下无结果占位。
 
-### 6.7 置顶频道消息
-
-- **方法**：`POST`
-- **路径**：`/api/channels/{cid}/pins/{mid}`
-- **认证**：是
-
-请求体可选：
-
-```json
-{ "note": "important" }
-```
-
-成功响应示例：
-
-```json
-{
-  "cid": "1",
-  "mid": "5001",
-  "pinned_by_uid": "1001",
-  "pinned_at": 1700000000000,
-  "note": "important"
-}
-```
-
-### 6.8 取消置顶频道消息
-
-- **方法**：`DELETE`
-- **路径**：`/api/channels/{cid}/pins/{mid}`
-- **认证**：是
-- **成功**：`204 No Content`
-
-### 6.9 获取频道置顶列表
-
-- **方法**：`GET`
-- **路径**：`/api/channels/{cid}/pins`
-- **认证**：是
-
-查询参数：
-
-| 参数 | 类型 | 约束 |
-| --- | --- | --- |
-| `cursor` | `string / null` | 不透明游标 |
-| `limit` | `int` | 默认 `20`，范围 `1..50` |
-
-成功响应为分页结构：`items + next_cursor + has_more`。
-
-### 6.10 获取提及收件箱
+### 6.7 获取提及收件箱
 
 - **方法**：`GET`
 - **路径**：`/api/mentions`
@@ -1197,8 +1151,6 @@ ReplyText 请求示例：
 
 - `message.created`
 - `message.recalled`
-- `message.pinned`
-- `message.unpinned`
 - `mention.created`
 - `channel.changed`
 - `channels.changed`
@@ -1211,7 +1163,6 @@ ReplyText 请求示例：
 | `channels.changed` | `{ "hint": "refresh" }` |
 | `message.created` | `{ "cid": "...", "message": { ...v1 消息对象... } }` |
 | `message.recalled` | `{ "cid": "...", "mid": "...", "recall_time": 1700000000000 }` |
-| `message.pinned` / `message.unpinned` | `{ "cid": "...", "mid": "..." }` |
 | `mention.created` | `{ "mention_id": "...", "cid": "...", "mid": "...", "from_uid": "...", "uid": "...", "created_at": 1700000000000 }` |
 | `read_state.updated` | `{ "cid": "...", "uid": "...", "last_read_mid": "...", "last_read_time": 1700000000000 }` |
 | `channel.changed` | `{ "cid": "...", "scope": "members", "hint": "refresh" }` |

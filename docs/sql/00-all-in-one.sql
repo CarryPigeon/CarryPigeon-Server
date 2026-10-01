@@ -150,33 +150,6 @@ CREATE TABLE chat_channel_read_state (
 CREATE INDEX idx_chat_channel_read_state_account_id
     ON chat_channel_read_state (account_id);
 
-CREATE TABLE chat_channel_pin (
-    pin_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    message_id BIGINT NOT NULL,
-    pinned_by_account_id BIGINT NOT NULL,
-    note VARCHAR(200) NOT NULL DEFAULT '',
-    pinned_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (channel_id, message_id),
-    CONSTRAINT fk_chat_channel_pin_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_channel_pin_pinned_by FOREIGN KEY (pinned_by_account_id) REFERENCES auth_account (id)
-);
-
-CREATE UNIQUE INDEX uk_chat_channel_pin_pin_id
-    ON chat_channel_pin (pin_id);
-
-CREATE INDEX idx_chat_channel_pin_channel_id_pinned_at
-    ON chat_channel_pin (channel_id, pinned_at DESC);
-
-CREATE INDEX idx_chat_channel_pin_channel_message_id
-    ON chat_channel_pin (channel_id, message_id DESC);
-
-CREATE INDEX idx_chat_channel_pin_message_id
-    ON chat_channel_pin (message_id);
-
-CREATE INDEX idx_chat_channel_pin_pinned_by_account_id
-    ON chat_channel_pin (pinned_by_account_id);
-
 INSERT INTO chat_channel (
     id,
     conversation_id,
@@ -244,9 +217,6 @@ CREATE TABLE chat_message_idempotency (
 
 CREATE INDEX idx_chat_message_idempotency_message
     ON chat_message_idempotency (message_id);
-
-ALTER TABLE chat_channel_pin
-    ADD CONSTRAINT fk_chat_channel_pin_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id);
 
 CREATE TABLE chat_mention (
     mention_id BIGINT NOT NULL,

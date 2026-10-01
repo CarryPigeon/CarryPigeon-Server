@@ -39,7 +39,7 @@ public interface ChannelDatabaseService {
     /** 批量读取频道记录，供频道列表投影避免逐频道查询。 */
     Map<Long, ChannelRecord> findByIds(Collection<Long> channelIds);
 
-    List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit);
+    List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, int limit);
 
     /**
      * 写入新的频道记录。

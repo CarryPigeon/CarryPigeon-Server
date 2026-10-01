@@ -77,7 +77,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
     public List<ChannelMemberResult> listChannelMembers(ListChannelMembersQuery query) {
         validateListChannelMembersQuery(query);
         Channel channel = requireChannel(query.channelId());
-        if (SYSTEM_CHANNEL_TYPE.equals(channel.type())) {
+        if (channel.systemChannel()) {
             throw ProblemException.forbidden("system_channel_members_hidden", SYSTEM_CHANNEL_MEMBERS_HIDDEN_MESSAGE);
         }
         ChannelMember operator = requireMember(channel.id(), query.accountId());
@@ -191,8 +191,7 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         requirePositive(accountId, "accountId");
         requirePositive(channelId, "channelId");
         Channel channel = requireChannel(channelId);
-        if ((SYSTEM_CHANNEL_TYPE.equals(channel.type()) || PRIVATE_CHANNEL_TYPE.equals(channel.type()))
-                && !channelMemberRepository.exists(channel.id(), accountId)) {
+        if ((channel.systemChannel()) && !channelMemberRepository.exists(channel.id(), accountId)) {
             throw ProblemException.forbidden("channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
         }
         return toResult(channel);
@@ -213,11 +212,9 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
         if (query.limit() <= 0 || query.limit() > 50) {
             throw ProblemException.validationFailed("limit must be between 1 and 50");
         }
-        String normalizedType = normalizeChannelTypeFilter(query.type());
         return channelRepository.discoverChannels(
                         query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
                         query.cursorChannelId(),
-                        normalizedType,
                         query.limit() + 1
                 ).stream()
                 .map(channel -> new DiscoverChannelResult(

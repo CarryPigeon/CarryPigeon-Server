@@ -24,10 +24,8 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
                 c.name,
                 c.brief,
                 c.avatar,
-                c.type,
                 c.is_default,
                 COUNT(cm.account_id) AS member_count,
-                CASE WHEN c.type = 'private' THEN TRUE ELSE FALSE END AS requires_application,
                 c.created_at,
                 c.updated_at
             FROM chat_channel c
@@ -39,10 +37,7 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
             <if test="cursorChannelId != null">
                 AND c.id &lt; #{cursorChannelId}
             </if>
-            <if test="type != null and type != ''">
-                AND c.type = #{type}
-            </if>
-            GROUP BY c.id, c.conversation_id, c.name, c.brief, c.avatar, c.type, c.is_default, c.created_at, c.updated_at
+            GROUP BY c.id, c.conversation_id, c.name, c.brief, c.avatar, c.is_default, c.created_at, c.updated_at
             ORDER BY c.id DESC
             LIMIT #{limit}
             </script>
@@ -50,7 +45,6 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
     List<ChannelDiscoverProjection> discoverChannels(
             @Param("keyword") String keyword,
             @Param("cursorChannelId") Long cursorChannelId,
-            @Param("type") String type,
             @Param("limit") int limit
     );
 

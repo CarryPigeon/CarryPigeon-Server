@@ -21,9 +21,8 @@ public class ChannelEntity {
     private String name;
     private String brief;
     private String avatar;
-    private String type;
-    @TableField("is_default")
-    private Boolean defaultChannel;
+    @TableField("is_system")
+    private Boolean systemChannel;
     private Instant createdAt;
     private Instant updatedAt;
 }

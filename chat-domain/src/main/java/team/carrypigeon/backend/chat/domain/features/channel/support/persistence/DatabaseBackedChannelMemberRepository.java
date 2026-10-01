@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Collection;
 import java.util.Map;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -15,6 +18,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 职责：在 channel feature 内完成成员关系模型与数据库契约模型转换。
  * 边界：不包含 SQL 与数据库驱动细节。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepository {
 
     private final ChannelMemberDatabaseService channelMemberDatabaseService;

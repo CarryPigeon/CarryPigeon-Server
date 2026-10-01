@@ -103,7 +103,6 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
                     normalizeNullableText(command.brief()),
                     normalizeNullableText(command.avatar()),
                     "",
-                    PRIVATE_CHANNEL_TYPE,
                     false,
                     now(),
                     now()
@@ -165,8 +164,7 @@ public class ChannelLifecycleDomainApi implements ChannelLifecycleApi {
                     normalizeNullableText(command.brief()),
                     channel.avatar(),
                     findOwnerUid(channel.id()),
-                    channel.type(),
-                    channel.defaultChannel(),
+                    channel.systemChannel(),
                     channel.createdAt(),
                     now()
             );

@@ -145,11 +145,6 @@ final class OpenApiRequestExamples {
             Map.entry("POST /api/channels/{channelId}/messages/attachments", formExample(
                     "上传消息附件",
                     Map.of("message_type", "file", "file", "<select attachment file>"))),
-            Map.entry("POST /api/channels/{channelId}/pins/{messageId}", jsonExample("置顶频道消息", """
-                    {
-                      "note": "Important message"
-                    }
-                    """)),
             Map.entry("POST /api/messages/{messageId}/forward", jsonExample("合并转发消息", """
                     {
                       "target_cid": "{{channelId}}",

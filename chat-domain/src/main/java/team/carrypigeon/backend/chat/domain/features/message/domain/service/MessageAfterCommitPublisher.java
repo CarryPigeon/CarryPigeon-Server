@@ -3,12 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.context.ApplicationEventPublisher;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelPinReference;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MentionCreatedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageCreatedEvent;
-import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessagePinnedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageRecalledEvent;
-import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageUnpinnedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.ReadStateUpdatedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -18,7 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 
 /**
  * 消息事务后实时发布协作对象。
- * 职责：从 canonical 消息构造创建、撤回、置顶和提醒事件。
+ * 职责：从 canonical 消息构造创建、撤回和提醒事件。
  * 边界：不读取仓储，不重建 domain data，不发布编辑或硬删除事件。
  */
 class MessageAfterCommitPublisher {
@@ -58,38 +55,6 @@ class MessageAfterCommitPublisher {
                 message.channelId(),
                 message.messageId(),
                 timeProvider.nowMillis(),
-                recipientAccountIds
-        )));
-    }
-
-    void publishMessagePinnedAfterCommit(
-            AfterCommitExecutor afterCommit,
-            ChannelPinReference pin,
-            List<Long> recipientAccountIds
-    ) {
-        afterCommit.execute(() -> eventPublisher.publishEvent(new MessagePinnedEvent(
-                pin.channelId(),
-                pin.messageId(),
-                pin.pinId(),
-                pin.pinnedByAccountId(),
-                pin.pinnedAt(),
-                recipientAccountIds
-        )));
-    }
-
-    void publishMessageUnpinnedAfterCommit(
-            AfterCommitExecutor afterCommit,
-            ChannelPinReference pin,
-            long unpinnedByAccountId,
-            long unpinnedAt,
-            List<Long> recipientAccountIds
-    ) {
-        afterCommit.execute(() -> eventPublisher.publishEvent(new MessageUnpinnedEvent(
-                pin.channelId(),
-                pin.messageId(),
-                pin.pinId(),
-                unpinnedByAccountId,
-                unpinnedAt,
                 recipientAccountIds
         )));
     }

@@ -8,13 +8,11 @@ import java.time.Instant;
  * 边界：不承载协议层包装逻辑。
  *
  * @param channelId 频道 ID
- * @param conversationId 会话 ID
  * @param name 频道名称
  * @param brief 频道简介
  * @param avatar 频道头像相对路径
  * @param ownerUid 频道 owner 用户 ID
- * @param type 频道类型
- * @param defaultChannel 是否为默认频道
+ * @param systemChannel 是否为默认频道
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -24,8 +22,7 @@ public record ChannelResult(
         String brief,
         String avatar,
         String ownerUid,
-        String type,
-        boolean defaultChannel,
+        boolean systemChannel,
         Instant createdAt,
         Instant updatedAt
 ) {

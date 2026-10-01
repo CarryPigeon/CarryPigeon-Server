@@ -23,8 +23,6 @@ public class RealtimeNotificationPreferenceFilter {
     private static final Set<String> FILTERED_EVENT_TYPES = Set.of(
             "message.created",
             "message.recalled",
-            "message.pinned",
-            "message.unpinned",
             "mention.created"
     );
 

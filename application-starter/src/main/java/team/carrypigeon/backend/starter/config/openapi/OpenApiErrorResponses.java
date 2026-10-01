@@ -123,7 +123,7 @@ final class OpenApiErrorResponses {
         if (path == null) {
             return false;
         }
-        return ("POST".equals(httpMethod) && (path.contains("/forward") || path.contains("/pins/")))
+        return ("POST".equals(httpMethod) && path.contains("/forward"))
                 || ("DELETE".equals(httpMethod) && "/api/channels/{channelId}".equals(path))
                 || ("POST".equals(httpMethod)
                 && "/api/channels/{channelId}/applications/{applicationId}/decisions".equals(path));

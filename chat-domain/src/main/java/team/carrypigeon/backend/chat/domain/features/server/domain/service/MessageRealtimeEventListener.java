@@ -7,9 +7,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MentionCreatedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageCreatedEvent;
-import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessagePinnedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageRecalledEvent;
-import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageUnpinnedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.ReadStateUpdatedEvent;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
@@ -52,28 +50,6 @@ public class MessageRealtimeEventListener {
                 "cid", Long.toString(event.channelId()),
                 "mid", Long.toString(event.messageId()),
                 "recall_time", event.recallTime()
-        ), event.recipientAccountIds());
-    }
-
-    @EventListener
-    public void onMessagePinned(MessagePinnedEvent event) {
-        publish(event.channelId(), "message.pinned", Map.of(
-                "cid", Long.toString(event.channelId()),
-                "mid", Long.toString(event.messageId()),
-                "pin_id", Long.toString(event.pinId()),
-                "pinned_by_uid", Long.toString(event.pinnedByAccountId()),
-                "pinned_at", event.pinnedAt().toEpochMilli()
-        ), event.recipientAccountIds());
-    }
-
-    @EventListener
-    public void onMessageUnpinned(MessageUnpinnedEvent event) {
-        publish(event.channelId(), "message.unpinned", Map.of(
-                "cid", Long.toString(event.channelId()),
-                "mid", Long.toString(event.messageId()),
-                "pin_id", Long.toString(event.pinId()),
-                "unpinned_by_uid", Long.toString(event.unpinnedByAccountId()),
-                "unpinned_at", event.unpinnedAt()
         ), event.recipientAccountIds());
     }
 

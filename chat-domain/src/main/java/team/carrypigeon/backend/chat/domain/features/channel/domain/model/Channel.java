@@ -13,7 +13,7 @@ import java.time.Instant;
  * @param avatar 频道头像相对路径
  * @param ownerUid 频道 owner 用户 ID（字符串化后）
  * @param type 频道类型
- * @param defaultChannel 是否为默认频道
+ * @param systemChannel 是否为默认频道
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -23,8 +23,7 @@ public record Channel(
         String brief,
         String avatar,
         String ownerUid,
-        String type,
-        boolean defaultChannel,
+        boolean systemChannel,
         Instant createdAt,
         Instant updatedAt
 ) {

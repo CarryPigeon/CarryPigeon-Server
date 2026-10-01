@@ -27,12 +27,6 @@ WHERE mention_id IN (9001)
    OR target_account_id IN (1001, 1002, 1003)
    OR channel_id IN (100, 101);
 
-DELETE FROM chat_channel_pin
-WHERE pin_id IN (8001)
-   OR message_id IN (5001, 5002, 5003, 5004, 5005)
-   OR pinned_by_account_id IN (1001, 1002, 1003)
-   OR channel_id IN (100, 101);
-
 DELETE FROM chat_channel_read_state
 WHERE account_id IN (1001, 1002, 1003)
    OR channel_id IN (100, 101);
@@ -408,24 +402,6 @@ VALUES
     (100, 1001, 5004, '2026-05-01 12:05:30', '2026-05-01 12:05:30', '2026-05-01 12:05:30'),
     (100, 1002, 5004, '2026-05-01 12:05:45', '2026-05-01 12:05:45', '2026-05-01 12:05:45'),
     (101, 1002, 5005, '2026-05-01 12:06:30', '2026-05-01 12:06:30', '2026-05-01 12:06:30');
-
-INSERT INTO chat_channel_pin (
-    pin_id,
-    channel_id,
-    message_id,
-    pinned_by_account_id,
-    note,
-    pinned_at
-)
-VALUES
-    (
-        8001,
-        100,
-        5004,
-        1001,
-        'iteration focus',
-        '2026-05-01 12:07:00'
-    );
 
 INSERT INTO chat_mention (
     mention_id,

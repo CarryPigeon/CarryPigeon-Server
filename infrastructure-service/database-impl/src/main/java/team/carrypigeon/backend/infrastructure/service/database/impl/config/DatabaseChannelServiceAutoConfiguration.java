@@ -10,21 +10,18 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelPinDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelPinMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelPinDatabaseService;
 
 /**
  * 频道数据库服务自动配置。
@@ -119,17 +116,4 @@ public class DatabaseChannelServiceAutoConfiguration {
         return new MybatisPlusChannelReadStateDatabaseService(channelReadStateMapper);
     }
 
-    /**
-     * 装配频道置顶消息数据库服务。
-     * 输入：频道置顶表 Mapper。
-     * 输出：供频道置顶消息维护使用的持久化实现。
-     *
-     * @param channelPinMapper 频道置顶表 Mapper
-     * @return 频道置顶数据库服务实现
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ChannelPinDatabaseService channelPinDatabaseService(ChannelPinMapper channelPinMapper) {
-        return new MybatisPlusChannelPinDatabaseService(channelPinMapper);
-    }
 }

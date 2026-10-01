@@ -42,7 +42,7 @@ public interface ChannelRepository {
                 .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    default List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+    default List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, int limit) {
         throw new UnsupportedOperationException("channel discover is not supported");
     }
 

@@ -40,8 +40,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     public Optional<ChannelRecord> findDefaultChannel() {
         return execute(() -> {
             ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
-                    .eq(ChannelEntity::getDefaultChannel, true)
-                    .eq(ChannelEntity::getType, PUBLIC_CHANNEL_TYPE)
+                    .eq(ChannelEntity::getSystemChannel, true)
                     .last(LIMIT_ONE));
             return Optional.ofNullable(entity).map(this::toRecord);
         }, "failed to query default channel");
@@ -54,7 +53,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     public Optional<ChannelRecord> findSystemChannel() {
         return execute(() -> {
             ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
-                    .eq(ChannelEntity::getType, SYSTEM_CHANNEL_TYPE)
+                    .eq(ChannelEntity::getSystemChannel, true)
                     .last(LIMIT_ONE));
             return Optional.ofNullable(entity).map(this::toRecord);
         }, "failed to query system channel");
@@ -85,9 +84,9 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 输入：关键字、游标、类型和条数上限。
      */
     @Override
-    public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
+    public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, int limit) {
         return execute(
-                () -> channelMapper.discoverChannels(keyword, cursorChannelId, type, limit).stream()
+                () -> channelMapper.discoverChannels(keyword, cursorChannelId, limit).stream()
                         .map(this::toDiscoverRecord)
                         .toList(),
                 "failed to discover channels"
@@ -139,8 +138,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
                 entity.getName(),
                 entity.getBrief(),
                 entity.getAvatar(),
-                entity.getType(),
-                Boolean.TRUE.equals(entity.getDefaultChannel()),
+                Boolean.TRUE.equals(entity.getSystemChannel()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
@@ -163,8 +161,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         entity.setName(record.name());
         entity.setBrief(record.brief());
         entity.setAvatar(record.avatar());
-        entity.setType(record.type());
-        entity.setDefaultChannel(record.defaultChannel());
+        entity.setSystemChannel(record.systemChannel());
         entity.setCreatedAt(record.createdAt());
         entity.setUpdatedAt(record.updatedAt());
         return entity;

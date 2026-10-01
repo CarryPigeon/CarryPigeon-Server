@@ -42,8 +42,7 @@ class ChannelProjectionMapper {
                 channel.brief(),
                 channel.avatar(),
                 ownerUid,
-                channel.type(),
-                channel.defaultChannel(),
+                channel.systemChannel(),
                 channel.createdAt(),
                 channel.updatedAt()
         );

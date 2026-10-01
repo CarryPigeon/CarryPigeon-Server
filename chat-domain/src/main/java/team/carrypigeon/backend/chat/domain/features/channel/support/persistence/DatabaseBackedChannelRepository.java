@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Collection;
 import java.util.Map;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -16,6 +19,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 职责：在 channel feature 内完成领域模型与数据库契约模型转换。
  * 边界：不包含 SQL 与数据库驱动细节。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedChannelRepository implements ChannelRepository {
 
     private final ChannelDatabaseService channelDatabaseService;
@@ -61,8 +66,8 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
      * 输入：关键字、游标、类型与查询上限。
      */
     @Override
-    public List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, String type, int limit) {
-        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, type, limit).stream()
+    public List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, int limit) {
+        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, limit).stream()
                 .map(this::toDiscoveredChannel)
                 .toList();
     }
@@ -102,8 +107,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 record.brief(),
                 record.avatar(),
                 "",
-                record.type(),
-                record.defaultChannel(),
+                record.systemChannel(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -126,8 +130,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 channel.name(),
                 channel.brief(),
                 channel.avatar(),
-                channel.type(),
-                channel.defaultChannel(),
+                channel.systemChannel(),
                 channel.createdAt(),
                 channel.updatedAt()
         );

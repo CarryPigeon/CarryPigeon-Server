@@ -431,7 +431,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     }
 
     private void requireSystemChannel(ChannelMessagingContext channel) {
-        if (!"system".equals(channel.type())) {
+        if (!channel.systemChannel()) {
             throw ProblemException.forbidden("system_channel_required", "system message requires system channel");
         }
     }

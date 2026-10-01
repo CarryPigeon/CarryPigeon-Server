@@ -312,7 +312,6 @@ public class GlobalExceptionHandler {
                  "channel_role_forbidden",
                  "channel_ownership_forbidden",
                  "channel_ban_forbidden",
-                 "channel_pin_forbidden",
                  "channel_message_recall_forbidden",
                  "system_channel_membership_required",
                  "system_channel_members_hidden",

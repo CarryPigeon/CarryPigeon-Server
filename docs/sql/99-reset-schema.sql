@@ -11,7 +11,6 @@ DROP TABLE IF EXISTS plugin_schema_history;
 DROP TABLE IF EXISTS chat_notification_channel_preference;
 DROP TABLE IF EXISTS chat_notification_server_preference;
 DROP TABLE IF EXISTS chat_mention;
-DROP TABLE IF EXISTS chat_channel_pin;
 DROP TABLE IF EXISTS chat_message;
 DROP TABLE IF EXISTS chat_channel_read_state;
 DROP TABLE IF EXISTS chat_channel_audit_log;

@@ -36,7 +36,7 @@ public class ChannelGovernancePolicy {
      * @param channel 待校验频道
      */
     public void requirePrivateChannel(Channel channel) {
-        if (!"private".equals(channel.type())) {
+        if (!channel.systemChannel()) {
             throw ProblemException.forbidden("private_channel_required", PRIVATE_CHANNEL_REQUIRED_MESSAGE);
         }
     }
@@ -186,14 +186,6 @@ public class ChannelGovernancePolicy {
     }
 
     /**
-     * 断言当前成员可管理置顶。
-     */
-    public void requireCanModeratePin(Channel channel, ChannelMember operator) {
-        requirePrivateChannel(channel);
-        requireOwnerOrAdmin(operator, "channel_pin_forbidden", OWNER_OR_ADMIN_ROLE_REQUIRED_MESSAGE);
-    }
-
-    /**
      * 断言当前成员可发送消息。
      *
      * @param channel 频道
@@ -201,7 +193,7 @@ public class ChannelGovernancePolicy {
      * @param now 当前时间
      */
     public void requireCanSendMessage(Channel channel, ChannelMember member, Instant now) {
-        if (!"private".equals(channel.type())) {
+        if (!channel.systemChannel()) {
             return;
         }
         if (member.mutedUntil() != null && member.mutedUntil().isAfter(now)) {
@@ -226,7 +218,7 @@ public class ChannelGovernancePolicy {
         if (operator.accountId() == senderAccountId) {
             return;
         }
-        if (!"private".equals(channel.type())) {
+        if (!channel.systemChannel()) {
             throw ProblemException.forbidden("channel_message_recall_forbidden", CHANNEL_MESSAGE_RECALL_FORBIDDEN_MESSAGE);
         }
         if (operator.role() == ChannelMemberRole.OWNER) {
