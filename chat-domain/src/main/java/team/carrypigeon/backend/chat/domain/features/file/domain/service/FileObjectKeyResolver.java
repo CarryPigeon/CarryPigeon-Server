@@ -1,7 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.util.Optional;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 

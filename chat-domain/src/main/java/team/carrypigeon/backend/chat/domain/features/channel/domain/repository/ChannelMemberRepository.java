@@ -58,9 +58,9 @@ public interface ChannelMemberRepository {
             return false;
         }
         update(new ChannelMember(previous.get().channelId(), previous.get().accountId(),
-                ChannelMemberRole.ADMIN, previous.get().joinedAt(), previous.get().mutedUntil()));
+                ChannelMemberRole.ADMIN, previous.get().joinedAt()));
         update(new ChannelMember(target.get().channelId(), target.get().accountId(),
-                ChannelMemberRole.OWNER, target.get().joinedAt(), target.get().mutedUntil()));
+                ChannelMemberRole.OWNER, target.get().joinedAt()));
         return true;
     }
 

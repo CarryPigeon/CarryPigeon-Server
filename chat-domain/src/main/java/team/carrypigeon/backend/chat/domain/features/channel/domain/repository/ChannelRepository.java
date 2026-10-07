@@ -1,9 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 
@@ -13,13 +14,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Discov
  * 边界：不暴露数据库实现细节。
  */
 public interface ChannelRepository {
-
-    /**
-     * 查询默认公共频道。
-     *
-     * @return 命中时返回频道，未命中时返回空
-     */
-    Optional<Channel> findDefaultChannel();
 
     /**
      * 查询 system 频道。

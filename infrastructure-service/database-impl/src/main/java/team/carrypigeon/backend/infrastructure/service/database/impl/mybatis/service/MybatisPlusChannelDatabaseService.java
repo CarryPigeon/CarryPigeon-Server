@@ -1,11 +1,13 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import java.util.List;
-import java.util.Optional;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
@@ -23,27 +25,11 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.sup
 public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService {
 
     private static final String LIMIT_ONE = "LIMIT 1";
-    private static final String PUBLIC_CHANNEL_TYPE = "public";
-    private static final String SYSTEM_CHANNEL_TYPE = "system";
 
     private final ChannelMapper channelMapper;
 
     public MybatisPlusChannelDatabaseService(ChannelMapper channelMapper) {
         this.channelMapper = channelMapper;
-    }
-
-    /**
-     * 查询默认公共频道记录。
-     * 输出：命中时返回 database-api 频道记录，否则返回空。
-     */
-    @Override
-    public Optional<ChannelRecord> findDefaultChannel() {
-        return execute(() -> {
-            ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
-                    .eq(ChannelEntity::getSystemChannel, true)
-                    .last(LIMIT_ONE));
-            return Optional.ofNullable(entity).map(this::toRecord);
-        }, "failed to query default channel");
     }
 
     /**

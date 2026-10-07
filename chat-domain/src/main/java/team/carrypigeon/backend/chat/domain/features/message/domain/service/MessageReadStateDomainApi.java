@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
@@ -37,7 +37,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
             ChannelReadStateRepository readStateRepository,
             ChannelContextApi channelContextApi,
             TransactionRunner transactionRunner,
-            ApplicationEventPublisher eventPublisher,
+            AfterCommitEventPublisher eventPublisher,
             TimeProviderImpl timeProvider
     ) {
         this.messageRepository = messageRepository;

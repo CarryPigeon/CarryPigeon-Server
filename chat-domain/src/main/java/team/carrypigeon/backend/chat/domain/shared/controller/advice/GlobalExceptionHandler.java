@@ -306,7 +306,7 @@ public class GlobalExceptionHandler {
                     new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "unauthorized", exception.getMessage(), null);
             case "token_expired" ->
                     new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "token_expired", exception.getMessage(), null);
-            case "private_channel_required",
+            case "regular_channel_required",
                  "channel_invite_forbidden",
                  "channel_profile_forbidden",
                  "channel_role_forbidden",

@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.command.InitializeChannelMembershipsCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.input.InitializeChannelMembershipsCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.InitializeUserAccountProfileCommand;
 

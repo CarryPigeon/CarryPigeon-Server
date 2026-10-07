@@ -25,8 +25,8 @@ public interface ChannelMemberMapper {
      * @return 受影响行数
      */
     @Insert("""
-            INSERT INTO chat_channel_member (channel_id, account_id, role, joined_at, muted_until)
-            VALUES (#{channelId}, #{accountId}, #{role}, #{joinedAt}, #{mutedUntil})
+            INSERT INTO chat_channel_member (channel_id, account_id, role, joined_at)
+            VALUES (#{channelId}, #{accountId}, #{role}, #{joinedAt})
             """)
     int insertMembership(ChannelMemberEntity entity);
 
@@ -54,7 +54,7 @@ public interface ChannelMemberMapper {
      * @return 命中时返回成员实体
      */
     @Select("""
-            SELECT channel_id, account_id, role, joined_at, muted_until
+            SELECT channel_id, account_id, role, joined_at
             FROM chat_channel_member
             WHERE channel_id = #{channelId} AND account_id = #{accountId}
             """)
@@ -69,8 +69,7 @@ public interface ChannelMemberMapper {
     @Update("""
             UPDATE chat_channel_member
             SET role = #{role},
-                joined_at = #{joinedAt},
-                muted_until = #{mutedUntil}
+                joined_at = #{joinedAt}
             WHERE channel_id = #{channelId} AND account_id = #{accountId}
             """)
     int updateMembership(ChannelMemberEntity entity);
@@ -114,7 +113,7 @@ public interface ChannelMemberMapper {
      * @return 成员实体列表
      */
     @Select("""
-            SELECT channel_id, account_id, role, joined_at, muted_until
+            SELECT channel_id, account_id, role, joined_at
             FROM chat_channel_member
             WHERE channel_id = #{channelId}
             ORDER BY joined_at ASC, account_id ASC

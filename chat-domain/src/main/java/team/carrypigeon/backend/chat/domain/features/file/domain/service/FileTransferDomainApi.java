@@ -5,7 +5,7 @@ import java.time.Instant;
 import java.util.Optional;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;

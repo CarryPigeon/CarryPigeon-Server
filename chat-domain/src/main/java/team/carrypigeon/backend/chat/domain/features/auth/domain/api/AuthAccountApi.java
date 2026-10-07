@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.api;
 
+import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.RegisterCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.command.UpdateCurrentAccountEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
@@ -34,6 +35,14 @@ public interface AuthAccountApi {
      * @return 当前账户公开信息
      */
     AuthPublicAccount getAccount(long accountId);
+
+    /**
+     * 批量获取账户公开信息。
+     *
+     * @param accountIds 目标账户 ID 列表
+     * @return 命中的账户公开信息
+     */
+    List<AuthPublicAccount> getAccounts(List<Long> accountIds);
 
     /**
      * 使用邮箱验证码更新当前账号的邮箱登录标识。

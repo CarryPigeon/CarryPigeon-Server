@@ -12,7 +12,6 @@ import java.time.Instant;
  * @param brief 频道简介
  * @param avatar 频道头像相对路径
  * @param ownerUid 频道 owner 用户 ID（字符串化后）
- * @param type 频道类型
  * @param systemChannel 是否为默认频道
  * @param createdAt 创建时间
  * @param updatedAt 更新时间

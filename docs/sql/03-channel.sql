@@ -22,7 +22,6 @@ CREATE TABLE chat_channel_member (
     account_id BIGINT NOT NULL,
     role VARCHAR(16) NOT NULL DEFAULT 'MEMBER',
     joined_at DATETIME(6) NOT NULL,
-    muted_until DATETIME(6) NULL,
     PRIMARY KEY (channel_id, account_id),
     CONSTRAINT fk_chat_channel_member_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
     CONSTRAINT fk_chat_channel_member_account FOREIGN KEY (account_id) REFERENCES auth_account (id)

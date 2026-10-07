@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
 import lombok.Data;
 
 /**
@@ -16,6 +15,5 @@ public class ChannelMemberEntity {
     private Long channelId;
     private Long accountId;
     private String role;
-    private Instant joinedAt;
-    private Instant mutedUntil;
+    private java.time.Instant joinedAt;
 }

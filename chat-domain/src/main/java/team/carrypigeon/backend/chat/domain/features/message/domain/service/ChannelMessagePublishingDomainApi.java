@@ -12,9 +12,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.ForwardChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
@@ -27,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDomainPluginApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.ValidateMessageDataCommand;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
@@ -54,7 +53,6 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
 
     private final MessageDeliveryCommandValidator commandValidator;
     private final ChannelContextApi channelContextApi;
-    private final ChannelMessagePolicyApi channelMessagePolicyApi;
     private final MessageRepository messageRepository;
     private final MessageMentionManager messageMentionManager;
     private final MessageAfterCommitPublisher messageAfterCommitPublisher;
@@ -66,18 +64,16 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
 
     public ChannelMessagePublishingDomainApi(
             ChannelContextApi channelContextApi,
-            ChannelMessagePolicyApi channelMessagePolicyApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
             MessageIdempotencyRepository messageIdempotencyRepository,
-            ApplicationEventPublisher eventPublisher,
+            AfterCommitEventPublisher eventPublisher,
             MessageDomainPluginApi messageDomainPluginApi,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelContextApi = channelContextApi;
-        this.channelMessagePolicyApi = channelMessagePolicyApi;
         this.messageRepository = messageRepository;
         this.messageMentionManager = new MessageMentionManager(mentionRepository, idGenerator, timeProvider);
         this.messageAfterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
@@ -106,7 +102,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext channel = channelMessagePolicyApi.requireSendableChannel(
+            ChannelMessagingContext channel = channelContextApi.requireSendableChannel(
                     command.channelId(), command.accountId(), now()
             );
             ChannelMessage message = buildCanonicalMessage(
@@ -199,7 +195,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext targetChannel = channelMessagePolicyApi.requireSendableChannel(
+            ChannelMessagingContext targetChannel = channelContextApi.requireSendableChannel(
                     command.targetChannelId(), command.accountId(), now()
             );
             Map<String, Object> data = new LinkedHashMap<>();

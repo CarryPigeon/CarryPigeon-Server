@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.auth.account;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.auth.account.AuthAccountDatabaseService;
@@ -43,6 +44,16 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
     public Optional<AuthAccountRecord> findById(long accountId) {
         return execute(() -> Optional.ofNullable(authAccountMapper.selectById(accountId)).map(AuthAccountEntity::toRecord),
                 "failed to query auth account by id");
+    }
+
+    @Override
+    public List<AuthAccountRecord> findByIds(List<Long> accountIds) {
+        return execute(
+                () -> authAccountMapper.selectBatchIds(accountIds).stream()
+                        .map(AuthAccountEntity::toRecord)
+                        .toList(),
+                "failed to query auth accounts by ids"
+        );
     }
 
     @Override

@@ -8,6 +8,7 @@ import java.time.Instant;
  * 边界：不包含鉴权口令、令牌或权限信息。
  *
  * @param accountId 账户 ID
+ * @param username 用户名（同时作为公开昵称）
  * @param avatarUrl 用户头像地址
  * @param bio 用户简介
  * @param sex 用户性别协议值
@@ -17,6 +18,7 @@ import java.time.Instant;
  */
 public record UserProfileResult(
         long accountId,
+        String username,
         String avatarUrl,
         String bio,
         long sex,

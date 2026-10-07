@@ -1,7 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.user.domain.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
@@ -24,15 +28,18 @@ public class UserProfileDomainApi implements UserProfileApi {
     private static final String USER_PROFILE_NOT_FOUND_MESSAGE = "user profile does not exist";
 
     private final UserProfileRepository userProfileRepository;
+    private final AuthAccountApi authAccountApi;
     private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileDomainApi(
             UserProfileRepository userProfileRepository,
+            AuthAccountApi authAccountApi,
             TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.userProfileRepository = userProfileRepository;
+        this.authAccountApi = authAccountApi;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
     }
@@ -46,7 +53,7 @@ public class UserProfileDomainApi implements UserProfileApi {
     public UserProfileResult getCurrentUserProfile(GetCurrentUserProfileQuery query) {
         UserProfile userProfile = userProfileRepository.findByAccountId(query.accountId())
                 .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
-        return toResult(userProfile);
+        return toResult(userProfile, authAccountApi.getAccount(userProfile.accountId()).username());
     }
 
     /**
@@ -58,7 +65,7 @@ public class UserProfileDomainApi implements UserProfileApi {
     public UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdQuery query) {
         UserProfile userProfile = userProfileRepository.findByAccountId(query.accountId())
                 .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
-        return toResult(userProfile);
+        return toResult(userProfile, authAccountApi.getAccount(userProfile.accountId()).username());
     }
 
     /**
@@ -71,8 +78,11 @@ public class UserProfileDomainApi implements UserProfileApi {
         if (accountIds == null || accountIds.isEmpty()) {
             return List.of();
         }
-        return userProfileRepository.findByAccountIds(accountIds).stream()
-                .map(this::toResult)
+        List<UserProfile> profiles = userProfileRepository.findByAccountIds(accountIds);
+        Map<Long, String> usernames = authAccountApi.getAccounts(accountIds).stream()
+                .collect(Collectors.toMap(AuthPublicAccount::id, AuthPublicAccount::username, (left, right) -> left));
+        return profiles.stream()
+                .map(profile -> toResult(profile, usernames.get(profile.accountId())))
                 .toList();
     }
 
@@ -94,13 +104,17 @@ public class UserProfileDomainApi implements UserProfileApi {
                     timeProvider.nowInstant()
             );
 
-            return toResult(userProfileRepository.update(updatedProfile));
+            return toResult(
+                    userProfileRepository.update(updatedProfile),
+                    authAccountApi.getAccount(command.accountId()).username()
+            );
         });
     }
 
-    private UserProfileResult toResult(UserProfile userProfile) {
+    private UserProfileResult toResult(UserProfile userProfile, String username) {
         return new UserProfileResult(
                 userProfile.accountId(),
+                username,
                 userProfile.avatarUrl(),
                 userProfile.bio(),
                 userProfile.sex(),

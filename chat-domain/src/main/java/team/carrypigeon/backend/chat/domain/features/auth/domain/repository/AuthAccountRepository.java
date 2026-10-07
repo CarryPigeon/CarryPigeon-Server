@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 
@@ -33,6 +34,14 @@ public interface AuthAccountRepository {
      * @return 命中时返回账户，未命中时返回空
      */
     Optional<AuthAccount> findById(long accountId);
+
+    /**
+     * 按账户 ID 批量查询账户。
+     *
+     * @param accountIds 目标账户 ID 列表
+     * @return 命中的账户
+     */
+    List<AuthAccount> findByIds(List<Long> accountIds);
 
     /**
      * 保存新账户。

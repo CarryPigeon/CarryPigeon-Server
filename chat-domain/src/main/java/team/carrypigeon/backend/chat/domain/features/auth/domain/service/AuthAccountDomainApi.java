@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service;
 
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
@@ -10,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Pass
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.ChannelAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
@@ -99,6 +100,21 @@ public class AuthAccountDomainApi implements AuthAccountApi {
                 account.email(),
                 account.createdAt()
         );
+    }
+
+    @Override
+    public List<AuthPublicAccount> getAccounts(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return List.of();
+        }
+        return authAccountRepository.findByIds(accountIds).stream()
+                .map(account -> new AuthPublicAccount(
+                        account.id(),
+                        account.username(),
+                        account.email(),
+                        account.createdAt()
+                ))
+                .toList();
     }
 
     @Override

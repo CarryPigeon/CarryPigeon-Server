@@ -3,12 +3,11 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessageAuditApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelMessagePolicyApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.command.AppendMessageRecallAuditCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.command.RequireMessageRecallPermissionCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.projection.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.messaging.ChannelMessageAuditApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.messaging.input.AppendMessageRecallAuditCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.input.RequireMessageRecallPermissionCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
@@ -16,7 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Messag
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import org.springframework.context.ApplicationEventPublisher;
+import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
@@ -34,7 +33,6 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
     private static final String RECALLED_MESSAGE_PLACEHOLDER = "消息已撤回";
 
     private final ChannelContextApi channelContextApi;
-    private final ChannelMessagePolicyApi channelMessagePolicyApi;
     private final ChannelMessageAuditApi channelMessageAuditApi;
     private final MessageRepository messageRepository;
     private final MessageMentionManager messageMentionManager;
@@ -45,17 +43,15 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
 
     public ChannelMessageLifecycleDomainApi(
             ChannelContextApi channelContextApi,
-            ChannelMessagePolicyApi channelMessagePolicyApi,
             ChannelMessageAuditApi channelMessageAuditApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            ApplicationEventPublisher eventPublisher,
+            AfterCommitEventPublisher eventPublisher,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelContextApi = channelContextApi;
-        this.channelMessagePolicyApi = channelMessagePolicyApi;
         this.channelMessageAuditApi = channelMessageAuditApi;
         this.messageRepository = messageRepository;
         this.messageMentionManager = new MessageMentionManager(mentionRepository, idGenerator, timeProvider);
@@ -71,7 +67,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
         ChannelMessage recalledMessage = transactionRunner.runInTransaction(afterCommit -> {
             ChannelMessagingContext channel = channelContextApi.requireChannel(command.channelId());
             ChannelMessage existingMessage = requireMessage(command.messageId());
-            channelMessagePolicyApi.requireRecallPermission(new RequireMessageRecallPermissionCommand(
+            channelContextApi.requireRecallPermission(new RequireMessageRecallPermissionCommand(
                     channel.id(),
                     command.accountId(),
                     existingMessage.channelId(),

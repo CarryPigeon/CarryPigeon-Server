@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.auth.account;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,6 +25,14 @@ public interface AuthAccountDatabaseService {
      * @return 命中时返回账户记录，未命中时返回空
      */
     Optional<AuthAccountRecord> findById(long accountId);
+
+    /**
+     * 按账户 ID 批量查询账户记录。
+     *
+     * @param accountIds 目标账户 ID 列表
+     * @return 命中的账户记录
+     */
+    List<AuthAccountRecord> findByIds(List<Long> accountIds);
     /**
      * 按邮箱查询账户
      *

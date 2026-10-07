@@ -5,10 +5,11 @@ import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
 
 /**
  * 基于 database-api 的用户资料仓储适配器。

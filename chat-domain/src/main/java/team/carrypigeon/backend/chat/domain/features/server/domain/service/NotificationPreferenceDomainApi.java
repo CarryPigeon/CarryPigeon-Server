@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 
 import java.util.List;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ChannelContextApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.NotificationPreferenceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationChannelPreferenceCommand;
 import team.carrypigeon.backend.chat.domain.features.server.domain.command.UpdateNotificationServerPreferenceCommand;

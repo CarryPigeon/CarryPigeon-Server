@@ -1,9 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
-import java.util.List;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 
@@ -13,13 +14,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  * 边界：不暴露 JDBC、SQL 或具体数据库框架细节。
  */
 public interface ChannelDatabaseService {
-
-    /**
-     * 查询默认频道。
-     *
-     * @return 命中时返回默认频道记录
-     */
-    Optional<ChannelRecord> findDefaultChannel();
 
     /**
      * 查询 system 频道。

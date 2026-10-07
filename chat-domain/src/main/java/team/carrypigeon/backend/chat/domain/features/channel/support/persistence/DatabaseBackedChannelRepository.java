@@ -1,12 +1,13 @@
 package team.carrypigeon.backend.chat.domain.features.channel.support.persistence;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -27,15 +28,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
 
     public DatabaseBackedChannelRepository(ChannelDatabaseService channelDatabaseService) {
         this.channelDatabaseService = channelDatabaseService;
-    }
-
-    /**
-     * 查询默认公共频道。
-     * 输出：存在时返回领域频道，不存在时返回空。
-     */
-    @Override
-    public Optional<Channel> findDefaultChannel() {
-        return channelDatabaseService.findDefaultChannel().map(this::toDomainModel);
     }
 
     /**

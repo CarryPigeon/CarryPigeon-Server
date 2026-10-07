@@ -156,8 +156,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
                 entity.getChannelId(),
                 entity.getAccountId(),
                 entity.getRole(),
-                entity.getJoinedAt(),
-                entity.getMutedUntil()
+                entity.getJoinedAt()
         );
     }
 
@@ -167,7 +166,6 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         entity.setAccountId(record.accountId());
         entity.setRole(record.role());
         entity.setJoinedAt(record.joinedAt());
-        entity.setMutedUntil(record.mutedUntil());
         return entity;
     }
 

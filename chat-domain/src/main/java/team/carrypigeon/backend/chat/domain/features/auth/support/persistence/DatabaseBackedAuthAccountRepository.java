@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.support.persistence;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
@@ -44,6 +45,13 @@ public class DatabaseBackedAuthAccountRepository implements AuthAccountRepositor
     public Optional<AuthAccount> findById(long accountId) {
         return authAccountDatabaseService.findById(accountId)
                 .map(this::toDomainModel);
+    }
+
+    @Override
+    public List<AuthAccount> findByIds(List<Long> accountIds) {
+        return authAccountDatabaseService.findByIds(accountIds).stream()
+                .map(this::toDomainModel)
+                .toList();
     }
 
     /**

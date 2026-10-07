@@ -52,7 +52,7 @@ final class RealtimeFrameCodec {
                 case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token" ->
                         "unauthorized";
                 case "invalid_credentials",
-                     "private_channel_required",
+                     "regular_channel_required",
                      "channel_invite_forbidden",
                      "channel_profile_forbidden",
                      "channel_role_forbidden",

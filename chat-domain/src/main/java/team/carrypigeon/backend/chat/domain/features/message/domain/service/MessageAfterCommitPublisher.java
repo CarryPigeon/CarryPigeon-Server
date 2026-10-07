@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import java.util.List;
 import java.util.Locale;
-import org.springframework.context.ApplicationEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MentionCreatedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageCreatedEvent;
 import team.carrypigeon.backend.chat.domain.features.message.domain.event.MessageRecalledEvent;
@@ -10,6 +9,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.event.ReadSt
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner.AfterCommitExecutor;
 
@@ -20,18 +20,21 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 class MessageAfterCommitPublisher {
 
-    private final ApplicationEventPublisher eventPublisher;
+    private final AfterCommitEventPublisher eventPublisher;
     private final TimeProviderImpl timeProvider;
 
-    MessageAfterCommitPublisher(ApplicationEventPublisher eventPublisher, TimeProviderImpl timeProvider) {
+    MessageAfterCommitPublisher(AfterCommitEventPublisher eventPublisher, TimeProviderImpl timeProvider) {
         this.eventPublisher = eventPublisher;
         this.timeProvider = timeProvider;
     }
 
     void publishReadStateUpdatedAfterCommit(AfterCommitExecutor afterCommit, ChannelReadState readState) {
-        afterCommit.execute(() -> eventPublisher.publishEvent(new ReadStateUpdatedEvent(
-                readState.channelId(), readState.accountId(), readState.lastReadMessageId(), readState.lastReadTime()
-        )));
+        eventPublisher.publishAfterCommit(
+                afterCommit::execute,
+                new ReadStateUpdatedEvent(
+                        readState.channelId(), readState.accountId(), readState.lastReadMessageId(), readState.lastReadTime()
+                )
+        );
     }
 
     void publishMessageCreatedAfterCommit(
@@ -51,28 +54,37 @@ class MessageAfterCommitPublisher {
             ChannelMessage message,
             List<Long> recipientAccountIds
     ) {
-        afterCommit.execute(() -> eventPublisher.publishEvent(new MessageRecalledEvent(
-                message.channelId(),
-                message.messageId(),
-                timeProvider.nowMillis(),
-                recipientAccountIds
-        )));
+        eventPublisher.publishAfterCommit(
+                afterCommit::execute,
+                new MessageRecalledEvent(
+                        message.channelId(),
+                        message.messageId(),
+                        timeProvider.nowMillis(),
+                        recipientAccountIds
+                )
+        );
     }
 
     private void publishMentions(List<Mention> mentions) {
         for (Mention mention : mentions) {
-            eventPublisher.publishEvent(new MentionCreatedEvent(
-                    mention.mentionId(), mention.channelId(), mention.messageId(), mention.fromAccountId(),
-                    mention.targetAccountId(), mention.createdAt()
-            ));
+            eventPublisher.publishAfterCommit(
+                    eventPublisher::publish,
+                    new MentionCreatedEvent(
+                            mention.mentionId(), mention.channelId(), mention.messageId(), mention.fromAccountId(),
+                            mention.targetAccountId(), mention.createdAt()
+                    )
+            );
         }
     }
 
     private void publishMessageCreated(ChannelMessage message, List<Long> recipientAccountIds) {
-        eventPublisher.publishEvent(new MessageCreatedEvent(
-                message.messageId(), message.senderId(), message.channelId(), message.domain(), message.domainVersion(),
-                message.data(), message.sendTime(), message.mentions(), message.preview(),
-                message.status().name().toLowerCase(Locale.ROOT), recipientAccountIds
-        ));
+        eventPublisher.publishAfterCommit(
+                eventPublisher::publish,
+                new MessageCreatedEvent(
+                        message.messageId(), message.senderId(), message.channelId(), message.domain(), message.domainVersion(),
+                        message.data(), message.sendTime(), message.mentions(), message.preview(),
+                        message.status().name().toLowerCase(Locale.ROOT), recipientAccountIds
+                )
+        );
     }
 }

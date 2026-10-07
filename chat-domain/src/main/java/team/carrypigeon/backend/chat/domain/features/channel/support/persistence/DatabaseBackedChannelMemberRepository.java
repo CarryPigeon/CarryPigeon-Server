@@ -123,8 +123,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
                 record.channelId(),
                 record.accountId(),
                 ChannelMemberRole.valueOf(record.role()),
-                record.joinedAt(),
-                record.mutedUntil()
+                record.joinedAt()
         );
     }
 
@@ -133,8 +132,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
                 channelMember.channelId(),
                 channelMember.accountId(),
                 channelMember.role().name(),
-                channelMember.joinedAt(),
-                channelMember.mutedUntil()
+                channelMember.joinedAt()
         );
     }
 }
