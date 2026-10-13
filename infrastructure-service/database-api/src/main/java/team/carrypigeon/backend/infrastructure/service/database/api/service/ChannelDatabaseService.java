@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
@@ -20,7 +19,7 @@ public interface ChannelDatabaseService {
      *
      * @return 命中时返回 system 频道记录
      */
-    Optional<ChannelRecord> findSystemChannel();
+    List<ChannelRecord> findSystemChannels();
 
     /**
      * 按频道 ID 查询频道。
@@ -30,9 +29,21 @@ public interface ChannelDatabaseService {
      */
     Optional<ChannelRecord> findById(long channelId);
 
-    /** 批量读取频道记录，供频道列表投影避免逐频道查询。 */
-    Map<Long, ChannelRecord> findByIds(Collection<Long> channelIds);
+    /**
+     * 批量读取频道记录，供频道列表投影避免逐频道查询
+     *
+     * @param channelIds 频道 ID 集合
+     * @return 频道记录列表
+     */
+    List<ChannelRecord> findByIds(Collection<Long> channelIds);
 
+    /**
+     * 按发现页规则查询频道集合。
+     * @param keyword 关键字
+     * @param cursorChannelId 游标频道 ID
+     * @param limit 查询上限
+     * @return 频道发现记录列表
+     */
     List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, int limit);
 
     /**

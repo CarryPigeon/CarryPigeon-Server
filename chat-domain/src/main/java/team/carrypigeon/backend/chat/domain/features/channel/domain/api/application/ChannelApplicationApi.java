@@ -1,15 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.application;
 
-
-
 import java.util.List;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.AcceptChannelInviteCommand;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.CreateChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.DecideChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.InviteChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.result.ChannelInviteResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.ListChannelApplicationsQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
 
 /**
  * 频道申请流领域 API。
@@ -21,28 +17,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.applicat
  * 调用方：controller 或其它 feature 通过本接口完成频道加入流程。
  */
 public interface ChannelApplicationApi {
-
-    /**
-     * 邀请账号加入目标频道。
-     * 输入：命令携带操作者、目标频道和被邀请账号。
-     * 输出：创建后的频道邀请投影。
-     * 约束：邀请权限、频道类型和目标账号状态由领域规则校验。
-     *
-     * @param command 频道邀请创建业务命令
-     * @return 创建后的频道邀请投影
-     */
-    ChannelInviteResult inviteChannelMember(InviteChannelMemberCommand command);
-
-    /**
-     * 接受频道邀请并加入频道。
-     * 输入：命令携带接受邀请的账号与邀请定位信息。
-     * 输出：处理后的频道邀请投影。
-     * 副作用：邀请接受成功时会创建或恢复频道成员关系。
-     *
-     * @param command 接受频道邀请业务命令
-     * @return 接受后的频道邀请投影
-     */
-    ChannelInviteResult acceptChannelInvite(AcceptChannelInviteCommand command);
 
     /**
      * 创建加入频道申请。

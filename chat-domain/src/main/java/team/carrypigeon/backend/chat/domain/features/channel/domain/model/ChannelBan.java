@@ -16,6 +16,7 @@ import java.time.Instant;
  * @param revokedAt 解除禁言时间；为空表示尚未解除
  */
 public record ChannelBan(
+        long banId,
         long channelId,
         long bannedAccountId,
         long operatorAccountId,

@@ -1,26 +1,29 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.ban;
+
+import java.time.Instant;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.ListChannelBansQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-
-import java.time.Instant;
-import java.util.List;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
-import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
+import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -35,114 +38,125 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
-    private final ChannelAuditLogRepository channelAuditLogRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
     private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
+    private final IdGenerator idGenerator;
 
     public ChannelBanDomainApi(
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            ChannelBanRepository channelBanRepository,
-            ChannelAuditLogRepository channelAuditLogRepository,
-            AfterCommitEventPublisher eventPublisher,
-            TimeProviderImpl timeProvider,
-            TransactionRunner transactionRunner
+        ChannelRepository channelRepository,
+        ChannelMemberRepository channelMemberRepository,
+        ChannelBanRepository channelBanRepository,
+        AfterCommitEventPublisher eventPublisher,
+        TimeProviderImpl timeProvider,
+        TransactionRunner transactionRunner,
+        IdGenerator idGenerator
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.channelBanRepository = channelBanRepository;
-        this.channelAuditLogRepository = channelAuditLogRepository;
         this.afterCommitEventPublisher = eventPublisher;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
+        this.idGenerator = idGenerator;
     }
 
     @Override
     public List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query) {
-        requirePositive(query.accountId(), "accountId");
-        requirePositive(query.channelId(), "channelId");
-        Channel channel = requireChannel(query.channelId());
-        ChannelMember operator = requireMember(channel.id(), query.accountId());
+        // 查询基础信息
+        Channel channel = channelRepository.findById(query.channelId())
+            .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+        ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
+            .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+        // TODO 系统频道不参与治理
         if (channel.systemChannel()) {
             throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
+                "regular_channel_required",
+                "channel invite flow is not supported for system channels"
             );
         }
-        if (operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.OWNER
-                && operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.ADMIN) {
+        // 权限校验
+        if (operator.role() != ChannelMemberRole.OWNER
+            && operator.role() != ChannelMemberRole.ADMIN) {
             throw ProblemException.forbidden(
-                    "channel_ban_forbidden",
-                    "channel action requires owner or admin role"
+                "channel_ban_forbidden",
+                "channel action requires owner or admin role"
             );
         }
+        // 数据转换
         return channelBanRepository.findByChannelId(channel.id()).stream()
-                .map(ChannelBanListItemResult::from)
-                .toList();
+            .map(ChannelBanListItemResult::from)
+            .toList();
     }
 
     @Override
     public ChannelBanResult banChannelMember(BanChannelMemberCommand command) {
-        validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId());
-        if (command.durationSeconds() != null && command.durationSeconds() <= 0) {
-            throw ProblemException.validationFailed("durationSeconds must be greater than 0");
-        }
-        if (command.reason() != null && command.reason().trim().length() > 256) {
-            throw ProblemException.validationFailed("reason length must be less than or equal to 256");
-        }
         return transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = requireChannel(command.channelId());
-            ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
-            ChannelMember target = requireMember(channel.id(), command.targetAccountId());
+            // 查询基本信息
+            Channel channel = channelRepository.findById(command.channelId())
+                .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+            // 判断不是系统频道
             if (channel.systemChannel()) {
                 throw ProblemException.forbidden(
-                        "regular_channel_required",
-                        "channel invite flow is not supported for system channels"
+                    "regular_channel_required",
+                    "channel invite flow is not supported for system channels"
                 );
             }
-            if (operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.OWNER
-                    && operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.ADMIN) {
+            // 判断是否有权限
+            if (operator.role() != ChannelMemberRole.OWNER
+                && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(
-                        "channel_ban_forbidden",
-                        "channel action requires owner or admin role"
-                );
-            }
-            if (target.role() == team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.OWNER) {
-                throw ProblemException.forbidden(
-                        "channel_ban_forbidden",
-                        "target member with OWNER role cannot be moderated"
+                    "channel_ban_forbidden",
+                    "channel action requires owner or admin role"
                 );
             }
             if (target.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.MEMBER) {
                 throw ProblemException.validationFailed("target member must have MEMBER role");
             }
-            ChannelBan existingBan = channelBanRepository.findByChannelIdAndBannedAccountId(
-                    channel.id(), target.accountId()).orElse(null);
+            // 查询已有信息
+            ChannelBan existingBan = channelBanRepository.findByRelation(
+                channel.id(), target.accountId()).orElse(null);
             if (existingBan != null
-                    && existingBan.revokedAt() == null
-                    && (existingBan.expiresAt() == null || existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
+                && existingBan.revokedAt() == null
+                && (existingBan.expiresAt() == null || existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
                 throw ProblemException.validationFailed("channel ban is already active");
             }
-            Instant now = timeProvider.nowInstant();
-            ChannelBan ban = new ChannelBan(
-                    channel.id(), target.accountId(), operator.accountId(),
-                    normalizeReason(command.reason()),
+            ChannelBan ban;
+            String reason = command.reason() == null || command.reason().isBlank() ? "" : command.reason().trim();
+            if (existingBan == null) {
+                Instant now = timeProvider.nowInstant();
+                ban = new ChannelBan(
+                    idGenerator.nextLongId(),
+                    channel.id(),
+                    target.accountId(),
+                    operator.accountId(),
+                    reason,
                     command.durationSeconds() == null ? null : now.plusSeconds(command.durationSeconds()),
                     now, null
-            );
-            if (existingBan == null) {
+                );
                 channelBanRepository.save(ban);
             } else {
+                Instant now = timeProvider.nowInstant();
+                ban = new ChannelBan(
+                    existingBan.banId(),
+                    channel.id(),
+                    target.accountId(),
+                    operator.accountId(),
+                    reason,
+                    command.durationSeconds() == null ? null : now.plusSeconds(command.durationSeconds()),
+                    now, null
+                );
                 channelBanRepository.update(ban);
             }
-            List<Long> recipients = channelMemberRepository.findAccountIdsByChannelId(channel.id());
-            appendAuditLog(channel.id(), operator.accountId(), "MEMBER_BANNED", target.accountId(),
-                    buildBanAuditMetadata(ban));
+            List<Long> recipients = channelMemberRepository.findMembersByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new ChannelChangedEvent(channel.id(), "bans", recipients));
+                afterCommit::execute, new ChannelChangedEvent(channel.id(), "bans", recipients));
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(target.accountId()));
+                afterCommit::execute, new AccountChannelsChangedEvent(target.accountId()));
             return ChannelBanResult.from(ban);
         });
     }
@@ -158,94 +172,55 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
         }
         return banChannelMember(new BanChannelMemberCommand(
-                command.operatorAccountId(), command.channelId(), command.targetAccountId(),
-                command.reason(), durationSeconds));
+            command.operatorAccountId(), command.channelId(), command.targetAccountId(),
+            command.reason(), durationSeconds));
     }
 
     @Override
     public ChannelBanResult unbanChannelMember(UnbanChannelMemberCommand command) {
-        validateTargetedCommand(command.operatorAccountId(), command.channelId(), command.targetAccountId());
         return transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = requireChannel(command.channelId());
-            ChannelMember operator = requireMember(channel.id(), command.operatorAccountId());
+            // 查询基础信息
+            Channel channel = channelRepository.findById(command.channelId())
+                .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+            // 判断权限与可操作性
             if (channel.systemChannel()) {
                 throw ProblemException.forbidden(
-                        "regular_channel_required",
-                        "channel invite flow is not supported for system channels"
+                    "regular_channel_required",
+                    "channel invite flow is not supported for system channels"
                 );
             }
-            if (operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.OWNER
-                    && operator.role() != team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole.ADMIN) {
+            if (operator.role() != ChannelMemberRole.OWNER
+                && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(
-                        "channel_ban_forbidden",
-                        "channel action requires owner or admin role"
+                    "channel_ban_forbidden",
+                    "channel action requires owner or admin role"
                 );
             }
-            ChannelBan existingBan = channelBanRepository.findByChannelIdAndBannedAccountId(
+            ChannelBan existingBan = channelBanRepository.findByRelation(
                     channel.id(), command.targetAccountId())
-                    .orElseThrow(() -> ProblemException.notFound(CHANNEL_BAN_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.notFound(CHANNEL_BAN_NOT_FOUND_MESSAGE));
             if (existingBan.revokedAt() != null
-                    || (existingBan.expiresAt() != null && !existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
+                || (existingBan.expiresAt() != null && !existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
                 throw ProblemException.validationFailed("channel ban is not active");
             }
             ChannelBan revokedBan = new ChannelBan(
-                    existingBan.channelId(), existingBan.bannedAccountId(), operator.accountId(),
-                    existingBan.reason(), existingBan.expiresAt(), existingBan.createdAt(), timeProvider.nowInstant());
+                existingBan.banId(),
+                existingBan.channelId(), existingBan.bannedAccountId(), operator.accountId(),
+                existingBan.reason(), existingBan.expiresAt(), existingBan.createdAt(), timeProvider.nowInstant());
+            // 更新数据
             channelBanRepository.update(revokedBan);
-            appendAuditLog(channel.id(), operator.accountId(), "MEMBER_UNBANNED",
-                    command.targetAccountId(), null);
+            // 后置处理
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute,
-                    new ChannelChangedEvent(
-                            channel.id(), "bans", channelMemberRepository.findAccountIdsByChannelId(channel.id())));
+                afterCommit::execute,
+                new ChannelChangedEvent(
+                    channel.id(), "bans", channelMemberRepository.findMembersByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList()));
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(command.targetAccountId()));
+                afterCommit::execute, new AccountChannelsChangedEvent(command.targetAccountId()));
+            // 响应数据
             return ChannelBanResult.from(revokedBan);
         });
-    }
-
-    private Channel requireChannel(long channelId) {
-        return channelRepository.findById(channelId)
-                .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
-    }
-
-    private ChannelMember requireMember(long channelId, long accountId) {
-        return channelMemberRepository.findByChannelIdAndAccountId(channelId, accountId)
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
-    }
-
-    private void validateTargetedCommand(long operatorAccountId, long channelId, long targetAccountId) {
-        requirePositive(operatorAccountId, "operatorAccountId");
-        requirePositive(channelId, "channelId");
-        requirePositive(targetAccountId, "targetAccountId");
-        if (operatorAccountId == targetAccountId) {
-            throw ProblemException.validationFailed("operatorAccountId must not equal targetAccountId");
-        }
-    }
-
-    private void requirePositive(long value, String fieldName) {
-        if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
-        }
-    }
-
-    private String normalizeReason(String reason) {
-        return reason == null || reason.isBlank() ? "" : reason.trim();
-    }
-
-    private String buildBanAuditMetadata(ChannelBan ban) {
-        StringBuilder metadata = new StringBuilder("{\"expiresAt\":");
-        if (ban.expiresAt() == null) {
-            metadata.append("null");
-        } else {
-            metadata.append("\"").append(ban.expiresAt()).append("\"");
-        }
-        return metadata.append('}').toString();
-    }
-
-    private void appendAuditLog(long channelId, long actorAccountId, String action, long targetAccountId, String metadata) {
-        channelAuditLogRepository.append(new team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelAuditLog(
-                0L, channelId, actorAccountId, action, targetAccountId, metadata, timeProvider.nowInstant()));
     }
 
 }

@@ -6,7 +6,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+
 import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -41,7 +43,7 @@ public class ChannelApplicationController {
     private final ChannelApplicationApi channelApplicationFlowDomainApi;
 
     public ChannelApplicationController(
-            ChannelApplicationApi channelApplicationFlowDomainApi
+        ChannelApplicationApi channelApplicationFlowDomainApi
     ) {
         this.channelApplicationFlowDomainApi = channelApplicationFlowDomainApi;
     }
@@ -55,16 +57,16 @@ public class ChannelApplicationController {
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         return toResponse(channelApplicationFlowDomainApi.createChannelApplication(new CreateChannelApplicationCommand(
-                cpPrincipal.accountId(),
-                channelId,
-                request.reason()
+            cpPrincipal.accountId(),
+            channelId,
+            request.reason()
         )));
     }
 
     /**
      * 查询指定频道的入群申请列表。
      *
-     * @param channelId 目标频道 ID
+     * @param channelId   目标频道 ID
      * @param cpPrincipal 当前认证用户
      * @return 入群申请列表响应
      */
@@ -72,50 +74,47 @@ public class ChannelApplicationController {
     @Operation(summary = "获取入群申请列表", description = "按频道读取入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回申请列表")})
     public ChannelApplicationListResponse listApplications(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         List<ChannelApplicationResponse> items = channelApplicationFlowDomainApi
-                .listChannelApplications(new ListChannelApplicationsQuery(cpPrincipal.accountId(), channelId)).stream()
-                .map(this::toResponse)
-                .toList();
+            .listChannelApplications(new ListChannelApplicationsQuery(cpPrincipal.accountId(), channelId)).stream()
+            .map(this::toResponse)
+            .toList();
         return new ChannelApplicationListResponse(items);
     }
 
     /**
      * 审批入群申请。
      *
-     * @param channelId 目标频道 ID
      * @param applicationId 目标申请 ID
-     * @param request 审批请求
-     * @param cpPrincipal 当前认证用户
+     * @param request       审批请求
+     * @param cpPrincipal   当前认证用户
      * @return 审批后的申请结果
      */
     @PostMapping("/{channelId}/applications/{applicationId}/decisions")
     @Operation(summary = "审批入群申请", description = "approve/reject 入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回审批后的申请结果")})
     public ChannelApplicationResponse decideApplication(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @PathVariable @Positive(message = "applicationId must be greater than 0") long applicationId,
-            @Valid @RequestBody DecideChannelApplicationRequest request,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable @Positive(message = "applicationId must be greater than 0") long applicationId,
+        @Valid @RequestBody DecideChannelApplicationRequest request,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         return toResponse(channelApplicationFlowDomainApi.decideChannelApplication(new DecideChannelApplicationCommand(
             cpPrincipal.accountId(),
-                channelId,
-                applicationId,
-                request.decision()
+            applicationId,
+            request.decision()
         )));
     }
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {
         return new ChannelApplicationResponse(
-                IdUtil.toString(result.applicationId()),
-                IdUtil.toString(result.channelId()),
-                IdUtil.toString(result.accountId()),
-                result.reason(),
-                result.applyTime().toEpochMilli(),
-                result.status().toLowerCase()
+            IdUtil.toString(result.applicationId()),
+            IdUtil.toString(result.channelId()),
+            IdUtil.toString(result.accountId()),
+            result.reason(),
+            result.applyTime().toEpochMilli(),
+            result.status().toLowerCase()
         );
     }
 }

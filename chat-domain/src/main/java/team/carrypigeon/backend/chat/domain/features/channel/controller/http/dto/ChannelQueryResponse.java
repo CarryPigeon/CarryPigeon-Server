@@ -16,8 +16,6 @@ public record ChannelQueryResponse(
     String brief,
     /*@Schema(description = "频道头像",example = "https://example.com/avatar.jpg")
     String avatar,*/
-    @Schema(description = "频道所有者用户 ID",example = "789012")
-    String ownerUid,
     @Schema(description = "是否为默认频道",example = "true")
     boolean systemChannel,
     @Schema(description = "创建时间",example = "2023-01-01T00:00:00Z")

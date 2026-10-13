@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
@@ -18,9 +17,9 @@ public interface ChannelRepository {
     /**
      * 查询 system 频道。
      *
-     * @return 命中时返回 system 频道，未命中时返回空
+     * @return 返回系统频道
      */
-    Optional<Channel> findSystemChannel();
+    List<Channel> findSystemChannels();
 
     /**
      * 按频道 ID 查询频道。
@@ -30,42 +29,42 @@ public interface ChannelRepository {
      */
     Optional<Channel> findById(long channelId);
 
-    default Map<Long, Channel> findByIds(Collection<Long> channelIds) {
-        return channelIds.stream().map(id -> findById(id).map(channel -> Map.entry(id, channel)))
-                .flatMap(Optional::stream)
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
+    /**
+     * 通过id组查询频道
+     *
+     * @param channelIds 频道id组
+     * @return 频道组
+     * */
+    List<Channel> findByIds(Collection<Long> channelIds);
 
-    default List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, int limit) {
-        throw new UnsupportedOperationException("channel discover is not supported");
-    }
+    /**
+     * 按发现页规则查询频道集合。
+     * 输入：关键字、游标、类型与查询上限。
+     *
+     * @param keyword 关键字
+     * @param cursorChannelId 游标频道 ID
+     * @param limit 查询上限
+     * @return 频道集合
+     */
+    List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, int limit);
 
     /**
      * 保存频道。
      *
      * @param channel 待保存频道
-     * @return 已保存频道
      */
-    default Channel save(Channel channel) {
-        throw new UnsupportedOperationException("channel save is not supported");
-    }
-
+     void save(Channel channel);
     /**
      * 更新频道。
      *
      * @param channel 待更新频道
-     * @return 已更新频道
      */
-    default Channel update(Channel channel) {
-        throw new UnsupportedOperationException("channel update is not supported");
-    }
+    void update(Channel channel);
 
     /**
      * 删除频道。
      *
      * @param channelId 频道 ID
      */
-    default void delete(long channelId) {
-        throw new UnsupportedOperationException("channel delete is not supported");
-    }
+    void delete(long channelId);
 }

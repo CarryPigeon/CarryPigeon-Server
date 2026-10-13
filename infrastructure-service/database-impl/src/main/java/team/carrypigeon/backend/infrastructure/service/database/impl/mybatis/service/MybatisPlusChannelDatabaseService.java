@@ -2,20 +2,16 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
-import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 频道数据库服务。
@@ -24,152 +20,55 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.sup
  */
 public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService {
 
-    private static final String LIMIT_ONE = "LIMIT 1";
-
     private final ChannelMapper channelMapper;
 
     public MybatisPlusChannelDatabaseService(ChannelMapper channelMapper) {
         this.channelMapper = channelMapper;
     }
 
-    /**
-     * 查询系统频道记录。
-     */
     @Override
-    public Optional<ChannelRecord> findSystemChannel() {
-        return execute(() -> {
-            ChannelEntity entity = channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
-                    .eq(ChannelEntity::getSystemChannel, true)
-                    .last(LIMIT_ONE));
-            return Optional.ofNullable(entity).map(this::toRecord);
-        }, "failed to query system channel");
+    public List<ChannelRecord> findSystemChannels() {
+        return channelMapper.selectList(new LambdaQueryWrapper<ChannelEntity>()
+                .eq(ChannelEntity::getSystemChannel, true)
+            )
+            .stream()
+            .map(ChannelEntity::toRecord)
+            .collect(Collectors.toList());
     }
 
-    /**
-     * 按主键查询频道记录。
-     */
     @Override
     public Optional<ChannelRecord> findById(long channelId) {
-        return execute(() -> Optional.ofNullable(channelMapper.selectById(channelId)).map(this::toRecord), "failed to query channel by id");
+        return Optional.ofNullable(channelMapper.selectById(channelId)).map(ChannelEntity::toRecord);
     }
 
     @Override
-    public Map<Long, ChannelRecord> findByIds(Collection<Long> channelIds) {
-        if (channelIds == null || channelIds.isEmpty()) {
-            return Map.of();
-        }
-        return execute(() -> SqlInClauseBatches.partition(channelIds).stream()
-                        .flatMap(batch -> channelMapper.findByIds(batch).stream())
-                        .map(this::toRecord)
-                        .collect(Collectors.toMap(ChannelRecord::id, record -> record)),
-                "failed to query channels by ids");
+    public List<ChannelRecord> findByIds(Collection<Long> channelIds) {
+        return channelMapper.selectList(new LambdaQueryWrapper<ChannelEntity>()
+                .in(ChannelEntity::getChannelId, channelIds)
+            )
+            .stream()
+            .map(ChannelEntity::toRecord)
+            .collect(Collectors.toList());
     }
 
-    /**
-     * 按发现页条件查询频道记录列表。
-     * 输入：关键字、游标、类型和条数上限。
-     */
     @Override
     public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, int limit) {
-        return execute(
-                () -> channelMapper.discoverChannels(keyword, cursorChannelId, limit).stream()
-                        .map(this::toDiscoverRecord)
-                        .toList(),
-                "failed to discover channels"
-        );
+        // TODO 完善channel查询
+        return List.of();
     }
 
-    /**
-     * 插入新频道记录。
-     */
     @Override
     public void insert(ChannelRecord record) {
-        executeVoid(() -> channelMapper.insert(toEntity(record)), "failed to insert channel");
+        channelMapper.insert(ChannelEntity.from(record));
     }
 
-    /**
-     * 更新既有频道记录。
-     */
     @Override
     public void update(ChannelRecord record) {
-        executeVoid(() -> channelMapper.updateById(toEntity(record)), "failed to update channel");
+        channelMapper.updateById(ChannelEntity.from(record));
     }
 
-    /**
-     * 删除频道记录。
-     */
     @Override
     public void delete(long channelId) {
-        executeVoid(() -> channelMapper.deleteById(channelId), "failed to delete channel");
-    }
-
-    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
-        try {
-            return operation.run();
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        }
-    }
-
-    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
-        execute(() -> {
-            operation.run();
-            return null;
-        }, errorMessage);
-    }
-
-    private ChannelRecord toRecord(ChannelEntity entity) {
-        return new ChannelRecord(
-                entity.getId(),
-                entity.getName(),
-                entity.getBrief(),
-                entity.getAvatar(),
-                Boolean.TRUE.equals(entity.getSystemChannel()),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
-
-    private ChannelDiscoverRecord toDiscoverRecord(ChannelDiscoverProjection projection) {
-        return new ChannelDiscoverRecord(
-                projection.getId(),
-                projection.getName(),
-                projection.getBrief(),
-                projection.getAvatar(),
-                projection.getMemberCount() == null ? 0L : projection.getMemberCount(),
-                Boolean.TRUE.equals(projection.getRequiresApplication())
-        );
-    }
-
-    private ChannelEntity toEntity(ChannelRecord record) {
-        ChannelEntity entity = new ChannelEntity();
-        entity.setId(record.id());
-        entity.setName(record.name());
-        entity.setBrief(record.brief());
-        entity.setAvatar(record.avatar());
-        entity.setSystemChannel(record.systemChannel());
-        entity.setCreatedAt(record.createdAt());
-        entity.setUpdatedAt(record.updatedAt());
-        return entity;
-    }
-
-    /**
-     * 有返回值的数据库访问操作。
-     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
-     */
-    @FunctionalInterface
-    private interface DatabaseOperation<T> {
-
-        T run();
-    }
-
-    /**
-     * 无返回值的数据库访问操作。
-     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
-     */
-    @FunctionalInterface
-    private interface VoidDatabaseOperation {
-
-        void run();
+        channelMapper.deleteById(channelId);
     }
 }

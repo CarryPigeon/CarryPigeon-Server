@@ -11,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Pass
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.ChannelAccountProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
@@ -40,7 +40,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     public AuthAccountDomainApi(
             AuthAccountRepository authAccountRepository,
             UserAccountProvisioningApi userAccountProvisioningApi,
-            ChannelAccountProvisioningApi channelAccountProvisioningApi,
+            ChannelMemberProvisioningApi channelAccountProvisioningApi,
             PasswordHasher passwordHasher,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,

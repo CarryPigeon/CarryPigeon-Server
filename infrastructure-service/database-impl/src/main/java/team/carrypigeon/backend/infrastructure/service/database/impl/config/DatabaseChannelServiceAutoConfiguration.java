@@ -4,22 +4,16 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelAuditLogMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelInviteMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelAuditLogDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelInviteDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelReadStateDatabaseService;
 
@@ -61,20 +55,6 @@ public class DatabaseChannelServiceAutoConfiguration {
     }
 
     /**
-     * 装配频道邀请数据库服务。
-     * 输入：频道邀请表 Mapper。
-     * 输出：供邀请创建、校验和撤销使用的持久化实现。
-     *
-     * @param channelInviteMapper 频道邀请表 Mapper
-     * @return 频道邀请数据库服务实现
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ChannelInviteDatabaseService channelInviteDatabaseService(ChannelInviteMapper channelInviteMapper) {
-        return new MybatisPlusChannelInviteDatabaseService(channelInviteMapper);
-    }
-
-    /**
      * 装配频道封禁数据库服务。
      * 输入：频道封禁表 Mapper。
      * 输出：供频道封禁规则读写使用的持久化实现。
@@ -86,20 +66,6 @@ public class DatabaseChannelServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public ChannelBanDatabaseService channelBanDatabaseService(ChannelBanMapper channelBanMapper) {
         return new MybatisPlusChannelBanDatabaseService(channelBanMapper);
-    }
-
-    /**
-     * 装配频道审计日志数据库服务。
-     * 输入：频道审计日志表 Mapper。
-     * 输出：供审计事件落库与查询使用的持久化实现。
-     *
-     * @param channelAuditLogMapper 频道审计日志表 Mapper
-     * @return 频道审计日志数据库服务实现
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public ChannelAuditLogDatabaseService channelAuditLogDatabaseService(ChannelAuditLogMapper channelAuditLogMapper) {
-        return new MybatisPlusChannelAuditLogDatabaseService(channelAuditLogMapper);
     }
 
     /**

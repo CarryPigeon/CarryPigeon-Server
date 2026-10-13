@@ -105,7 +105,6 @@ public class ChannelController {
             IdUtil.toString(result.channelId()),
             result.name(),
             result.brief(),
-            result.ownerUid(),
             result.systemChannel(),
             result.createdAt().toEpochMilli()
         );

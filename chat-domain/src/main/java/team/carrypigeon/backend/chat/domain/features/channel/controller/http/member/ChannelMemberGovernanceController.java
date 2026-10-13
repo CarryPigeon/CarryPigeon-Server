@@ -23,12 +23,12 @@ import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberResponse;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.ChannelMemberApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.DemoteChannelAdminCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.KickChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.ListChannelMembersQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.input.PromoteChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.membership.result.ChannelMemberResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.DemoteChannelAdminCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.KickChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.ListChannelMembersQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.PromoteChannelMemberCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**

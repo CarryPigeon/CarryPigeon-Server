@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.ChannelAccountProvisioningApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.account.input.InitializeChannelMembershipsCommand;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberProvisioningApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.InitializeChannelMembershipsCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.InitializeUserAccountProfileCommand;
 
@@ -14,11 +14,11 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.command.Initial
 class AuthAccountProvisioner {
 
     private final UserAccountProvisioningApi userAccountProvisioningApi;
-    private final ChannelAccountProvisioningApi channelAccountProvisioningApi;
+    private final ChannelMemberProvisioningApi channelAccountProvisioningApi;
 
     AuthAccountProvisioner(
             UserAccountProvisioningApi userAccountProvisioningApi,
-            ChannelAccountProvisioningApi channelAccountProvisioningApi
+            ChannelMemberProvisioningApi channelAccountProvisioningApi
     ) {
         this.userAccountProvisioningApi = userAccountProvisioningApi;
         this.channelAccountProvisioningApi = channelAccountProvisioningApi;

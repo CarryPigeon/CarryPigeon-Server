@@ -1,7 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.Instant;
+
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+
 import lombok.Data;
 
 /**
@@ -13,6 +16,8 @@ import lombok.Data;
 @Data
 public class ChannelBanEntity {
 
+    @TableId
+    private Long banId;
     private Long channelId;
     private Long bannedAccountId;
     private Long operatorAccountId;

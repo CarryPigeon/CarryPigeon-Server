@@ -1,4 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.channel;
+
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -23,13 +24,13 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
 
     @Override
     public List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query) {
-                return channelRepository.discoverChannels(
-                        query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
-                        query.cursorChannelId(),
-                        query.limit() + 1
-                ).stream()
-                .map(DiscoverChannelResult::from)
-                .toList();
+        return channelRepository.discoverChannels(
+                query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
+                query.cursorChannelId(),
+                query.limit() + 1
+            ).stream()
+            .map(DiscoverChannelResult::from)
+            .toList();
     }
 
 }

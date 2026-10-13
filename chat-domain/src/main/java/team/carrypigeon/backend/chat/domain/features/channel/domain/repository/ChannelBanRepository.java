@@ -18,19 +18,13 @@ public interface ChannelBanRepository {
      * @param bannedAccountId 被封禁账户 ID
      * @return 命中时返回封禁记录
      */
-    Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId);
+    Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId);
 
     /**
      * 查询频道下的全部封禁记录。
      */
-    default List<ChannelBan> findByChannelId(long channelId) {
-        return List.of();
-    }
+    List<ChannelBan> findByChannelId(long channelId);
 
-    /** 判断频道是否存在任意封禁记录依赖。 */
-    default boolean existsByChannelId(long channelId) {
-        return !findByChannelId(channelId).isEmpty();
-    }
 
     /**
      * 保存新的封禁记录。

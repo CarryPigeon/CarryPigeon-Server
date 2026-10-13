@@ -7,6 +7,7 @@ import java.time.Instant;
  * 职责：表达频道封禁读写共用的最小持久化投影字段。
  * 边界：只服务 database-api 最小数据库契约，不承载额外封禁业务语义。
  *
+ * @param banId 封禁对应的id
  * @param channelId 频道 ID
  * @param bannedAccountId 被封禁账户 ID
  * @param operatorAccountId 执行封禁的账户 ID
@@ -16,6 +17,7 @@ import java.time.Instant;
  * @param revokedAt 解除封禁时间；为空表示尚未解除
  */
 public record ChannelBanRecord(
+        long banId,
         long channelId,
         long bannedAccountId,
         long operatorAccountId,

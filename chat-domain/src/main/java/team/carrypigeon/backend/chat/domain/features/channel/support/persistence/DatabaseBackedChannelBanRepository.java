@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
@@ -29,7 +30,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
      * 查询频道对目标账户的封禁记录。
      */
     @Override
-    public Optional<ChannelBan> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
+    public Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByChannelIdAndBannedAccountId(channelId, bannedAccountId)
                 .map(this::toDomain);
     }
@@ -42,14 +43,6 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         return channelBanDatabaseService.findByChannelId(channelId).stream()
                 .map(this::toDomain)
                 .toList();
-    }
-
-    /**
-     * 判断频道是否存在封禁记录，不加载完整记录集合。
-     */
-    @Override
-    public boolean existsByChannelId(long channelId) {
-        return channelBanDatabaseService.existsByChannelId(channelId);
     }
 
     /**
@@ -70,6 +63,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
 
     private ChannelBan toDomain(ChannelBanRecord record) {
         return new ChannelBan(
+                record.banId(),
                 record.channelId(),
                 record.bannedAccountId(),
                 record.operatorAccountId(),
@@ -82,6 +76,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
 
     private ChannelBanRecord toRecord(ChannelBan channelBan) {
         return new ChannelBanRecord(
+                channelBan.banId(),
                 channelBan.channelId(),
                 channelBan.bannedAccountId(),
                 channelBan.operatorAccountId(),

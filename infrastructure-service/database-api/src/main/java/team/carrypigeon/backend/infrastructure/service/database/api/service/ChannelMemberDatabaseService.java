@@ -1,8 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 
@@ -14,75 +12,56 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 public interface ChannelMemberDatabaseService {
 
     /**
-     * 判断指定账户是否为频道成员。
+     * 保存频道成员关系。
      *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
-     * @return 属于成员时返回 true
-     */
-    boolean exists(long channelId, long accountId);
-
-    /**
-     * 写入新的频道成员记录。
-     *
-     * @param record 待持久化成员记录
+     * @param record 成员关系
      */
     void insert(ChannelMemberRecord record);
 
     /**
-     * 查询活跃成员记录。
+     * 查询活跃成员投影。
      *
      * @param channelId 频道 ID
      * @param accountId 账户 ID
-     * @return 命中时返回成员记录
+     * @return 命中时返回活跃成员
      */
-    Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId);
+    Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId);
 
     /**
-     * 更新已存在的成员记录。
+     * 更新已存在的活跃成员投影。
      *
-     * @param record 待更新成员记录
+     * @param record 待更新成员
      */
     void update(ChannelMemberRecord record);
 
-    /** 在同一事务内将所有权从当前 OWNER 转移到目标成员。 */
-    default boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
-        return false;
-    }
-
     /**
-     * 删除已存在的成员记录。
+     * 删除已存在的活跃成员投影。
      *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
+     * @param memberId 成员 ID
      */
-    void delete(long channelId, long accountId);
+    void delete(long memberId);
 
     /**
-     * 删除频道下全部成员记录。
+     * 删除频道下的全部成员关系。
+     * 默认实现保持内存替身兼容，持久化适配器应覆盖为集合级删除。
      *
      * @param channelId 频道 ID
      */
     void deleteByChannelId(long channelId);
 
     /**
-     * 查询频道下的全部成员记录。
+     * 查询频道下的全部活跃成员投影。
      *
      * @param channelId 频道 ID
-     * @return 成员记录列表
+     * @return 活跃成员列表
      */
-    List<ChannelMemberRecord> findByChannelId(long channelId);
+    List<ChannelMemberRecord> findMembersByChannelId(long channelId);
 
     /**
-     * 查询频道下的全部成员账户 ID。
+     * 查询账户参与的全部频道成员。
      *
-     * @param channelId 频道 ID
-     * @return 成员账户 ID 列表
+     * @param accountId 账户 ID
+     * @return 频道列表
      */
-    List<Long> findAccountIdsByChannelId(long channelId);
-
-    List<Long> findChannelIdsByAccountId(long accountId);
-
-    /** 批量读取频道 owner，返回频道到 owner 账户的映射。 */
-    Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds);
+    List<ChannelMemberRecord> findMembersByAccountId(long accountId);
 }

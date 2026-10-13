@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.support.persistenc
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -30,27 +29,23 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
         this.channelDatabaseService = channelDatabaseService;
     }
 
-    /**
-     * 查询系统频道。
-     * 边界：这里只返回持久化存在的系统频道，不判断当前账户可见性。
-     */
     @Override
-    public Optional<Channel> findSystemChannel() {
-        return channelDatabaseService.findSystemChannel().map(this::toDomainModel);
+    public List<Channel> findSystemChannels() {
+        return channelDatabaseService.findSystemChannels().stream()
+                .map(this::toDomainModel)
+                .toList();
     }
 
-    /**
-     * 按频道 ID 查询单个频道。
-     */
     @Override
     public Optional<Channel> findById(long channelId) {
         return channelDatabaseService.findById(channelId).map(this::toDomainModel);
     }
 
     @Override
-    public Map<Long, Channel> findByIds(Collection<Long> channelIds) {
-        return channelDatabaseService.findByIds(channelIds).entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, entry -> toDomainModel(entry.getValue())));
+    public List<Channel> findByIds(Collection<Long> channelIds) {
+        return channelDatabaseService.findByIds(channelIds).stream()
+                .map(this::toDomainModel)
+                .toList();
     }
 
     /**
@@ -64,33 +59,21 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 .toList();
     }
 
-    /**
-     * 写入一个新频道。
-     * 输出：返回原领域对象，保持上层事务上下文中的对象一致。
-     */
     @Override
-    public Channel save(Channel channel) {
+    public void save(Channel channel) {
         channelDatabaseService.insert(toRecord(channel));
-        return channel;
     }
 
-    /**
-     * 更新频道的持久化投影。
-     */
     @Override
-    public Channel update(Channel channel) {
+    public void update(Channel channel) {
         channelDatabaseService.update(toRecord(channel));
-        return channel;
     }
 
-    /**
-     * 删除频道记录。
-     * 边界：不级联处理成员、消息等其它业务数据。
-     */
     @Override
     public void delete(long channelId) {
         channelDatabaseService.delete(channelId);
     }
+
 
     private Channel toDomainModel(ChannelRecord record) {
         return new Channel(
@@ -98,7 +81,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 record.name(),
                 record.brief(),
                 record.avatar(),
-                "",
                 record.systemChannel(),
                 record.createdAt(),
                 record.updatedAt()

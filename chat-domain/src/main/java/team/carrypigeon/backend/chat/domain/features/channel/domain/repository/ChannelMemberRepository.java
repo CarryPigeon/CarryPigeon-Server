@@ -2,10 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Collection;
-import java.util.Map;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 
 /**
  * 频道成员仓储抽象。
@@ -13,15 +11,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
  * 边界：不暴露数据库实现细节。
  */
 public interface ChannelMemberRepository {
-
-    /**
-     * 判断账户是否属于频道成员。
-     *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
-     * @return 属于成员时返回 true
-     */
-    boolean exists(long channelId, long accountId);
 
     /**
      * 保存频道成员关系。
@@ -37,42 +26,21 @@ public interface ChannelMemberRepository {
      * @param accountId 账户 ID
      * @return 命中时返回活跃成员
      */
-    default Optional<ChannelMember> findByChannelIdAndAccountId(long channelId, long accountId) {
-        return Optional.empty();
-    }
+    Optional<ChannelMember> findByRelation(long channelId, long accountId);
 
     /**
      * 更新已存在的活跃成员投影。
      *
      * @param channelMember 待更新成员
      */
-    default void update(ChannelMember channelMember) {
-        throw new UnsupportedOperationException("channel member update is not supported");
-    }
-
-    /** 在持久化层原子完成所有权转移。 */
-    default boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
-        Optional<ChannelMember> previous = findByChannelIdAndAccountId(channelId, previousOwnerAccountId);
-        Optional<ChannelMember> target = findByChannelIdAndAccountId(channelId, targetAccountId);
-        if (previous.isEmpty() || target.isEmpty() || previousOwnerAccountId == targetAccountId) {
-            return false;
-        }
-        update(new ChannelMember(previous.get().channelId(), previous.get().accountId(),
-                ChannelMemberRole.ADMIN, previous.get().joinedAt()));
-        update(new ChannelMember(target.get().channelId(), target.get().accountId(),
-                ChannelMemberRole.OWNER, target.get().joinedAt()));
-        return true;
-    }
+    void update(ChannelMember channelMember);
 
     /**
      * 删除已存在的活跃成员投影。
      *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
+     * @param memberId 成员 ID
      */
-    default void delete(long channelId, long accountId) {
-        throw new UnsupportedOperationException("channel member delete is not supported");
-    }
+    void delete(long memberId);
 
     /**
      * 删除频道下的全部成员关系。
@@ -80,9 +48,7 @@ public interface ChannelMemberRepository {
      *
      * @param channelId 频道 ID
      */
-    default void deleteByChannelId(long channelId) {
-        findByChannelId(channelId).forEach(member -> delete(channelId, member.accountId()));
-    }
+    void deleteByChannelId(long channelId);
 
     /**
      * 查询频道下的全部活跃成员投影。
@@ -90,29 +56,13 @@ public interface ChannelMemberRepository {
      * @param channelId 频道 ID
      * @return 活跃成员列表
      */
-    default List<ChannelMember> findByChannelId(long channelId) {
-        return List.of();
-    }
+    List<ChannelMember> findMembersByChannelId(long channelId);
 
     /**
-     * 查询频道下的全部成员账户 ID。
+     * 查询账户参与的全部频道成员。
      *
-     * @param channelId 频道 ID
-     * @return 成员账户 ID 列表
+     * @param accountId 账户 ID
+     * @return 频道列表
      */
-    List<Long> findAccountIdsByChannelId(long channelId);
-
-    default List<Long> findChannelIdsByAccountId(long accountId) {
-        return List.of();
-    }
-
-    default Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds) {
-        return channelIds.stream()
-                .map(channelId -> findByChannelId(channelId).stream()
-                        .filter(member -> member.role() == ChannelMemberRole.OWNER)
-                        .findFirst()
-                        .map(owner -> Map.entry(channelId, owner.accountId())))
-                .flatMap(Optional::stream)
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
+    List<ChannelMember> findMembersByAccountId(long accountId);
 }

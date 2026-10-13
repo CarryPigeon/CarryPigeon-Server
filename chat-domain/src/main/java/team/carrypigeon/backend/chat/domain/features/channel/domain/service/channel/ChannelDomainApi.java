@@ -17,15 +17,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.event.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelAuditLogRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelInviteRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -42,30 +40,27 @@ public class ChannelDomainApi implements ChannelApi {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
-    private final ChannelInviteRepository channelInviteRepository;
+    private final ChannelApplicationRepository channelInviteRepository;
     private final ChannelBanRepository channelBanRepository;
-    private final ChannelAuditLogRepository channelAuditLogRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
     private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelDomainApi(
-            ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository,
-            ChannelInviteRepository channelInviteRepository,
-            ChannelBanRepository channelBanRepository,
-            ChannelAuditLogRepository channelAuditLogRepository,
-            AfterCommitEventPublisher eventPublisher,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            TransactionRunner transactionRunner
+        ChannelRepository channelRepository,
+        ChannelMemberRepository channelMemberRepository,
+        ChannelApplicationRepository channelInviteRepository,
+        ChannelBanRepository channelBanRepository,
+        AfterCommitEventPublisher eventPublisher,
+        IdGenerator idGenerator,
+        TimeProviderImpl timeProvider,
+        TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.channelInviteRepository = channelInviteRepository;
         this.channelBanRepository = channelBanRepository;
-        this.channelAuditLogRepository = channelAuditLogRepository;
         this.afterCommitEventPublisher = eventPublisher;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -77,29 +72,26 @@ public class ChannelDomainApi implements ChannelApi {
         // 缓存结果
         Map<Long, Channel> visibleChannels = new LinkedHashMap<>();
         // 查询系统频道，默认一定存在用户关系
-        channelRepository.findSystemChannel()
-                .ifPresent(channel -> visibleChannels.putIfAbsent(channel.id(), channel));
+        channelRepository.findSystemChannels()
+            .forEach(channel -> visibleChannels.putIfAbsent(channel.id(), channel));
         // 查询所在的私有频道
-        List<Long> memberChannelIds = channelMemberRepository.findChannelIdsByAccountId(accountId);
-        Map<Long, Channel> memberChannels = channelRepository.findByIds(memberChannelIds);
-        for (Long channelId : memberChannelIds) {
-            Channel channel = memberChannels.get(channelId);
-            if (channel != null) {
-                visibleChannels.putIfAbsent(channel.id(), channel);
-            }
-        }
+        List<ChannelMember> memberChannelIds = channelMemberRepository.findMembersByAccountId(accountId);
+        List<Channel> memberChannels = channelRepository.findByIds(memberChannelIds.stream().map(ChannelMember::channelId).toList());
+        memberChannels.forEach(
+            channel -> visibleChannels.putIfAbsent(channel.id(), channel)
+        );
         return visibleChannels.values().stream()
-                .map(ChannelResult::from)
-                .toList();
+            .map(ChannelResult::from)
+            .toList();
     }
 
     @Override
     public ChannelResult getChannelById(long accountId, long channelId) {
         // 查询对应的频道
         Channel channel = channelRepository.findById(channelId)
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+            .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
         // 判断是否有查询权限
-        if (channel.systemChannel() && !channelMemberRepository.exists(channel.id(), accountId)) {
+        if (channel.systemChannel() && channelMemberRepository.findByRelation(channel.id(), accountId).isEmpty()) {
             throw ProblemException.forbidden("channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
         }
         // 返回对应的result
@@ -117,22 +109,21 @@ public class ChannelDomainApi implements ChannelApi {
             // 创建频道原始信息
             long channelId = idGenerator.nextLongId();
             Channel channel = new Channel(
-                    channelId,
-                    command.name().trim(),
-                    command.brief() == null ? "" : command.brief().trim(),
-                    command.avatar() == null ? "" : command.avatar().trim(),
-                    IdUtil.toString(command.accountId()),
-                    false,
-                    timeProvider.nowInstant(),
-                    timeProvider.nowInstant()
+                channelId,
+                command.name().trim(),
+                command.brief() == null ? "" : command.brief().trim(),
+                command.avatar() == null ? "" : command.avatar().trim(),
+                false,
+                timeProvider.nowInstant(),
+                timeProvider.nowInstant()
             );
             // 持久化频道信息
             channelRepository.save(channel);
             // 持久化频道用户信息
-            channelMemberRepository.save(new ChannelMember(channel.id(), command.accountId(), ChannelMemberRole.OWNER, timeProvider.nowInstant()));
+            channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), command.accountId(), ChannelMemberRole.OWNER, timeProvider.nowInstant()));
             // 发布频道创建事件
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(command.accountId()));
+                afterCommit::execute, new AccountChannelsChangedEvent(command.accountId()));
             // 返回
             return ChannelResult.from(channel);
         });
@@ -150,7 +141,7 @@ public class ChannelDomainApi implements ChannelApi {
             Channel channel = channelRepository.findById(command.channelId())
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
             // 查询对应的channel与member的对应关系
-            ChannelMember operator = channelMemberRepository.findByChannelIdAndAccountId(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             // 权限判断
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -158,9 +149,8 @@ public class ChannelDomainApi implements ChannelApi {
             }
             // TODO 依赖数据没有删除
             if (
-                channelInviteRepository.existsByChannelId(command.channelId())
-                || channelBanRepository.existsByChannelId(command.channelId())
-                || channelAuditLogRepository.existsByChannelId(command.channelId())
+                !channelInviteRepository.findByChannelId(command.channelId()).isEmpty()
+                    || !channelBanRepository.findByChannelId(command.channelId()).isEmpty()
             ) {
                 throw ProblemException.conflict(
                     "channel_delete_blocked",
@@ -172,7 +162,7 @@ public class ChannelDomainApi implements ChannelApi {
             channelRepository.delete(channel.id());
             // TODO 通知操作成功，操作应该向所有人通知而不仅仅是对频道删除者
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(operator.accountId()));
+                afterCommit::execute, new AccountChannelsChangedEvent(operator.accountId()));
         });
     }
 
@@ -188,43 +178,43 @@ public class ChannelDomainApi implements ChannelApi {
             // 查询基本的信息
             Channel channel = channelRepository.findById(command.channelId())
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
-            ChannelMember operator = channelMemberRepository.findByChannelIdAndAccountId(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             // TODO system channel是否需要提供对外修改接口还是纯粹后台管理
             if (channel.systemChannel()) {
                 throw ProblemException.forbidden(
-                        "regular_channel_required",
-                        "channel invite flow is not supported for system channels"
+                    "regular_channel_required",
+                    "channel invite flow is not supported for system channels"
                 );
             }
             // 权限校验
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(
-                        "channel_profile_forbidden",
-                        "channel action requires owner or admin role"
+                    "channel_profile_forbidden",
+                    "channel action requires owner or admin role"
                 );
             }
             // 创建更新后的频道信息
-            Long ownerAccountId = channelMemberRepository
-                .findOwnerAccountIdsByChannelIds(List.of(command.channelId()))
-                .get(command.channelId());
             Channel updated = new Channel(
-                    channel.id(),
-                    command.name().trim(),
-                    command.brief() == null ? "" : command.brief().trim(),
-                    channel.avatar(),
-                    ownerAccountId == null ? "" : IdUtil.toString(ownerAccountId),
-                    channel.systemChannel(),
-                    channel.createdAt(),
-                    timeProvider.nowInstant()
+                channel.id(),
+                command.name().trim(),
+                command.brief() == null ? "" : command.brief().trim(),
+                channel.avatar(),
+                false,
+                channel.createdAt(),
+                timeProvider.nowInstant()
             );
             // 执行更新操作
             channelRepository.update(updated);
             // 通知相关人员
             afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute,
-                    new ChannelChangedEvent(
-                            updated.id(), "profile", List.copyOf(channelMemberRepository.findAccountIdsByChannelId(command.channelId()))));
+                afterCommit::execute,
+                new ChannelChangedEvent(
+                    updated.id(),
+                    "profile",
+                    channelMemberRepository.findMembersByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
+                )
+            );
             return ChannelResult.from(updated);
         });
     }

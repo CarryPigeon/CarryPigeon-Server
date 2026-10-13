@@ -2,7 +2,9 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.dao.DataAccessException;
+
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
@@ -111,6 +113,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
 
     private ChannelBanRecord toRecord(ChannelBanEntity entity) {
         return new ChannelBanRecord(
+                entity.getBanId(),
                 entity.getChannelId(),
                 entity.getBannedAccountId(),
                 entity.getOperatorAccountId(),

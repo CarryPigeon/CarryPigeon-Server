@@ -15,49 +15,4 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
  */
 @Mapper
 public interface ChannelMapper extends BaseMapper<ChannelEntity> {
-
-    @Select("""
-            <script>
-            SELECT
-                c.id,
-                c.conversation_id,
-                c.name,
-                c.brief,
-                c.avatar,
-                c.is_default,
-                COUNT(cm.account_id) AS member_count,
-                c.created_at,
-                c.updated_at
-            FROM chat_channel c
-            LEFT JOIN chat_channel_member cm ON cm.channel_id = c.id
-            WHERE 1 = 1
-            <if test="keyword != null and keyword != ''">
-                AND (c.name LIKE CONCAT('%', #{keyword}, '%') OR c.brief LIKE CONCAT('%', #{keyword}, '%'))
-            </if>
-            <if test="cursorChannelId != null">
-                AND c.id &lt; #{cursorChannelId}
-            </if>
-            GROUP BY c.id, c.conversation_id, c.name, c.brief, c.avatar, c.is_default, c.created_at, c.updated_at
-            ORDER BY c.id DESC
-            LIMIT #{limit}
-            </script>
-            """)
-    List<ChannelDiscoverProjection> discoverChannels(
-            @Param("keyword") String keyword,
-            @Param("cursorChannelId") Long cursorChannelId,
-            @Param("limit") int limit
-    );
-
-    @Select("""
-            <script>
-            SELECT id, conversation_id, name, brief, avatar, type,
-                   is_default AS default_channel, created_at, updated_at
-            FROM chat_channel
-            WHERE id IN
-            <foreach collection="channelIds" item="channelId" open="(" separator="," close=")">
-              #{channelId}
-            </foreach>
-            </script>
-            """)
-    List<ChannelEntity> findByIds(@Param("channelIds") java.util.Collection<Long> channelIds);
 }

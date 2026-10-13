@@ -5,6 +5,8 @@ import java.util.Optional;
 import java.util.Collection;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.dao.DataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
@@ -28,165 +30,60 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         this.channelMemberMapper = channelMemberMapper;
     }
 
-    /**
-     * 判断成员关系是否存在。
-     */
-    @Override
-    public boolean exists(long channelId, long accountId) {
-        return execute(() -> channelMemberMapper.existsMembership(channelId, accountId), "failed to query channel membership");
-    }
-
-    /**
-     * 插入新的频道成员记录。
-     */
     @Override
     public void insert(ChannelMemberRecord record) {
-        executeVoid(() -> channelMemberMapper.insertMembership(toEntity(record)), "failed to insert channel membership");
+        channelMemberMapper.insert(ChannelMemberEntity.from(record));
     }
 
-    /**
-     * 查询单个成员关系记录。
-     */
     @Override
-    public Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId) {
-        return execute(() ->
-                Optional.ofNullable(channelMemberMapper.findByChannelIdAndAccountId(channelId, accountId))
-                        .map(this::toRecord), "failed to query channel membership");
+    public Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId) {
+        ChannelMemberEntity channelMemberEntity = channelMemberMapper.selectOne(
+            new LambdaQueryWrapper<ChannelMemberEntity>()
+                .eq(ChannelMemberEntity::getChannelId, channelId)
+                .eq(ChannelMemberEntity::getAccountId, accountId)
+        );
+        if (channelMemberEntity == null) {
+            return Optional.empty();
+        }
+        return Optional.of(channelMemberEntity.toRecord());
     }
 
-    /**
-     * 更新既有成员关系记录。
-     */
     @Override
     public void update(ChannelMemberRecord record) {
-        executeVoid(() -> channelMemberMapper.updateMembership(toEntity(record)), "failed to update channel membership");
+        channelMemberMapper.updateById(ChannelMemberEntity.from(record));
     }
 
     @Override
-    @Transactional
-    public boolean transferOwnership(long channelId, long previousOwnerAccountId, long targetAccountId) {
-        return execute(() -> {
-            if (channelId <= 0 || previousOwnerAccountId <= 0 || targetAccountId <= 0
-                    || previousOwnerAccountId == targetAccountId) {
-                return false;
-            }
-            if (channelMemberMapper.demoteOwnerIfCurrent(channelId, previousOwnerAccountId) != 1) {
-                return false;
-            }
-            if (channelMemberMapper.promoteToOwnerIfMember(channelId, targetAccountId) != 1) {
-                throw new IllegalStateException("target channel member cannot become owner");
-            }
-            return true;
-        }, "failed to transfer channel ownership");
-    }
+    public void delete(long memberId) {
+        channelMemberMapper.deleteById(memberId);
 
-    /**
-     * 删除成员关系记录。
-     */
-    @Override
-    public void delete(long channelId, long accountId) {
-        executeVoid(() -> channelMemberMapper.deleteMembership(channelId, accountId), "failed to delete channel membership");
-    }
-
-    /**
-     * 按频道一次删除全部成员关系。
-     */
-    @Override
-    public void deleteByChannelId(long channelId) {
-        executeVoid(() -> channelMemberMapper.deleteByChannelId(channelId), "failed to delete channel memberships");
-    }
-
-    /**
-     * 查询频道下全部成员记录。
-     */
-    @Override
-    public List<ChannelMemberRecord> findByChannelId(long channelId) {
-        return execute(() ->
-                channelMemberMapper.findByChannelId(channelId).stream()
-                        .map(this::toRecord)
-                        .toList(), "failed to query channel members");
-    }
-
-    /**
-     * 查询频道下全部成员账户 ID。
-     */
-    @Override
-    public List<Long> findAccountIdsByChannelId(long channelId) {
-        return execute(() -> channelMemberMapper.findAccountIdsByChannelId(channelId), "failed to query channel member account ids");
-    }
-
-    /**
-     * 查询账户加入的频道 ID 集合。
-     */
-    @Override
-    public List<Long> findChannelIdsByAccountId(long accountId) {
-        return execute(() -> channelMemberMapper.findChannelIdsByAccountId(accountId), "failed to query account channel ids");
     }
 
     @Override
-    public Map<Long, Long> findOwnerAccountIdsByChannelIds(Collection<Long> channelIds) {
-        if (channelIds == null || channelIds.isEmpty()) {
-            return Map.of();
-        }
-        return execute(() -> SqlInClauseBatches.partition(channelIds).stream()
-                        .flatMap(batch -> channelMemberMapper.findOwnerAccountIdsByChannelIds(batch).stream())
-                        .collect(Collectors.toMap(ChannelOwnerProjection::getChannelId, ChannelOwnerProjection::getAccountId)),
-                "failed to query channel owners");
-    }
-
-    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
-        try {
-            return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        }
-    }
-
-    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
-        execute(() -> {
-            operation.run();
-            return null;
-        }, errorMessage);
-    }
-
-    private ChannelMemberRecord toRecord(ChannelMemberEntity entity) {
-        return new ChannelMemberRecord(
-                entity.getChannelId(),
-                entity.getAccountId(),
-                entity.getRole(),
-                entity.getJoinedAt()
+    public void deleteByChannelId(long channelId) {
+        channelMemberMapper.delete(
+            new LambdaQueryWrapper<ChannelMemberEntity>()
+                .eq(ChannelMemberEntity::getChannelId, channelId)
         );
     }
 
-    private ChannelMemberEntity toEntity(ChannelMemberRecord record) {
-        ChannelMemberEntity entity = new ChannelMemberEntity();
-        entity.setChannelId(record.channelId());
-        entity.setAccountId(record.accountId());
-        entity.setRole(record.role());
-        entity.setJoinedAt(record.joinedAt());
-        return entity;
+    @Override
+    public List<ChannelMemberRecord> findMembersByChannelId(long channelId) {
+        return channelMemberMapper.selectList(
+                new LambdaQueryWrapper<ChannelMemberEntity>()
+                    .eq(ChannelMemberEntity::getChannelId, channelId)
+            ).stream()
+            .map(ChannelMemberEntity::toRecord)
+            .collect(Collectors.toList());
     }
 
-    /**
-     * 有返回值的数据库访问操作。
-     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
-     */
-    @FunctionalInterface
-    private interface DatabaseOperation<T> {
-
-        T run();
+    @Override
+    public List<ChannelMemberRecord> findMembersByAccountId(long accountId) {
+        return channelMemberMapper.selectList(
+                new LambdaQueryWrapper<ChannelMemberEntity>()
+                    .eq(ChannelMemberEntity::getAccountId, accountId)
+            ).stream()
+            .map(ChannelMemberEntity::toRecord)
+            .collect(Collectors.toList());
     }
-
-    /**
-     * 无返回值的数据库访问操作。
-     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
-     */
-    @FunctionalInterface
-    private interface VoidDatabaseOperation {
-
-        void run();
-    }
-
 }
