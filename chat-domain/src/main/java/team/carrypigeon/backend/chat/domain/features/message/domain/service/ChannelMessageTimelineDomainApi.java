@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
@@ -42,21 +42,21 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         // 约束请求参数是否合理
         validateHistoryQuery(query);
         // 权限校验，判断是否是成员
-        ChannelMessagingContext channel = channelContextApi.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
 
         if (query.aroundMessageId() != null) {
             ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
-            if (targetMessage.channelId() != channel.id()) {
+            if (targetMessage.channelId() != channel.channelId()) {
                 throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
             }
             int beforeCount = query.before() == null ? 25 : query.before();
             int afterCount = query.after() == null ? 25 : query.after();
             List<ChannelMessageResult> messages = Stream.concat(
                             Stream.concat(
-                                    messageRepository.findByChannelIdBefore(channel.id(), query.aroundMessageId(), beforeCount).stream(),
+                                    messageRepository.findByChannelIdBefore(channel.channelId(), query.aroundMessageId(), beforeCount).stream(),
                                     Stream.of(targetMessage)
                             ),
-                            messageRepository.findByChannelIdAfter(channel.id(), query.aroundMessageId(), afterCount).stream()
+                            messageRepository.findByChannelIdAfter(channel.channelId(), query.aroundMessageId(), afterCount).stream()
                     )
                     .sorted(Comparator.comparingLong(ChannelMessage::messageId).reversed())
                     .map(ChannelMessageProjectionMapper::toResult)
@@ -64,7 +64,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
             return new ChannelMessageHistoryResult(messages, null);
         }
         List<ChannelMessageResult> messages = messageRepository.findByChannelIdBefore(
-                        channel.id(),
+                        channel.channelId(),
                         query.cursorMessageId(),
                         query.limit() + 1
                 ).stream()
@@ -79,9 +79,9 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
     @Override
     public ChannelMessageSearchResult searchChannelMessages(SearchChannelMessagesQuery query) {
         validateSearchQuery(query);
-        ChannelMessagingContext channel = channelContextApi.requireMemberChannel(query.channelId(), query.accountId());
+        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
         List<ChannelMessageResult> messages = messageRepository.searchByChannelId(
-                        channel.id(),
+                        channel.channelId(),
                         query.keyword().trim(),
                         query.cursorMessageId(),
                         query.senderAccountId(),

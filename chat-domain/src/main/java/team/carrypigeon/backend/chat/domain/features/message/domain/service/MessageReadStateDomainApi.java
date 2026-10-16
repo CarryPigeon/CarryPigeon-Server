@@ -56,7 +56,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
             if (message.channelId() != command.channelId()) {
                 throw ProblemException.notFound("message does not exist");
             }
-            channelContextApi.requireMemberChannel(command.channelId(), command.accountId());
+            channelContextApi.requireMemberContext(command.channelId(), command.accountId());
             ChannelReadState current = readStateRepository
                     .findByChannelIdAndAccountId(command.channelId(), command.accountId())
                     .orElse(null);

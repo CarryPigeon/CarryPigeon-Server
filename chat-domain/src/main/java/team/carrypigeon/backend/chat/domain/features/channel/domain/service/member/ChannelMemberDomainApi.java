@@ -27,7 +27,6 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.projection.User
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -46,7 +45,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     private final ChannelMemberRepository channelMemberRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
     private final UserProfileApi userProfileApi;
-    private final IdGenerator idGenerator;
     private final TransactionRunner transactionRunner;
 
     public ChannelMemberDomainApi(
@@ -54,14 +52,12 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         ChannelMemberRepository channelMemberRepository,
         UserProfileApi userProfileApi,
         AfterCommitEventPublisher eventPublisher,
-        IdGenerator idGenerator,
         TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.afterCommitEventPublisher = eventPublisher;
         this.userProfileApi = userProfileApi;
-        this.idGenerator = idGenerator;
         this.transactionRunner = transactionRunner;
     }
 
@@ -70,13 +66,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         // 获取频道信息
         Channel channel = channelRepository.findById(query.channelId())
             .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
-        // 不能是系统频道
-        if (channel.systemChannel()) {
-            throw ProblemException.forbidden(
-                "system_channel_members_hidden",
-                "system channel member list is not available"
-            );
-        }
         // 判断是否存在成员信息，只要是成员就能查询
         channelMemberRepository.findByRelation(query.channelId(), query.accountId())
             .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
@@ -114,13 +103,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
-            // 判断是否为系统频道，系统频道只能在后台管理管理员
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             // 判断操作者是否是管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.forbidden(
@@ -171,13 +153,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
-            // 判断是否为系统频道，系统频道只能在后台管理管理员
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             // 判断操作者是否是管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.forbidden(
@@ -227,13 +202,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_MEMBER_NOT_FOUND_MESSAGE));
-            // 判断是否是系统频道
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             // 判断执行者是否是所有人
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.forbidden(
@@ -290,13 +258,6 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.notFound(CHANNEL_MEMBER_NOT_FOUND_MESSAGE));
-            // 判断是否是系统频道
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             // 执行者必须有权限
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(

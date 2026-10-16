@@ -69,13 +69,6 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             // 查询频道信息
             Channel channel = channelRepository.findById(command.channelId())
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
-            // 拒绝系统频道
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                        "regular_channel_required",
-                        "channel application flow is not supported for system channels"
-                );
-            }
             // 拒绝已有成员
             if (channelMemberRepository.findByRelation(channel.id(), command.accountId()).isPresent()) {
                 throw ProblemException.validationFailed("current account is already a channel member");
@@ -125,12 +118,6 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
         ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
         // 校验
-        if (channel.systemChannel()) {
-            throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-            );
-        }
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
             throw ProblemException.forbidden(
                     "channel_invite_forbidden",

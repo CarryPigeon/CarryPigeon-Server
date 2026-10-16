@@ -89,7 +89,7 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
     public void updateChannelPreference(UpdateNotificationChannelPreferenceCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        channelContextApi.requireMemberChannel(command.channelId(), command.accountId());
+        channelContextApi.requireMemberContext(command.channelId(), command.accountId());
         String mode = normalizeMode(command.mode(), CHANNEL_MODES, "mode");
         long mutedUntil = normalizeMutedUntil(command.mutedUntil());
         NotificationChannelPreference existing = notificationPreferenceRepository

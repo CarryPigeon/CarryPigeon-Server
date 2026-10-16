@@ -143,7 +143,10 @@ class FileObjectKeyResolver {
      */
     private void authorizeAttachmentDownload(long accountId, String objectKey) {
         AttachmentScope attachmentScope = parseAttachmentScope(objectKey);
-        if (!channelContextApi.isMember(attachmentScope.channelId(), accountId)) {
+        try {
+            channelContextApi.requireMemberContext(attachmentScope.channelId(), accountId);
+        } catch (ProblemException exception) {
+            // 频道不存在与账号非成员统一收敛为文件访问拒绝，不向调用方泄露频道存在性差异
             throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
         }
     }

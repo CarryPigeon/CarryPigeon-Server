@@ -69,13 +69,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
         ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
             .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
-        // TODO 系统频道不参与治理
-        if (channel.systemChannel()) {
-            throw ProblemException.forbidden(
-                "regular_channel_required",
-                "channel invite flow is not supported for system channels"
-            );
-        }
         // 权限校验
         if (operator.role() != ChannelMemberRole.OWNER
             && operator.role() != ChannelMemberRole.ADMIN) {
@@ -100,13 +93,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
-            // 判断不是系统频道
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             // 判断是否有权限
             if (operator.role() != ChannelMemberRole.OWNER
                 && operator.role() != ChannelMemberRole.ADMIN) {
@@ -185,12 +171,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
             // 判断权限与可操作性
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
             if (operator.role() != ChannelMemberRole.OWNER
                 && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(

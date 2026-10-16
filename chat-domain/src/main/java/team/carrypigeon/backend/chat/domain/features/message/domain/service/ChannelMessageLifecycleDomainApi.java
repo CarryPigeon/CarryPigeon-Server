@@ -6,8 +6,7 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.messaging.ChannelMessageAuditApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.messaging.input.AppendMessageRecallAuditCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.input.RequireMessageRecallPermissionCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
@@ -65,28 +64,49 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
     public ChannelMessageResult recallChannelMessage(RecallChannelMessageCommand command) {
         validateRecallCommand(command);
         ChannelMessage recalledMessage = transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessagingContext channel = channelContextApi.requireChannel(command.channelId());
             ChannelMessage existingMessage = requireMessage(command.messageId());
-            channelContextApi.requireRecallPermission(new RequireMessageRecallPermissionCommand(
-                    channel.id(),
-                    command.accountId(),
-                    existingMessage.channelId(),
-                    existingMessage.senderId()
-            ));
-            List<Long> recipients = channelContextApi.recipientAccountIds(channel.id());
+            // 以消息自身的频道为准，避免命令频道与消息频道不一致时越权
+            ChannelContext operatorContext = channelContextApi.requireMemberContext(
+                existingMessage.channelId(), command.accountId());
+            // 发送者也必须仍是频道成员，避免对已退出成员的历史消息执行治理
+            channelContextApi.requireMemberContext(existingMessage.channelId(), existingMessage.senderId());
+            requireRecallPermitted(existingMessage, command.accountId(), operatorContext);
+            List<Long> recipients = channelContextApi.memberAccountIds(existingMessage.channelId());
             if (isRecalled(existingMessage)) {
                 return existingMessage;
             }
             ChannelMessage updatedMessage = messageRepository.update(toRecalledMessage(existingMessage));
             messageMentionManager.deleteByMessageId(updatedMessage.messageId());
             channelMessageAuditApi.appendMessageRecallAudit(new AppendMessageRecallAuditCommand(
-                    nextMessageId(), channel.id(), command.accountId(), updatedMessage.messageId(),
+                    nextMessageId(), existingMessage.channelId(), command.accountId(), updatedMessage.messageId(),
                     updatedMessage.senderId(), now()
             ));
             messageAfterCommitPublisher.publishMessageRecalledAfterCommit(afterCommit, updatedMessage, recipients);
             return updatedMessage;
         });
         return ChannelMessageProjectionMapper.toResult(recalledMessage);
+    }
+
+    /**
+     * 校验调用方是否有权撤回目标消息。
+     * 约束：本人可撤回自己的消息；治理者可撤回非治理者成员的消息，治理者之间不可互相撤回。
+     *
+     * @param message 待撤回消息
+     * @param operatorAccountId 撤回操作者账号 ID
+     * @param operatorContext 操作者在消息所属频道的上下文
+     */
+    private void requireRecallPermitted(ChannelMessage message, long operatorAccountId, ChannelContext operatorContext) {
+        if (message.senderId() == operatorAccountId) {
+            return;
+        }
+        if (operatorContext.isModerator()
+                && !channelContextApi.moderatorAccounts(message.channelId()).contains(message.senderId())) {
+            return;
+        }
+        throw ProblemException.forbidden(
+            "channel_message_recall_forbidden",
+            "channel message recall is not allowed"
+        );
     }
 
     private void validateRecallCommand(RecallChannelMessageCommand command) {

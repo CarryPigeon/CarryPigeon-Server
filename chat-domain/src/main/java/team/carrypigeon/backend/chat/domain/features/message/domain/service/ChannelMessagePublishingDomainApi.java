@@ -13,11 +13,10 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.ForwardChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendSystemChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageIdempotency;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
@@ -102,9 +101,12 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext channel = channelContextApi.requireSendableChannel(
-                    command.channelId(), command.accountId(), now()
+            ChannelContext channel = channelContextApi.requireMemberContext(
+                    command.channelId(), command.accountId()
             );
+            if (channel.isMuted()) {
+                throw ProblemException.forbidden("user_muted", "channel member is muted");
+            }
             ChannelMessage message = buildCanonicalMessage(
                     channel,
                     command.accountId(),
@@ -157,26 +159,6 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     }
 
     @Override
-    public ChannelMessageResult sendSystemChannelMessage(SendSystemChannelMessageCommand command) {
-        commandValidator.validateSystemSendCommand(command);
-        ChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessagingContext channel = channelContextApi.requireChannel(command.channelId());
-            requireSystemChannel(channel);
-            ChannelMessage message = buildCanonicalMessage(
-                    channel,
-                    command.operatorAccountId(),
-                    "Core:System",
-                    command.domainVersion(),
-                    command.data(),
-                    command.mentions(),
-                    false
-            );
-            return persistCreatedMessage(afterCommit, message, channel);
-        });
-        return ChannelMessageProjectionMapper.toResult(persisted);
-    }
-
-    @Override
     public ChannelMessageResult forwardChannelMessage(ForwardChannelMessageCommand command) {
         validateForwardCommand(command);
         String idempotencyKey = normalizedIdempotencyKey(command.idempotencyKey());
@@ -195,9 +177,12 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                                 "idempotency result message is unavailable"
                         ));
             }
-            ChannelMessagingContext targetChannel = channelContextApi.requireSendableChannel(
-                    command.targetChannelId(), command.accountId(), now()
+            ChannelContext targetChannel = channelContextApi.requireMemberContext(
+                    command.targetChannelId(), command.accountId()
             );
+            if (targetChannel.isMuted()) {
+                throw ProblemException.forbidden("user_muted", "channel member is muted");
+            }
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("domain", CORE_TEXT_DOMAIN);
             data.put("domain_version", CORE_TEXT_DOMAIN_VERSION);
@@ -206,7 +191,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
             }
             if (command.mergedMessageIds() == null || command.mergedMessageIds().isEmpty()) {
                 ChannelMessage source = requireMessage(command.sourceMessageId());
-                channelContextApi.requireMemberChannel(source.channelId(), command.accountId());
+                channelContextApi.requireMemberContext(source.channelId(), command.accountId());
                 data.put("forwarded_from", forwardSource(source));
             } else {
                 Map<Long, ChannelMessage> messagesById = messageRepository.findByIds(command.mergedMessageIds());
@@ -222,7 +207,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                     sources.add(forwardSource(source));
                 }
                 sourceChannelIds.forEach(channelId ->
-                        channelContextApi.requireMemberChannel(channelId, command.accountId()));
+                        channelContextApi.requireMemberContext(channelId, command.accountId()));
                 data.put("forwarded_messages", List.copyOf(sources));
             }
             ChannelMessage message = buildCanonicalMessage(
@@ -277,7 +262,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     }
 
     private ChannelMessage buildCanonicalMessage(
-            ChannelMessagingContext channel,
+            ChannelContext channel,
             long senderId,
             String domain,
             String domainVersion,
@@ -289,7 +274,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         java.time.Instant sendTime = now();
         ValidatedMessageDataResult content = messageDomainPluginApi.validateMessageData(new ValidateMessageDataCommand(
                 messageId,
-                channel.id(),
+                channel.channelId(),
                 senderId,
                 sendTime,
                 domain,
@@ -300,7 +285,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         return new ChannelMessage(
                 messageId,
                 senderId,
-                channel.id(),
+                channel.channelId(),
                 content.domain(),
                 content.domainVersion(),
                 content.data(),
@@ -314,9 +299,9 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     private ChannelMessage persistCreatedMessage(
             TransactionRunner.AfterCommitExecutor afterCommit,
             ChannelMessage message,
-            ChannelMessagingContext channel
+            ChannelContext channel
     ) {
-        List<Long> recipients = channelContextApi.recipientAccountIds(channel.id());
+        List<Long> recipients = channelContextApi.memberAccountIds(channel.channelId());
         ChannelMessage saved = messageRepository.save(message);
         List<Mention> mentions = messageMentionManager.persistMentions(saved, recipients);
         messageAfterCommitPublisher.publishMessageCreatedAfterCommit(afterCommit, saved, recipients, mentions);
@@ -424,12 +409,6 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     private ChannelMessage requireMessage(long messageId) {
         return messageRepository.findById(messageId)
                 .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
-    }
-
-    private void requireSystemChannel(ChannelMessagingContext channel) {
-        if (!channel.systemChannel()) {
-            throw ProblemException.forbidden("system_channel_required", "system message requires system channel");
-        }
     }
 
     private Map<String, Object> forwardSource(ChannelMessage sourceMessage) {

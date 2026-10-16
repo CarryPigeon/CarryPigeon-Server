@@ -5,12 +5,11 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelMessagingContext;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**
@@ -23,13 +22,11 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
 
     private final ChannelContextApi channelContextApi;
     private final MessageAttachmentUploader messageAttachmentUploader;
-    private final TimeProviderImpl timeProvider;
 
     public ChannelMessageAttachmentDomainApi(
             ChannelContextApi channelContextApi,
             FileReferenceApi fileReferenceApi,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider
     ) {
         this.channelContextApi = channelContextApi;
@@ -38,21 +35,22 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
                 idGenerator,
                 objectStorageServiceProvider
         );
-        this.timeProvider = timeProvider;
     }
 
     @Override
     public MessageAttachmentUploadResult uploadMessageAttachment(UploadMessageAttachmentCommand command) {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
-        ChannelMessagingContext channel = channelContextApi.requireSendableChannel(
+        ChannelContext channel = channelContextApi.requireMemberContext(
                 command.channelId(),
-                command.accountId(),
-                timeProvider.nowInstant()
+                command.accountId()
         );
+        if (channel.isMuted()) {
+            throw ProblemException.forbidden("user_muted", "channel member is muted");
+        }
         return messageAttachmentUploader.upload(
                 command.accountId(),
-                channel.id(),
+                channel.channelId(),
                 command.messageType(),
                 command.filename(),
                 command.mimeType(),

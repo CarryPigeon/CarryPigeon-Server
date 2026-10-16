@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendSystemChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 
 /**
@@ -10,12 +9,6 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  * 边界：不访问仓储、不判断频道权限、不创建或发布消息。
  */
 class MessageDeliveryCommandValidator {
-
-    void validateSystemSendCommand(SendSystemChannelMessageCommand command) {
-        requirePositive(command.operatorAccountId(), "operatorAccountId");
-        requirePositive(command.channelId(), "channelId");
-        validateCanonicalFields(command.domainVersion(), command.data());
-    }
 
     void validateSendCommand(SendChannelMessageCommand command) {
         requirePositive(command.accountId(), "accountId");

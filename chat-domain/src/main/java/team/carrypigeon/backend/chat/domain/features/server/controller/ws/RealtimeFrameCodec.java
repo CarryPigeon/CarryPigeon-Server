@@ -60,10 +60,7 @@ final class RealtimeFrameCodec {
                      "channel_ban_forbidden",
                      "channel_membership_required",
                      "not_channel_member",
-                     "channel_message_recall_forbidden",
-                     "system_channel_membership_required",
-                     "system_channel_members_hidden",
-                     "system_channel_required" -> "forbidden";
+                     "channel_message_recall_forbidden" -> "forbidden";
                 default -> exception.reason();
             };
             case VALIDATION -> switch (exception.reason()) {

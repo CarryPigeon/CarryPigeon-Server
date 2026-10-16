@@ -313,9 +313,6 @@ public class GlobalExceptionHandler {
                  "channel_ownership_forbidden",
                  "channel_ban_forbidden",
                  "channel_message_recall_forbidden",
-                 "system_channel_membership_required",
-                 "system_channel_members_hidden",
-                 "system_channel_required",
                  "message_not_editable",
                  "message_edit_window_expired" ->
                     new ErrorDescriptor(HttpStatus.FORBIDDEN, "forbidden", exception.getMessage(), null);

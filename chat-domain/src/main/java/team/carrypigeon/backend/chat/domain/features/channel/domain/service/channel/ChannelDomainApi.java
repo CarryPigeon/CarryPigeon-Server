@@ -1,9 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.channel;
 
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -69,18 +67,14 @@ public class ChannelDomainApi implements ChannelApi {
 
     @Override
     public List<ChannelResult> listChannels(long accountId) {
-        // 缓存结果
-        Map<Long, Channel> visibleChannels = new LinkedHashMap<>();
-        // 查询系统频道，默认一定存在用户关系
-        channelRepository.listSystemChannels()
-            .forEach(channel -> visibleChannels.putIfAbsent(channel.id(), channel));
-        // 查询所在的私有频道
-        List<ChannelMember> memberChannelIds = channelMemberRepository.listByAccountId(accountId);
-        List<Channel> memberChannels = channelRepository.listByIds(memberChannelIds.stream().map(ChannelMember::channelId).toList());
-        memberChannels.forEach(
-            channel -> visibleChannels.putIfAbsent(channel.id(), channel)
-        );
-        return visibleChannels.values().stream()
+        // 可见性唯一标准：账号在当前频道存在成员映射
+        List<ChannelMember> memberships = channelMemberRepository.listByAccountId(accountId);
+        if (memberships.isEmpty()) {
+            return List.of();
+        }
+        List<Channel> channels = channelRepository.listByIds(
+            memberships.stream().map(ChannelMember::channelId).toList());
+        return channels.stream()
             .map(ChannelResult::from)
             .toList();
     }
@@ -90,8 +84,8 @@ public class ChannelDomainApi implements ChannelApi {
         // 查询对应的频道
         Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
-        // 判断是否有查询权限
-        if (channel.systemChannel() && channelMemberRepository.findByRelation(channel.id(), accountId).isEmpty()) {
+        // 判断是否有查询权限：统一以成员映射为准
+        if (channelMemberRepository.findByRelation(channel.id(), accountId).isEmpty()) {
             throw ProblemException.forbidden("channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
         }
         // 返回对应的result
@@ -183,14 +177,7 @@ public class ChannelDomainApi implements ChannelApi {
                 .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
-            // TODO system channel是否需要提供对外修改接口还是纯粹后台管理
-            if (channel.systemChannel()) {
-                throw ProblemException.forbidden(
-                    "regular_channel_required",
-                    "channel invite flow is not supported for system channels"
-                );
-            }
-            // 权限校验
+            // 权限校验：统一按成员角色判断
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.forbidden(
                     "channel_profile_forbidden",
