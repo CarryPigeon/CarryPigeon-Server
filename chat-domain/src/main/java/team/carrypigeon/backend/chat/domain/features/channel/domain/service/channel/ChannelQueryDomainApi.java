@@ -11,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 
 /**
  * 频道发现 API 实现。
- * 频道详情、成员、封禁和审计查询由各自能力 API 暴露。
+ * 频道详情、成员、禁言和审计查询由各自能力 API 暴露。
  */
 @Service
 public class ChannelQueryDomainApi implements ChannelQueryApi {

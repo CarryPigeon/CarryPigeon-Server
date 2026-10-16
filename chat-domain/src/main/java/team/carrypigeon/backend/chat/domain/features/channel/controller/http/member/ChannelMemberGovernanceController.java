@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http.me
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,19 +32,18 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道成员治理 HTTP 入口。
- * 职责：提供成员查询、管理员调整和成员移除协议。
- * 边界：只映射成员治理请求，不处理频道生命周期和封禁。
+ * 职责：承接频道成员列表读取、管理员调整与成员移除协议。
+ * 边界：只做协议映射与领域 API 调用，不承载成员角色规则，也不处理频道生命周期与禁言。
  */
-@Validated
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道成员", description = "频道成员的基础性能力")
+@Validated
+@Tag(name = "频道成员", description = "频道成员查询与治理能力。")
 public class ChannelMemberGovernanceController {
 
     private final ChannelMemberApi channelMembershipApi;
 
-    @Autowired
     public ChannelMemberGovernanceController(
             ChannelMemberApi channelMembershipApi
     ) {
@@ -54,10 +52,20 @@ public class ChannelMemberGovernanceController {
 
     /**
      * 查询指定频道的成员列表。
+     * 约束：调用方必须是该频道成员。
+     *
+     * @param channelId 目标频道 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 频道成员列表响应
      */
     @GetMapping("/{channelId}/members")
-    @Operation(summary = "查询频道成员", description = "查询指定频道的成员列表。")
-    @ApiResponses({@ApiResponse(responseCode = "200", description = "返回频道成员列表")})
+    @Operation(summary = "查询频道成员", description = "返回指定频道的成员列表，包含成员角色与加入时间。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回频道成员列表"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是该频道成员"),
+            @ApiResponse(responseCode = "404", description = "频道不存在")
+    })
     public ChannelMemberListResponse listChannelMembers(
             @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
@@ -79,12 +87,27 @@ public class ChannelMemberGovernanceController {
 
     /**
      * 将指定成员设为管理员。
+     * 约束：调用方必须具备该频道 OWNER 成员角色，且目标成员当前角色为 MEMBER。
+     * 副作用：更新目标成员的频道角色为 ADMIN，并在事务提交后通知频道成员。
+     *
+     * @param channelId 目标频道 ID
+     * @param targetAccountId 目标成员账户 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @PutMapping("/{channelId}/admins/{targetAccountId}")
-    @Operation(summary = "设为管理员", description = "按 v1 资源路径将指定成员设为管理员。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "管理员设置成功")})
+    @Operation(summary = "设为管理员", description = "将指定频道成员的角色提升为 ADMIN，要求 OWNER 成员角色。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "管理员设置成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或不是频道所有者"),
+            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在"),
+            @ApiResponse(responseCode = "422", description = "目标成员当前角色不是 MEMBER")
+    })
     public ResponseEntity<Void> promoteChannelMemberV1(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
@@ -96,12 +119,27 @@ public class ChannelMemberGovernanceController {
 
     /**
      * 撤销指定成员的管理员角色。
+     * 约束：调用方必须具备该频道 OWNER 成员角色，且目标成员当前角色为 ADMIN。
+     * 副作用：更新目标成员的频道角色为 MEMBER，并在事务提交后通知频道成员。
+     *
+     * @param channelId 目标频道 ID
+     * @param targetAccountId 目标成员账户 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}/admins/{targetAccountId}")
-    @Operation(summary = "撤销管理员", description = "按 v1 资源路径撤销管理员角色。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "管理员角色撤销成功")})
+    @Operation(summary = "撤销管理员", description = "将指定频道成员的角色降级为 MEMBER，要求 OWNER 成员角色。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "管理员角色撤销成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或不是频道所有者"),
+            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在"),
+            @ApiResponse(responseCode = "422", description = "目标成员当前角色不是 ADMIN")
+    })
     public ResponseEntity<Void> demoteChannelAdminV1(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
@@ -113,10 +151,23 @@ public class ChannelMemberGovernanceController {
 
     /**
      * 将指定成员移出频道。
+     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色，且目标成员当前角色为 MEMBER。
+     * 副作用：删除目标成员的频道成员关系，并在事务提交后通知频道成员与目标账号。
+     *
+     * @param channelId 目标频道 ID
+     * @param targetAccountId 目标成员账户 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}/members/{targetAccountId}")
-    @Operation(summary = "踢出频道成员", description = "将指定成员从频道中移除。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "移除成功")})
+    @Operation(summary = "踢出频道成员", description = "删除指定成员的频道成员关系，要求 OWNER 或 ADMIN 成员角色。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "成员移除成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
+            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在"),
+            @ApiResponse(responseCode = "422", description = "目标成员当前角色不是 MEMBER")
+    })
     public ResponseEntity<Void> kickChannelMember(
             @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,

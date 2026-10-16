@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,14 +47,14 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 频道基础 HTTP 入口。
- * 职责：提供频道的基础功能
- * 边界：只提供频道的基本功能，如何创建更新等
+ * 职责：承接频道列表、资料读取、发现、创建、删除与资料更新协议。
+ * 边界：只做协议映射与领域 API 调用，不承载频道可见性、权限和资料校验规则。
  */
-@Validated
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道", description = "提供频道管理的基础性能力。")
+@Validated
+@Tag(name = "频道", description = "频道基础信息与频道发现能力。")
 public class ChannelController {
 
     private final ChannelApi channelApi;
@@ -68,12 +69,18 @@ public class ChannelController {
     }
 
     /**
-     * 返回当前用户可见的频道列表。
+     * 返回当前账号存在成员关系的频道列表。
+     * 约束：频道可见性以成员关系为唯一标准，非成员频道不会出现在结果中。
      *
-     * @return 频道摘要列表，用于客户端简略渲染
+     * @param cpPrincipal 当前认证用户
+     * @return 可见频道摘要列表
      */
     @GetMapping
-    @Operation(summary = "获取频道列表", description = "返回当前登录用户当前可见的频道列表。")
+    @Operation(summary = "获取频道列表", description = "返回当前登录账号存在成员关系的频道列表。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回可见频道摘要列表"),
+            @ApiResponse(responseCode = "401", description = "未认证")
+    })
     public ChannelListResponse listChannels(
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
@@ -89,11 +96,23 @@ public class ChannelController {
     }
 
     /**
-     * 按频道 ID 返回当前用户可见的频道资料。
+     * 按频道 ID 返回频道资料。
+     * 约束：调用方必须是该频道成员，否则拒绝访问。
+     *
+     * @param channelId 目标频道 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 频道资料响应
      */
     @GetMapping("/{channelId}")
-    @Operation(summary = "获取频道资料", description = "按频道 ID 返回当前可见频道摘要。")
+    @Operation(summary = "获取频道资料", description = "按频道 ID 返回频道名称、简介与系统频道标记。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回频道资料"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是该频道成员"),
+            @ApiResponse(responseCode = "404", description = "频道不存在")
+    })
     public ChannelQueryResponse getChannelById(
+        @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
@@ -108,13 +127,28 @@ public class ChannelController {
     }
 
     /**
-     * 按关键字、类型和不透明游标发现频道。
-     * TODO 待审核
+     * 按关键字与不透明游标发现频道。
+     * 约束：游标由本接口签发，非法或过期的游标按参数错误拒绝。
+     *
+     * @param keyword 频道名称或简介关键字；为空表示不过滤
+     * @param cursor 不透明分页游标；为空表示从第一页开始
+     * @param limit 单页返回条数，范围 1..50
+     * @param cpPrincipal 当前认证用户
+     * @return 游标分页的频道发现结果
      */
     @GetMapping("/discover")
+    @Operation(summary = "发现频道", description = "按关键字分页发现频道，返回结果附带下一页游标。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回频道发现分页结果"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "422", description = "游标非法或 limit 超出 1..50")
+    })
     public CursorPageResponse<DiscoverChannelResponse> discoverChannels(
+        @Parameter(description = "频道名称或简介关键字", example = "技术")
         @RequestParam(name = "q", required = false) String keyword,
+        @Parameter(description = "上一页返回的分页游标", example = "Y2hhbm5lbF9kaXNjb3ZlcjoyMDAx")
         @RequestParam(required = false) String cursor,
+        @Parameter(description = "单页返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
         @Min(value = 1, message = "limit must be between 1 and 50")
         @Max(value = 50, message = "limit must be between 1 and 50") int limit,
@@ -148,13 +182,21 @@ public class ChannelController {
         )).toList(), nextCursor, hasMore);
     }
 
-
     /**
-     * 创建频道并返回新频道摘要。
+     * 创建频道并把创建者设为所有者。
+     * 副作用：持久化频道与创建者的所有者成员关系。
+     *
+     * @param body 频道创建请求
+     * @param cpPrincipal 当前认证用户
+     * @return 新建频道摘要，HTTP 201
      */
     @PostMapping
-    @Operation(summary = "创建频道", description = "创建频道")
-    @ApiResponses({@ApiResponse(responseCode = "201", description = "频道创建成功")})
+    @Operation(summary = "创建频道", description = "创建普通频道，并把创建者设为其所有者。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "频道创建成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "422", description = "请求体字段非法")
+    })
     public ResponseEntity<ChannelListResponseItem> createChannel(
         @Valid @RequestBody CreateChannelRequest body,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
@@ -174,11 +216,23 @@ public class ChannelController {
 
     /**
      * 删除指定频道。
+     * 约束：仅频道所有者可删除；频道仍存在申请或禁言依赖数据时拒绝删除。
+     *
+     * @param channelId 目标频道 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}")
-    @Operation(summary = "删除频道", description = "删除指定频道。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "频道删除成功")})
+    @Operation(summary = "删除频道", description = "删除指定频道及其全部成员关系。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "频道删除成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或不是所有者"),
+            @ApiResponse(responseCode = "404", description = "频道不存在"),
+            @ApiResponse(responseCode = "409", description = "频道仍存在申请或禁言等依赖数据")
+    })
     public ResponseEntity<Void> deleteChannel(
+        @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
@@ -188,11 +242,24 @@ public class ChannelController {
 
     /**
      * 更新指定频道的名称与简介。
+     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
+     *
+     * @param channelId 目标频道 ID
+     * @param body 频道资料更新请求
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @PatchMapping("/{channelId}")
-    @Operation(summary = "更新频道资料", description = "按 v1 资源路径更新频道名称与简介。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "频道资料更新成功")})
+    @Operation(summary = "更新频道资料", description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "频道资料更新成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
+            @ApiResponse(responseCode = "404", description = "频道不存在"),
+            @ApiResponse(responseCode = "422", description = "请求体字段非法")
+    })
     public ResponseEntity<Void> updateChannelProfile(
+        @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @Valid @RequestBody UpdateChannelProfileRequest body,
         @AuthenticationPrincipal CpPrincipal cpPrincipal

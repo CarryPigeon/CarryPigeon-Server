@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.inp
 
 
 /**
- * 解除频道封禁命令。
- * 职责：承载频道成员解除封禁用例所需的最小输入。
+ * 解除频道成员禁言命令。
+ * 职责：承载频道成员解除禁言用例所需的最小输入。
  * 边界：只表达应用层命令，不承载治理规则判断。
  *
  * @param operatorAccountId 操作人账户 ID

@@ -146,6 +146,10 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             // 查询申请
             ChannelApplication application = channelApplicationRepository.findById(command.applicationId())
                     .orElseThrow(() -> ProblemException.notFound("channel application does not exist"));
+            // 申请必须归属于路径声明的频道，避免跨频道越权审批
+            if (application.channelId() != command.channelId()) {
+                throw ProblemException.notFound("channel application does not exist");
+            }
             // 必须没有处理过
             if (application.status() != ChannelApplicationStatus.PENDING) {
                 throw ProblemException.conflict("application_already_processed", "channel application is already processed");

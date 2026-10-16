@@ -12,8 +12,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 
 /**
- * 基于 database-api 的频道封禁仓储适配器。
- * 职责：在 channel feature 内完成封禁领域模型与数据库契约模型转换。
+ * 基于 database-api 的频道禁言仓储适配器。
+ * 职责：在 channel feature 内完成禁言领域模型与数据库契约模型转换。
  * 边界：不包含 SQL 与数据库驱动细节。
  */
 @Component
@@ -27,7 +27,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     /**
-     * 查询频道对目标账户的封禁记录。
+     * 查询频道对目标账户的禁言记录。
      */
     @Override
     public Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId) {
@@ -36,7 +36,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     /**
-     * 列出频道下全部封禁记录。
+     * 列出频道下全部禁言记录。
      */
     @Override
     public List<ChannelBan> list(long channelId) {
@@ -46,7 +46,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     /**
-     * 持久化新的封禁记录。
+     * 持久化新的禁言记录。
      */
     @Override
     public void save(ChannelBan channelBan) {
@@ -54,7 +54,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     /**
-     * 更新既有封禁记录。
+     * 更新既有禁言记录。
      */
     @Override
     public void update(ChannelBan channelBan) {

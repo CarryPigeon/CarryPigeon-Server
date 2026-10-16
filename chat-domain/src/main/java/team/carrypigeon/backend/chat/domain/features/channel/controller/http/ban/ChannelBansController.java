@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,20 +32,19 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.inpu
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
- * 频道封禁 HTTP 入口。
- * 职责：提供频道成员封禁、解禁和封禁列表协议。
- * 边界：只映射封禁相关请求，不处理其它成员治理操作。
+ * 频道禁言 HTTP 入口。
+ * 职责：承接频道成员禁言、解除禁言与禁言列表协议。
+ * 边界：只做协议映射与领域 API 调用，不承载禁言时长、权限和系统频道规则。
  */
-@Validated
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道封禁", description = "频道封禁的基础性能力")
+@Validated
+@Tag(name = "频道禁言", description = "频道成员禁言与解禁能力。")
 public class ChannelBansController {
 
     private final ChannelBanApi channelBanApi;
 
-    @Autowired
     public ChannelBansController(
             ChannelBanApi channelBanApi
     ) {
@@ -53,12 +52,29 @@ public class ChannelBansController {
     }
 
     /**
-     * 封禁指定频道成员。
+     * 对指定频道成员设置禁言。
+     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色，且目标成员角色为 MEMBER。
+     * 副作用：写入或更新一条禁言记录，并在事务提交后通知频道成员。
+     *
+     * @param channelId 目标频道 ID
+     * @param targetAccountId 目标成员账户 ID
+     * @param body 禁言请求，until 为空表示不设置自动到期
+     * @param cpPrincipal 当前认证用户
+     * @return 禁言结果
      */
     @PutMapping("/{channelId}/bans/{targetAccountId}")
-    @Operation(summary = "禁言频道成员", description = "按 docs/api/API.md 契约禁言指定成员。")
+    @Operation(summary = "禁言频道成员", description = "对指定频道成员设置禁言，可按 epoch 毫秒指定到期时间。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回禁言结果"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
+            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在"),
+            @ApiResponse(responseCode = "422", description = "请求体字段非法、目标角色不允许禁言或禁言已生效")
+    })
     public ResponseEntity<ChannelBanResponse> banChannelMemberV1(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "目标成员账户 ID", example = "1002")
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @Valid @RequestBody ChannelBanRequest body,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
@@ -82,15 +98,30 @@ public class ChannelBansController {
     }
 
     /**
-     * 解除指定频道成员的封禁。
+     * 解除指定频道成员的禁言。
+     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色，且目标禁言记录处于生效状态。
+     * 副作用：标记禁言记录为已解除，并在事务提交后通知频道成员。
+     *
+     * @param channelId 目标频道 ID
+     * @param targetAccountId 目标成员账户 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}/bans/{targetAccountId}")
-    @Operation(summary = "解除频道封禁", description = "解除指定频道成员的封禁状态。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "解除成功")})
+    @Operation(summary = "解除频道成员禁言", description = "解除指定频道成员当前生效的禁言状态。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "解除禁言成功"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
+            @ApiResponse(responseCode = "404", description = "频道不存在或禁言记录不存在"),
+            @ApiResponse(responseCode = "422", description = "禁言记录当前不处于生效状态")
+    })
     public ResponseEntity<Void> unbanChannelMember(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal,
-            @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId
+            @Parameter(description = "目标成员账户 ID", example = "1002")
+            @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
+            @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         channelBanApi.unbanChannelMember(
                 new UnbanChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
@@ -99,11 +130,23 @@ public class ChannelBansController {
     }
 
     /**
-     * 返回指定频道的封禁列表。
+     * 返回指定频道的禁言列表。
+     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
+     *
+     * @param channelId 目标频道 ID
+     * @param cpPrincipal 当前认证用户
+     * @return 禁言列表响应
      */
     @GetMapping("/{channelId}/bans")
-    @Operation(summary = "获取禁言列表", description = "按频道返回封禁列表。")
+    @Operation(summary = "获取禁言列表", description = "返回指定频道当前的禁言记录列表。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "返回禁言列表"),
+            @ApiResponse(responseCode = "401", description = "未认证"),
+            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
+            @ApiResponse(responseCode = "404", description = "频道不存在")
+    })
     public ChannelBanListResponse listChannelBans(
+            @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {

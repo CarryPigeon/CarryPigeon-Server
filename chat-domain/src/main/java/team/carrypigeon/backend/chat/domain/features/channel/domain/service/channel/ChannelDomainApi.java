@@ -126,7 +126,7 @@ public class ChannelDomainApi implements ChannelApi {
 
     /**
      * 删除频道。
-     * 约束：仅频道所有者可删除，且频道不存在邀请、封禁、消息或审计等依赖数据。
+     * 约束：仅频道所有者可删除，且频道不存在申请、禁言、消息或审计等依赖数据。
      *
      * @param command 频道删除命令
      */
