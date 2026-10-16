@@ -30,7 +30,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
-    public List<Channel> findSystemChannels() {
+    public List<Channel> listSystemChannels() {
         return channelDatabaseService.findSystemChannels().stream()
                 .map(this::toDomainModel)
                 .toList();
@@ -42,7 +42,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
-    public List<Channel> findByIds(Collection<Long> channelIds) {
+    public List<Channel> listByIds(Collection<Long> channelIds) {
         return channelDatabaseService.findByIds(channelIds).stream()
                 .map(this::toDomainModel)
                 .toList();

@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http.dt
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * 更新频道资料请求。
@@ -12,6 +13,7 @@ import jakarta.validation.constraints.NotNull;
 public record UpdateChannelProfileRequest(
         @Schema(description = "频道名称", example = "New Name")
         @NotBlank(message = "name must not be blank")
+        @Size(max = 128, message = "name length must be less than or equal to 128")
         String name,
         @Schema(description = "频道简介", example = "...")
         @NotNull(message = "brief must not be null")

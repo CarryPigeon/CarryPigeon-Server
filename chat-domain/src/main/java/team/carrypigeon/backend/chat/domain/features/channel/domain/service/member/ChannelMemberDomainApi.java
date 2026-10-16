@@ -28,7 +28,6 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserPr
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -82,7 +81,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         channelMemberRepository.findByRelation(query.channelId(), query.accountId())
             .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
         // 查询频道member信息
-        List<ChannelMember> members = channelMemberRepository.findMembersByChannelId(channel.id());
+        List<ChannelMember> members = channelMemberRepository.listByChannelId(channel.id());
         // 查询人员的详细信息
         List<Long> accountIds = members.stream().map(ChannelMember::accountId).toList();
         Map<Long, UserProfileResult> profiles = userProfileApi.getPublicUserProfiles(accountIds).stream()
@@ -104,6 +103,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
      * @param command 成员提升命令
      * @return 提升后的成员投影
      */
+    @Override
     public ChannelMemberResult promoteChannelMember(PromoteChannelMemberCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 获取频道信息
@@ -134,7 +134,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             }
             // 新的成员信息
             ChannelMember promotedMember = new ChannelMember(
-                idGenerator.nextLongId(),
+                target.id(),
                 target.channelId(),
                 target.accountId(),
                 ChannelMemberRole.ADMIN,
@@ -143,7 +143,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 信息持久化
             channelMemberRepository.update(promotedMember);
             // 审计日志输出
-            List<Long> accounts = channelMemberRepository.findMembersByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute,
@@ -160,6 +160,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
      * @param command 管理员降级命令
      * @return 降级后的成员投影
      */
+    @Override
     public ChannelMemberResult demoteChannelAdmin(DemoteChannelAdminCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 获取频道信息
@@ -190,7 +191,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             }
             // 新的成员信息
             ChannelMember promotedMember = new ChannelMember(
-                idGenerator.nextLongId(),
+                target.id(),
                 target.channelId(),
                 target.accountId(),
                 ChannelMemberRole.MEMBER,
@@ -199,7 +200,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 信息持久化
             channelMemberRepository.update(promotedMember);
             // 审计日志输出
-            List<Long> accounts = channelMemberRepository.findMembersByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute,
@@ -216,6 +217,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
      * @param command 所有权转移命令
      * @return 所有权转移结果投影
      */
+    @Override
     public ChannelOwnershipTransferResult transferChannelOwnership(TransferChannelOwnershipCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 获取需要的信息
@@ -245,14 +247,14 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             }
             // 新信息
             ChannelMember previousOwner = new ChannelMember(
-                idGenerator.nextLongId(),
+                operator.id(),
                 operator.channelId(),
                 operator.accountId(),
                 ChannelMemberRole.ADMIN,
                 operator.joinedAt()
             );
             ChannelMember newOwner = new ChannelMember(
-                idGenerator.nextLongId(),
+                target.id(),
                 target.channelId(),
                 target.accountId(),
                 ChannelMemberRole.OWNER,
@@ -262,7 +264,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             channelMemberRepository.update(previousOwner);
             channelMemberRepository.update(newOwner);
             // 后置处理
-            List<Long> accounts = channelMemberRepository.findMembersByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute,
@@ -278,6 +280,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
      *
      * @param command 踢出成员命令
      */
+    @Override
     public void kickChannelMember(KickChannelMemberCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 查询相关信息
@@ -305,8 +308,8 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             if (target.role() != ChannelMemberRole.MEMBER) {
                 throw ProblemException.validationFailed("target member must have MEMBER role");
             }
-            channelMemberRepository.delete(target.memberId());
-            List<Long> accounts = channelMemberRepository.findMembersByChannelId(command.channelId())
+            channelMemberRepository.delete(target.id());
+            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
             // 通知其他人频道列表改变
             afterCommitEventPublisher.publishAfterCommit(

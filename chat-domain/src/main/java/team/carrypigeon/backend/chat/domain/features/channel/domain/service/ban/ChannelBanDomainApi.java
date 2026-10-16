@@ -24,6 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -39,7 +40,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final IdGenerator idGenerator;
 
@@ -48,7 +49,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         ChannelMemberRepository channelMemberRepository,
         ChannelBanRepository channelBanRepository,
         AfterCommitEventPublisher eventPublisher,
-        TimeProviderImpl timeProvider,
+        TimeProvider timeProvider,
         TransactionRunner transactionRunner,
         IdGenerator idGenerator
     ) {
@@ -84,7 +85,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             );
         }
         // 数据转换
-        return channelBanRepository.findByChannelId(channel.id()).stream()
+        return channelBanRepository.list(channel.id()).stream()
             .map(ChannelBanListItemResult::from)
             .toList();
     }
@@ -127,8 +128,8 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             }
             ChannelBan ban;
             String reason = command.reason() == null || command.reason().isBlank() ? "" : command.reason().trim();
+            Instant now = timeProvider.nowInstant();
             if (existingBan == null) {
-                Instant now = timeProvider.nowInstant();
                 ban = new ChannelBan(
                     idGenerator.nextLongId(),
                     channel.id(),
@@ -140,7 +141,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 );
                 channelBanRepository.save(ban);
             } else {
-                Instant now = timeProvider.nowInstant();
                 ban = new ChannelBan(
                     existingBan.banId(),
                     channel.id(),
@@ -152,7 +152,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 );
                 channelBanRepository.update(ban);
             }
-            List<Long> recipients = channelMemberRepository.findMembersByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
+            List<Long> recipients = channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute, new ChannelChangedEvent(channel.id(), "bans", recipients));
             afterCommitEventPublisher.publishAfterCommit(
@@ -215,7 +215,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute,
                 new ChannelChangedEvent(
-                    channel.id(), "bans", channelMemberRepository.findMembersByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList()));
+                    channel.id(), "bans", channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList()));
             afterCommitEventPublisher.publishAfterCommit(
                 afterCommit::execute, new AccountChannelsChangedEvent(command.targetAccountId()));
             // 响应数据

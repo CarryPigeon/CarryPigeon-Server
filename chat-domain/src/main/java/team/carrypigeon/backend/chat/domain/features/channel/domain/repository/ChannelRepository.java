@@ -19,7 +19,7 @@ public interface ChannelRepository {
      *
      * @return 返回系统频道
      */
-    List<Channel> findSystemChannels();
+    List<Channel> listSystemChannels();
 
     /**
      * 按频道 ID 查询频道。
@@ -35,7 +35,7 @@ public interface ChannelRepository {
      * @param channelIds 频道id组
      * @return 频道组
      * */
-    List<Channel> findByIds(Collection<Long> channelIds);
+    List<Channel> listByIds(Collection<Long> channelIds);
 
     /**
      * 按发现页规则查询频道集合。

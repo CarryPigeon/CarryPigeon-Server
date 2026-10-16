@@ -44,8 +44,8 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
-    public void delete(long memberId) {
-        channelMemberDatabaseService.delete(memberId);
+    public void delete(long id) {
+        channelMemberDatabaseService.delete(id);
     }
 
     @Override
@@ -54,12 +54,12 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
-    public List<ChannelMember> findMembersByChannelId(long channelId) {
+    public List<ChannelMember> listByChannelId(long channelId) {
         return channelMemberDatabaseService.findMembersByChannelId(channelId).stream().map(this::toDomain).toList();
     }
 
     @Override
-    public List<ChannelMember> findMembersByAccountId(long accountId) {
+    public List<ChannelMember> listByAccountId(long accountId) {
         return channelMemberDatabaseService.findMembersByAccountId(accountId).stream().map(this::toDomain).toList();
     }
 
@@ -75,7 +75,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     private ChannelMemberRecord toRecord(ChannelMember channelMember) {
         return new ChannelMemberRecord(
-            channelMember.memberId(),
+            channelMember.id(),
             channelMember.channelId(),
             channelMember.accountId(),
             channelMember.role().name(),

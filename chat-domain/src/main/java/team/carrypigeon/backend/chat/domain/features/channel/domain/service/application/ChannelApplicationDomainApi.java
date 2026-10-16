@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service.app
 
 
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
@@ -24,7 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -40,10 +39,10 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
-    private final ChannelApplicationRepository channelInviteRepository;
+    private final ChannelApplicationRepository channelApplicationRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelApplicationDomainApi(
@@ -52,12 +51,12 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             ChannelApplicationRepository channelInviteRepository,
             AfterCommitEventPublisher eventPublisher,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
+            TimeProvider timeProvider,
             TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
-        this.channelInviteRepository = channelInviteRepository;
+        this.channelApplicationRepository = channelInviteRepository;
         this.afterCommitEventPublisher = eventPublisher;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -81,10 +80,13 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             if (channelMemberRepository.findByRelation(channel.id(), command.accountId()).isPresent()) {
                 throw ProblemException.validationFailed("current account is already a channel member");
             }
-            ChannelApplication existingApplication = channelInviteRepository.findByChannelAndApplicant(channel.id(), command.accountId())
+            ChannelApplication existingApplication = channelApplicationRepository.findByRelation(channel.id(), command.accountId())
                     .orElse(null);
             if (existingApplication != null && existingApplication.status() == ChannelApplicationStatus.PENDING) {
                 throw ProblemException.validationFailed("pending channel application already exists");
+            }
+            if(existingApplication != null){
+                channelApplicationRepository.delete(existingApplication.applicationId());
             }
             String reason = command.reason() == null || command.reason().isBlank() ? "" : command.reason().trim();
             ChannelApplication application = new ChannelApplication(
@@ -96,29 +98,15 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                 timeProvider.nowInstant(),
                 null
             );
-            ChannelApplication persistedInvite = null;
-            if (existingApplication == null) {
-                channelInviteRepository.save(application);
-            } else {
-                persistedInvite = new ChannelApplication(
-                    existingApplication.applicationId(),
-                    existingApplication.applicantId(),
-                    existingApplication.channelId(),
-                    reason,
-                    ChannelApplicationStatus.PENDING,
-                    timeProvider.nowInstant(),
-                    null
-                );
-                channelInviteRepository.update(persistedInvite);
-            }
+            channelApplicationRepository.save(application);
             // 后置处理
             afterCommitEventPublisher.publishAfterCommit(
                     afterCommit::execute,
-                    new ChannelChangedEvent(channel.id(), "applications", channelMemberRepository.findMembersByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()));
+                    new ChannelChangedEvent(channel.id(), "applications", channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()));
             afterCommitEventPublisher.publishAfterCommit(
                     afterCommit::execute, new AccountChannelsChangedEvent(command.accountId()));
             // 响应
-            return ChannelApplicationResult.from(Objects.requireNonNull(persistedInvite), reason);
+            return ChannelApplicationResult.from(application, reason);
         });
     }
 
@@ -150,7 +138,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             );
         }
         // 组装数据
-        return channelInviteRepository.findByChannelId(channel.id()).stream()
+        return channelApplicationRepository.list(channel.id()).stream()
                 .map(invite -> ChannelApplicationResult.from(
                         invite,
                         invite.reason() == null || invite.reason().isBlank() ? "" : invite.reason().trim()
@@ -169,7 +157,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     public ChannelApplicationResult decideChannelApplication(DecideChannelApplicationCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 查询申请
-            ChannelApplication application = channelInviteRepository.findById(command.applicationId())
+            ChannelApplication application = channelApplicationRepository.findById(command.applicationId())
                     .orElseThrow(() -> ProblemException.notFound("channel application does not exist"));
             // 必须没有处理过
             if (application.status() != ChannelApplicationStatus.PENDING) {
@@ -205,12 +193,12 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                 application.createdAt(),
                 timeProvider.nowInstant()
             );
-            channelInviteRepository.update(updated);
+            channelApplicationRepository.update(updated);
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {
                 channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), application.channelId(), application.applicantId(), ChannelMemberRole.MEMBER, timeProvider.nowInstant()));
             }
             // 后置通知
-            List<Long> recipientAccountIds = List.copyOf(channelMemberRepository.findMembersByChannelId(application.channelId()).stream().map(ChannelMember::accountId).toList());
+            List<Long> recipientAccountIds = List.copyOf(channelMemberRepository.listByChannelId(application.channelId()).stream().map(ChannelMember::accountId).toList());
             afterCommitEventPublisher.publishAfterCommit(
                     afterCommit::execute, new ChannelChangedEvent(application.channelId(), "applications", recipientAccountIds));
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {

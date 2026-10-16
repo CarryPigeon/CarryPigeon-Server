@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +21,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelListResponse;
@@ -52,15 +53,12 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道与成员", description = "频道查询、成员治理、申请、发现与封禁能力。")
+@Tag(name = "频道", description = "提供频道管理的基础性能力。")
 public class ChannelController {
-
-    private static final String DISCOVER_CURSOR_SCOPE = "channel_discover";
 
     private final ChannelApi channelApi;
     private final ChannelQueryApi channelQueryApi;
 
-    @Autowired
     public ChannelController(
         ChannelApi channelApi,
         ChannelQueryApi channelQueryApi
@@ -72,23 +70,22 @@ public class ChannelController {
     /**
      * 返回当前用户可见的频道列表。
      *
-     * @param cpPrincipal 当前认证用户
      * @return 频道摘要列表，用于客户端简略渲染
      */
     @GetMapping
     @Operation(summary = "获取频道列表", description = "返回当前登录用户当前可见的频道列表。")
     public ChannelListResponse listChannels(
         @AuthenticationPrincipal CpPrincipal cpPrincipal
-        ) {
+    ) {
         return new ChannelListResponse(channelApi.listChannels(cpPrincipal.accountId()).stream()
-                .map(
-                    result -> new ChannelListResponseItem(
-                        IdUtil.toString(result.channelId()),
-                        result.name(),
-                        result.brief()
-                    )
+            .map(
+                result -> new ChannelListResponseItem(
+                    IdUtil.toString(result.channelId()),
+                    result.name(),
+                    result.brief()
                 )
-                .toList());
+            )
+            .toList());
     }
 
     /**
@@ -97,8 +94,8 @@ public class ChannelController {
     @GetMapping("/{channelId}")
     @Operation(summary = "获取频道资料", description = "按频道 ID 返回当前可见频道摘要。")
     public ChannelQueryResponse getChannelById(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelResult result = channelApi.getChannelById(cpPrincipal.accountId(), channelId);
         return new ChannelQueryResponse(
@@ -116,39 +113,38 @@ public class ChannelController {
      */
     @GetMapping("/discover")
     public CursorPageResponse<DiscoverChannelResponse> discoverChannels(
-            @RequestParam(name = "q", required = false) String keyword,
-            @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int limit,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @RequestParam(name = "q", required = false) String keyword,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "20")
+        @Min(value = 1, message = "limit must be between 1 and 50")
+        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
+        @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        Long cursorChannelId = OpaqueCursorCodec.decode(DISCOVER_CURSOR_SCOPE, cursor);
+        Long cursorChannelId = OpaqueCursorCodec.decode("channel_discover", cursor);
         if (cursorChannelId != null && cursorChannelId <= 0) {
             throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
         }
-        if (limit <= 0 || limit > 50) {
-            throw ProblemException.validationFailed("limit must be between 1 and 50");
-        }
         List<DiscoverChannelResult> items = channelQueryApi.discoverChannels(new DiscoverChannelsQuery(
-                cpPrincipal.accountId(),
-                keyword,
-                OpaqueCursorCodec.decode(DISCOVER_CURSOR_SCOPE, cursor),
-                limit
+            cpPrincipal.accountId(),
+            keyword,
+            OpaqueCursorCodec.decode("channel_discover", cursor),
+            limit
         ));
         boolean hasMore = items.size() > limit;
         List<DiscoverChannelResult> pageItems = hasMore ? items.subList(0, limit) : items;
         String nextCursor = hasMore
-                ? OpaqueCursorCodec.encode(
-                        DISCOVER_CURSOR_SCOPE,
-                        Long.parseLong(pageItems.getLast().cid())
-                )
-                : null;
+            ? OpaqueCursorCodec.encode(
+            "channel_discover",
+            pageItems.getLast().cid()
+        )
+            : null;
         return CursorPageResponse.of(pageItems.stream().map(item -> new DiscoverChannelResponse(
-                item.cid(),
-                item.name(),
-                item.brief(),
-                item.avatar(),
-                item.memberCount(),
-                item.requiresApplication()
+            item.cid()+"",
+            item.name(),
+            item.brief(),
+            item.avatar(),
+            item.memberCount(),
+            item.requiresApplication()
         )).toList(), nextCursor, hasMore);
     }
 

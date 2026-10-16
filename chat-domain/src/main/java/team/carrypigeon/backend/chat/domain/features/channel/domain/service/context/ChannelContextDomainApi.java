@@ -60,7 +60,7 @@ public class ChannelContextDomainApi implements ChannelContextApi {
 
     @Override
     public List<Long> recipientAccountIds(long channelId) {
-        return channelMemberRepository.findMembersByChannelId(channelId).stream().map(ChannelMember::accountId).toList();
+        return channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList();
     }
 
     @Override

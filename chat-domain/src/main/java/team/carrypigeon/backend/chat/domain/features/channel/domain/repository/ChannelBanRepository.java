@@ -23,7 +23,7 @@ public interface ChannelBanRepository {
     /**
      * 查询频道下的全部封禁记录。
      */
-    List<ChannelBan> findByChannelId(long channelId);
+    List<ChannelBan> list(long channelId);
 
 
     /**

@@ -12,36 +12,43 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 public interface ChannelApplicationDatabaseService {
 
     /**
-     * 查询频道下目标账户的邀请记录。
+     * 查询频道下目标账户的申请记录。
      *
      * @param channelId 频道 ID
-     * @param applicantId 被邀请账户 ID
-     * @return 命中时返回邀请记录
+     * @param applicantId 被申请账户 ID
+     * @return 命中时返回申请记录
      */
     Optional<ChannelApplicationRecord> findByChannelAndApplicant(long channelId, long applicantId);
 
     /**
-     * 按申请/邀请 ID 查询。
+     * 按申请 ID 查询。
      */
     Optional<ChannelApplicationRecord> findById(long applicationId);
 
     /**
-     * 查询频道下的全部申请/邀请记录。
+     * 查询频道下的全部申请记录。
      */
     List<ChannelApplicationRecord> findByChannelId(long channelId);
 
     /**
-     * 写入新的邀请记录。
+     * 写入新的申请记录。
      *
-     * @param record 待持久化邀请记录
+     * @param record 待持久化申请记录
      */
     void insert(ChannelApplicationRecord record);
 
     /**
-     * 更新已存在的邀请记录。
+     * 更新已存在的申请记录。
      *
-     * @param record 待更新邀请记录
+     * @param record 待更新申请记录
      */
     void update(ChannelApplicationRecord record);
+
+    /**
+     * 删除已存在的申请记录
+     *
+     * @param applicationId 申请id
+     * */
+    void delete(long applicationId);
 
 }

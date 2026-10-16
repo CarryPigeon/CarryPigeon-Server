@@ -24,7 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -40,26 +40,26 @@ public class ChannelDomainApi implements ChannelApi {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
-    private final ChannelApplicationRepository channelInviteRepository;
+    private final ChannelApplicationRepository channelApplicationRepository;
     private final ChannelBanRepository channelBanRepository;
     private final AfterCommitEventPublisher afterCommitEventPublisher;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public ChannelDomainApi(
         ChannelRepository channelRepository,
         ChannelMemberRepository channelMemberRepository,
-        ChannelApplicationRepository channelInviteRepository,
+        ChannelApplicationRepository channelApplicationRepository,
         ChannelBanRepository channelBanRepository,
         AfterCommitEventPublisher eventPublisher,
         IdGenerator idGenerator,
-        TimeProviderImpl timeProvider,
+        TimeProvider timeProvider,
         TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
-        this.channelInviteRepository = channelInviteRepository;
+        this.channelApplicationRepository = channelApplicationRepository;
         this.channelBanRepository = channelBanRepository;
         this.afterCommitEventPublisher = eventPublisher;
         this.idGenerator = idGenerator;
@@ -72,11 +72,11 @@ public class ChannelDomainApi implements ChannelApi {
         // 缓存结果
         Map<Long, Channel> visibleChannels = new LinkedHashMap<>();
         // 查询系统频道，默认一定存在用户关系
-        channelRepository.findSystemChannels()
+        channelRepository.listSystemChannels()
             .forEach(channel -> visibleChannels.putIfAbsent(channel.id(), channel));
         // 查询所在的私有频道
-        List<ChannelMember> memberChannelIds = channelMemberRepository.findMembersByAccountId(accountId);
-        List<Channel> memberChannels = channelRepository.findByIds(memberChannelIds.stream().map(ChannelMember::channelId).toList());
+        List<ChannelMember> memberChannelIds = channelMemberRepository.listByAccountId(accountId);
+        List<Channel> memberChannels = channelRepository.listByIds(memberChannelIds.stream().map(ChannelMember::channelId).toList());
         memberChannels.forEach(
             channel -> visibleChannels.putIfAbsent(channel.id(), channel)
         );
@@ -104,6 +104,7 @@ public class ChannelDomainApi implements ChannelApi {
      * @param command 频道创建命令
      * @return 创建后的频道投影
      */
+    @Override
     public ChannelResult createChannel(CreateChannelCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 创建频道原始信息
@@ -135,6 +136,7 @@ public class ChannelDomainApi implements ChannelApi {
      *
      * @param command 频道删除命令
      */
+    @Override
     public void deleteChannel(DeleteChannelCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 查询对应的channel
@@ -149,8 +151,8 @@ public class ChannelDomainApi implements ChannelApi {
             }
             // TODO 依赖数据没有删除
             if (
-                !channelInviteRepository.findByChannelId(command.channelId()).isEmpty()
-                    || !channelBanRepository.findByChannelId(command.channelId()).isEmpty()
+                !channelApplicationRepository.list(command.channelId()).isEmpty()
+                    || !channelBanRepository.list(command.channelId()).isEmpty()
             ) {
                 throw ProblemException.conflict(
                     "channel_delete_blocked",
@@ -173,6 +175,7 @@ public class ChannelDomainApi implements ChannelApi {
      * @param command 频道资料更新命令
      * @return 更新后的频道投影
      */
+    @Override
     public ChannelResult updateChannelProfile(UpdateChannelProfileCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 查询基本的信息
@@ -212,7 +215,7 @@ public class ChannelDomainApi implements ChannelApi {
                 new ChannelChangedEvent(
                     updated.id(),
                     "profile",
-                    channelMemberRepository.findMembersByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
+                    channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
                 )
             );
             return ChannelResult.from(updated);

@@ -18,25 +18,25 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class DatabaseBackedChannelInviteRepository implements ChannelApplicationRepository {
+public class DatabaseBackedChannelApplicationRepository implements ChannelApplicationRepository {
 
-    private final ChannelApplicationDatabaseService channelInviteDatabaseService;
+    private final ChannelApplicationDatabaseService channelApplicationDatabaseService;
 
-    public DatabaseBackedChannelInviteRepository(ChannelApplicationDatabaseService channelInviteDatabaseService) {
-        this.channelInviteDatabaseService = channelInviteDatabaseService;
+    public DatabaseBackedChannelApplicationRepository(ChannelApplicationDatabaseService channelApplicationDatabaseService) {
+        this.channelApplicationDatabaseService = channelApplicationDatabaseService;
     }
 
     @Override
     public Optional<ChannelApplication> findById(long applicationId) {
-        return channelInviteDatabaseService.findById(applicationId).map(this::toDomain);
+        return channelApplicationDatabaseService.findById(applicationId).map(this::toDomain);
     }
 
     /**
      * 列出频道下全部邀请 / 申请记录。
      */
     @Override
-    public java.util.List<ChannelApplication> findByChannelId(long channelId) {
-        return channelInviteDatabaseService.findByChannelId(channelId).stream()
+    public java.util.List<ChannelApplication> list(long channelId) {
+        return channelApplicationDatabaseService.findByChannelId(channelId).stream()
             .map(this::toDomain)
             .toList();
     }
@@ -45,21 +45,26 @@ public class DatabaseBackedChannelInviteRepository implements ChannelApplication
      * 持久化新的邀请或申请记录。
      */
     @Override
-    public void save(ChannelApplication channelInvite) {
-        channelInviteDatabaseService.insert(toRecord(channelInvite));
+    public void save(ChannelApplication application) {
+        channelApplicationDatabaseService.insert(toRecord(application));
     }
 
     /**
      * 更新既有邀请或申请记录。
      */
     @Override
-    public void update(ChannelApplication channelInvite) {
-        channelInviteDatabaseService.update(toRecord(channelInvite));
+    public void update(ChannelApplication application) {
+        channelApplicationDatabaseService.update(toRecord(application));
     }
 
     @Override
-    public Optional<ChannelApplication> findByChannelAndApplicant(long channelId, long applicantId) {
-        return channelInviteDatabaseService.findByChannelAndApplicant(channelId, applicantId).map(this::toDomain);
+    public void delete(long applicationId) {
+        channelApplicationDatabaseService.delete(applicationId);
+    }
+
+    @Override
+    public Optional<ChannelApplication> findByRelation(long channelId, long applicantId) {
+        return channelApplicationDatabaseService.findByChannelAndApplicant(channelId, applicantId).map(this::toDomain);
     }
 
     private ChannelApplication toDomain(ChannelApplicationRecord record) {

@@ -22,15 +22,15 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusChannelApplicationDatabaseService implements ChannelApplicationDatabaseService {
 
-    private final ChannelApplicationMapper channelInviteMapper;
+    private final ChannelApplicationMapper channelAppplicationMapper;
 
-    public MybatisPlusChannelApplicationDatabaseService(ChannelApplicationMapper channelInviteMapper) {
-        this.channelInviteMapper = channelInviteMapper;
+    public MybatisPlusChannelApplicationDatabaseService(ChannelApplicationMapper channelAppplicationMapper) {
+        this.channelAppplicationMapper = channelAppplicationMapper;
     }
 
     @Override
     public Optional<ChannelApplicationRecord> findByChannelAndApplicant(long channelId, long applicantId) {
-        ChannelApplicationEntity entity = channelInviteMapper.selectOne(
+        ChannelApplicationEntity entity = channelAppplicationMapper.selectOne(
             new LambdaQueryWrapper<ChannelApplicationEntity>()
                 .eq(ChannelApplicationEntity::getChannelId, channelId)
                 .eq(ChannelApplicationEntity::getApplicantId, applicantId)
@@ -43,7 +43,7 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
 
     @Override
     public Optional<ChannelApplicationRecord> findById(long applicationId) {
-        ChannelApplicationEntity entity = channelInviteMapper.selectById(applicationId);
+        ChannelApplicationEntity entity = channelAppplicationMapper.selectById(applicationId);
         if(entity==null){
             return Optional.empty();
         }
@@ -52,7 +52,7 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
 
     @Override
     public List<ChannelApplicationRecord> findByChannelId(long channelId) {
-        return channelInviteMapper.selectList(
+        return channelAppplicationMapper.selectList(
                 new LambdaQueryWrapper<ChannelApplicationEntity>()
                     .eq(ChannelApplicationEntity::getChannelId, channelId)
             )
@@ -63,11 +63,16 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
 
     @Override
     public void insert(ChannelApplicationRecord record) {
-        channelInviteMapper.insert(ChannelApplicationEntity.from(record));
+        channelAppplicationMapper.insert(ChannelApplicationEntity.from(record));
     }
 
     @Override
     public void update(ChannelApplicationRecord record) {
-        channelInviteMapper.update(ChannelApplicationEntity.from(record), new LambdaUpdateWrapper<ChannelApplicationEntity>().eq(ChannelApplicationEntity::getApplicationId, record.applicationId()));
+        channelAppplicationMapper.update(ChannelApplicationEntity.from(record), new LambdaUpdateWrapper<ChannelApplicationEntity>().eq(ChannelApplicationEntity::getApplicationId, record.applicationId()));
+    }
+
+    @Override
+    public void delete(long applicationId) {
+        channelAppplicationMapper.deleteById(applicationId);
     }
 }

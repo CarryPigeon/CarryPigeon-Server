@@ -2,13 +2,12 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel
 
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.DiscoveredChannel;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 远端频道发现结果。
  */
 public record DiscoverChannelResult(
-        String cid,
+        long cid,
         String name,
         String brief,
         String avatar,
@@ -18,12 +17,12 @@ public record DiscoverChannelResult(
 
     public static DiscoverChannelResult from(DiscoveredChannel channel) {
         return new DiscoverChannelResult(
-                IdUtil.toString(channel.id()),
-                channel.name(),
-                channel.brief(),
-                channel.avatar(),
-                channel.memberCount(),
-                channel.requiresApplication()
+            channel.id(),
+            channel.name(),
+            channel.brief(),
+            channel.avatar(),
+            channel.memberCount(),
+            channel.requiresApplication()
         );
     }
 }

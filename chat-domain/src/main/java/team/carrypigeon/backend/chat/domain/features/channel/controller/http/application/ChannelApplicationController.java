@@ -40,12 +40,12 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 @Validated
 public class ChannelApplicationController {
 
-    private final ChannelApplicationApi channelApplicationFlowDomainApi;
+    private final ChannelApplicationApi channelApplicationApi;
 
     public ChannelApplicationController(
         ChannelApplicationApi channelApplicationFlowDomainApi
     ) {
-        this.channelApplicationFlowDomainApi = channelApplicationFlowDomainApi;
+        this.channelApplicationApi = channelApplicationFlowDomainApi;
     }
 
     @PostMapping("/{channelId}/applications")
@@ -56,7 +56,7 @@ public class ChannelApplicationController {
         @Valid @RequestBody CreateChannelApplicationRequest request,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationFlowDomainApi.createChannelApplication(new CreateChannelApplicationCommand(
+        return toResponse(channelApplicationApi.createChannelApplication(new CreateChannelApplicationCommand(
             cpPrincipal.accountId(),
             channelId,
             request.reason()
@@ -77,7 +77,7 @@ public class ChannelApplicationController {
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        List<ChannelApplicationResponse> items = channelApplicationFlowDomainApi
+        List<ChannelApplicationResponse> items = channelApplicationApi
             .listChannelApplications(new ListChannelApplicationsQuery(cpPrincipal.accountId(), channelId)).stream()
             .map(this::toResponse)
             .toList();
@@ -92,7 +92,7 @@ public class ChannelApplicationController {
      * @param cpPrincipal   当前认证用户
      * @return 审批后的申请结果
      */
-    @PostMapping("/{channelId}/applications/{applicationId}/decisions")
+    @PostMapping("/applications/{applicationId}/decisions")
     @Operation(summary = "审批入群申请", description = "approve/reject 入群申请。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回审批后的申请结果")})
     public ChannelApplicationResponse decideApplication(
@@ -100,7 +100,7 @@ public class ChannelApplicationController {
         @Valid @RequestBody DecideChannelApplicationRequest request,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationFlowDomainApi.decideChannelApplication(new DecideChannelApplicationCommand(
+        return toResponse(channelApplicationApi.decideChannelApplication(new DecideChannelApplicationCommand(
             cpPrincipal.accountId(),
             applicationId,
             request.decision()

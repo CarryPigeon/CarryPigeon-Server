@@ -40,7 +40,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道与成员", description = "频道查询、成员治理、申请、发现与封禁能力。")
+@Tag(name = "频道成员", description = "频道成员的基础性能力")
 public class ChannelMemberGovernanceController {
 
     private final ChannelMemberApi channelMembershipApi;

@@ -20,33 +20,40 @@ public interface ChannelApplicationRepository {
     Optional<ChannelApplication> findById(long applicationId);
 
     /**
-     * TODO 分页查询
-     * 查询频道下的全部申请记录。
-     *
-     * @return 申请的列表
-     */
-    List<ChannelApplication> findByChannelId(long channelId);
-
-    /**
-     * 保存新的申请记录。
-     *
-     * @param channelInvite 申请记录
-     */
-    void save(ChannelApplication channelInvite);
-
-    /**
-     * 更新已存在的邀请记录。
-     *
-     * @param channelInvite 邀请记录
-     */
-    void update(ChannelApplication channelInvite);
-
-    /**
      * 根据频道和申请人查找申请记录。
      *
      * @param channelId   频道id
      * @param applicantId 申请人id
      * @return 申请记录，如果不存在则返回空Optional
      */
-    Optional<ChannelApplication> findByChannelAndApplicant(long channelId, long applicantId);
+    Optional<ChannelApplication> findByRelation(long channelId, long applicantId);
+
+    /**
+     * TODO 分页查询
+     * 查询频道下的全部申请记录。
+     *
+     * @return 申请的列表
+     */
+    List<ChannelApplication> list(long channelId);
+
+    /**
+     * 保存新的申请记录。
+     *
+     * @param application 申请记录
+     */
+    void save(ChannelApplication application);
+
+    /**
+     * 更新已存在的申请记录。
+     *
+     * @param application 申请记录
+     */
+    void update(ChannelApplication application);
+
+    /**
+     * 删除申请
+     *
+     * @param applicationId 申请id
+     * */
+    void delete(long applicationId);
 }

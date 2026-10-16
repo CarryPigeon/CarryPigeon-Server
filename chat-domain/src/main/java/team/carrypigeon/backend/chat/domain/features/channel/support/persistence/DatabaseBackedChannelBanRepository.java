@@ -39,7 +39,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
      * 列出频道下全部封禁记录。
      */
     @Override
-    public List<ChannelBan> findByChannelId(long channelId) {
+    public List<ChannelBan> list(long channelId) {
         return channelBanDatabaseService.findByChannelId(channelId).stream()
                 .map(this::toDomain)
                 .toList();

@@ -37,7 +37,7 @@ public class ChannelMemberProvisioningDomainApi implements ChannelMemberProvisio
 
     @Override
     public void initializeMemberships(InitializeChannelMembershipsCommand command) {
-        List<Channel> systemChannels = channelRepository.findSystemChannels();
+        List<Channel> systemChannels = channelRepository.listSystemChannels();
         for (Channel systemChannel : systemChannels) {
             if (channelMemberRepository.findByRelation(systemChannel.id(), command.accountId()).isEmpty()) {
                 channelMemberRepository.save(new ChannelMember(
