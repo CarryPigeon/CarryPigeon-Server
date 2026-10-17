@@ -4,9 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 /**
- * 频道成员 v1 响应。
- * 职责：承载成员列表最小公共字段。
- * 边界：不暴露旧协议的 accountId/avatarUrl/joinedAt 命名。
+ * 频道成员响应项。
+ * 职责：承载成员列表所需的账户身份、角色、头像与加入时间。
+ * 边界：只暴露成员展示字段，不暴露成员关系主键与内部治理状态。
  */
 public record ChannelMemberResponse(
         @Schema(description = "用户 ID", example = "1001")

@@ -16,8 +16,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 
 /**
  * 基于 database-api 的频道仓储适配器。
- * 职责：在 channel feature 内完成领域模型与数据库契约模型转换。
- * 边界：不包含 SQL 与数据库驱动细节。
+ * 职责：把 {@link ChannelRepository} 的领域语义调用翻译为 database-api 的最小数据库契约，并在两侧模型之间做纯转换。
+ * 边界：不含 SQL 与数据库驱动细节，不承载频道可见性、权限与资料校验规则；事务边界由调用方（领域服务）决定。
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -43,6 +43,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
 
     @Override
     public List<Channel> listByIds(Collection<Long> channelIds) {
+        // 注意：本适配器不处理空集合，调用方需自行拦截，否则会下传空 IN 条件
         return channelDatabaseService.findByIds(channelIds).stream()
                 .map(this::toDomainModel)
                 .toList();
@@ -74,7 +75,13 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
         channelDatabaseService.delete(channelId);
     }
 
-
+    /**
+     * 把频道持久化契约转换为频道领域模型。
+     * 说明：两侧字段一一对应，仅做类型与命名归一，不注入任何业务规则。
+     *
+     * @param record 频道持久化投影
+     * @return 频道领域模型
+     */
     private Channel toDomainModel(ChannelRecord record) {
         return new Channel(
                 record.id(),
@@ -87,6 +94,13 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
         );
     }
 
+    /**
+     * 把频道发现持久化投影转换为发现读模型。
+     * 说明：该投影只服务发现读链路，成员数与加入门槛提示均来自数据库侧聚合结果，本方法不再补算。
+     *
+     * @param record 频道发现持久化投影
+     * @return 频道发现读模型
+     */
     private DiscoveredChannel toDiscoveredChannel(ChannelDiscoverRecord record) {
         return new DiscoveredChannel(
                 record.id(),
@@ -98,6 +112,13 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
         );
     }
 
+    /**
+     * 把频道领域模型转换为持久化契约。
+     * 说明：会连同 systemChannel 一起写入，因此调用方必须在更新前保留该标记，否则会把系统频道降级为普通频道。
+     *
+     * @param channel 频道领域模型
+     * @return 频道持久化投影
+     */
     private ChannelRecord toRecord(Channel channel) {
         return new ChannelRecord(
                 channel.id(),

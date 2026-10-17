@@ -13,8 +13,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 
 /**
  * 基于 database-api 的频道禁言仓储适配器。
- * 职责：在 channel feature 内完成禁言领域模型与数据库契约模型转换。
- * 边界：不包含 SQL 与数据库驱动细节。
+ * 职责：把 {@link ChannelBanRepository} 的领域语义调用翻译为 database-api 的最小数据库契约，并完成禁言记录的双向转换。
+ * 边界：不含 SQL 与数据库驱动细节，不承载"禁言是否仍然生效"的判定规则；事务边界由调用方（领域服务）决定。
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -26,41 +26,38 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         this.channelBanDatabaseService = channelBanDatabaseService;
     }
 
-    /**
-     * 查询频道对目标账户的禁言记录。
-     */
     @Override
     public Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByChannelIdAndBannedAccountId(channelId, bannedAccountId)
                 .map(this::toDomain);
     }
 
-    /**
-     * 列出频道下全部禁言记录。
-     */
     @Override
     public List<ChannelBan> list(long channelId) {
+        // 返回该频道全部禁言记录（含已解除与已过期），是否仍然生效由调用方按 revokedAt 与 expiresAt 判定
         return channelBanDatabaseService.findByChannelId(channelId).stream()
                 .map(this::toDomain)
                 .toList();
     }
 
-    /**
-     * 持久化新的禁言记录。
-     */
     @Override
     public void save(ChannelBan channelBan) {
         channelBanDatabaseService.insert(toRecord(channelBan));
     }
 
-    /**
-     * 更新既有禁言记录。
-     */
     @Override
     public void update(ChannelBan channelBan) {
+        // 底层按 banId 更新，调用方必须沿用既有 banId，重新发号会命中不到任何行
         channelBanDatabaseService.update(toRecord(channelBan));
     }
 
+    /**
+     * 把禁言记录持久化契约转换为领域模型。
+     * 说明：两侧字段一一对应；expiresAt 为空表示不设置自动到期，revokedAt 为空表示尚未解除，两者共同决定记录是否生效。
+     *
+     * @param record 频道禁言持久化投影
+     * @return 频道禁言领域模型
+     */
     private ChannelBan toDomain(ChannelBanRecord record) {
         return new ChannelBan(
                 record.banId(),
@@ -74,6 +71,13 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         );
     }
 
+    /**
+     * 把禁言记录领域模型转换为持久化契约。
+     * 说明：更新既有记录时必须保留原 banId，否则会被当成新记录插入或更新不到目标行。
+     *
+     * @param channelBan 频道禁言领域模型
+     * @return 频道禁言持久化投影
+     */
     private ChannelBanRecord toRecord(ChannelBan channelBan) {
         return new ChannelBanRecord(
                 channelBan.banId(),

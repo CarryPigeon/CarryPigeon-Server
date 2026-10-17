@@ -3,9 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http.dt
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 频道摘要响应。
- * 职责：承载频道列表与按 ID 查询所需的最小公共字段。
- * 边界：当前只表达 v1 已落地的 HTTP 字段，不扩展频道资料完整模型。
+ * 频道摘要响应项。
+ * 职责：承载频道列表与创建频道返回所需的频道标识、名称与简介。
+ * 边界：只表达列表渲染所需的最小字段，不含头像、系统频道标记与时间戳；频道详情请使用 ChannelQueryResponse。
  */
 public record ChannelListResponseItem(
         @Schema(description = "频道 ID", example = "1")
@@ -14,7 +14,5 @@ public record ChannelListResponseItem(
         String name,
         @Schema(description = "频道简介", example = "")
         String brief
-/*        @Schema(description = "频道头像相对路径", example = "")
-        String avatar*/
 ) {
 }

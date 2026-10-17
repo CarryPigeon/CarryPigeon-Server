@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 入群申请响应。
+ * 职责：承载单条入群申请的标识、申请人、理由、时间与状态字段。
+ * 边界：只暴露申请展示字段，不暴露审批人与审批意见；状态以小写形式给出。
  */
 public record ChannelApplicationResponse(
         @Schema(description = "申请 ID", example = "1") String applicationId,

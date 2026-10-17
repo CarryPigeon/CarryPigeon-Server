@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 创建频道请求。
- * 职责：承载 `POST /api/channels` 的最小字段。
- * 边界：当前创建普通频道，并接收 `docs/api/API.md` 所要求的 brief/avatar 输入。
+ * 职责：承载创建普通频道所需的名称、简介与头像字段。
+ * 边界：只做字段承载与协议校验，不表达频道可见性、频道类型与创建权限规则。
  */
 public record CreateChannelRequest(
         @Schema(description = "频道名称", example = "General")

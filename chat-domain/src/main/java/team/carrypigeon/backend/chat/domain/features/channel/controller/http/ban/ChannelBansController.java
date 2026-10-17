@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http.ba
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +31,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.inpu
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.ListChannelBansQuery;
+import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -63,13 +66,27 @@ public class ChannelBansController {
      * @return 禁言结果
      */
     @PutMapping("/{channelId}/bans/{targetAccountId}")
-    @Operation(summary = "禁言频道成员", description = "对指定频道成员设置禁言，可按 epoch 毫秒指定到期时间。")
+    @Operation(
+            summary = "禁言频道成员",
+            description = "对指定频道成员设置禁言。until 为空表示不设置自动到期；已有未解除且未到期的禁言时拒绝重复设置。",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    description = "请求体含 until 与 reason：until 为 epoch 毫秒且必须大于当前时间，"
+                            + "省略或为空表示不设置自动到期；reason 允许空字符串，最长 256 字符",
+                    content = @Content(schema = @Schema(implementation = ChannelBanRequest.class))
+            )
+    )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回禁言结果"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
-            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在"),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法、目标角色不允许禁言或禁言已生效")
+            @ApiResponse(responseCode = "200", description = "响应体为禁言记录，含 cid、uid、until、reason、create_time",
+                    content = @Content(schema = @Schema(implementation = ChannelBanResponse.class))),
+            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_ban_forbidden",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "请求体字段非法、目标角色不允许禁言或禁言已生效",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<ChannelBanResponse> banChannelMemberV1(
             @Parameter(description = "目标频道 ID", example = "2001")
@@ -108,13 +125,20 @@ public class ChannelBansController {
      * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}/bans/{targetAccountId}")
-    @Operation(summary = "解除频道成员禁言", description = "解除指定频道成员当前生效的禁言状态。")
+    @Operation(
+            summary = "解除频道成员禁言",
+            description = "解除指定频道成员当前生效的禁言状态。成功返回 204，响应体为空。"
+    )
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "解除禁言成功"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
-            @ApiResponse(responseCode = "404", description = "频道不存在或禁言记录不存在"),
-            @ApiResponse(responseCode = "422", description = "禁言记录当前不处于生效状态")
+            @ApiResponse(responseCode = "204", description = "解除禁言成功，响应体为空"),
+            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_ban_forbidden",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "频道不存在或禁言记录不存在",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "禁言记录当前不处于生效状态，reason 为 validation_failed",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<Void> unbanChannelMember(
             @Parameter(description = "目标频道 ID", example = "2001")
@@ -138,12 +162,19 @@ public class ChannelBansController {
      * @return 禁言列表响应
      */
     @GetMapping("/{channelId}/bans")
-    @Operation(summary = "获取禁言列表", description = "返回指定频道当前的禁言记录列表。")
+    @Operation(
+            summary = "获取禁言列表",
+            description = "返回指定频道的禁言记录列表。列表包含已解除与已过期的历史记录，由调用方按 until 自行过滤。"
+    )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回禁言列表"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "403", description = "当前账号不是频道成员或角色不足"),
-            @ApiResponse(responseCode = "404", description = "频道不存在")
+            @ApiResponse(responseCode = "200", description = "响应体为禁言列表外壳，items 为禁言记录数组",
+                    content = @Content(schema = @Schema(implementation = ChannelBanListResponse.class))),
+            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_ban_forbidden",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "频道不存在",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ChannelBanListResponse listChannelBans(
             @Parameter(description = "目标频道 ID", example = "2001")

@@ -11,10 +11,16 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 
 /**
  * 频道发现 API 实现。
- * 频道详情、成员、禁言和审计查询由各自能力 API 暴露。
+ * 职责：承接频道发现查询，把仓储返回的发现读模型转换为对外投影。
+ * 边界：不判断调用方是否有权查看某个具体频道，也不承载成员、禁言与审计查询；这些由各自能力 API 暴露。
  */
 @Service
 public class ChannelQueryDomainApi implements ChannelQueryApi {
+
+    /**
+     * 多取一条用于判定是否还有下一页，因此实际查询上限始终比调用方请求多 1。
+     */
+    private static final int HAS_MORE_PROBE = 1;
 
     private final ChannelRepository channelRepository;
 
@@ -24,10 +30,15 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
 
     @Override
     public List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query) {
+        // 关键字统一在此归一：空白串与 null 等价，都表示不按关键字过滤
+        String normalizedKeyword = query.keyword() == null || query.keyword().isBlank()
+            ? null
+            : query.keyword().trim();
+        // 多取一条交由调用方判定 hasMore，使分页语义不进入仓储层
         return channelRepository.discoverChannels(
-                query.keyword() == null || query.keyword().isBlank() ? null : query.keyword().trim(),
+                normalizedKeyword,
                 query.cursorChannelId(),
-                query.limit() + 1
+                query.limit() + HAS_MORE_PROBE
             ).stream()
             .map(DiscoverChannelResult::from)
             .toList();

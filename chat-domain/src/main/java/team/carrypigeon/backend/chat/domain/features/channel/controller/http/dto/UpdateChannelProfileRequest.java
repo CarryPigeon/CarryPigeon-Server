@@ -7,8 +7,8 @@ import jakarta.validation.constraints.Size;
 
 /**
  * 更新频道资料请求。
- * 职责：承载 `PATCH /api/channels/{cid}` 的最小资料字段。
- * 边界：仅承载频道名称与简介更新，不扩展额外资料字段。
+ * 职责：承载频道名称与简介两个可更新字段。
+ * 边界：只做字段承载与协议校验，不承载 OWNER/ADMIN 角色判断；头像与系统频道标记不在更新范围内。
  */
 public record UpdateChannelProfileRequest(
         @Schema(description = "频道名称", example = "New Name")

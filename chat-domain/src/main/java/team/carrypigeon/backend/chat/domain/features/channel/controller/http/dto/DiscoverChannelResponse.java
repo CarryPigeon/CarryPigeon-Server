@@ -3,7 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.channel.controller.http.dt
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * 远端频道发现响应项。
+ * 频道发现响应项。
+ * 职责：承载频道发现列表所需的频道摘要、成员规模与加入门槛提示。
+ * 边界：只服务发现读链路，不含频道完整资料与当前账号的成员状态。
  */
 public record DiscoverChannelResponse(
         @Schema(description = "频道 ID", example = "12345") String cid,
