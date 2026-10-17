@@ -10,7 +10,8 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.projection.No
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationChannelPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.model.NotificationServerPreference;
 import team.carrypigeon.backend.chat.domain.features.server.domain.repository.NotificationPreferenceRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.server.domain.problem.ServerProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
@@ -117,11 +118,11 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
      */
     private String normalizeMode(String rawMode, List<String> allowedModes, String fieldName) {
         if (rawMode == null || rawMode.isBlank()) {
-            throw ProblemException.validationFailed(fieldName + " must not be blank");
+            throw ProblemException.of(ServerProblem.INVALID_INPUT, fieldName + " must not be blank");
         }
         String mode = rawMode.trim();
         if (!allowedModes.contains(mode)) {
-            throw ProblemException.validationFailed(fieldName + " is invalid");
+            throw ProblemException.of(ServerProblem.INVALID_INPUT, fieldName + " is invalid");
         }
         return mode;
     }
@@ -138,14 +139,14 @@ public class NotificationPreferenceDomainApi implements NotificationPreferenceAp
             return 0L;
         }
         if (mutedUntil < 0L) {
-            throw ProblemException.validationFailed("muted_until must be greater than or equal to 0");
+            throw ProblemException.of(ServerProblem.INVALID_INPUT, "muted_until must be greater than or equal to 0");
         }
         return mutedUntil;
     }
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(ServerProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 }

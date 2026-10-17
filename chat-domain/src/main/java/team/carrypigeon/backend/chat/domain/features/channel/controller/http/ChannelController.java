@@ -42,10 +42,10 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -175,14 +175,11 @@ public class ChannelController {
         @Max(value = 50, message = "limit must be between 1 and 50") int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        Long cursorChannelId = OpaqueCursorCodec.decode("channel_discover", cursor);
-        if (cursorChannelId != null && cursorChannelId <= 0) {
-            throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
-        }
+        Long cursorChannelId = OpaqueCursorCodec.decode("channel_discover", cursor, ChannelProblem.CURSOR_INVALID);
         List<DiscoverChannelResult> items = channelQueryApi.discoverChannels(new DiscoverChannelsQuery(
             cpPrincipal.accountId(),
             keyword,
-            OpaqueCursorCodec.decode("channel_discover", cursor),
+            cursorChannelId,
             limit
         ));
         boolean hasMore = items.size() > limit;

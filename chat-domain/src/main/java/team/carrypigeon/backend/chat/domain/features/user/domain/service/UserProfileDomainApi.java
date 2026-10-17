@@ -10,10 +10,11 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfile
 import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
+import team.carrypigeon.backend.chat.domain.features.user.domain.problem.UserProblem;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurrentUserProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -24,8 +25,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 @Service
 public class UserProfileDomainApi implements UserProfileApi {
-
-    private static final String USER_PROFILE_NOT_FOUND_MESSAGE = "user profile does not exist";
 
     private final UserProfileRepository userProfileRepository;
     private final AuthAccountApi authAccountApi;
@@ -52,7 +51,7 @@ public class UserProfileDomainApi implements UserProfileApi {
      */
     public UserProfileResult getCurrentUserProfile(GetCurrentUserProfileQuery query) {
         UserProfile userProfile = userProfileRepository.findByAccountId(query.accountId())
-                .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
         return toResult(userProfile, authAccountApi.getAccount(userProfile.accountId()).username());
     }
 
@@ -64,7 +63,7 @@ public class UserProfileDomainApi implements UserProfileApi {
      */
     public UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdQuery query) {
         UserProfile userProfile = userProfileRepository.findByAccountId(query.accountId())
-                .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
         return toResult(userProfile, authAccountApi.getAccount(userProfile.accountId()).username());
     }
 
@@ -94,7 +93,7 @@ public class UserProfileDomainApi implements UserProfileApi {
     public void updateCurrentUserProfile(UpdateCurrentUserProfileCommand command) {
         transactionRunner.runInTransaction(() -> {
             UserProfile existingProfile = userProfileRepository.findByAccountId(command.accountId())
-                    .orElseThrow(() -> ProblemException.notFound(USER_PROFILE_NOT_FOUND_MESSAGE));
+                    .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
 
             UserProfile updatedProfile = existingProfile.updateProfile(
                     command.avatarUrl(),

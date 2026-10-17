@@ -18,14 +18,14 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
@@ -35,7 +35,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 @Service
 public class ChannelBanDomainApi implements ChannelBanApi {
 
-    private static final String CHANNEL_BAN_NOT_FOUND_MESSAGE = "channel ban does not exist";
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
@@ -74,16 +73,13 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     @Override
     public List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query) {
         Channel channel = channelRepository.findById(query.channelId())
-            .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
-            .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 禁言台账属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER
             && operator.role() != ChannelMemberRole.ADMIN) {
-            throw ProblemException.forbidden(
-                "channel_ban_forbidden",
-                "channel action requires owner or admin role"
-            );
+            throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
         }
         // 这里不过滤 revokedAt 与 expiresAt，由调用方按需判定记录是否仍然生效
         return channelBanRepository.list(channel.id()).stream()
@@ -105,22 +101,19 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     public ChannelBanResult banChannelMember(BanChannelMemberCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
                 && operator.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.forbidden(
-                    "channel_ban_forbidden",
-                    "channel action requires owner or admin role"
-                );
+                throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
             }
             // 只允许禁言 MEMBER，避免管理员之间互相禁言
             if (target.role() != ChannelMemberRole.MEMBER) {
-                throw ProblemException.validationFailed("target member must have MEMBER role");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member must have MEMBER role");
             }
             ChannelBan existingBan = channelBanRepository.findByRelation(
                 channel.id(), target.accountId()).orElse(null);
@@ -128,7 +121,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             if (existingBan != null
                 && existingBan.revokedAt() == null
                 && (existingBan.expiresAt() == null || existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
-                throw ProblemException.validationFailed("channel ban is already active");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "channel ban is already active");
             }
             ChannelBan ban;
             String reason = command.reason() == null || command.reason().isBlank() ? "" : command.reason().trim();
@@ -184,7 +177,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         if (command.untilEpochMillis() != null) {
             long nowMillis = timeProvider.nowMillis();
             if (command.untilEpochMillis() <= nowMillis) {
-                throw ProblemException.validationFailed("until must be greater than current time");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "until must be greater than current time");
             }
             // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
             durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
@@ -209,24 +202,21 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 查询基础信息
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound("channel does not exist"));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", "channel membership is required"));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言解除同样属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
                 && operator.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.forbidden(
-                    "channel_ban_forbidden",
-                    "channel action requires owner or admin role"
-                );
+                throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
             }
             ChannelBan existingBan = channelBanRepository.findByRelation(
                     channel.id(), command.targetAccountId())
-                .orElseThrow(() -> ProblemException.notFound(CHANNEL_BAN_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.BAN_NOT_FOUND));
             // 只有仍然生效的记录才可解除：已解除或已过期的记录重复解除按参数错误拒绝
             if (existingBan.revokedAt() != null
                 || (existingBan.expiresAt() != null && !existingBan.expiresAt().isAfter(timeProvider.nowInstant()))) {
-                throw ProblemException.validationFailed("channel ban is not active");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "channel ban is not active");
             }
             // 领域模型不可变：沿用原 banId、原原因与原到期时间，只补充解除时间
             // 注意 operatorAccountId 会被覆盖为解禁人，因此该字段表达的是"最后操作者"而非"最初禁言人"

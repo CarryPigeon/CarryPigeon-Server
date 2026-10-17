@@ -15,7 +15,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -28,7 +29,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
 @Service
 public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycleApi {
 
-    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String RECALLED_MESSAGE_PLACEHOLDER = "消息已撤回";
 
     private final ChannelContextApi channelContextApi;
@@ -103,10 +103,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
                 && !channelContextApi.moderatorAccounts(message.channelId()).contains(message.senderId())) {
             return;
         }
-        throw ProblemException.forbidden(
-            "channel_message_recall_forbidden",
-            "channel message recall is not allowed"
-        );
+        throw ProblemException.of(MessageProblem.RECALL_FORBIDDEN);
     }
 
     private void validateRecallCommand(RecallChannelMessageCommand command) {
@@ -117,7 +114,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
 
     private ChannelMessage requireMessage(long messageId) {
         return messageRepository.findById(messageId)
-                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
     }
 
     private ChannelMessage toRecalledMessage(ChannelMessage message) {
@@ -149,7 +146,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 }

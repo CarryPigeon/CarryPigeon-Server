@@ -14,7 +14,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 频道消息时间线领域 API 实现。
@@ -23,8 +24,6 @@ import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemExcepti
  */
 @Service
 public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineApi {
-
-    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
 
     private final ChannelContextApi channelContextApi;
     private final MessageRepository messageRepository;
@@ -47,7 +46,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         if (query.aroundMessageId() != null) {
             ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
             if (targetMessage.channelId() != channel.channelId()) {
-                throw ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE);
+                throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             int beforeCount = query.before() == null ? 25 : query.before();
             int afterCount = query.after() == null ? 25 : query.after();
@@ -105,22 +104,22 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
         if (query.aroundMessageId() != null && query.aroundMessageId() <= 0) {
-            throw ProblemException.validationFailed("around_mid must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "around_mid must be greater than 0");
         }
         if (query.cursorMessageId() != null && query.cursorMessageId() <= 0) {
-            throw ProblemException.validationFailed("cursorMessageId must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "cursorMessageId must be greater than 0");
         }
         if (query.aroundMessageId() != null && query.cursorMessageId() != null) {
-            throw ProblemException.validationFailed("cursor and around_mid cannot be used together");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "cursor and around_mid cannot be used together");
         }
         if (query.before() != null && (query.before() < 0 || query.before() > 50)) {
-            throw ProblemException.validationFailed("before must be between 0 and 50");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "before must be between 0 and 50");
         }
         if (query.after() != null && (query.after() < 0 || query.after() > 50)) {
-            throw ProblemException.validationFailed("after must be between 0 and 50");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "after must be between 0 and 50");
         }
         if (query.limit() <= 0 || query.limit() > 50) {
-            throw ProblemException.validationFailed("limit must be between 1 and 50");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "limit must be between 1 and 50");
         }
     }
 
@@ -134,25 +133,25 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         requirePositive(query.accountId(), "accountId");
         requirePositive(query.channelId(), "channelId");
         if (query.keyword() == null || query.keyword().isBlank()) {
-            throw ProblemException.validationFailed("keyword must not be blank");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "keyword must not be blank");
         }
         if (query.keyword().trim().length() > 100) {
-            throw ProblemException.validationFailed("keyword length must be between 1 and 100");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "keyword length must be between 1 and 100");
         }
         if (query.cursorMessageId() != null && query.cursorMessageId() <= 0) {
-            throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
+            throw ProblemException.of(MessageProblem.CURSOR_INVALID);
         }
         if (query.senderAccountId() != null && query.senderAccountId() <= 0) {
-            throw ProblemException.validationFailed("sender_uid must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "sender_uid must be greater than 0");
         }
         if (query.beforeMessageId() != null && query.beforeMessageId() <= 0) {
-            throw ProblemException.validationFailed("before_mid must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "before_mid must be greater than 0");
         }
         if (query.afterMessageId() != null && query.afterMessageId() <= 0) {
-            throw ProblemException.validationFailed("after_mid must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "after_mid must be greater than 0");
         }
         if (query.limit() <= 0 || query.limit() > 50) {
-            throw ProblemException.validationFailed("limit must be between 1 and 50");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "limit must be between 1 and 50");
         }
     }
 
@@ -171,12 +170,12 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
 
     private ChannelMessage requireMessage(long messageId) {
         return messageRepository.findById(messageId)
-                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
     }
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 }

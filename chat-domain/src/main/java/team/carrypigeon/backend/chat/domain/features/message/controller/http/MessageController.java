@@ -24,7 +24,8 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Chan
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ForwardChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import org.springframework.web.bind.annotation.PostMapping;
 
 /**
@@ -110,7 +111,7 @@ public class MessageController {
         String header = normalizeOptional(headerValue);
         String body = normalizeOptional(bodyValue);
         if (header != null && body != null && !header.equals(body)) {
-            throw ProblemException.validationFailed("Idempotency-Key header must match idempotency_key");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "Idempotency-Key header must match idempotency_key");
         }
         return header == null ? body : header;
     }
@@ -135,7 +136,7 @@ public class MessageController {
             }
             return value;
         } catch (RuntimeException exception) {
-            throw ProblemException.validationFailed(fieldName + " must be decimal snowflake string");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
         }
     }
 }

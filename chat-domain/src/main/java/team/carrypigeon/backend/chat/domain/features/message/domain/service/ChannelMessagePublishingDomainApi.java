@@ -29,7 +29,8 @@ import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPubli
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDomainPluginApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.ValidateMessageDataCommand;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -45,7 +46,6 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     private static final String CORE_TEXT_DOMAIN = "Core:Text";
     private static final String CORE_FORWARD_DOMAIN = "Core:Forward";
     private static final String CORE_TEXT_DOMAIN_VERSION = "1.0.0";
-    private static final String MESSAGE_NOT_FOUND_MESSAGE = "message does not exist";
     private static final String FORWARD_OPERATION = "message.forward.v1";
     private static final String SEND_OPERATION = "message.send.v1";
     private static final int MAX_IDEMPOTENCY_KEY_LENGTH = 128;
@@ -89,23 +89,20 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         commandValidator.validateSendCommand(command);
         String idempotencyKey = normalizedIdempotencyKey(command.clientMessageId());
         if (idempotencyKey != null && idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
-            throw ProblemException.validationFailed("client_message_id length must be less than or equal to 128");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "client_message_id length must be less than or equal to 128");
         }
         String requestFingerprint = idempotencyKey == null ? null : sendRequestFingerprint(command);
         ChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
             MessageIdempotency reservation = reserveSendIdempotency(command, idempotencyKey, requestFingerprint);
             if (reservation != null && reservation.messageId() != null) {
                 return messageRepository.findById(reservation.messageId())
-                        .orElseThrow(() -> ProblemException.fail(
-                                "idempotency_result_missing",
-                                "idempotency result message is unavailable"
-                        ));
+                        .orElseThrow(() -> ProblemException.of(MessageProblem.IDEMPOTENCY_RESULT_MISSING));
             }
             ChannelContext channel = channelContextApi.requireMemberContext(
                     command.channelId(), command.accountId()
             );
             if (channel.isMuted()) {
-                throw ProblemException.forbidden("user_muted", "channel member is muted");
+                throw ProblemException.of(MessageProblem.USER_MUTED);
             }
             ChannelMessage message = buildCanonicalMessage(
                     channel,
@@ -150,10 +147,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                 null
         ));
         if (!requestFingerprint.equals(reservation.requestFingerprint())) {
-            throw ProblemException.conflict(
-                    "idempotency_key_reused",
-                    "client_message_id has already been used for a different request"
-            );
+            throw ProblemException.of(MessageProblem.IDEMPOTENCY_KEY_REUSED);
         }
         return reservation;
     }
@@ -172,16 +166,13 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
             );
             if (reservation != null && reservation.messageId() != null) {
                 return messageRepository.findById(reservation.messageId())
-                        .orElseThrow(() -> ProblemException.fail(
-                                "idempotency_result_missing",
-                                "idempotency result message is unavailable"
-                        ));
+                        .orElseThrow(() -> ProblemException.of(MessageProblem.IDEMPOTENCY_RESULT_MISSING));
             }
             ChannelContext targetChannel = channelContextApi.requireMemberContext(
                     command.targetChannelId(), command.accountId()
             );
             if (targetChannel.isMuted()) {
-                throw ProblemException.forbidden("user_muted", "channel member is muted");
+                throw ProblemException.of(MessageProblem.USER_MUTED);
             }
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("domain", CORE_TEXT_DOMAIN);
@@ -253,10 +244,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
                 null
         ));
         if (!requestFingerprint.equals(reservation.requestFingerprint())) {
-            throw ProblemException.conflict(
-                    "idempotency_key_reused",
-                    "idempotency key has already been used for a different request"
-            );
+            throw ProblemException.of(MessageProblem.FORWARD_IDEMPOTENCY_KEY_REUSED);
         }
         return reservation;
     }
@@ -313,19 +301,19 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         requirePositive(command.sourceMessageId(), "sourceMessageId");
         requirePositive(command.targetChannelId(), "targetChannelId");
         if (command.comment() != null && command.comment().trim().length() > 500) {
-            throw ProblemException.validationFailed("comment length must be less than or equal to 500");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "comment length must be less than or equal to 500");
         }
         String idempotencyKey = normalizedIdempotencyKey(command.idempotencyKey());
         if (idempotencyKey != null && idempotencyKey.length() > MAX_IDEMPOTENCY_KEY_LENGTH) {
-            throw ProblemException.validationFailed("idempotency key length must be less than or equal to 128");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "idempotency key length must be less than or equal to 128");
         }
         if (command.mergedMessageIds() != null && !command.mergedMessageIds().isEmpty()) {
             if (command.mergedMessageIds().size() < 2) {
-                throw ProblemException.validationFailed("merged_mids must contain at least two ids");
+                throw ProblemException.of(MessageProblem.INVALID_INPUT, "merged_mids must contain at least two ids");
             }
             for (Long messageId : command.mergedMessageIds()) {
                 if (messageId == null || messageId <= 0L) {
-                    throw ProblemException.validationFailed("merged_mids must contain positive snowflake ids");
+                    throw ProblemException.of(MessageProblem.INVALID_INPUT, "merged_mids must contain positive snowflake ids");
                 }
             }
         }
@@ -408,7 +396,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
 
     private ChannelMessage requireMessage(long messageId) {
         return messageRepository.findById(messageId)
-                .orElseThrow(() -> ProblemException.notFound(MESSAGE_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
     }
 
     private Map<String, Object> forwardSource(ChannelMessage sourceMessage) {
@@ -431,7 +419,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 

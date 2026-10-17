@@ -5,7 +5,8 @@ import java.time.Instant;
 import java.util.Base64;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 受签名保护的上传 share_key 编解码器。
@@ -110,7 +111,7 @@ public class FileUploadShareKeyCodec {
             mac.init(new SecretKeySpec(signingSecret, HMAC_ALGORITHM));
             return Base64.getUrlEncoder().withoutPadding().encodeToString(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception exception) {
-            throw ProblemException.fail("file_share_key_sign_failed", "failed to sign file share key");
+            throw ProblemException.of(FileProblem.SHARE_KEY_SIGN_FAILED, exception);
         }
     }
 
@@ -140,7 +141,7 @@ public class FileUploadShareKeyCodec {
      * @return share_key 无效问题异常
      */
     private ProblemException invalidShareKey() {
-        return ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+        return ProblemException.of(FileProblem.INVALID_SHARE_KEY);
     }
 
     /**

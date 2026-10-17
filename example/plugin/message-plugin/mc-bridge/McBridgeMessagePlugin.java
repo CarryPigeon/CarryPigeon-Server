@@ -3,7 +3,7 @@ package example.plugin.messageplugin.mcbridge;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.plugin.support.message.PluginChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * Example specialized extension handler for mc-bridge.
@@ -24,11 +24,11 @@ public class McBridgeMessagePlugin extends PluginChannelMessagePlugin {
         CanonicalData canonicalData = super.validateCanonicalData(context, domainVersion, rawData);
         Object payloadValue = canonicalData.data().get("payload");
         if (!(payloadValue instanceof Map<?, ?> payload)) {
-            throw ProblemException.validationFailed("mc-bridge payload must be object");
+            throw ProblemException.of(McBridgeProblem.PAYLOAD_NOT_OBJECT);
         }
         Object eventValue = payload.get("event");
         if (!(eventValue instanceof String event) || event.isBlank()) {
-            throw ProblemException.validationFailed("mc-bridge event must not be blank");
+            throw ProblemException.of(McBridgeProblem.EVENT_BLANK);
         }
         Map<String, Object> normalizedPayload = new LinkedHashMap<>();
         payload.forEach((key, value) -> normalizedPayload.put((String) key, value));

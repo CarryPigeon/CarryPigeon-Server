@@ -17,10 +17,11 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -33,9 +34,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 @Service
 public class ChannelApplicationDomainApi implements ChannelApplicationApi {
-
-    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
-    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -77,16 +75,16 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     public ChannelApplicationResult createChannelApplication(CreateChannelApplicationCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 已是成员时无需申请，直接按参数错误拒绝
             if (channelMemberRepository.findByRelation(channel.id(), command.accountId()).isPresent()) {
-                throw ProblemException.validationFailed("current account is already a channel member");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "current account is already a channel member");
             }
             // 同一 (频道, 申请人) 至多保留一条申请：已审批的历史记录会被本次申请覆盖
             ChannelApplication existingApplication = channelApplicationRepository.findByRelation(channel.id(), command.accountId())
                     .orElse(null);
             if (existingApplication != null && existingApplication.status() == ChannelApplicationStatus.PENDING) {
-                throw ProblemException.validationFailed("pending channel application already exists");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "pending channel application already exists");
             }
             if (existingApplication != null) {
                 // 先删旧记录再写入新记录，保证替换过程与下方写入处于同一事务，不会留下两行
@@ -126,15 +124,12 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     @Override
     public List<ChannelApplicationResult> listChannelApplications(ListChannelApplicationsQuery query) {
         Channel channel = channelRepository.findById(query.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 申请名单属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
-            throw ProblemException.forbidden(
-                    "channel_invite_forbidden",
-                    "channel invite requires owner or admin role"
-            );
+            throw ProblemException.of(ChannelProblem.APPLICATION_LIST_FORBIDDEN);
         }
         // 申请理由在持久化层允许为 null，这里统一归一为空字符串后再暴露给协议层
         return channelApplicationRepository.list(channel.id()).stream()
@@ -159,33 +154,30 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     public ChannelApplicationResult decideChannelApplication(DecideChannelApplicationCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             ChannelApplication application = channelApplicationRepository.findById(command.applicationId())
-                    .orElseThrow(() -> ProblemException.notFound("channel application does not exist"));
+                    .orElseThrow(() -> ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND));
             // 归属校验：路径声明的频道必须与申请实际所属频道一致，否则按不存在处理以免泄露其它频道的申请存在性
             if (application.channelId() != command.channelId()) {
-                throw ProblemException.notFound("channel application does not exist");
+                throw ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND);
             }
             // 幂等保护：只有 PENDING 申请可被审批，重复审批按冲突拒绝
             if (application.status() != ChannelApplicationStatus.PENDING) {
-                throw ProblemException.conflict("application_already_processed", "channel application is already processed");
+                throw ProblemException.of(ChannelProblem.APPLICATION_ALREADY_PROCESSED);
             }
             ChannelMember operator = channelMemberRepository.findByRelation(application.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 审批属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.forbidden(
-                    "channel_invite_forbidden",
-                    "channel application requires owner or admin role"
-                );
+                throw ProblemException.of(ChannelProblem.APPLICATION_DECIDE_FORBIDDEN);
             }
             // 协议层只传字符串决定，这里收敛为固定枚举，未知取值按参数错误拒绝
             ChannelApplicationStatus decidedStatus = switch (command.decision().trim().toLowerCase()) {
                 case "approve" -> ChannelApplicationStatus.ACCEPTED;
                 case "reject" -> ChannelApplicationStatus.DECLINED;
-                default -> throw ProblemException.validationFailed("decision must be approve or reject");
+                default -> throw ProblemException.of(ChannelProblem.INVALID_INPUT, "decision must be approve or reject");
             };
             // 申请人可能在申请期间已通过其它途径入群，此时审批失去意义
             if (channelMemberRepository.findByRelation(application.channelId(), application.applicantId()).isPresent()) {
-                throw ProblemException.conflict("already a member");
+                throw ProblemException.of(ChannelProblem.APPLICANT_ALREADY_MEMBER);
             }
             // 领域模型不可变：沿用原申请主键与创建时间，只替换状态并写入响应时间
             ChannelApplication updated = new ChannelApplication(

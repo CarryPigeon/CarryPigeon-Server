@@ -45,7 +45,8 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Send
 import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 频道消息 HTTP 入口。
@@ -158,10 +159,10 @@ public class ChannelMessageController {
     ) {
         String effectiveKeyword = q != null && !q.isBlank() ? q : keyword;
         if (effectiveKeyword == null || effectiveKeyword.isBlank()) {
-            throw ProblemException.validationFailed("q must not be blank");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "q must not be blank");
         }
         if (effectiveKeyword.trim().length() > 100) {
-            throw ProblemException.validationFailed("validation_failed", "q length must be between 1 and 100");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "q length must be between 1 and 100");
         }
         ChannelMessageSearchResult result = channelMessageTimelineApi.searchChannelMessages(
                 new SearchChannelMessagesQuery(
@@ -235,7 +236,7 @@ public class ChannelMessageController {
                     result.size()
             );
         } catch (IOException exception) {
-            throw ProblemException.fail("attachment_upload_read_failed", "failed to read attachment upload content");
+            throw ProblemException.of(MessageProblem.ATTACHMENT_UPLOAD_READ_FAILED, exception);
         }
     }
 
@@ -270,7 +271,7 @@ public class ChannelMessageController {
         for (String mentionId : mentionIds) {
             Long parsedId = parseOptionalSnowflake(mentionId, "mentions", false);
             if (parsedId == null || parsedId <= 0L) {
-                throw ProblemException.validationFailed("mentions must contain positive decimal snowflake strings");
+                throw ProblemException.of(MessageProblem.INVALID_INPUT, "mentions must contain positive decimal snowflake strings");
             }
             parsedIds.add(parsedId);
         }
@@ -294,14 +295,14 @@ public class ChannelMessageController {
             return Long.parseLong(rawValue.trim());
         } catch (NumberFormatException exception) {
             if (cursorField) {
-                throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
+                throw ProblemException.of(MessageProblem.CURSOR_INVALID);
             }
-            throw ProblemException.validationFailed(fieldName + " must be decimal snowflake string");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
         }
     }
 
     private Long decodeCursor(String scope, String cursor) {
-        return OpaqueCursorCodec.decode(scope, cursor);
+        return OpaqueCursorCodec.decode(scope, cursor, MessageProblem.CURSOR_INVALID);
     }
 
     private String encodeCursor(String scope, Long value) {

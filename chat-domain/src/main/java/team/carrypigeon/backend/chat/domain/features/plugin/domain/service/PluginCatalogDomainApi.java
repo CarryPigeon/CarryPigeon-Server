@@ -7,7 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.PluginCatalogItemResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 消息插件目录领域服务。
@@ -71,9 +72,8 @@ public class PluginCatalogDomainApi implements PluginCatalogApi {
     public void requireRequiredPluginsSatisfied(List<String> installedPluginIds) {
         List<String> missingPlugins = findMissingRequiredPlugins(installedPluginIds);
         if (!missingPlugins.isEmpty()) {
-            throw ProblemException.validationFailed(
-                    "required_plugin_missing",
-                    "required plugins are missing",
+            throw ProblemException.of(
+                    PluginProblem.REQUIRED_PLUGIN_MISSING,
                     Map.of("missing_plugins", missingPlugins)
             );
         }

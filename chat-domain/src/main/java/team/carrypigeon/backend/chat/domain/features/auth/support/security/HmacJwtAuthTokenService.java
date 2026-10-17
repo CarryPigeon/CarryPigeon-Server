@@ -13,7 +13,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperti
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
@@ -85,7 +86,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
     public AuthTokenClaims parseAccessToken(String accessToken) {
         AuthTokenClaims claims = parseToken(accessToken);
         if (!ACCESS_TOKEN_TYPE.equals(claims.tokenType())) {
-            throw ProblemException.forbidden("invalid_access_token", "access token is invalid");
+            throw ProblemException.of(AuthProblem.INVALID_ACCESS_TOKEN);
         }
         return claims;
     }
@@ -101,7 +102,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
     public AuthTokenClaims parseRefreshToken(String refreshToken) {
         AuthTokenClaims claims = parseToken(refreshToken);
         if (!REFRESH_TOKEN_TYPE.equals(claims.tokenType())) {
-            throw ProblemException.forbidden("invalid_refresh_token", "refresh token is invalid");
+            throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
         }
         return claims;
     }
@@ -168,7 +169,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
 
             Instant expiresAt = Instant.ofEpochSecond(requiredLongClaim(payload, "exp"));
             if (!expiresAt.isAfter(timeProvider.nowInstant())) {
-                throw ProblemException.forbidden("token_expired", "token is expired");
+                throw ProblemException.of(AuthProblem.TOKEN_EXPIRED);
             }
 
             String subject = requiredStringClaim(payload, "sub");
@@ -235,7 +236,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
     }
 
     private ProblemException invalidToken() {
-        return ProblemException.forbidden("invalid_token", "token is invalid");
+        return ProblemException.of(AuthProblem.INVALID_TOKEN);
     }
 
     /**
@@ -251,7 +252,7 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
             mac.init(new SecretKeySpec(properties.secret().getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
             return mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8));
         } catch (Exception exception) {
-            throw ProblemException.fail("token_sign_failed", "failed to sign token");
+            throw ProblemException.of(AuthProblem.TOKEN_SIGN_FAILED, exception);
         }
     }
 

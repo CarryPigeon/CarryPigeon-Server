@@ -10,10 +10,11 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -23,9 +24,6 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
  */
 @Service
 public class ChannelContextDomainApi implements ChannelContextApi {
-
-    private static final String CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
-    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
 
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
@@ -48,10 +46,10 @@ public class ChannelContextDomainApi implements ChannelContextApi {
     public ChannelContext requireMemberContext(long channelId, long accountId) {
         // 频道必须存在，避免把"频道不存在"与"无成员关系"混为一谈
         channelRepository.findById(channelId)
-            .orElseThrow(() -> ProblemException.notFound(CHANNEL_NOT_FOUND_MESSAGE));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 账号必须是该频道成员，非成员一律拒绝；角色与禁言状态随上下文一并返回，调用方无需二次查询
         ChannelMember member = channelMemberRepository.findByRelation(channelId, accountId)
-            .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         return new ChannelContext(member.channelId(), member.role(), activeMutedUntil(channelId, accountId));
     }
 
@@ -90,7 +88,7 @@ public class ChannelContextDomainApi implements ChannelContextApi {
             .filter(ban -> ban.revokedAt() == null)
             .map(ChannelBan::expiresAt)
             // 再剔除未设置到期时间与已过期的记录
-            .filter(expiresAt -> expiresAt != null && expiresAt.isAfter(now))
+            .filter(expiresAt -> expiresAt.isAfter(now))
             .orElse(null);
     }
 }

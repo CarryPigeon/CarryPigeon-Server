@@ -78,9 +78,7 @@ public class ChannelApplicationController {
                     content = @Content(schema = @Schema(implementation = ChannelApplicationResponse.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "频道不允许提交入群申请，reason 为 regular_channel_required",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在",
+            @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "请求体字段非法、当前账号已是成员或已存在待处理申请",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))

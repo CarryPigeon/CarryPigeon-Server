@@ -30,7 +30,8 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.projection.File
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.FileUploadResponse;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -119,7 +120,7 @@ public class FileController {
             );
             return ResponseEntity.noContent().build();
         } catch (IOException exception) {
-            throw ProblemException.fail("file_upload_read_failed", "failed to read upload content");
+            throw ProblemException.of(FileProblem.UPLOAD_READ_FAILED, exception);
         }
     }
 
@@ -151,7 +152,7 @@ public class FileController {
             accountId = principal.accountId();
         }
         FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(accountId, shareKey)
-                .orElseThrow(() -> ProblemException.notFound("file does not exist"));
+                .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
         String type = downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType();
         if (downloadResult.content().isPresent()) {
             return ResponseEntity.ok()

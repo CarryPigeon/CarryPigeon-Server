@@ -1,7 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.server.domain.problem.ServerProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 实时通道客户端消息。
@@ -66,7 +67,7 @@ public record RealtimeClientMessage(
             return null;
         }
         if (!(value instanceof Map<?, ?>)) {
-            throw ProblemException.validationFailed("validation_failed", key + " must be object");
+            throw ProblemException.of(ServerProblem.INVALID_INPUT, key + " must be object");
         }
         return (Map<String, Object>) value;
     }

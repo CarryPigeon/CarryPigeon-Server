@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 消息附件 objectKey 规则策略。
@@ -39,7 +40,7 @@ class FileMessageAttachmentPolicy {
             candidate = candidate.substring(slashIndex + 1);
         }
         if (candidate.isBlank()) {
-            throw ProblemException.validationFailed("filename must not be blank");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "filename must not be blank");
         }
         return candidate;
     }

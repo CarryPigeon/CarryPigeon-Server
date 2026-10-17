@@ -25,7 +25,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
@@ -36,10 +37,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 @Service
 public class ChannelMemberDomainApi implements ChannelMemberApi {
-
-    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
-    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
-    private static final String CHANNEL_MEMBER_NOT_FOUND_MESSAGE = "channel member does not exist";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -74,10 +71,10 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     public List<ChannelMemberResult> listChannelMembers(ListChannelMembersQuery query) {
         // 先确认频道存在，避免把"频道不存在"与"不是成员"混为一类拒绝
         Channel channel = channelRepository.findById(query.channelId())
-            .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 读取权限下放到成员身份：只要请求者本人是成员，就允许查看完整成员列表
         channelMemberRepository.findByRelation(query.channelId(), query.accountId())
-            .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         List<ChannelMember> members = channelMemberRepository.listByChannelId(channel.id());
         // 一次性批量取回全部成员资料并按账号建索引，避免在下方映射时逐个查询
         List<Long> accountIds = members.stream().map(ChannelMember::accountId).toList();
@@ -106,22 +103,19 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     public void promoteChannelMember(PromoteChannelMemberCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                    .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                    .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                    .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                    .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
-                    .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                    .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能自行扩张管理员数量
             if (operator.role() != ChannelMemberRole.OWNER) {
-                throw ProblemException.forbidden(
-                        "channel_role_forbidden",
-                        "channel action requires owner role"
-                );
+                throw ProblemException.of(ChannelProblem.ROLE_FORBIDDEN);
             }
             // 只允许 MEMBER 升为 ADMIN，避免重复提升或跨级覆盖 OWNER
             if (target.role() != ChannelMemberRole.MEMBER) {
-                throw ProblemException.validationFailed("target member must have MEMBER role");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member must have MEMBER role");
             }
             // 领域模型不可变：沿用目标成员原主键与原始加入时间，只替换角色
             ChannelMember promotedMember = new ChannelMember(
@@ -156,23 +150,20 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         transactionRunner.runInTransaction(afterCommit -> {
             // 获取频道信息
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能撤销其它管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
-                throw ProblemException.forbidden(
-                    "channel_role_forbidden",
-                    "channel action requires owner role"
-                );
+                throw ProblemException.of(ChannelProblem.ROLE_FORBIDDEN);
             }
             // 只允许 ADMIN 降为 MEMBER；对已是 MEMBER 的目标重复调用视为参数错误
             // NOTE: 此处错误文案当前仍为 "target member must have MEMBER role"，与实际判定条件（需为 ADMIN）不符，待你确认后再单独修正
             if (target.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.validationFailed("target member must have MEMBER role");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member must have MEMBER role");
             }
             // 领域模型不可变：沿用目标成员原主键与原始加入时间，只把角色改回 MEMBER
             ChannelMember demotedMember = new ChannelMember(
@@ -207,22 +198,19 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     public ChannelOwnershipTransferResult transferChannelOwnership(TransferChannelOwnershipCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 目标不是成员时按资源不存在处理，与操作者非成员的拒绝语义区分开
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
-                .orElseThrow(() -> ProblemException.notFound(CHANNEL_MEMBER_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 只有现任 OWNER 才能发起转移，避免 ADMIN 自行接管频道
             if (operator.role() != ChannelMemberRole.OWNER) {
-                throw ProblemException.forbidden(
-                    "channel_ownership_forbidden",
-                    "channel action requires owner role"
-                );
+                throw ProblemException.of(ChannelProblem.OWNERSHIP_FORBIDDEN);
             }
             // 目标已是 OWNER 时转移无意义，按参数错误拒绝
             if (target.role() == ChannelMemberRole.OWNER) {
-                throw ProblemException.validationFailed("target member is already owner");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member is already owner");
             }
             // 两次角色变更必须构成同一事务：否则可能出现频道短暂没有 OWNER 的状态
             // 领域模型不可变，两处都以各自原主键重建；主键必须沿用，否则更新命中不到任何行
@@ -265,21 +253,18 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     public void kickChannelMember(KickChannelMemberCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
-                .orElseThrow(() -> ProblemException.notFound(CHANNEL_MEMBER_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 治理动作要求 OWNER 或 ADMIN，普通成员不能移除他人
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.forbidden(
-                    "channel_kick_forbidden",
-                    "channel action requires owner or admin role"
-                );
+                throw ProblemException.of(ChannelProblem.KICK_FORBIDDEN);
             }
             // 只允许移除 MEMBER，防止越权踢掉管理员或频道所有者
             if (target.role() != ChannelMemberRole.MEMBER) {
-                throw ProblemException.validationFailed("target member must have MEMBER role");
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member must have MEMBER role");
             }
             // 删除成员关系后重新取快照，通知中不再包含被移除者
             channelMemberRepository.delete(target.id());

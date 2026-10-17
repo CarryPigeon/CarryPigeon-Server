@@ -6,7 +6,8 @@ import java.util.Set;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
@@ -34,7 +35,7 @@ class MessageMentionManager {
         Set<Long> normalized = new LinkedHashSet<>();
         for (Long mention : mentions) {
             if (mention == null || mention <= 0L) {
-                throw ProblemException.validationFailed("mentions must contain positive snowflake ids");
+                throw ProblemException.of(MessageProblem.INVALID_INPUT, "mentions must contain positive snowflake ids");
             }
             normalized.add(mention);
         }
@@ -50,7 +51,7 @@ class MessageMentionManager {
         java.util.ArrayList<Mention> created = new java.util.ArrayList<>();
         for (Long targetAccountId : message.mentions()) {
             if (targetAccountId == message.senderId() || !validRecipients.contains(targetAccountId)) {
-                throw ProblemException.validationFailed("mentions contains user outside message recipients");
+                throw ProblemException.of(MessageProblem.INVALID_INPUT, "mentions contains user outside message recipients");
             }
             Mention mention = new Mention(
                     idGenerator.nextLongId(),

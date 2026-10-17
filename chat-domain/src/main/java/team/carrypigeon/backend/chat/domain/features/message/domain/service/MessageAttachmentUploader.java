@@ -4,7 +4,8 @@ import java.io.InputStream;
 import org.springframework.beans.factory.ObjectProvider;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
@@ -60,15 +61,15 @@ class MessageAttachmentUploader {
             InputStream content
     ) {
         if (content == null) {
-            throw ProblemException.validationFailed("file content must not be null");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "file content must not be null");
         }
         if (size <= 0L) {
-            throw ProblemException.validationFailed("size must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "size must be greater than 0");
         }
         String normalizedMessageType = normalizeAttachmentMessageType(messageType);
         long maxSize = VOICE_MESSAGE_TYPE.equals(normalizedMessageType) ? MAX_VOICE_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
         if (size > maxSize) {
-            throw ProblemException.validationFailed("size must be less than or equal to " + maxSize);
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "size must be less than or equal to " + maxSize);
         }
         String normalizedFilename = fileReferenceApi.normalizeMessageAttachmentFilename(filename);
         String resolvedContentType = resolveContentType(normalizedMessageType, contentType);
@@ -99,7 +100,7 @@ class MessageAttachmentUploader {
     private String normalizeAttachmentMessageType(String messageType) {
         String normalized = messageType == null || messageType.isBlank() ? FILE_MESSAGE_TYPE : messageType.trim().toLowerCase();
         if (!FILE_MESSAGE_TYPE.equals(normalized) && !VOICE_MESSAGE_TYPE.equals(normalized)) {
-            throw ProblemException.validationFailed("message_type must be file or voice");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "message_type must be file or voice");
         }
         return normalized;
     }
@@ -113,7 +114,7 @@ class MessageAttachmentUploader {
     private ObjectStorageService requireObjectStorageService() {
         ObjectStorageService objectStorageService = objectStorageServiceProvider.getIfAvailable();
         if (objectStorageService == null) {
-            throw ProblemException.fail("storage_service_unavailable", "storage service is unavailable");
+            throw ProblemException.of(MessageProblem.STORAGE_UNAVAILABLE);
         }
         return objectStorageService;
     }

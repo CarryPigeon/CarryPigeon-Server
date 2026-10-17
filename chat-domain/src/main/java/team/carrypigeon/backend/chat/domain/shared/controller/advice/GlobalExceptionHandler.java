@@ -28,7 +28,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiError;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
 
 /**
@@ -49,19 +49,26 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ProblemException.class)
     public ResponseEntity<ApiErrorResponse> handleProblemException(ProblemException exception) {
-        ErrorDescriptor descriptor = switch (exception.type()) {
-            case VALIDATION -> validationDescriptor(exception);
-            case CONFLICT -> new ErrorDescriptor(HttpStatus.CONFLICT, exception.reason(), exception.getMessage(), exception.details());
-            case FORBIDDEN -> forbiddenDescriptor(exception);
-            case NOT_FOUND -> new ErrorDescriptor(HttpStatus.NOT_FOUND, "not_found", exception.getMessage(), null);
-            case INTERNAL -> internalDescriptor(exception);
-        };
-        if (descriptor.status() == HttpStatus.INTERNAL_SERVER_ERROR) {
-            log.error("Problem exception mapped to internal error, reason={}", exception.reason(), exception);
-        } else if (descriptor.status() == HttpStatus.SERVICE_UNAVAILABLE) {
-            log.warn("Problem exception mapped to service unavailable, reason={}", exception.reason());
+        // 响应码与原因完全由异常携带的外部错误码决定，这里不做任何 reason 判定
+        HttpStatus status = HttpStatus.valueOf(exception.status());
+        if (status == HttpStatus.SERVICE_UNAVAILABLE) {
+            // 外部依赖不可用属于可预期运维事件，按 warn 记录即可
+            log.warn("Problem exception mapped to {}, mapping={}, reason={}",
+                    status.value(), exception.mapping(), exception.reason());
+        } else if (status.is5xxServerError()) {
+            // 5xx 必须带堆栈与根因，便于定位内部失败
+            log.error("Problem exception mapped to {}, mapping={}, reason={}",
+                    status.value(), exception.mapping(), exception.reason(), exception);
+        } else {
+            log.debug("Problem exception mapped to {}, mapping={}, reason={}",
+                    status.value(), exception.mapping(), exception.reason());
         }
-        return buildErrorResponse(descriptor);
+        return buildErrorResponse(new ErrorDescriptor(
+                status,
+                exception.reason(),
+                exception.getMessage(),
+                exception.details()
+        ));
     }
 
     /**
@@ -291,80 +298,6 @@ public class GlobalExceptionHandler {
             }
         }
         return result.toString();
-    }
-
-    /**
-     * 映射鉴权与权限类领域问题到 HTTP 错误描述。
-     * 约束：token 与登录态问题统一映射为 401，领域权限不足映射为 403。
-     *
-     * @param exception 领域问题异常
-     * @return HTTP 错误描述
-     */
-    private ErrorDescriptor forbiddenDescriptor(ProblemException exception) {
-        return switch (exception.reason()) {
-            case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token", "invalid_credentials" ->
-                    new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "unauthorized", exception.getMessage(), null);
-            case "token_expired" ->
-                    new ErrorDescriptor(HttpStatus.UNAUTHORIZED, "token_expired", exception.getMessage(), null);
-            case "regular_channel_required",
-                 "channel_invite_forbidden",
-                 "channel_profile_forbidden",
-                 "channel_role_forbidden",
-                 "channel_ownership_forbidden",
-                 "channel_ban_forbidden",
-                 "channel_message_recall_forbidden",
-                 "message_not_editable",
-                 "message_edit_window_expired" ->
-                    new ErrorDescriptor(HttpStatus.FORBIDDEN, "forbidden", exception.getMessage(), null);
-            default -> new ErrorDescriptor(HttpStatus.FORBIDDEN, exception.reason(), exception.getMessage(), null);
-        };
-    }
-
-    /**
-     * 映射校验类领域问题到 HTTP 错误描述。
-     * 约束：少量具有业务状态语义的校验问题会提升为 409 或 412，其余保持 422。
-     *
-     * @param exception 领域问题异常
-     * @return HTTP 错误描述
-     */
-    private ErrorDescriptor validationDescriptor(ProblemException exception) {
-        if ("required_plugin_missing".equals(exception.reason())) {
-            return new ErrorDescriptor(
-                    HttpStatus.PRECONDITION_FAILED,
-                    exception.reason(),
-                    exception.getMessage(),
-                    exception.details()
-            );
-        }
-        if ("application_already_processed".equals(exception.reason())) {
-            return new ErrorDescriptor(
-                    HttpStatus.CONFLICT,
-                    "conflict",
-                    exception.getMessage(),
-                    exception.details()
-            );
-        }
-        return new ErrorDescriptor(
-                HttpStatus.UNPROCESSABLE_ENTITY,
-                exception.reason(),
-                exception.getMessage(),
-                exception.details()
-        );
-    }
-
-    /**
-     * 映射内部类领域问题到 HTTP 错误描述。
-     * 约束：可被调用方理解的外部服务不可用返回 503，其余内部问题统一隐藏为 500。
-     *
-     * @param exception 领域问题异常
-     * @return HTTP 错误描述
-     */
-    private ErrorDescriptor internalDescriptor(ProblemException exception) {
-        return switch (exception.reason()) {
-            case "mail_service_unavailable", "email_delivery_failed", "storage_service_unavailable" ->
-                    new ErrorDescriptor(HttpStatus.SERVICE_UNAVAILABLE, exception.reason(), exception.getMessage(), null);
-            default -> new ErrorDescriptor(HttpStatus.INTERNAL_SERVER_ERROR, "internal_error", "internal server error", null);
-        };
     }
 
     /**

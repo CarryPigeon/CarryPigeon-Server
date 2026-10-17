@@ -20,7 +20,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -33,9 +34,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.transaction.
  */
 @Service
 public class ChannelDomainApi implements ChannelApi {
-
-    private static final String GENERAL_CHANNEL_NOT_FOUND_MESSAGE = "channel does not exist";
-    private static final String MEMBERSHIP_REQUIRED_MESSAGE = "channel membership is required";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -83,10 +81,10 @@ public class ChannelDomainApi implements ChannelApi {
     @Override
     public ChannelResult getChannelById(long accountId, long channelId) {
         Channel channel = channelRepository.findById(channelId)
-            .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+            .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 可见性校验与列表保持同一标准：只要不存在成员关系就拒绝，不为系统频道放开
         if (channelMemberRepository.findByRelation(channel.id(), accountId).isEmpty()) {
-            throw ProblemException.forbidden("channel_membership_required", MEMBERSHIP_REQUIRED_MESSAGE);
+            throw ProblemException.of(ChannelProblem.READ_FORBIDDEN);
         }
         return ChannelResult.from(channel);
     }
@@ -136,12 +134,12 @@ public class ChannelDomainApi implements ChannelApi {
     public void deleteChannel(DeleteChannelCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者必须先是频道成员，再判断其角色，避免把"非成员"与"角色不足"混为一类拒绝
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             if (operator.role() != ChannelMemberRole.OWNER) {
-                throw ProblemException.forbidden("channel_owner_required", "channel action requires owner role");
+                throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
             }
             // 存在申请或禁言记录时拒绝删除，避免留下指向已删频道的孤儿数据
             // TODO: 消息与审计数据当前未纳入依赖检查，需要在补齐级联清理后一并拦截
@@ -149,10 +147,7 @@ public class ChannelDomainApi implements ChannelApi {
                 !channelApplicationRepository.list(command.channelId()).isEmpty()
                     || !channelBanRepository.list(command.channelId()).isEmpty()
             ) {
-                throw ProblemException.conflict(
-                    "channel_delete_blocked",
-                    "channel contains dependent data and cannot be deleted"
-                );
+                throw ProblemException.of(ChannelProblem.DELETE_BLOCKED);
             }
             // 先删成员关系再删频道：频道记录是成员关系的外键目标，顺序不能颠倒
             channelMemberRepository.deleteByChannelId(channel.id());
@@ -177,15 +172,12 @@ public class ChannelDomainApi implements ChannelApi {
     public ChannelResult updateChannelProfile(UpdateChannelProfileCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
-                .orElseThrow(() -> ProblemException.notFound(GENERAL_CHANNEL_NOT_FOUND_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
-                .orElseThrow(() -> ProblemException.forbidden("not_channel_member", MEMBERSHIP_REQUIRED_MESSAGE));
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 资料修改按成员角色放行，不再按频道类型区分；系统频道的成员角色为 MEMBER，因此天然被这一层拦住
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
-                throw ProblemException.forbidden(
-                    "channel_profile_forbidden",
-                    "channel action requires owner or admin role"
-                );
+                throw ProblemException.of(ChannelProblem.PROFILE_FORBIDDEN);
             }
             // 领域模型不可变，这里以原主键与原始创建时间重建频道对象；其余未参与本次更新的字段需显式保留
             Channel updated = new Channel(

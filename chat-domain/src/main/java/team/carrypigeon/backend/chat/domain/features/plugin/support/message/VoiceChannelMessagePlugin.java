@@ -4,7 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
@@ -48,7 +49,7 @@ public class VoiceChannelMessagePlugin implements ChannelMessagePlugin {
         String objectKey = MessagePluginDataReader.resolveAttachmentObjectKey(data, fileReferenceApi);
         requireScopedObjectKey(context, objectKey);
         StorageObject storageObject = objectStorageService.get(new GetObjectCommand(objectKey))
-                .orElseThrow(() -> ProblemException.notFound("storage object does not exist"));
+                .orElseThrow(() -> ProblemException.of(PluginProblem.STORAGE_OBJECT_NOT_FOUND));
         String filename = MessagePluginDataReader.requiredString(data, "filename", "filename must not be blank");
         long durationMillis = MessagePluginDataReader.requiredPositiveLong(
                 data,
@@ -86,7 +87,7 @@ public class VoiceChannelMessagePlugin implements ChannelMessagePlugin {
         if (!fileReferenceApi.isMessageAttachmentWithinSenderScope(
                 context.channelId(), supportedType(), context.senderId(), objectKey
         )) {
-            throw ProblemException.validationFailed("voice objectKey is out of allowed channel scope");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "voice objectKey is out of allowed channel scope");
         }
     }
 

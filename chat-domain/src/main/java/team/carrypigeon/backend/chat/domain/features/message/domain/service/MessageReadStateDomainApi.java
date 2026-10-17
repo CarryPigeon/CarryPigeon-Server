@@ -13,7 +13,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -52,9 +53,9 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
         validate(command);
         return transactionRunner.runInTransaction(afterCommit -> {
             ChannelMessage message = messageRepository.findById(command.lastReadMessageId())
-                    .orElseThrow(() -> ProblemException.notFound("message does not exist"));
+                    .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             if (message.channelId() != command.channelId()) {
-                throw ProblemException.notFound("message does not exist");
+                throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             channelContextApi.requireMemberContext(command.channelId(), command.accountId());
             ChannelReadState current = readStateRepository
@@ -96,7 +97,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
 
     private void validate(UpdateChannelReadStateCommand command) {
         if (command == null) {
-            throw ProblemException.validationFailed("command must not be null");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "command must not be null");
         }
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
@@ -106,7 +107,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 

@@ -3,7 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.verification.support;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -64,10 +65,10 @@ public class CacheBackedEmailVerificationCapability implements EmailVerification
     @Override
     public void verifyCode(String email, String code) {
         if (code == null || code.isBlank()) {
-            throw ProblemException.validationFailed("email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
         }
         if (!cacheService.consumeIfEquals(cacheKey(email), code)) {
-            throw ProblemException.validationFailed("email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
         }
     }
 
@@ -92,12 +93,12 @@ public class CacheBackedEmailVerificationCapability implements EmailVerification
      */
     private void deliverCode(String email, String code) {
         if (mailSenderService == null) {
-            throw ProblemException.fail("mail_service_unavailable", "mail service is unavailable");
+            throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
         }
         try {
             mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code)));
         } catch (RuntimeException exception) {
-            throw ProblemException.fail("email_delivery_failed", "failed to deliver verification email");
+            throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
         }
     }
 

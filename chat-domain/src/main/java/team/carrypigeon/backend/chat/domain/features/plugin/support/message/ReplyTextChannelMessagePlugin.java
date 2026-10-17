@@ -2,7 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.plugin.support.message;
 
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * Core:ReplyText 消息插件。
@@ -42,7 +43,7 @@ public class ReplyTextChannelMessagePlugin implements ChannelMessagePlugin {
         Map<String, Object> replyTo = MessagePluginDataReader.optionalObject(data, "reply_to");
         Map<String, Object> quoteReply = MessagePluginDataReader.optionalObject(data, "quote_reply");
         if (replyToMid == null && quoteReply == null) {
-            throw ProblemException.validationFailed("reply_to_mid or quote_reply is required");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "reply_to_mid or quote_reply is required");
         }
         if (replyToMid != null) {
             data.put("reply_to_mid", replyToMid);
@@ -50,7 +51,7 @@ public class ReplyTextChannelMessagePlugin implements ChannelMessagePlugin {
         if (replyTo != null) {
             String snapshotMid = MessagePluginDataReader.requiredSnowflake(replyTo.get("mid"), "reply_to.mid");
             if (replyToMid == null || !replyToMid.equals(snapshotMid)) {
-                throw ProblemException.validationFailed("reply_to_mid must match reply_to.mid");
+                throw ProblemException.of(PluginProblem.INVALID_INPUT, "reply_to_mid must match reply_to.mid");
             }
             replyTo.put("mid", snapshotMid);
             replyTo.put("sender_name", MessagePluginDataReader.requiredString(

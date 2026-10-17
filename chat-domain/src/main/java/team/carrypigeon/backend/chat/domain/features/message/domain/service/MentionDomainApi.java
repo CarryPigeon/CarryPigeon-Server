@@ -3,10 +3,11 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.MentionApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MentionResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.query.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 提及领域服务。
@@ -40,7 +41,7 @@ public class MentionDomainApi implements MentionApi {
      */
     public void markMentionRead(long accountId, long mentionId) {
         if (!mentionRepository.markAsRead(accountId, mentionId)) {
-            throw ProblemException.notFound("mention not found");
+            throw ProblemException.of(MessageProblem.MENTION_NOT_FOUND);
         }
     }
 

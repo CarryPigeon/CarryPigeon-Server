@@ -4,7 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 频道消息插件注册器。
@@ -55,7 +56,7 @@ public class ChannelMessagePluginRegistry {
     public ChannelMessagePlugin require(String messageType) {
         ChannelMessagePlugin plugin = pluginsByType.get(messageType);
         if (plugin == null) {
-            throw ProblemException.validationFailed("unsupported message type");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "unsupported message type");
         }
         return plugin;
     }
@@ -69,7 +70,7 @@ public class ChannelMessagePluginRegistry {
     public ChannelMessagePlugin requireDomain(String domain) {
         ChannelMessagePlugin plugin = pluginsByDomain.get(domain);
         if (plugin == null) {
-            throw ProblemException.validationFailed("schema_invalid", "domain is not supported");
+            throw ProblemException.of(PluginProblem.SCHEMA_DOMAIN_UNSUPPORTED);
         }
         return plugin;
     }

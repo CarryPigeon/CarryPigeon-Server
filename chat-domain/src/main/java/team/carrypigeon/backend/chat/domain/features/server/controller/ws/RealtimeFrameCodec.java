@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 
 /**
@@ -46,30 +46,15 @@ final class RealtimeFrameCodec {
         return new TextWebSocketFrame(jsonProvider.toJson(new RealtimeServerMessage(type, id, data, error)));
     }
 
+    /**
+     * 取领域问题在实时通道上的对外原因。
+     * 约束：直接复用异常携带的错误码，保证 HTTP 与 WebSocket 两个通道的对外原因完全一致。
+     *
+     * @param exception 领域问题异常
+     * @return 对外原因
+     */
     String mapReason(ProblemException exception) {
-        return switch (exception.type()) {
-            case FORBIDDEN -> switch (exception.reason()) {
-                case "authentication_required", "invalid_access_token", "invalid_refresh_token", "invalid_token" ->
-                        "unauthorized";
-                case "invalid_credentials",
-                     "regular_channel_required",
-                     "channel_invite_forbidden",
-                     "channel_profile_forbidden",
-                     "channel_role_forbidden",
-                     "channel_ownership_forbidden",
-                     "channel_ban_forbidden",
-                     "channel_membership_required",
-                     "not_channel_member",
-                     "channel_message_recall_forbidden" -> "forbidden";
-                default -> exception.reason();
-            };
-            case VALIDATION -> switch (exception.reason()) {
-                case "application_already_processed" -> "conflict";
-                default -> exception.reason();
-            };
-            case INTERNAL -> "internal_error";
-            default -> exception.reason();
-        };
+        return exception.reason();
     }
 
     /**

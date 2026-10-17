@@ -1,7 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 消息发送命令校验协作对象。
@@ -14,26 +15,26 @@ class MessageDeliveryCommandValidator {
         requirePositive(command.accountId(), "accountId");
         requirePositive(command.channelId(), "channelId");
         if (command.domain() == null || command.domain().isBlank()) {
-            throw ProblemException.validationFailed("domain must not be blank");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "domain must not be blank");
         }
         validateCanonicalFields(command.domainVersion(), command.data());
     }
 
     private void validateCanonicalFields(String domainVersion, java.util.Map<String, Object> data) {
         if (domainVersion == null || domainVersion.isBlank()) {
-            throw ProblemException.validationFailed("domain_version must not be blank");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "domain_version must not be blank");
         }
         if (data == null) {
-            throw ProblemException.validationFailed("data must not be null");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "data must not be null");
         }
         if (data.containsKey("mentions")) {
-            throw ProblemException.validationFailed("mentions must be top-level message metadata");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "mentions must be top-level message metadata");
         }
     }
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 }

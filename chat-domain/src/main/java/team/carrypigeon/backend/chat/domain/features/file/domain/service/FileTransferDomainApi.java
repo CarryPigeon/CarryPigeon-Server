@@ -9,7 +9,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.projection.FileUploadGrantResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
@@ -80,10 +81,10 @@ public class FileTransferDomainApi implements FileTransferApi {
     public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, java.io.InputStream content) {
         requirePositive(accountId, "accountId");
         if (shareKey == null || shareKey.isBlank()) {
-            throw ProblemException.validationFailed("share_key must not be blank");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "share_key must not be blank");
         }
         if (content == null) {
-            throw ProblemException.validationFailed("file content must not be null");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "file content must not be null");
         }
         FileObjectKeyResolver.ResolvedObject resolvedObject = fileObjectKeyResolver.resolveUploadObject(accountId, shareKey, sizeBytes);
         ObjectStorageService objectStorageService = requireObjectStorageService();
@@ -142,16 +143,16 @@ public class FileTransferDomainApi implements FileTransferApi {
      */
     private void validateUploadGrant(String filename, String mimeType, long sizeBytes) {
         if (filename == null || filename.isBlank()) {
-            throw ProblemException.validationFailed("filename must not be blank");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "filename must not be blank");
         }
         if (mimeType == null || mimeType.isBlank()) {
-            throw ProblemException.validationFailed("mime_type must not be blank");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "mime_type must not be blank");
         }
         if (sizeBytes <= 0) {
-            throw ProblemException.validationFailed("size_bytes must be greater than 0");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "size_bytes must be greater than 0");
         }
         if (sizeBytes > MAX_UPLOAD_SIZE_BYTES) {
-            throw ProblemException.validationFailed("size_bytes must be less than or equal to " + MAX_UPLOAD_SIZE_BYTES);
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "size_bytes must be less than or equal to " + MAX_UPLOAD_SIZE_BYTES);
         }
     }
 
@@ -164,14 +165,14 @@ public class FileTransferDomainApi implements FileTransferApi {
     private ObjectStorageService requireObjectStorageService() {
         ObjectStorageService objectStorageService = objectStorageServiceProvider.getIfAvailable();
         if (objectStorageService == null) {
-            throw ProblemException.fail("storage_service_unavailable", "storage service is unavailable");
+            throw ProblemException.of(FileProblem.STORAGE_UNAVAILABLE);
         }
         return objectStorageService;
     }
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 

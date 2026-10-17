@@ -24,7 +24,8 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Ment
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MentionListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UpdateMentionReadStateRequest;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -153,19 +154,19 @@ public class MentionController {
             return Long.parseLong(rawValue.trim());
         } catch (NumberFormatException exception) {
             if (cursorField) {
-                throw ProblemException.validationFailed("cursor_invalid", "cursor is invalid");
+                throw ProblemException.of(MessageProblem.CURSOR_INVALID);
             }
-            throw ProblemException.validationFailed(fieldName + " must be decimal snowflake string");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
         }
     }
 
     private Long decodeCursor(String cursor) {
-        return OpaqueCursorCodec.decode(MENTION_CURSOR_SCOPE, cursor);
+        return OpaqueCursorCodec.decode(MENTION_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID);
     }
 
     private int normalizeLimit(int limit) {
         if (limit <= 0 || limit > 50) {
-            throw ProblemException.validationFailed("validation_failed", "limit must be between 1 and 50");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "limit must be between 1 and 50");
         }
         return limit;
     }
@@ -181,7 +182,7 @@ public class MentionController {
     private long parseRequiredSnowflake(String rawValue, String fieldName) {
         Long parsed = parseOptionalSnowflake(rawValue, fieldName, false);
         if (parsed == null) {
-            throw ProblemException.validationFailed(fieldName + " must be decimal snowflake string");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
         }
         return parsed;
     }

@@ -5,7 +5,8 @@ import java.math.BigInteger;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 消息插件 data 严格读取器。
@@ -19,21 +20,21 @@ final class MessagePluginDataReader {
 
     static Map<String, Object> copyData(Map<String, Object> data) {
         if (data == null) {
-            throw ProblemException.validationFailed("data must not be null");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "data must not be null");
         }
         return new LinkedHashMap<>(data);
     }
 
     static void requireVersion(String actual, String expected) {
         if (!expected.equals(actual)) {
-            throw ProblemException.validationFailed("schema_invalid", "domain version is not supported");
+            throw ProblemException.of(PluginProblem.SCHEMA_VERSION_UNSUPPORTED);
         }
     }
 
     static String requiredString(Map<String, Object> data, String field, String message) {
         String value = optionalString(data, field);
         if (value == null) {
-            throw ProblemException.validationFailed(message);
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, message);
         }
         return value;
     }
@@ -44,7 +45,7 @@ final class MessagePluginDataReader {
             return null;
         }
         if (!(value instanceof String stringValue)) {
-            throw ProblemException.validationFailed(field + " must be string");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be string");
         }
         String normalized = stringValue.trim();
         return normalized.isEmpty() ? null : normalized;
@@ -69,15 +70,15 @@ final class MessagePluginDataReader {
                 return Long.parseLong(stringValue.trim());
             }
         } catch (ArithmeticException | NumberFormatException exception) {
-            throw ProblemException.validationFailed(field + " must be integer");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be integer");
         }
-        throw ProblemException.validationFailed(field + " must be integer");
+        throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be integer");
     }
 
     static Long requiredPositiveLong(Map<String, Object> data, String field, String message) {
         Long value = optionalLong(data, field);
         if (value == null || value <= 0L) {
-            throw ProblemException.validationFailed(message);
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, message);
         }
         return value;
     }
@@ -88,7 +89,7 @@ final class MessagePluginDataReader {
             return null;
         }
         if (!(value instanceof Boolean booleanValue)) {
-            throw ProblemException.validationFailed(field + " must be boolean");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be boolean");
         }
         return booleanValue;
     }
@@ -99,12 +100,12 @@ final class MessagePluginDataReader {
             return null;
         }
         if (!(value instanceof Map<?, ?> rawMap)) {
-            throw ProblemException.validationFailed(field + " must be object");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be object");
         }
         Map<String, Object> result = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
             if (!(entry.getKey() instanceof String key)) {
-                throw ProblemException.validationFailed(field + " must contain string keys");
+                throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must contain string keys");
             }
             result.put(key, entry.getValue());
         }
@@ -114,7 +115,7 @@ final class MessagePluginDataReader {
     static Map<String, Object> requiredObject(Map<String, Object> data, String field) {
         Map<String, Object> value = optionalObject(data, field);
         if (value == null) {
-            throw ProblemException.validationFailed(field + " must be object");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be object");
         }
         return value;
     }
@@ -124,20 +125,20 @@ final class MessagePluginDataReader {
             return null;
         }
         if (!(value instanceof String stringValue) || !stringValue.matches("[1-9][0-9]*")) {
-            throw ProblemException.validationFailed(field + " must be decimal snowflake string");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be decimal snowflake string");
         }
         try {
             new BigInteger(stringValue).longValueExact();
             return stringValue;
         } catch (ArithmeticException exception) {
-            throw ProblemException.validationFailed(field + " must be decimal snowflake string");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be decimal snowflake string");
         }
     }
 
     static String requiredSnowflake(Object value, String field) {
         String result = optionalSnowflake(value, field);
         if (result == null) {
-            throw ProblemException.validationFailed(field + " must be decimal snowflake string");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, field + " must be decimal snowflake string");
         }
         return result;
     }
@@ -149,6 +150,6 @@ final class MessagePluginDataReader {
         }
         String shareKey = requiredString(data, "share_key", "share_key must not be blank");
         return fileReferenceApi.attachmentObjectKey(shareKey)
-                .orElseThrow(() -> ProblemException.validationFailed("invalid_share_key", "share_key is invalid"));
+                .orElseThrow(() -> ProblemException.of(PluginProblem.INVALID_SHARE_KEY));
     }
 }

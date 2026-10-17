@@ -27,7 +27,8 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.dto.Chan
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UnreadItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UnreadListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.dto.UpdateChannelReadStateRequest;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 频道读状态 HTTP 入口。
@@ -96,7 +97,7 @@ public class ChannelReadStateController {
         try {
             return Long.parseLong(rawValue);
         } catch (NumberFormatException exception) {
-            throw ProblemException.validationFailed("last_read_mid must be decimal snowflake string");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "last_read_mid must be decimal snowflake string");
         }
     }
 }

@@ -12,7 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.file.controller.dto.ProfileBackgroundUploadResponse;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileTransferApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 用户资料背景图 HTTP 入口。
@@ -45,7 +46,7 @@ public class ProfileBackgroundController {
             );
             return new ProfileBackgroundUploadResponse("/api/files/download/" + shareKey);
         } catch (IOException exception) {
-            throw ProblemException.fail("background_upload_read_failed", "failed to read background upload content");
+            throw ProblemException.of(FileProblem.BACKGROUND_UPLOAD_READ_FAILED, exception);
         }
     }
 }

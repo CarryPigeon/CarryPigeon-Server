@@ -7,8 +7,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelM
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
@@ -46,7 +47,7 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
                 command.accountId()
         );
         if (channel.isMuted()) {
-            throw ProblemException.forbidden("user_muted", "channel member is muted");
+            throw ProblemException.of(MessageProblem.USER_MUTED);
         }
         return messageAttachmentUploader.upload(
                 command.accountId(),
@@ -61,7 +62,7 @@ public class ChannelMessageAttachmentDomainApi implements ChannelMessageAttachme
 
     private void requirePositive(long value, String fieldName) {
         if (value <= 0) {
-            throw ProblemException.validationFailed(fieldName + " must be greater than 0");
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
         }
     }
 }

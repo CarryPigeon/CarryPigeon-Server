@@ -5,7 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * Core:Forward 消息插件。
@@ -39,7 +40,7 @@ public class ForwardChannelMessagePlugin implements ChannelMessagePlugin {
         Map<String, Object> data = MessagePluginDataReader.copyData(rawData);
         String nestedDomain = MessagePluginDataReader.requiredString(data, "domain", "domain must not be blank");
         if (!"Core:Text".equals(nestedDomain)) {
-            throw ProblemException.validationFailed("forward content domain is not supported");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "forward content domain is not supported");
         }
         String nestedVersion = MessagePluginDataReader.requiredString(
                 data,
@@ -56,14 +57,14 @@ public class ForwardChannelMessagePlugin implements ChannelMessagePlugin {
         Map<String, Object> forwardedFrom = MessagePluginDataReader.optionalObject(data, "forwarded_from");
         List<Map<String, Object>> forwardedMessages = optionalSources(data.get("forwarded_messages"));
         if ((forwardedFrom == null) == (forwardedMessages == null)) {
-            throw ProblemException.validationFailed("exactly one forward source field is required");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "exactly one forward source field is required");
         }
         if (forwardedFrom != null) {
             canonicalData.put("forwarded_from", canonicalSource(forwardedFrom));
             return new CanonicalData(canonicalData, comment == null ? "转发消息" : comment);
         }
         if (forwardedMessages.size() < 2) {
-            throw ProblemException.validationFailed("forwarded_messages must contain at least two sources");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "forwarded_messages must contain at least two sources");
         }
         List<Map<String, Object>> canonicalSources = forwardedMessages.stream()
                 .map(this::canonicalSource)
@@ -88,17 +89,17 @@ public class ForwardChannelMessagePlugin implements ChannelMessagePlugin {
             return null;
         }
         if (!(value instanceof List<?> rawList)) {
-            throw ProblemException.validationFailed("forwarded_messages must be array");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "forwarded_messages must be array");
         }
         List<Map<String, Object>> sources = new ArrayList<>();
         for (Object item : rawList) {
             if (!(item instanceof Map<?, ?> rawMap)) {
-                throw ProblemException.validationFailed("forwarded_messages must contain objects");
+                throw ProblemException.of(PluginProblem.INVALID_INPUT, "forwarded_messages must contain objects");
             }
             Map<String, Object> source = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
                 if (!(entry.getKey() instanceof String key)) {
-                    throw ProblemException.validationFailed("forwarded_messages must contain string keys");
+                    throw ProblemException.of(PluginProblem.INVALID_INPUT, "forwarded_messages must contain string keys");
                 }
                 source.put(key, entry.getValue());
             }
@@ -119,7 +120,7 @@ public class ForwardChannelMessagePlugin implements ChannelMessagePlugin {
         canonical.put("uid", MessagePluginDataReader.requiredSnowflake(source.get("uid"), "forward source uid"));
         Object preview = source.get("preview");
         if (!(preview instanceof String previewText)) {
-            throw ProblemException.validationFailed("forward source preview must be string");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "forward source preview must be string");
         }
         canonical.put("preview", previewText);
         canonical.put("send_time", MessagePluginDataReader.requiredPositiveLong(

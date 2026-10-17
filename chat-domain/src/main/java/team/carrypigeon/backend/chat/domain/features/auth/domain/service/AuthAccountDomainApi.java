@@ -15,7 +15,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.C
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
@@ -65,11 +66,11 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             // 存在性校验，确保username和邮箱的唯一性
             authAccountRepository.findByUsername(command.username())
                     .ifPresent(existing -> {
-                        throw ProblemException.validationFailed("username already exists");
+                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "username already exists");
                     });
             authAccountRepository.findByEmail(command.email())
                     .ifPresent(existing -> {
-                        throw ProblemException.validationFailed("email already exists");
+                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "email already exists");
                     });
             // 邮箱验证码校验
             emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(command.email(), command.code()));
@@ -93,7 +94,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     @Override
     public AuthPublicAccount getAccount(long accountId) {
         AuthAccount account = authAccountRepository.findById(accountId)
-            .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
+            .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
         return new AuthPublicAccount(
                 account.id(),
                 account.username(),
@@ -127,12 +128,12 @@ public class AuthAccountDomainApi implements AuthAccountApi {
         transactionRunner.runInTransaction(() -> {
             // 获取当前用户
             AuthAccount existingAccount = authAccountRepository.findById(command.accountId())
-                    .orElseThrow(() -> ProblemException.notFound("auth account does not exist"));
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
             // 判断新邮箱是否与已有邮箱绑定
             authAccountRepository.findByEmail(email)
                     .filter(account -> account.id() != command.accountId())
                     .ifPresent(account -> {
-                        throw ProblemException.validationFailed("email already exists");
+                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "email already exists");
                     });
             // 更新用户邮箱
             authAccountRepository.update(new AuthAccount(

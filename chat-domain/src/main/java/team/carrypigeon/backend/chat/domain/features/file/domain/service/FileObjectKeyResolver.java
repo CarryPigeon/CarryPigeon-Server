@@ -2,7 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.file.domain.service;
 
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
@@ -45,7 +46,7 @@ class FileObjectKeyResolver {
      */
     String profileBackgroundShareKey(long accountId) {
         if (accountId <= 0) {
-            throw ProblemException.validationFailed("accountId must be greater than 0");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "accountId must be greater than 0");
         }
         return PROFILE_BACKGROUND_SHARE_KEY_PREFIX + accountId;
     }
@@ -62,7 +63,7 @@ class FileObjectKeyResolver {
      */
     String resolveDownloadObjectKey(Long accountId, String shareKey) {
         if (shareKey == null || shareKey.isBlank()) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         if (SERVER_AVATAR_SHARE_KEY.equals(shareKey)) {
             return SERVER_AVATAR_SHARE_KEY;
@@ -71,7 +72,7 @@ class FileObjectKeyResolver {
         if (isProfileBackgroundShareKey(shareKey)) {
             long ownerAccountId = parseProfileBackgroundAccountId(shareKey);
             if (ownerAccountId != requiredAccountId) {
-                throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
+                throw ProblemException.of(FileProblem.ACCESS_FORBIDDEN);
             }
             return profileBackgroundObjectKey(ownerAccountId);
         }
@@ -82,7 +83,7 @@ class FileObjectKeyResolver {
         }
         FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
         if (issuedShareKey.ownerAccountId() != requiredAccountId) {
-            throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
+            throw ProblemException.of(FileProblem.ACCESS_FORBIDDEN);
         }
         return uploadShareKeyCodec.objectKey(issuedShareKey);
     }
@@ -100,35 +101,35 @@ class FileObjectKeyResolver {
      */
     ResolvedObject resolveUploadObject(long accountId, String shareKey, long sizeBytes) {
         if (sizeBytes <= 0) {
-            throw ProblemException.validationFailed("size_bytes must be greater than 0");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "size_bytes must be greater than 0");
         }
         if (FileShareKeyCodec.attachmentObjectKey(shareKey).isPresent()) {
-            throw ProblemException.validationFailed("attachment share_key is read-only");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "attachment share_key is read-only");
         }
         if (SERVER_AVATAR_SHARE_KEY.equals(shareKey)) {
-            throw ProblemException.forbidden("file_upload_forbidden", "server avatar upload is not supported");
+            throw ProblemException.of(FileProblem.SERVER_AVATAR_UPLOAD_FORBIDDEN);
         }
         if (isProfileBackgroundShareKey(shareKey)) {
             long ownerAccountId = parseProfileBackgroundAccountId(shareKey);
             if (ownerAccountId != accountId) {
-                throw ProblemException.forbidden("file_upload_forbidden", "file upload is not granted to current account");
+                throw ProblemException.of(FileProblem.UPLOAD_FORBIDDEN);
             }
             if (sizeBytes > MAX_PROFILE_BACKGROUND_SIZE_BYTES) {
-                throw ProblemException.validationFailed(
+                throw ProblemException.of(FileProblem.INVALID_INPUT, 
                         "size_bytes must be less than or equal to " + MAX_PROFILE_BACKGROUND_SIZE_BYTES
                 );
             }
             return new ResolvedObject(profileBackgroundObjectKey(ownerAccountId), sizeBytes);
         }
         if (!shareKey.startsWith("shr_")) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
         if (issuedShareKey.ownerAccountId() != accountId) {
-            throw ProblemException.forbidden("file_upload_forbidden", "file upload is not granted to current account");
+            throw ProblemException.of(FileProblem.UPLOAD_FORBIDDEN);
         }
         if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
-            throw ProblemException.validationFailed("declared size does not match upload content length");
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "declared size does not match upload content length");
         }
         return new ResolvedObject(uploadShareKeyCodec.objectKey(issuedShareKey), sizeBytes);
     }
@@ -147,7 +148,7 @@ class FileObjectKeyResolver {
             channelContextApi.requireMemberContext(attachmentScope.channelId(), accountId);
         } catch (ProblemException exception) {
             // 频道不存在与账号非成员统一收敛为文件访问拒绝，不向调用方泄露频道存在性差异
-            throw ProblemException.forbidden("file_access_forbidden", "file access is not granted to current account");
+            throw ProblemException.of(FileProblem.ACCESS_FORBIDDEN, exception);
         }
     }
 
@@ -161,15 +162,15 @@ class FileObjectKeyResolver {
     private AttachmentScope parseAttachmentScope(String objectKey) {
         String[] segments = objectKey.split("/");
         if (segments.length < 7) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         if (!"channels".equals(segments[0]) || !"messages".equals(segments[2]) || !"accounts".equals(segments[4])) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         try {
             return new AttachmentScope(Long.parseLong(segments[1]), segments[3], Long.parseLong(segments[5]));
         } catch (NumberFormatException exception) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
     }
 
@@ -188,7 +189,7 @@ class FileObjectKeyResolver {
         try {
             return Long.parseLong(shareKey.substring(PROFILE_BACKGROUND_SHARE_KEY_PREFIX.length()));
         } catch (RuntimeException exception) {
-            throw ProblemException.validationFailed("invalid_share_key", "share_key is invalid");
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
     }
 
@@ -205,7 +206,7 @@ class FileObjectKeyResolver {
      */
     private long requireAuthenticatedAccountId(Long accountId) {
         if (accountId == null || accountId <= 0) {
-            throw ProblemException.forbidden("authentication_required", "authentication is required");
+            throw ProblemException.of(FileProblem.AUTHENTICATION_REQUIRED);
         }
         return accountId;
     }

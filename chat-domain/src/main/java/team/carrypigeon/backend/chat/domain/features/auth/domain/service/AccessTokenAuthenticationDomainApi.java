@@ -4,8 +4,9 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * Access token 认证领域 API 实现。
@@ -43,6 +44,6 @@ public class AccessTokenAuthenticationDomainApi implements AccessTokenAuthentica
     }
 
     private ProblemException invalidAccessToken() {
-        return ProblemException.forbidden("invalid_access_token", "access token is invalid");
+        return ProblemException.of(AuthProblem.INVALID_ACCESS_TOKEN);
     }
 }

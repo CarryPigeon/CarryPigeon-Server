@@ -6,7 +6,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -65,16 +66,16 @@ public class InMemoryEmailVerificationCapability implements EmailVerificationCap
     @Override
     public void verifyCode(String email, String code) {
         if (code == null || code.isBlank()) {
-            throw ProblemException.validationFailed("email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
         }
         String normalizedEmail = normalize(email);
         EmailCodeEntry entry = issuedCodes.get(normalizedEmail);
         Instant now = timeProvider.nowInstant();
         if (entry == null || entry.expiresAt().isBefore(now) || !entry.code().equals(code)) {
-            throw ProblemException.validationFailed("email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
         }
         if (!issuedCodes.remove(normalizedEmail, entry)) {
-            throw ProblemException.validationFailed("email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
         }
     }
 
@@ -95,12 +96,12 @@ public class InMemoryEmailVerificationCapability implements EmailVerificationCap
      */
     private void deliverCode(String email, String code) {
         if (mailSenderService == null) {
-            throw ProblemException.fail("mail_service_unavailable", "mail service is unavailable");
+            throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
         }
         try {
             mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code)));
         } catch (RuntimeException exception) {
-            throw ProblemException.fail("email_delivery_failed", "failed to deliver verification email");
+            throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
         }
     }
 

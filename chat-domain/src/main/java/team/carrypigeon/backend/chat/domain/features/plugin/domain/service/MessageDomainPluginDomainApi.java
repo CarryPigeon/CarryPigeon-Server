@@ -5,7 +5,8 @@ import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDo
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.ValidateMessageDataCommand;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
-import team.carrypigeon.backend.chat.domain.shared.domain.problem.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 消息 domain 插件 API 实现。
@@ -24,7 +25,7 @@ public class MessageDomainPluginDomainApi implements MessageDomainPluginApi {
     public ValidatedMessageDataResult validateMessageData(ValidateMessageDataCommand command) {
         ChannelMessagePlugin plugin = pluginRegistry.requireDomain(command.domain());
         if (command.clientRequest() && !plugin.clientSendable()) {
-            throw ProblemException.validationFailed("domain is not client-sendable");
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "domain is not client-sendable");
         }
         ChannelMessagePlugin.CanonicalData canonicalData = plugin.validateCanonicalData(
                 new ChannelMessagePlugin.ChannelMessageBuildContext(
