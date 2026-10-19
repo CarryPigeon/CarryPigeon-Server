@@ -3,6 +3,9 @@ package team.carrypigeon.backend.infrastructure.basic.transaction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
+
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -13,6 +16,8 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
  * 职责：把事务契约适配到 Spring TransactionTemplate。
  * 边界：Spring 事务对象不向契约层暴露。
  */
+@Component
+@AutoConfiguration(afterName = "org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration")
 public class SpringTransactionRunner implements TransactionRunner {
 
     private final TransactionTemplate transactionTemplate;

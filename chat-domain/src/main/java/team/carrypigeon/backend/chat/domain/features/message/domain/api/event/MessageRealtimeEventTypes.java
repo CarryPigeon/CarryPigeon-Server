@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.api.event;
 
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.event.RealtimeEventType;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
 
 /**
  * 消息 feature 发布的实时事件类型。

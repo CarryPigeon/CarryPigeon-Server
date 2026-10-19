@@ -6,9 +6,9 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.event.RealtimeEvent;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.event.RealtimeEventType;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**

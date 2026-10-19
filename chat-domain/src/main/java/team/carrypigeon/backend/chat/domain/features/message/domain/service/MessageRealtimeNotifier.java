@@ -12,8 +12,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.event.Re
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.event.RealtimeEvent;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 

@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerCapabilities;
 import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
@@ -24,7 +25,7 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
 
     private final ServerIdentityProvider serverIdentityProvider;
     private final String applicationName;
-    private final RealtimeDiscoverySettings realtimeDiscoverySettings;
+    private final RealtimeServerProperties realtimeServerProperties;
     private final TimeProviderImpl timeProvider;
     private final PluginCatalogApi pluginCatalogApi;
 
@@ -32,13 +33,13 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
     public ServerEntranceDomainApi(
             ServerIdentityProvider serverIdentityProvider,
             @Value("${spring.application.name:CarryPigeonBackend}") String applicationName,
-            RealtimeDiscoverySettings realtimeDiscoverySettings,
+            RealtimeServerProperties realtimeServerProperties,
             TimeProviderImpl timeProvider,
             PluginCatalogApi pluginCatalogApi
     ) {
         this.serverIdentityProvider = serverIdentityProvider;
         this.applicationName = applicationName;
-        this.realtimeDiscoverySettings = realtimeDiscoverySettings;
+        this.realtimeServerProperties = realtimeServerProperties;
         this.timeProvider = timeProvider;
         this.pluginCatalogApi = pluginCatalogApi;
     }
@@ -56,9 +57,9 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
                 DEFAULT_AVATAR,
                 API_VERSION,
                 API_VERSION,
-                realtimeDiscoverySettings.wsUrl(),
+                realtimeServerProperties.wsUrl(),
                 pluginCatalogApi.requiredPluginIds(),
-                new ServerCapabilities(true, true, realtimeDiscoverySettings.enabled()),
+                new ServerCapabilities(true, true, realtimeServerProperties.enabled()),
                 timeProvider.nowMillis()
         );
     }
