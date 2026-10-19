@@ -1,86 +1,61 @@
--- Message domain
--- Canonical message schema. Domain-specific fields are stored only in data.
+-- ============================================================================
+-- 消息域表结构
+-- 状态：草稿（待评审）
+-- 责任范围：chat_message、chat_mention、chat_message_idempotency
+-- 可重复执行：是（CREATE TABLE IF NOT EXISTS）
+-- 来源：database-impl 的 MessageEntity、MentionEntity、MessageIdempotencyEntity
+--       与 MessageIdempotencyMapper 的显式 SQL
+-- ============================================================================
 
-CREATE TABLE chat_message (
-    message_id BIGINT NOT NULL,
-    sender_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    domain VARCHAR(128) NOT NULL,
-    domain_version VARCHAR(32) NOT NULL,
-    data JSON NOT NULL,
-    send_time DATETIME(6) NOT NULL,
-    mentions JSON NOT NULL,
-    preview VARCHAR(255) NOT NULL DEFAULT '',
-    status VARCHAR(32) NOT NULL,
+SET NAMES utf8mb4;
+
+CREATE TABLE IF NOT EXISTS chat_message (
+    message_id     BIGINT       NOT NULL COMMENT '消息 ID（雪花，客户端可见）',
+    sender_id      BIGINT       NOT NULL COMMENT '发送者账号 ID',
+    channel_id     BIGINT       NOT NULL COMMENT '频道 ID',
+    domain         VARCHAR(64)  NOT NULL COMMENT '消息 domain',
+    domain_version VARCHAR(32)  NOT NULL COMMENT 'domain 版本',
+    data           MEDIUMTEXT   NOT NULL COMMENT 'domain 载荷（JSON）',
+    send_time      DATETIME(3)  NOT NULL COMMENT '发送时间',
+    mentions       TEXT         NULL COMMENT '提及账号列表（序列化）',
+    preview        VARCHAR(512) NULL COMMENT '列表预览文本',
+    status         VARCHAR(16)  NOT NULL COMMENT '状态：ACTIVE/RECALLED',
     PRIMARY KEY (message_id),
-    CONSTRAINT fk_chat_message_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_message_sender FOREIGN KEY (sender_id) REFERENCES auth_account (id)
-);
+    KEY idx_chat_message_channel_time (channel_id, send_time),
+    KEY idx_chat_message_sender (sender_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '频道消息';
 
-CREATE INDEX idx_chat_message_channel_message
-    ON chat_message (channel_id, message_id DESC);
-
-CREATE INDEX idx_chat_message_channel_sender_message_id
-    ON chat_message (channel_id, sender_id, message_id DESC);
-
-CREATE INDEX idx_chat_message_channel_domain_message_id
-    ON chat_message (channel_id, domain, message_id DESC);
-
-CREATE TABLE chat_channel_read_state (
-    channel_id BIGINT NOT NULL,
-    account_id BIGINT NOT NULL,
-    last_read_message_id BIGINT NOT NULL,
-    last_read_time DATETIME(6) NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (channel_id, account_id),
-    CONSTRAINT fk_chat_channel_read_state_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_channel_read_state_account FOREIGN KEY (account_id) REFERENCES auth_account (id)
-);
-
-CREATE INDEX idx_chat_channel_read_state_account_id
-    ON chat_channel_read_state (account_id);
-
-CREATE TABLE chat_message_idempotency (
-    account_id BIGINT NOT NULL,
-    operation VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    idempotency_key VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-    request_fingerprint CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    message_id BIGINT NULL,
-    created_at DATETIME(6) NOT NULL,
-    completed_at DATETIME(6) NULL,
-    PRIMARY KEY (account_id, operation, idempotency_key),
-    CONSTRAINT fk_chat_message_idempotency_account FOREIGN KEY (account_id) REFERENCES auth_account (id),
-    CONSTRAINT fk_chat_message_idempotency_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id)
-);
-
-CREATE INDEX idx_chat_message_idempotency_message
-    ON chat_message_idempotency (message_id);
-
-CREATE TABLE chat_mention (
-    mention_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    message_id BIGINT NOT NULL,
-    from_account_id BIGINT NOT NULL,
-    target_type VARCHAR(32) NOT NULL,
-    target_account_id BIGINT NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    is_read BOOLEAN NOT NULL,
+CREATE TABLE IF NOT EXISTS chat_mention (
+    mention_id        BIGINT      NOT NULL COMMENT '提及 ID（雪花）',
+    channel_id        BIGINT      NOT NULL COMMENT '频道 ID',
+    message_id        BIGINT      NOT NULL COMMENT '消息 ID',
+    from_account_id   BIGINT      NOT NULL COMMENT '发起人账号 ID',
+    target_type       VARCHAR(16) NOT NULL COMMENT '目标类型',
+    target_account_id BIGINT      NOT NULL COMMENT '被提及账号 ID',
+    created_at        DATETIME(3) NOT NULL COMMENT '创建时间',
+    `read`            TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '是否已读',
     PRIMARY KEY (mention_id),
-    CONSTRAINT fk_chat_mention_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_mention_message FOREIGN KEY (message_id) REFERENCES chat_message (message_id),
-    CONSTRAINT fk_chat_mention_from_account FOREIGN KEY (from_account_id) REFERENCES auth_account (id),
-    CONSTRAINT fk_chat_mention_target_account FOREIGN KEY (target_account_id) REFERENCES auth_account (id)
-);
+    KEY idx_chat_mention_target (target_account_id, `read`, created_at),
+    KEY idx_chat_mention_message (message_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '消息提及';
 
-CREATE INDEX idx_chat_mention_target_account_id_created_at
-    ON chat_mention (target_account_id, created_at DESC);
-
-CREATE INDEX idx_chat_mention_channel_id_created_at
-    ON chat_mention (channel_id, created_at DESC);
-
-CREATE INDEX idx_chat_mention_target_account_read_mention_id
-    ON chat_mention (target_account_id, is_read, mention_id DESC);
-
-CREATE INDEX idx_chat_mention_target_account_channel_mention_id
-    ON chat_mention (target_account_id, channel_id, mention_id DESC);
+-- 幂等表：唯一键由业务语义决定，Mapper 依赖它做 ON DUPLICATE KEY UPDATE 与 FOR UPDATE。
+CREATE TABLE IF NOT EXISTS chat_message_idempotency (
+    account_id          BIGINT       NOT NULL COMMENT '发起账号 ID',
+    operation           VARCHAR(32)  NOT NULL COMMENT '操作类型（发送/转发等）',
+    idempotency_key     VARCHAR(128) NOT NULL COMMENT '客户端幂等键',
+    request_fingerprint VARCHAR(255) NOT NULL COMMENT '请求指纹，用于识别同键不同体',
+    message_id          BIGINT       NULL COMMENT '首次成功产生的消息 ID；空表示处理中',
+    created_at          DATETIME(6)  NOT NULL COMMENT '预留时间',
+    completed_at        DATETIME(6)  NULL COMMENT '完成时间；空表示未完成',
+    PRIMARY KEY (account_id, operation, idempotency_key)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '消息写操作幂等记录';

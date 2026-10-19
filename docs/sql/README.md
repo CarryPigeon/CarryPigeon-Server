@@ -1,64 +1,69 @@
-# 领域 SQL
+# 数据库脚本
 
-本文档目录提供当前仓库对外保留的数据库 SQL 入口，用于：
+**状态：草稿（待评审）**
+**读者：** 建库、升级、重置环境的人
+**边界：** 本文只说明脚本集合与执行顺序。部署步骤、账号权限、字符集核对、备份恢复见 `docs/operations/数据库部署.md`；表设计约定见 `docs/standards/持久化与SQL.md`。
 
-- 在空库中初始化 CarryPigeon Backend 的最终表结构
-- 按领域阅读当前数据库设计
-- 为本地开发和联调导入一组可重复执行的测试数据
+---
 
-## 文件说明
+## 1. 脚本集合
 
-- `00-all-in-one.sql`
-  - 一次性初始化整库结构的最短路径
-- `01-auth.sql`
-  - 认证与 refresh session 相关表
-- `02-user.sql`
-  - 用户资料相关表
-- `03-channel.sql`
-  - 频道、成员、邀请、封禁、审计、已读、置顶相关表与系统种子频道
-- `04-message.sql`
-  - 消息与 mention 相关表
-- `06-plugin.sql`
-  - 启动期插件迁移历史表 `plugin_schema_history`
-- `10-test-data.sql`
-  - 本地开发 / 接口联调用测试数据，假定结构已初始化
-- `99-reset-schema.sql`
-  - 破坏性结构清理脚本，用于污染库重新初始化前删除当前项目管理的全部表
+| 顺序 | 文件 | 内容 |
+|---|---|---|
+| 1 | `01-auth.sql` | `auth_account`、`auth_refresh_session` |
+| 2 | `02-user.sql` | `user_profile` |
+| 3 | `03-channel.sql` | `chat_channel`、`chat_channel_member`、`chat_channel_application`、`chat_channel_ban`、`chat_channel_read_state`，以及唯一 `system` 频道种子 |
+| 4 | `04-message.sql` | `chat_message`、`chat_mention`、`chat_message_idempotency` |
+| — | `99-reset.sql` | 破坏性清理：删除上述全部表（仅在需要重置时先执行） |
 
-## 推荐执行方式
+## 2. 执行顺序
 
-若你要初始化一个空的 MySQL schema，推荐以下两种方式之一：
+空库初始化：
 
-1. 最简单路径：直接执行 `00-all-in-one.sql`
-2. 按领域执行：依次执行 `01-auth.sql`、`02-user.sql`、`03-channel.sql`、`04-message.sql`、`05-notification.sql`、`06-plugin.sql`
+```bash
+mysql -h <host> -P <port> -u <user> -p <database> < docs/sql/01-auth.sql
+mysql -h <host> -P <port> -u <user> -p <database> < docs/sql/02-user.sql
+mysql -h <host> -P <port> -u <user> -p <database> < docs/sql/03-channel.sql
+mysql -h <host> -P <port> -u <user> -p <database> < docs/sql/04-message.sql
+```
 
-若你还需要一组现成数据，再执行：
+已污染的环境：
 
-1. `10-test-data.sql`
+```bash
+mysql ... < docs/sql/99-reset.sql
+# 再按上面的顺序重新执行
+```
 
-若当前 schema 中已有旧结构或污染数据，且这些数据不需要保留，可先执行：
+---
 
-1. `99-reset-schema.sql`
-2. `00-all-in-one.sql`
-3. `10-test-data.sql`（可选）
+## 3. 约定
 
-`99-reset-schema.sql` 会删除当前项目管理表中的全部数据和表结构，不执行 `DROP DATABASE`，但仍不得用于需要保留业务数据的环境。
+| 约定 | 说明 |
+|---|---|
+| 可重复执行 | 全部使用 `CREATE TABLE IF NOT EXISTS`；`03-channel.sql` 的种子插入用 `WHERE NOT EXISTS` 保证幂等 |
+| 无拼接件 | 不提供 all-in-one 脚本：同一份 DDL 只保留一份来源 |
+| 字符集 | 每张表显式 `utf8mb4` + `utf8mb4_unicode_ci` + InnoDB |
+| 无外键 | 表之间不建外键约束，一致性由应用保证（与现有仓储实现一致） |
+| 时间类型 | `DATETIME(3)`；幂等表用 `DATETIME(6)`（与 Mapper 里的精度一致） |
+| 主键 | 业务 ID 由应用生成（雪花），不使用自增 |
 
-## 测试账号
+---
 
-`10-test-data.sql` 会写入 3 个测试账号：
+## 4. 不存在但容易被找的脚本
 
-- `carry-owner` / `carrypigeon123`
-- `carry-admin` / `carry-admin-123`
-- `carry-member` / `carry-member-123`
+| 曾经的脚本 | 现状 | 原因 |
+|---|---|---|
+| `00-all-in-one.sql` | 不提供 | 与"唯一事实来源"冲突；需要一次性执行时用 shell 顺序调用 |
+| `06-plugin.sql` | 不需要 | `plugin_schema_history` 由应用启动时自动创建（`JdbcPluginMigrationDatabaseService.ensureHistoryStorage()`），手工建表反而可能与其定义漂移 |
+| `90-dev-seed.sql`（开发种子） | 暂缓 | 种子账号需要与认证使用的密码哈希参数一致，不能手写常量；待明确种子数据口径后补 |
 
-## 适用范围
+---
 
-- MySQL 8.x
-- 空 schema 初始化
-- 开源场景下的结构审查、手工部署与本地联调
+## 5. 待确认项
 
-当前仓库已经不再保留 `db/migration` 版本迁移目录。完整部署说明请同时阅读：
-
-- `docs/operations/数据库部署手册.md`
-- `docs/operations/部署手册.md`
+| # | 项 | 依据 |
+|---|---|---|
+| 1 | `chat_channel_read_state` 的主键 | 实体声明 `@TableId("channel_id")`，但运行期按 `channel_id` + `account_id` 定位；本脚本按复合主键 `(channel_id, account_id)` 定义，需与仓储实现对齐后确认 |
+| 2 | 若干 VARCHAR 长度（`name`/`brief`/`avatar`/`reason`/`preview`/`data`） | 实体为 `String`，长度按字段语义与请求 DTO 的校验上限推断，未在实体中显式声明 |
+| 3 | `user_profile.sex` / `birthday` 的取值范围与单位 | 实体为 `Long`，语义由客户端与服务端约定，本脚本只保证类型 |
+| 4 | 索引集合 | 依据 Mapper/Service 里实际出现的过滤与排序条件推断；上线前应按真实查询计划复核 |
