@@ -83,9 +83,10 @@ public class ChannelBansController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_ban_forbidden",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在",
+            @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法、目标角色不允许禁言或禁言已生效",
+            @ApiResponse(responseCode = "422", description = "请求体字段非法、until 不大于当前时间、目标成员当前角色不是 MEMBER，"
+                    + "或该成员已有生效中的禁言，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<ChannelBanResponse> banChannelMemberV1(

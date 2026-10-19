@@ -24,7 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.Ema
 import team.carrypigeon.backend.chat.domain.features.verification.domain.command.VerifyEmailVerificationCodeCommand;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 鉴权会话领域 API 实现。

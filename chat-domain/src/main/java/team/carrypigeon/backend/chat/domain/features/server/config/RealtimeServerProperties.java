@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
  * Netty 实时通道配置。
- * 职责：收敛实时通道的地址、端口、路径、线程模型和连接超时配置。
+ * 职责：收敛实时通道的地址、端口、路径、线程模型、连接超时与事件窗口参数。
  * 边界：这里只承载稳定运行参数，不承载启动逻辑。
  */
 @ConfigurationProperties(prefix = "cp.chat.server.realtime")
@@ -25,7 +25,11 @@ public record RealtimeServerProperties(
         @DefaultValue("1h")
         Duration eventRetention,
         @DefaultValue("10000")
-        int maxEventAccounts
+        int maxEventAccounts,
+        @DefaultValue("1000")
+        int maxEventsPerAccount,
+        @DefaultValue("262144")
+        int maxPayloadBytes
 ) {
 
     @ConstructorBinding
@@ -57,30 +61,11 @@ public record RealtimeServerProperties(
         if (maxEventAccounts <= 0) {
             throw new IllegalArgumentException("maxEventAccounts must be greater than 0");
         }
+        if (maxEventsPerAccount <= 0) {
+            throw new IllegalArgumentException("maxEventsPerAccount must be greater than 0");
+        }
+        if (maxPayloadBytes <= 0) {
+            throw new IllegalArgumentException("maxPayloadBytes must be greater than 0");
+        }
     }
-
-    public RealtimeServerProperties(
-            boolean enabled,
-            String host,
-            int port,
-            String path,
-            int bossThreads,
-            int workerThreads,
-            int authenticationTimeoutSeconds,
-            int readIdleTimeoutSeconds
-    ) {
-        this(
-                enabled,
-                host,
-                port,
-                path,
-                bossThreads,
-                workerThreads,
-                authenticationTimeoutSeconds,
-                readIdleTimeoutSeconds,
-                Duration.ofHours(1),
-                10_000
-        );
-    }
-
 }

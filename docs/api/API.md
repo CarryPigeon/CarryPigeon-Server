@@ -707,19 +707,6 @@ required gate 不满足时返回：
 { "items": [] }
 ```
 
-### 5.17 更新频道通知偏好
-
-- **方法**：`PUT`
-- **路径**：`/api/channels/{cid}/notification_preference`
-- **认证**：是
-- **成功**：`204 No Content`
-
-请求体示例：
-
-```json
-{ "mode": "inherit", "muted_until": null }
-```
-
 ## 6. 消息接口
 
 基路径：`/api/channels` 与 `/api/messages`
@@ -1020,37 +1007,7 @@ ReplyText 请求示例：
 - 文件不存在返回 `404 not_found`。
 - storage-api 的预签名 TTL 只接受 1 秒至 7 天范围内的整秒 Duration；具体接口使用的 TTL 由服务端流程决定，客户端不能提交任意 TTL。
 
-### 7.6 查询通知偏好
-
-- **方法**：`GET`
-- **路径**：`/api/notification_preferences`
-- **认证**：是
-
-成功响应示例：
-
-```json
-{
-  "server": { "mode": "all", "muted_until": null },
-  "channels": [
-    { "cid": "1", "mode": "inherit", "muted_until": null }
-  ]
-}
-```
-
-### 7.7 更新服务级通知偏好
-
-- **方法**：`PUT`
-- **路径**：`/api/notification_preferences/server`
-- **认证**：是
-- **成功**：`204 No Content`
-
-请求体示例：
-
-```json
-{ "mode": "all", "muted_until": null }
-```
-
-### 7.8 查询审计日志
+### 7.6 查询审计日志
 
 - **方法**：`GET`
 - **路径**：`/api/audit_logs`
@@ -1082,17 +1039,22 @@ ReplyText 请求示例：
 - **读空闲时限**：`cp.chat.server.realtime.read-idle-timeout-seconds=60`
 - **断线事件保留时间**：`cp.chat.server.realtime.event-retention=1h`
 - **断线事件账号上限**：`cp.chat.server.realtime.max-event-accounts=10000`
+- **每账号事件条数上限**：`cp.chat.server.realtime.max-events-per-account=1000`
+- **单事件载荷上限**：`cp.chat.server.realtime.max-payload-bytes=262144`（超过上限的事件不落窗口、不推送，仅记录服务端错误日志）
 - **公开发现语义**：realtime 开关关闭时，`GET /api/server` 当前返回 `ws_url=null`，并将 `capabilities.websocket=false`
-- **广播退化语义**：当 realtime 未装配时，消息与频道 realtime 发布器退化为空实现，主业务链路继续运行但不会产生实际推送
-- **资源退化语义**：事件过期或账号窗口被淘汰时沿用完整同步语义；不可写连接会被主动关闭，已记录事件可在客户端重连后按恢复协议续传
+- **广播退化语义**：realtime 关闭时不启动 Netty 监听，事件仍会写入内存窗口但没有在线连接，因此不产生实际推送；主业务链路不受影响
+- **资源退化语义**：事件过期或超出账号窗口上限时沿用完整同步语义；账号数达到上限后新账号不再建档（其通过 HTTP 全量同步恢复），已有窗口不受影响；不可写连接会被主动关闭，已记录事件可在客户端重连后按恢复协议续传
 
 ### 8.1 连接与认证
 
 - 握手阶段只准备请求上下文，允许匿名完成 HTTP Upgrade。
 - 握手完成后必须在鉴权时限内以 `auth` 作为首帧；超时会收到 `auth.err` / `authentication_timeout`，随后连接关闭。
-- 未鉴权时发送 `ping`、`reauth` 或其它命令会收到 `auth.err` / `unauthorized`，随后连接关闭。
+- 未鉴权时发送 `ping`、`reauth` 等已注册命令会收到对应 `<type>.err` / `unauthorized`，随后连接关闭；发送未注册命令则收到 `<type>.err` / `unsupported_command`，同样关闭。
 - 刷新已鉴权会话的令牌使用 `reauth`；未鉴权连接不能直接使用 `reauth`。
 - access token 到期时服务端会发送 `auth.err` / `token_expired` 并关闭连接；客户端应先通过 HTTP 刷新 token，再使用 `reauth` 建立新的有效期。
+- 命令类型由服务端命令注册表决定，内建 `auth`、`reauth`、`ping` 三项，其它 feature 与插件可追加自定义命令。
+- 未注册的命令回写 `<type>.err` / `unsupported_command`；未鉴权连接收到该类错误后同样关闭。
+- 命令 `data` 中的未识别字段被忽略，不会触发校验失败。
 
 首帧 `auth` 示例：
 
@@ -1102,7 +1064,6 @@ ReplyText 请求示例：
   "id": "1",
   "data": {
     "access_token": "xxx",
-    "device_id": "device-1",
     "resume": { "last_event_id": "9001" }
   }
 }
@@ -1125,8 +1086,8 @@ ReplyText 请求示例：
 
 ### 8.2 心跳
 
-- 已鉴权客户端发送：`{"type":"ping"}`
-- 服务端回写：`{"type":"pong"}`
+- 已鉴权客户端发送：`{"type":"ping","id":"2"}`
+- 服务端回写：`{"type":"pong","id":"2","data":{"server_time":1700000000000},"error":null}`，`id` 回显请求 ID 便于配对
 - 每个入站帧都会重置读空闲计时；连续 60 秒无入站数据时，服务端返回 `command.err` / `idle_timeout` 并关闭连接。
 
 ### 8.3 事件 envelope
@@ -1167,7 +1128,13 @@ ReplyText 请求示例：
 | `read_state.updated` | `{ "cid": "...", "uid": "...", "last_read_mid": "...", "last_read_time": 1700000000000 }` |
 | `channel.changed` | `{ "cid": "...", "scope": "members", "hint": "refresh" }` |
 
-`channel.changed.scope` 建议值：`profile`、`members`、`applications`、`bans`、`messages`。
+`channel.changed.scope` 取值：`profile`、`members`、`applications`、`bans`。
+
+事件标识与顺序：
+
+- `event_id` 由雪花 ID 生成，单调递增。
+- 客户端与服务端均按 `event_id` 单调性丢弃旧事件，因此断线续传与实时推送交错到达时不会回退状态。
+- 单节点、按账户隔离的内存事件窗口：先落窗口再推送，客户端收到事件后立即断线也能在重连时回放。
 
 当前 `resume` 为单节点、按账户隔离的内存事件窗口实现：
 

@@ -12,12 +12,10 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 消息读状态领域 API 实现。
@@ -31,21 +29,20 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
     private final ChannelReadStateRepository readStateRepository;
     private final ChannelContextApi channelContextApi;
     private final TransactionRunner transactionRunner;
-    private final MessageAfterCommitPublisher afterCommitPublisher;
+    private final MessageRealtimeNotifier messageRealtimeNotifier;
 
     public MessageReadStateDomainApi(
             MessageRepository messageRepository,
             ChannelReadStateRepository readStateRepository,
             ChannelContextApi channelContextApi,
             TransactionRunner transactionRunner,
-            AfterCommitEventPublisher eventPublisher,
-            TimeProviderImpl timeProvider
+            MessageRealtimeNotifier messageRealtimeNotifier
     ) {
         this.messageRepository = messageRepository;
         this.readStateRepository = readStateRepository;
         this.channelContextApi = channelContextApi;
         this.transactionRunner = transactionRunner;
-        this.afterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
+        this.messageRealtimeNotifier = messageRealtimeNotifier;
     }
 
     @Override
@@ -74,7 +71,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
                     readTime
             );
             if (readStateRepository.advanceIfNewer(updated)) {
-                afterCommitPublisher.publishReadStateUpdatedAfterCommit(afterCommit, updated);
+                messageRealtimeNotifier.readStateUpdated(afterCommit, updated);
                 return toResult(updated);
             }
             return readStateRepository.findByChannelIdAndAccountId(command.channelId(), command.accountId())

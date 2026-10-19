@@ -11,21 +11,20 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DeleteChannelCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
  * 频道生命周期领域服务。
@@ -39,7 +38,7 @@ public class ChannelDomainApi implements ChannelApi {
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelApplicationRepository channelApplicationRepository;
     private final ChannelBanRepository channelBanRepository;
-    private final AfterCommitEventPublisher afterCommitEventPublisher;
+    private final ChannelEventNotifier channelEventNotifier;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
@@ -49,7 +48,7 @@ public class ChannelDomainApi implements ChannelApi {
         ChannelMemberRepository channelMemberRepository,
         ChannelApplicationRepository channelApplicationRepository,
         ChannelBanRepository channelBanRepository,
-        AfterCommitEventPublisher eventPublisher,
+        ChannelEventNotifier channelEventNotifier,
         IdGenerator idGenerator,
         TimeProvider timeProvider,
         TransactionRunner transactionRunner
@@ -58,7 +57,7 @@ public class ChannelDomainApi implements ChannelApi {
         this.channelMemberRepository = channelMemberRepository;
         this.channelApplicationRepository = channelApplicationRepository;
         this.channelBanRepository = channelBanRepository;
-        this.afterCommitEventPublisher = eventPublisher;
+        this.channelEventNotifier = channelEventNotifier;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -118,8 +117,7 @@ public class ChannelDomainApi implements ChannelApi {
             // 创建者直接落 OWNER 角色，这是后续所有频道治理动作的权限来源
             channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), command.accountId(), ChannelMemberRole.OWNER, now));
             // 提交后通知该账号刷新可见频道集合，回滚时不应发出通知
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new AccountChannelsChangedEvent(command.accountId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, command.accountId());
             return ChannelResult.from(channel);
         });
     }
@@ -153,8 +151,7 @@ public class ChannelDomainApi implements ChannelApi {
             channelMemberRepository.deleteByChannelId(channel.id());
             channelRepository.delete(channel.id());
             // TODO: 频道删除后应通知全部原成员刷新频道列表，当前仅通知操作者本人
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new AccountChannelsChangedEvent(operator.accountId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, operator.accountId());
         });
     }
 
@@ -191,13 +188,11 @@ public class ChannelDomainApi implements ChannelApi {
             );
             channelRepository.update(updated);
             // 资料变化只影响频道本身，因此按频道维度取全体成员作为接收快照
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute,
-                new ChannelChangedEvent(
-                    updated.id(),
-                    "profile",
-                    channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
-                )
+            channelEventNotifier.channelChanged(
+                afterCommit,
+                updated.id(),
+                ChannelChangeScope.PROFILE,
+                channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
             );
             return ChannelResult.from(updated);
         });

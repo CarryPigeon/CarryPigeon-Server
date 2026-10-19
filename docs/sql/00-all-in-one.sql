@@ -245,32 +245,6 @@ CREATE INDEX idx_chat_mention_target_account_read_mention_id
 CREATE INDEX idx_chat_mention_target_account_channel_mention_id
     ON chat_mention (target_account_id, channel_id, mention_id DESC);
 
--- Notification domain
-CREATE TABLE chat_notification_server_preference (
-    account_id BIGINT NOT NULL,
-    mode VARCHAR(32) NOT NULL,
-    muted_until BIGINT NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (account_id),
-    CONSTRAINT fk_chat_notification_server_preference_account FOREIGN KEY (account_id) REFERENCES auth_account (id)
-);
-
-CREATE TABLE chat_notification_channel_preference (
-    account_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    mode VARCHAR(32) NOT NULL,
-    muted_until BIGINT NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    PRIMARY KEY (account_id, channel_id),
-    CONSTRAINT fk_chat_notification_channel_preference_channel FOREIGN KEY (channel_id) REFERENCES chat_channel (id),
-    CONSTRAINT fk_chat_notification_channel_preference_account FOREIGN KEY (account_id) REFERENCES auth_account (id)
-);
-
-CREATE INDEX idx_chat_notification_channel_preference_account_id
-    ON chat_notification_channel_preference (account_id, channel_id);
-
 -- Plugin runtime
 CREATE TABLE plugin_schema_history (
     plugin_id VARCHAR(128) NOT NULL,

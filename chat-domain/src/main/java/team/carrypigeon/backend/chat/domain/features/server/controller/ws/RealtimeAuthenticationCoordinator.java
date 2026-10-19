@@ -8,27 +8,29 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeClientMessage;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeFrame;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeConnectionIndex;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
- * 实时连接认证协调器。
- * 职责：执行 auth/reauth、维护账户通道注册，并管理首帧宽限与 token 到期计时。
- * 边界：不解析 JSON、不决定顶层命令类型，也不读取或映射续传事件。
+ * 实时通道认证机制。
+ * 职责：承接凭证校验、principal 绑定、认证超时与 token 过期定时、断连注销。
+ * 边界：不解析上行帧、不承载续传逻辑；只有本类会主动写出认证类下行帧。
  */
 final class RealtimeAuthenticationCoordinator {
 
     private final TimeProviderImpl timeProvider;
     private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
-    private final RealtimeSessionRegistry realtimeSessionRegistry;
+    private final RealtimeConnectionIndex realtimeConnectionIndex;
     private final int authenticationTimeoutSeconds;
     private final RealtimeWebSocketDebugLogger debugLogger;
     private final RealtimeFrameCodec frameCodec;
@@ -37,74 +39,60 @@ final class RealtimeAuthenticationCoordinator {
             TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
+            RealtimeConnectionIndex realtimeConnectionIndex,
             int authenticationTimeoutSeconds,
             RealtimeWebSocketDebugLogger debugLogger,
             RealtimeFrameCodec frameCodec
     ) {
-        if (authenticationTimeoutSeconds <= 0) {
-            throw new IllegalArgumentException("authenticationTimeoutSeconds must be greater than 0");
-        }
         this.timeProvider = timeProvider;
         this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.realtimeConnectionIndex = realtimeConnectionIndex;
         this.authenticationTimeoutSeconds = authenticationTimeoutSeconds;
         this.debugLogger = debugLogger;
         this.frameCodec = frameCodec;
     }
 
     /**
-     * 认证或替换当前连接凭据。
-     * 副作用：更新 principal、会话注册和 token 计时，成功响应后执行续传回调。
+     * 校验凭证并绑定当前连接。
+     * 失败语义：凭证缺失、无效或过期时抛出 {@code ProblemException}，由分派层转换为命令错误帧。
+     *
+     * @param context Netty 通道上下文
+     * @param command 认证命令
+     * @param reauth 是否为凭据替换
+     * @return 已建立的认证会话
      */
-    void authenticate(
-            ChannelHandlerContext context,
-            RealtimeClientMessage request,
-            boolean reauth,
-            Consumer<CpPrincipal> afterAuthenticated
-    ) {
-        String accessToken = request.accessToken();
+    AuthenticatedSession authenticate(ChannelHandlerContext context, RealtimeClientMessage command, boolean reauth) {
+        String accessToken = command.accessToken();
         if (accessToken == null || accessToken.isBlank()) {
-            debugLogger.authResult(context, request, reauth, false, "unauthorized");
-            context.writeAndFlush(frameCodec.commandError(
-                    request.id(),
-                    reauth ? "reauth.err" : "auth.err",
-                    "unauthorized",
-                    "authentication is required"
-            ));
-            return;
+            debugLogger.authResult(context, command, reauth, false, "unauthorized");
+            throw ProblemException.of(AuthProblem.AUTHENTICATION_REQUIRED);
         }
-        try {
-            AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
-            CpPrincipal principal = new CpPrincipal(
-                    authentication.accountId()
-            );
-            replacePrincipal(context, principal);
-            cancelAuthenticationTimeout(context);
-            scheduleAccessTokenExpiration(context, authentication.expiresAt());
-            debugLogger.authResult(context, request, reauth, true, "");
-            context.writeAndFlush(frameCodec.serverFrame(
-                    reauth ? "reauth.ok" : "auth.ok",
-                    request.id(),
-                    Map.of(
-                            "uid", Long.toString(authentication.accountId()),
-                            "expires_at", authentication.expiresAt().toEpochMilli(),
-                            "server_id", serverIdentityProperties.id()
-                    ),
-                    null
-            ));
-            afterAuthenticated.accept(principal);
-        } catch (ProblemException exception) {
-            String reason = frameCodec.mapReason(exception);
-            debugLogger.authResult(context, request, reauth, false, reason);
-            context.writeAndFlush(frameCodec.commandError(
-                    request.id(),
-                    reauth ? "reauth.err" : "auth.err",
-                    reason,
-                    exception.getMessage()
-            ));
-        }
+        AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
+        CpPrincipal principal = new CpPrincipal(authentication.accountId());
+        replacePrincipal(context, principal);
+        cancelAuthenticationTimeout(context);
+        scheduleAccessTokenExpiration(context, authentication.expiresAt());
+        debugLogger.authResult(context, command, reauth, true, "");
+        return new AuthenticatedSession(
+                authentication.accountId(),
+                authentication.expiresAt(),
+                serverIdentityProperties.id()
+        );
+    }
+
+    /**
+     * 认证成功应答载荷。
+     *
+     * @param session 认证会话
+     * @return 应答载荷
+     */
+    Map<String, Object> ackData(AuthenticatedSession session) {
+        return Map.of(
+                "uid", Long.toString(session.accountId()),
+                "expires_at", session.expiresAt().toEpochMilli(),
+                "server_id", session.serverId()
+        );
     }
 
     void scheduleAuthenticationTimeout(ChannelHandlerContext context) {
@@ -113,9 +101,8 @@ final class RealtimeAuthenticationCoordinator {
                 () -> RealtimeChannelLogContext.run(context, () -> {
                     if (context.channel().isActive() && !isAuthenticated(context)) {
                         debugLogger.frameRejected(context, "authentication_timeout", null);
-                        context.writeAndFlush(frameCodec.commandError(
-                                null,
-                                "auth.err",
+                        context.writeAndFlush(errorFrame(
+                                "auth",
                                 "authentication_timeout",
                                 "authentication frame was not received in time"
                         )).addListener(ChannelFutureListener.CLOSE);
@@ -131,19 +118,9 @@ final class RealtimeAuthenticationCoordinator {
         return context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get() != null;
     }
 
-    void rejectUnauthenticatedCommand(ChannelHandlerContext context, RealtimeClientMessage request) {
-        debugLogger.frameRejected(context, "unauthorized", null);
-        context.writeAndFlush(frameCodec.commandError(
-                request.id(), "auth.err", "unauthorized", "auth must be the first realtime command"
-        )).addListener(ChannelFutureListener.CLOSE);
-    }
-
-    void writeErrorAndCloseIfUnauthenticated(ChannelHandlerContext context, TextWebSocketFrame errorFrame) {
-        if (isAuthenticated(context)) {
-            context.writeAndFlush(errorFrame);
-        } else {
-            context.writeAndFlush(errorFrame).addListener(ChannelFutureListener.CLOSE);
-        }
+    long accountId(ChannelHandlerContext context) {
+        CpPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        return principal == null ? 0L : principal.accountId();
     }
 
     void channelInactive(ChannelHandlerContext context) {
@@ -154,8 +131,14 @@ final class RealtimeAuthenticationCoordinator {
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
         if (principal != null) {
-            realtimeSessionRegistry.unregister(principal.accountId(), context.channel());
+            realtimeConnectionIndex.unregister(principal.accountId(), context.channel());
         }
+    }
+
+    private TextWebSocketFrame errorFrame(String requestType, String reason, String message) {
+        return new TextWebSocketFrame(frameCodec.encode(
+                new RealtimeFrame.CommandError(null, requestType, reason, message)
+        ));
     }
 
     private void replacePrincipal(ChannelHandlerContext context, CpPrincipal principal) {
@@ -163,10 +146,10 @@ final class RealtimeAuthenticationCoordinator {
                 .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
                 .get();
         if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {
-            realtimeSessionRegistry.unregister(previousPrincipal.accountId(), context.channel());
+            realtimeConnectionIndex.unregister(previousPrincipal.accountId(), context.channel());
         }
         context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(principal);
-        realtimeSessionRegistry.register(principal.accountId(), context.channel());
+        realtimeConnectionIndex.register(principal.accountId(), context.channel());
     }
 
     private void cancelAuthenticationTimeout(ChannelHandlerContext context) {
@@ -191,9 +174,8 @@ final class RealtimeAuthenticationCoordinator {
                             && isAuthenticated(context)
                             && expiresAt.equals(currentExpiresAt)) {
                         debugLogger.frameRejected(context, "token_expired", null);
-                        context.writeAndFlush(frameCodec.commandError(
-                                null, "auth.err", "token_expired", "access token is expired"
-                        )).addListener(ChannelFutureListener.CLOSE);
+                        context.writeAndFlush(errorFrame("auth", "token_expired", "access token is expired"))
+                                .addListener(ChannelFutureListener.CLOSE);
                     }
                 }),
                 delayMillis,
@@ -210,5 +192,15 @@ final class RealtimeAuthenticationCoordinator {
             expirationFuture.cancel(false);
         }
         context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).set(null);
+    }
+
+    /**
+     * 已认证会话。
+     *
+     * @param accountId 账号 ID
+     * @param expiresAt 访问令牌过期时间
+     * @param serverId 服务端标识
+     */
+    record AuthenticatedSession(long accountId, Instant expiresAt, String serverId) {
     }
 }

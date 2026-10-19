@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.ws;
 
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -7,99 +8,69 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeClientMessage;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeCommandHandler;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeFrame;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeConnectionIndex;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
  * Netty 实时通道处理器。
- * 职责：承接 WebSocket channel 生命周期，并按 v1 客户端命令类型执行顶层分派。
- * 边界：认证计时、事件续传和 frame 映射由聚焦协作对象承担；聊天写入只走 HTTP。
+ * 职责：承接 WebSocket 连接生命周期，并按命令注册表分派上行命令。
+ * 边界：认证机制、续传与帧编解码由聚焦协作对象承担；聊天写入只走 HTTP。
  */
 public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 
     private static final Logger log = LoggerFactory.getLogger(RealtimeChannelHandler.class);
+
+    /** 无法归属到具体命令时的错误帧类型前缀。 */
+    private static final String FRAME_LEVEL_TYPE = "command";
 
     private final IdGenerator idGenerator;
     private final RealtimeWebSocketDebugLogger debugLogger;
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeAuthenticationCoordinator authenticationCoordinator;
     private final RealtimeResumeCoordinator resumeCoordinator;
+    private final RealtimeCommandRegistry commandRegistry;
 
     public RealtimeChannelHandler(
-            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry
-    ) {
-        this(
-                jsonProvider,
-                idGenerator,
-                timeProvider,
-                accessTokenAuthenticationApi,
-                serverIdentityProperties,
-                realtimeSessionRegistry,
-                10,
-                false
-        );
-    }
-
-    public RealtimeChannelHandler(
-            JsonProviderImpl jsonProvider,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
-            boolean requestLogEnabled
-    ) {
-        this(
-                jsonProvider,
-                idGenerator,
-                timeProvider,
-                accessTokenAuthenticationApi,
-                serverIdentityProperties,
-                realtimeSessionRegistry,
-                10,
-                requestLogEnabled
-        );
-    }
-
-    public RealtimeChannelHandler(
-            JsonProviderImpl jsonProvider,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
+            RealtimeConnectionIndex realtimeConnectionIndex,
+            RealtimeFrameCodec frameCodec,
+            RealtimeCommandRegistry commandRegistry,
+            RealtimeResumeCoordinator resumeCoordinator,
             int authenticationTimeoutSeconds,
             boolean requestLogEnabled
     ) {
         this.idGenerator = idGenerator;
+        this.frameCodec = frameCodec;
+        this.commandRegistry = commandRegistry;
+        this.resumeCoordinator = resumeCoordinator;
         this.debugLogger = requestLogEnabled
                 ? new RealtimeWebSocketDebugLogger(true)
                 : RealtimeWebSocketDebugLogger.disabled();
-        this.frameCodec = new RealtimeFrameCodec(jsonProvider);
         this.authenticationCoordinator = new RealtimeAuthenticationCoordinator(
                 timeProvider,
                 accessTokenAuthenticationApi,
                 serverIdentityProperties,
-                realtimeSessionRegistry,
+                realtimeConnectionIndex,
                 authenticationTimeoutSeconds,
                 debugLogger,
                 frameCodec
         );
-        this.resumeCoordinator = new RealtimeResumeCoordinator(realtimeSessionRegistry, frameCodec);
     }
 
     @Override
@@ -112,8 +83,11 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         }
         if (event instanceof IdleStateEvent) {
             debugLogger.frameRejected(context, "idle_timeout", null);
-            context.writeAndFlush(frameCodec.commandError(
-                    null, "command.err", "idle_timeout", "realtime connection is idle"
+            writeFrame(context, new RealtimeFrame.CommandError(
+                    null,
+                    FRAME_LEVEL_TYPE,
+                    "idle_timeout",
+                    "realtime connection is idle"
             )).addListener(ChannelFutureListener.CLOSE);
             return;
         }
@@ -155,67 +129,77 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         return new IdleStateHandler(readIdleTimeoutSeconds, 0, 0, TimeUnit.SECONDS);
     }
 
+    /**
+     * 解析并分派一条客户端命令。
+     * 分派顺序：解析信封 → 校验信封 → 查找处理器 → 认证前置 → 交给处理器。
+     *
+     * @param context Netty 通道上下文
+     * @param frame 客户端文本帧
+     */
     private void handleFrame(ChannelHandlerContext context, TextWebSocketFrame frame) {
+        RealtimeClientMessage request = null;
         try {
-            RealtimeClientMessage request = frameCodec.parseClientFrame(frame.text());
+            request = frameCodec.decode(frame.text());
             debugLogger.frameReceived(context, request, frame.text().length());
-            frameCodec.validateClientFrame(request);
-            if (!authenticationCoordinator.isAuthenticated(context) && !"auth".equals(request.type())) {
-                authenticationCoordinator.rejectUnauthenticatedCommand(context, request);
+            frameCodec.validate(request);
+            Optional<RealtimeCommandHandler> handler = commandRegistry.find(request.type());
+            if (handler.isEmpty()) {
+                debugLogger.frameRejected(context, "unsupported_command", null);
+                writeErrorAndCloseIfUnauthenticated(context, request, "unsupported_command", "unsupported realtime command");
                 return;
             }
-            switch (request.type()) {
-                case "auth" -> handleAuthentication(context, request, false);
-                case "reauth" -> handleAuthentication(context, request, true);
-                case "ping" -> context.writeAndFlush(frameCodec.serverFrame("pong", null, null, null));
-                default -> context.writeAndFlush(frameCodec.commandError(
-                        request.id(),
-                        request.type() + ".err",
-                        "validation_failed",
-                        "unsupported realtime command"
-                ));
+            if (handler.get().requiresAuthentication() && !authenticationCoordinator.isAuthenticated(context)) {
+                debugLogger.frameRejected(context, "unauthorized", null);
+                writeErrorAndCloseIfUnauthenticated(context, request, "unauthorized", "auth must be the first realtime command");
+                return;
             }
-        } catch (RealtimeFrameCodec.InvalidClientFrameException exception) {
-            debugLogger.frameRejected(context, exception.reason(), null);
-            authenticationCoordinator.writeErrorAndCloseIfUnauthenticated(
-                    context,
-                    frameCodec.commandError(null, "command.err", "validation_failed", exception.getMessage())
+            handler.get().handle(
+                    new RealtimeCommandContextImpl(context, request, authenticationCoordinator, resumeCoordinator, frameCodec),
+                    request
             );
+        } catch (RealtimeFrameCodec.InvalidClientFrameException exception) {
+            debugLogger.frameRejected(context, exception.reason(), exception);
+            writeErrorAndCloseIfUnauthenticated(context, request, "validation_failed", exception.getMessage());
         } catch (InfrastructureException exception) {
             debugLogger.frameRejected(context, "request_body_invalid", exception);
-            authenticationCoordinator.writeErrorAndCloseIfUnauthenticated(
-                    context,
-                    frameCodec.commandError(null, "command.err", "validation_failed", "request body is invalid")
-            );
+            writeErrorAndCloseIfUnauthenticated(context, request, "validation_failed", "request body is invalid");
         } catch (ProblemException exception) {
-            String reason = frameCodec.mapReason(exception);
-            debugLogger.frameRejected(context, reason, exception);
-            context.writeAndFlush(frameCodec.commandError(null, "command.err", reason, exception.getMessage()));
+            debugLogger.frameRejected(context, exception.reason(), exception);
+            writeErrorAndCloseIfUnauthenticated(context, request, exception.reason(), exception.getMessage());
         } catch (RuntimeException exception) {
             debugLogger.frameRejected(context, "internal_error", exception);
             log.warn("Failed to handle realtime frame", exception);
-            context.writeAndFlush(frameCodec.commandError(
-                    null, "command.err", "internal_error", "internal server error"
-            ));
+            writeErrorAndCloseIfUnauthenticated(context, request, "internal_error", "internal server error");
         }
     }
 
-    private void handleAuthentication(
+    /**
+     * 写出命令错误帧，并在连接未认证时关闭。
+     * 约束：未认证连接只有一次出错机会，写完后必须关闭，避免匿名连接长期占用。
+     */
+    private void writeErrorAndCloseIfUnauthenticated(
             ChannelHandlerContext context,
             RealtimeClientMessage request,
-            boolean reauth
+            String reason,
+            String message
     ) {
-        if (!reauth && authenticationCoordinator.isAuthenticated(context)) {
-            context.writeAndFlush(frameCodec.commandError(
-                    request.id(), "auth.err", "already_authenticated", "use reauth to replace credentials"
-            ));
+        if (authenticationCoordinator.isAuthenticated(context)) {
+            writeFrame(context, commandError(request, reason, message));
             return;
         }
-        authenticationCoordinator.authenticate(
-                context,
-                request,
-                reauth,
-                principal -> resumeCoordinator.replay(context, principal.accountId(), request.lastEventId())
+        writeFrame(context, commandError(request, reason, message)).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private RealtimeFrame.CommandError commandError(RealtimeClientMessage request, String reason, String message) {
+        return new RealtimeFrame.CommandError(
+                request == null ? null : request.id(),
+                request == null ? FRAME_LEVEL_TYPE : request.type(),
+                reason,
+                message
         );
+    }
+
+    private ChannelFuture writeFrame(ChannelHandlerContext context, RealtimeFrame frame) {
+        return context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(frame)));
     }
 }

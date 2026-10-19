@@ -16,7 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetCurren
 import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 用户资料领域服务。

@@ -10,22 +10,21 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.applicat
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.DecideChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.ListChannelApplicationsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
  * 频道申请流领域服务。
@@ -38,7 +37,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelApplicationRepository channelApplicationRepository;
-    private final AfterCommitEventPublisher afterCommitEventPublisher;
+    private final ChannelEventNotifier channelEventNotifier;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
@@ -47,7 +46,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelApplicationRepository channelInviteRepository,
-            AfterCommitEventPublisher eventPublisher,
+            ChannelEventNotifier channelEventNotifier,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner
@@ -55,7 +54,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.channelApplicationRepository = channelInviteRepository;
-        this.afterCommitEventPublisher = eventPublisher;
+        this.channelEventNotifier = channelEventNotifier;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -102,12 +101,13 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             );
             channelApplicationRepository.save(application);
             // 申请变化只对频道治理者有意义，因此按频道维度取现有成员作为接收快照
-            afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute,
-                    new ChannelChangedEvent(channel.id(), "applications", channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()));
+            channelEventNotifier.channelChanged(
+                    afterCommit,
+                    channel.id(),
+                    ChannelChangeScope.APPLICATIONS,
+                    channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList());
             // 申请人自身也需要刷新频道集合，其视角不属于上面的频道成员快照
-            afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(command.accountId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, command.accountId());
             return ChannelApplicationResult.from(application, reason);
         });
     }
@@ -196,16 +196,15 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             }
             // 在事务内取成员快照：批准后申请人已在其中，拒绝时则不含申请人
             List<Long> recipientAccountIds = List.copyOf(channelMemberRepository.listByChannelId(application.channelId()).stream().map(ChannelMember::accountId).toList());
-            afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new ChannelChangedEvent(application.channelId(), "applications", recipientAccountIds));
+            channelEventNotifier.channelChanged(
+                    afterCommit, application.channelId(), ChannelChangeScope.APPLICATIONS, recipientAccountIds);
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {
                 // 仅批准会改变成员集，拒绝不需要发出成员集变化通知
-                afterCommitEventPublisher.publishAfterCommit(
-                        afterCommit::execute, new ChannelChangedEvent(application.channelId(), "members", recipientAccountIds));
+                channelEventNotifier.channelChanged(
+                        afterCommit, application.channelId(), ChannelChangeScope.MEMBERS, recipientAccountIds);
             }
             // 申请人视角的频道集合也需要刷新，与上面的频道成员快照相互独立
-            afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute, new AccountChannelsChangedEvent(application.applicantId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, application.applicantId());
             return ChannelApplicationResult.from(
                     updated,
                     updated.reason() == null || updated.reason().isBlank() ? "" : updated.reason().trim()

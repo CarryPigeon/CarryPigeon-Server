@@ -115,12 +115,6 @@ final class OpenApiRequestExamples {
                       "until": 1893456000000
                     }
                     """)),
-            Map.entry("PUT /api/channels/{channelId}/notification_preference", jsonExample("更新频道通知偏好", """
-                    {
-                      "mode": "inherit",
-                      "muted_until": 0
-                    }
-                    """)),
             Map.entry("POST /api/channels/{channelId}/applications", jsonExample("申请加入频道", """
                     {
                       "reason": "I want to join this channel"
@@ -163,12 +157,6 @@ final class OpenApiRequestExamples {
                     {
                       "before_mention_id": "{{mentionId}}",
                       "cid": "{{channelId}}"
-                    }
-                    """)),
-            Map.entry("PUT /api/notification_preferences/server", jsonExample("更新服务通知偏好", """
-                    {
-                      "mode": "all",
-                      "muted_until": null
                     }
                     """))
     );

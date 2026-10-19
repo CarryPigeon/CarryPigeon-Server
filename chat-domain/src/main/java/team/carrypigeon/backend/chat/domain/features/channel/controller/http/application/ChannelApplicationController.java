@@ -159,9 +159,10 @@ public class ChannelApplicationController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "频道不存在，或申请不属于该频道（按不存在处理以免泄露跨频道申请存在性）",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "申请已被处理，reason 为 application_already_processed",
+            @ApiResponse(responseCode = "409", description = "申请已被处理（reason 为 application_already_processed），"
+                    + "或申请人已是频道成员（reason 为 conflict）",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "审批决定非法，或申请人已是频道成员",
+            @ApiResponse(responseCode = "422", description = "审批决定不是 approve 或 reject，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ChannelApplicationResponse decideApplication(

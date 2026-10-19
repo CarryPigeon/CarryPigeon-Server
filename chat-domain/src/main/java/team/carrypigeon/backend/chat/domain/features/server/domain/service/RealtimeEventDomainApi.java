@@ -1,77 +1,43 @@
 package team.carrypigeon.backend.chat.domain.features.server.domain.service;
 
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.RealtimeEventApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.command.PublishRealtimeEventCommand;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeNotificationPreferenceFilter;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.event.RealtimeEvent;
+import team.carrypigeon.backend.chat.domain.features.server.domain.capability.RealtimeEventSink;
 
 /**
- * 实时事件 API 实现。
- * 职责：应用通知偏好、写入事件缓存并向目标账号的在线会话投递 v1 event frame。
- * 边界：只理解通用事件命令，不引用 message 或 channel 内部模型。
+ * 实时事件发布实现。
+ * 职责：规范化接收人并把事件委派给投递能力，同时把投递失败隔离在业务事务之外。
+ * 边界：不查询仓储、不接触 JSON 或 Netty、不解释载荷、不改变事件语义。
  */
 @Service
 public class RealtimeEventDomainApi implements RealtimeEventApi {
 
-    private final RealtimeSessionRegistry realtimeSessionRegistry;
-    private final RealtimeNotificationPreferenceFilter notificationPreferenceFilter;
-    private final JsonProvider jsonProvider;
-    private final TimeProvider timeProvider;
-    private final IdGenerator idGenerator;
+    private static final Logger log = LoggerFactory.getLogger(RealtimeEventDomainApi.class);
 
-    public RealtimeEventDomainApi(
-            RealtimeSessionRegistry realtimeSessionRegistry,
-            RealtimeNotificationPreferenceFilter notificationPreferenceFilter,
-            JsonProvider jsonProvider,
-            TimeProvider timeProvider,
-            IdGenerator idGenerator
-    ) {
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
-        this.notificationPreferenceFilter = notificationPreferenceFilter;
-        this.jsonProvider = jsonProvider;
-        this.timeProvider = timeProvider;
-        this.idGenerator = idGenerator;
+    private final RealtimeEventSink realtimeEventSink;
+
+    public RealtimeEventDomainApi(RealtimeEventSink realtimeEventSink) {
+        this.realtimeEventSink = realtimeEventSink;
     }
 
     @Override
-    public void publish(PublishRealtimeEventCommand command) {
-        Collection<Long> recipients = command.applyNotificationPreferences()
-                ? notificationPreferenceFilter.filterRecipients(
-                        command.channelId(),
-                        command.eventType(),
-                        command.recipientAccountIds()
-                )
-                : command.recipientAccountIds();
-        if (recipients == null || recipients.isEmpty()) {
+    public void publish(RealtimeEvent event) {
+        if (event == null) {
             return;
         }
-        String eventId = idGenerator.nextStringId();
-        long serverTime = timeProvider.nowMillis();
-        realtimeSessionRegistry.appendEvent(RealtimeSessionRegistry.event(
-                eventId,
-                command.eventType(),
-                serverTime,
-                command.payload(),
-                recipients
-        ));
-        Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("type", "event");
-        envelope.put("id", null);
-        envelope.put("data", Map.of(
-                "event_id", eventId,
-                "event_type", command.eventType(),
-                "server_time", serverTime,
-                "payload", command.payload()
-        ));
-        envelope.put("error", null);
-        String frameText = jsonProvider.toJson(envelope);
-        realtimeSessionRegistry.writeText(recipients, frameText);
+        List<Long> recipients = event.recipientAccountIds();
+        if (recipients.isEmpty()) {
+            return;
+        }
+        try {
+            realtimeEventSink.deliver(event, recipients);
+        } catch (RuntimeException exception) {
+            // 事务已提交，推送失败不得回传为业务失败；丢失的事件由客户端通过 HTTP 全量同步补齐
+            log.error("Failed to deliver realtime event, type={}", event.type().wireName(), exception);
+        }
     }
 }

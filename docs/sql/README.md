@@ -18,8 +18,6 @@
   - 频道、成员、邀请、封禁、审计、已读、置顶相关表与系统种子频道
 - `04-message.sql`
   - 消息与 mention 相关表
-- `05-notification.sql`
-  - 服务级与频道级通知偏好相关表
 - `06-plugin.sql`
   - 启动期插件迁移历史表 `plugin_schema_history`
 - `10-test-data.sql`

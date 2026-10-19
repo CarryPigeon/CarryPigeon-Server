@@ -1,6 +1,6 @@
 -- Test data for local development and integration verification.
 -- Assumption: schema has already been initialized by 00-all-in-one.sql
--- or by 01-auth.sql -> 06-plugin.sql.
+-- or by the numbered schema files under this directory.
 --
 -- Accounts created by this script:
 --   carry-owner  / carrypigeon123
@@ -8,13 +8,6 @@
 --   carry-member / carry-member-123
 
 START TRANSACTION;
-
-DELETE FROM chat_notification_channel_preference
-WHERE account_id IN (1001, 1002, 1003)
-   OR channel_id IN (100, 101);
-
-DELETE FROM chat_notification_server_preference
-WHERE account_id IN (1001, 1002, 1003);
 
 DELETE FROM chat_message_idempotency
 WHERE account_id IN (1001, 1002, 1003)
@@ -423,31 +416,5 @@ VALUES
         '2026-05-01 12:02:00',
         FALSE
     );
-
-INSERT INTO chat_notification_server_preference (
-    account_id,
-    mode,
-    muted_until,
-    created_at,
-    updated_at
-)
-VALUES
-    (1001, 'all', 0, '2026-05-01 12:10:00', '2026-05-01 12:10:00'),
-    (1002, 'mentions_only', 0, '2026-05-01 12:10:10', '2026-05-01 12:10:10'),
-    (1003, 'muted', 1770000000000, '2026-05-01 12:10:20', '2026-05-01 12:10:20');
-
-INSERT INTO chat_notification_channel_preference (
-    account_id,
-    channel_id,
-    mode,
-    muted_until,
-    created_at,
-    updated_at
-)
-VALUES
-    (1001, 100, 'all', 0, '2026-05-01 12:11:00', '2026-05-01 12:11:00'),
-    (1002, 100, 'inherit', 0, '2026-05-01 12:11:10', '2026-05-01 12:11:10'),
-    (1003, 1, 'muted', 1770000000000, '2026-05-01 12:11:20', '2026-05-01 12:11:20'),
-    (1002, 101, 'mentions_only', 0, '2026-05-01 12:11:30', '2026-05-01 12:11:30');
 
 COMMIT;

@@ -2,11 +2,12 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service.mem
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfileQuery;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.DemoteChannelAdminCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.KickChannelMemberCommand;
@@ -15,20 +16,15 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.i
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.TransferChannelOwnershipCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.MemberProfile;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
  * 频道治理领域服务。
@@ -40,21 +36,21 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
-    private final AfterCommitEventPublisher afterCommitEventPublisher;
-    private final UserProfileApi userProfileApi;
+    private final ChannelEventNotifier channelEventNotifier;
+    private final MemberProfileQuery memberProfileQuery;
     private final TransactionRunner transactionRunner;
 
     public ChannelMemberDomainApi(
         ChannelRepository channelRepository,
         ChannelMemberRepository channelMemberRepository,
-        UserProfileApi userProfileApi,
-        AfterCommitEventPublisher eventPublisher,
+        MemberProfileQuery memberProfileQuery,
+        ChannelEventNotifier channelEventNotifier,
         TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
-        this.afterCommitEventPublisher = eventPublisher;
-        this.userProfileApi = userProfileApi;
+        this.channelEventNotifier = channelEventNotifier;
+        this.memberProfileQuery = memberProfileQuery;
         this.transactionRunner = transactionRunner;
     }
 
@@ -78,11 +74,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         List<ChannelMember> members = channelMemberRepository.listByChannelId(channel.id());
         // 一次性批量取回全部成员资料并按账号建索引，避免在下方映射时逐个查询
         List<Long> accountIds = members.stream().map(ChannelMember::accountId).toList();
-        Map<Long, UserProfileResult> profiles = userProfileApi.getPublicUserProfiles(accountIds).stream()
-            .collect(Collectors.toMap(
-                UserProfileResult::accountId,
-                Function.identity()
-            ));
+        Map<Long, MemberProfile> profiles = memberProfileQuery.findProfiles(accountIds);
 
         // 成员资料缺失时对应投影字段为空，这里不补默认值，由协议层决定如何展示
         return members.stream()
@@ -129,10 +121,9 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
             List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                     .stream().map(ChannelMember::accountId).toList();
-            afterCommitEventPublisher.publishAfterCommit(
-                    afterCommit::execute,
-                    new ChannelChangedEvent(channel.id(), "members", accounts));
-            return ChannelMemberResult.from(promotedMember, userProfileApi.getUserProfileByAccountId(new GetUserProfileByAccountIdQuery(command.targetAccountId())));
+            channelEventNotifier.channelChanged(
+                    afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
+            return ChannelMemberResult.from(promotedMember, memberProfileQuery.findProfile(command.targetAccountId()));
         });
     }
 
@@ -177,10 +168,9 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
             List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute,
-                new ChannelChangedEvent(channel.id(), "members", accounts));
-            return ChannelMemberResult.from(demotedMember, userProfileApi.getUserProfileByAccountId(new GetUserProfileByAccountIdQuery(command.targetAccountId())));
+            channelEventNotifier.channelChanged(
+                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
+            return ChannelMemberResult.from(demotedMember, memberProfileQuery.findProfile(command.targetAccountId()));
         });
     }
 
@@ -233,9 +223,8 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 先降原 OWNER 再升新 OWNER，顺序保证任意中间点都只有一个 OWNER
             List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute,
-                new ChannelChangedEvent(channel.id(), "members", accounts));
+            channelEventNotifier.channelChanged(
+                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             return ChannelOwnershipTransferResult.from(previousOwner, newOwner);
         });
     }
@@ -271,11 +260,10 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
                 .stream().map(ChannelMember::accountId).toList();
             // 通知频道内其余成员刷新成员列表
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new ChannelChangedEvent(channel.id(), "members", accounts));
+            channelEventNotifier.channelChanged(
+                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new AccountChannelsChangedEvent(target.accountId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, target.accountId());
         });
     }
 

@@ -19,7 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthPro
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 鉴权账号领域 API 实现。
@@ -66,11 +66,11 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             // 存在性校验，确保username和邮箱的唯一性
             authAccountRepository.findByUsername(command.username())
                     .ifPresent(existing -> {
-                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "username already exists");
+                        throw ProblemException.of(AuthProblem.USERNAME_ALREADY_EXISTS);
                     });
             authAccountRepository.findByEmail(command.email())
                     .ifPresent(existing -> {
-                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "email already exists");
+                        throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
                     });
             // 邮箱验证码校验
             emailVerificationApi.verifyCode(new VerifyEmailVerificationCodeCommand(command.email(), command.code()));
@@ -133,7 +133,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             authAccountRepository.findByEmail(email)
                     .filter(account -> account.id() != command.accountId())
                     .ifPresent(account -> {
-                        throw ProblemException.of(AuthProblem.INVALID_INPUT, "email already exists");
+                        throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
                     });
             // 更新用户邮箱
             authAccountRepository.update(new AuthAccount(

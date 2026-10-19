@@ -12,6 +12,9 @@ public enum AuthProblem implements ProblemMapping {
     /** 认证相关入参不合法。 */
     INVALID_INPUT(422, "validation_failed", "validation failed"),
 
+    /** 未提供认证凭证。 */
+    AUTHENTICATION_REQUIRED(401, "unauthorized", "authentication is required"),
+
     /** access token 无法验证。 */
     INVALID_ACCESS_TOKEN(401, "unauthorized", "access token is invalid"),
 
@@ -32,6 +35,12 @@ public enum AuthProblem implements ProblemMapping {
 
     /** 目标认证账号不存在。 */
     ACCOUNT_NOT_FOUND(404, "not_found", "auth account does not exist"),
+
+    /** 注册时用户名已被占用。 */
+    USERNAME_ALREADY_EXISTS(409, "username_already_exists", "username already exists"),
+
+    /** 注册或改绑时邮箱已被其它账号占用。 */
+    EMAIL_ALREADY_EXISTS(409, "email_already_exists", "email already exists"),
 
     /** 令牌摘要计算失败。 */
     TOKEN_HASH_FAILED(500, "internal_error", "internal server error"),

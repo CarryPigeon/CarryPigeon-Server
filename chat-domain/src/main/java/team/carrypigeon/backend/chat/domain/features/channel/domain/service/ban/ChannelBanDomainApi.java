@@ -12,21 +12,20 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.inpu
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.AccountChannelsChangedEvent;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.event.ChannelChangedEvent;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 
 /**
  * 频道禁言领域 API 实现。
@@ -38,7 +37,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelBanRepository channelBanRepository;
-    private final AfterCommitEventPublisher afterCommitEventPublisher;
+    private final ChannelEventNotifier channelEventNotifier;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final IdGenerator idGenerator;
@@ -47,7 +46,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         ChannelRepository channelRepository,
         ChannelMemberRepository channelMemberRepository,
         ChannelBanRepository channelBanRepository,
-        AfterCommitEventPublisher eventPublisher,
+        ChannelEventNotifier channelEventNotifier,
         TimeProvider timeProvider,
         TransactionRunner transactionRunner,
         IdGenerator idGenerator
@@ -55,7 +54,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.channelBanRepository = channelBanRepository;
-        this.afterCommitEventPublisher = eventPublisher;
+        this.channelEventNotifier = channelEventNotifier;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
         this.idGenerator = idGenerator;
@@ -153,11 +152,9 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 channelBanRepository.update(ban);
             }
             List<Long> recipients = channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new ChannelChangedEvent(channel.id(), "bans", recipients));
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS, recipients);
             // 被禁言者自身也要刷新状态，它仍在成员快照中但需要单独的偏好与状态更新
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new AccountChannelsChangedEvent(target.accountId()));
+            channelEventNotifier.accountChannelsChanged(afterCommit, target.accountId());
             return ChannelBanResult.from(ban);
         });
     }
@@ -226,12 +223,12 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 existingBan.reason(), existingBan.expiresAt(), existingBan.createdAt(), timeProvider.nowInstant());
             channelBanRepository.update(revokedBan);
             // 通知频道成员刷新禁言台账，并单独通知被解禁者刷新自身状态
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute,
-                new ChannelChangedEvent(
-                    channel.id(), "bans", channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList()));
-            afterCommitEventPublisher.publishAfterCommit(
-                afterCommit::execute, new AccountChannelsChangedEvent(command.targetAccountId()));
+            channelEventNotifier.channelChanged(
+                afterCommit,
+                channel.id(),
+                ChannelChangeScope.BANS,
+                channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList());
+            channelEventNotifier.accountChannelsChanged(afterCommit, command.targetAccountId());
             return ChannelBanResult.from(revokedBan);
         });
     }

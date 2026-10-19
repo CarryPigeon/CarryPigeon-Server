@@ -28,7 +28,7 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.manifest.PluginManif
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.PluginMigrationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 启动期插件运行时领域服务。

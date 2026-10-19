@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.realtime.RealtimeClientMessage;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**

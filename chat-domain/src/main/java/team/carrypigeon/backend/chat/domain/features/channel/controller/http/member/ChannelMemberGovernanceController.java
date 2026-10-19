@@ -114,9 +114,9 @@ public class ChannelMemberGovernanceController {
             @ApiResponse(responseCode = "204", description = "管理员设置成功，响应体为空"),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或不是频道所有者，reason 为 not_channel_member 或 channel_role_forbidden",
+            @ApiResponse(responseCode = "403", description = "操作者或目标不是频道成员，或操作者不是频道所有者，reason 为 not_channel_member 或 channel_role_forbidden",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在",
+            @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "目标成员当前角色不是 MEMBER，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -153,9 +153,9 @@ public class ChannelMemberGovernanceController {
             @ApiResponse(responseCode = "204", description = "管理员角色撤销成功，响应体为空"),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或不是频道所有者，reason 为 not_channel_member 或 channel_role_forbidden",
+            @ApiResponse(responseCode = "403", description = "操作者或目标不是频道成员，或操作者不是频道所有者，reason 为 not_channel_member 或 channel_role_forbidden",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在或目标成员不存在",
+            @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "目标成员当前角色不是 ADMIN，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))

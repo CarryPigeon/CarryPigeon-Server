@@ -6,17 +6,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcPluginMigrationDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.startup.DatabaseInitializationChecker;
-import team.carrypigeon.backend.infrastructure.service.database.impl.transaction.SpringTransactionRunner;
 
 /**
  * 数据库基础设施自动配置。
@@ -63,18 +59,6 @@ public class DatabaseInfrastructureAutoConfiguration {
     @ConditionalOnMissingBean(name = "databaseInitializationCheck")
     public InitializationChecker databaseInitializationCheck(DatabaseHealthService databaseHealthService) {
         return new DatabaseInitializationChecker(databaseHealthService);
-    }
-
-    /**
-     * 装配事务执行器。
-     *
-     * @param transactionManager Spring 事务管理器
-     * @return 供 domain/application 使用的事务执行适配器
-     */
-    @Bean
-    @ConditionalOnMissingBean
-    public TransactionRunner transactionRunner(PlatformTransactionManager transactionManager) {
-        return new SpringTransactionRunner(new TransactionTemplate(transactionManager));
     }
 
     /**

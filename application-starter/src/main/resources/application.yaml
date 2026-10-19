@@ -124,6 +124,10 @@ cp:
         event-retention: 1h
         # 职责：限制单进程保留断线事件窗口的账号总数。
         max-event-accounts: 10000
+        # 职责：限制单个账号事件窗口保留的事件条数。
+        max-events-per-account: 1000
+        # 职责：限制单条实时事件帧的 UTF-8 字节数，超限事件不落窗口也不推送。
+        max-payload-bytes: 262144
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。

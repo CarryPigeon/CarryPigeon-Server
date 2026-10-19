@@ -9,9 +9,9 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.chat.domain.features.server.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerIdentityProperties;
-import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeSessionRegistry;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeConnectionIndex;
+import team.carrypigeon.backend.chat.domain.features.server.support.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
@@ -22,53 +22,38 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel> {
 
     private final RealtimeServerProperties properties;
-    private final JsonProviderImpl jsonProvider;
     private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
     private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
-    private final RealtimeSessionRegistry realtimeSessionRegistry;
+    private final RealtimeConnectionIndex realtimeConnectionIndex;
+    private final RealtimeFrameCodec frameCodec;
+    private final RealtimeCommandRegistry commandRegistry;
+    private final RealtimeResumeCoordinator resumeCoordinator;
     private final boolean requestLogEnabled;
 
     public RealtimeChannelInitializer(
             RealtimeServerProperties properties,
-            JsonProviderImpl jsonProvider,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
             AccessTokenAuthenticationApi accessTokenAuthenticationApi,
             ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry,
+            RealtimeConnectionIndex realtimeConnectionIndex,
+            RealtimeFrameCodec frameCodec,
+            RealtimeCommandRegistry commandRegistry,
+            RealtimeResumeCoordinator resumeCoordinator,
             boolean requestLogEnabled
     ) {
         this.properties = properties;
-        this.jsonProvider = jsonProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
-        this.realtimeSessionRegistry = realtimeSessionRegistry;
+        this.realtimeConnectionIndex = realtimeConnectionIndex;
+        this.frameCodec = frameCodec;
+        this.commandRegistry = commandRegistry;
+        this.resumeCoordinator = resumeCoordinator;
         this.requestLogEnabled = requestLogEnabled;
-    }
-
-    public RealtimeChannelInitializer(
-            RealtimeServerProperties properties,
-            JsonProviderImpl jsonProvider,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeSessionRegistry realtimeSessionRegistry
-    ) {
-        this(
-                properties,
-                jsonProvider,
-                idGenerator,
-                timeProvider,
-                accessTokenAuthenticationApi,
-                serverIdentityProperties,
-                realtimeSessionRegistry,
-                false
-        );
     }
 
     @Override
@@ -80,12 +65,14 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         pipeline.addLast(RealtimeChannelHandler.idleStateHandler(properties.readIdleTimeoutSeconds()));
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
         pipeline.addLast(new RealtimeChannelHandler(
-                jsonProvider,
                 idGenerator,
                 timeProvider,
                 accessTokenAuthenticationApi,
                 serverIdentityProperties,
-                realtimeSessionRegistry,
+                realtimeConnectionIndex,
+                frameCodec,
+                commandRegistry,
+                resumeCoordinator,
                 properties.authenticationTimeoutSeconds(),
                 requestLogEnabled
         ));

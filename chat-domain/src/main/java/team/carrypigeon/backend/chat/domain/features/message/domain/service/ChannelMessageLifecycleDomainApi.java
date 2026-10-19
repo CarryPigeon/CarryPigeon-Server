@@ -14,12 +14,11 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Messag
 import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 频道消息生命周期领域 API 实现。
@@ -35,7 +34,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
     private final ChannelMessageAuditApi channelMessageAuditApi;
     private final MessageRepository messageRepository;
     private final MessageMentionManager messageMentionManager;
-    private final MessageAfterCommitPublisher messageAfterCommitPublisher;
+    private final MessageRealtimeNotifier messageRealtimeNotifier;
     private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
     private final TransactionRunner transactionRunner;
@@ -45,7 +44,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
             ChannelMessageAuditApi channelMessageAuditApi,
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
-            AfterCommitEventPublisher eventPublisher,
+            MessageRealtimeNotifier messageRealtimeNotifier,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
             TransactionRunner transactionRunner
@@ -54,7 +53,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
         this.channelMessageAuditApi = channelMessageAuditApi;
         this.messageRepository = messageRepository;
         this.messageMentionManager = new MessageMentionManager(mentionRepository, idGenerator, timeProvider);
-        this.messageAfterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
+        this.messageRealtimeNotifier = messageRealtimeNotifier;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -81,7 +80,7 @@ public class ChannelMessageLifecycleDomainApi implements ChannelMessageLifecycle
                     nextMessageId(), existingMessage.channelId(), command.accountId(), updatedMessage.messageId(),
                     updatedMessage.senderId(), now()
             ));
-            messageAfterCommitPublisher.publishMessageRecalledAfterCommit(afterCommit, updatedMessage, recipients);
+            messageRealtimeNotifier.messageRecalled(afterCommit, updatedMessage, recipients);
             return updatedMessage;
         });
         return ChannelMessageProjectionMapper.toResult(recalledMessage);

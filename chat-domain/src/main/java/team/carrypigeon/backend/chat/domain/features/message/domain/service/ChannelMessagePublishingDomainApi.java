@@ -25,7 +25,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.projection.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageIdempotencyRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.event.AfterCommitEventPublisher;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.MessageDomainPluginApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.command.ValidateMessageDataCommand;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.projection.ValidatedMessageDataResult;
@@ -33,7 +32,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.problem.Mess
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.transaction.TransactionRunner;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 频道消息发布领域 API 实现。
@@ -54,7 +53,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
     private final ChannelContextApi channelContextApi;
     private final MessageRepository messageRepository;
     private final MessageMentionManager messageMentionManager;
-    private final MessageAfterCommitPublisher messageAfterCommitPublisher;
+    private final MessageRealtimeNotifier messageRealtimeNotifier;
     private final MessageIdempotencyRepository messageIdempotencyRepository;
     private final MessageDomainPluginApi messageDomainPluginApi;
     private final IdGenerator idGenerator;
@@ -66,7 +65,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
             MessageRepository messageRepository,
             MentionRepository mentionRepository,
             MessageIdempotencyRepository messageIdempotencyRepository,
-            AfterCommitEventPublisher eventPublisher,
+            MessageRealtimeNotifier messageRealtimeNotifier,
             MessageDomainPluginApi messageDomainPluginApi,
             IdGenerator idGenerator,
             TimeProviderImpl timeProvider,
@@ -75,7 +74,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         this.channelContextApi = channelContextApi;
         this.messageRepository = messageRepository;
         this.messageMentionManager = new MessageMentionManager(mentionRepository, idGenerator, timeProvider);
-        this.messageAfterCommitPublisher = new MessageAfterCommitPublisher(eventPublisher, timeProvider);
+        this.messageRealtimeNotifier = messageRealtimeNotifier;
         this.commandValidator = new MessageDeliveryCommandValidator();
         this.messageIdempotencyRepository = messageIdempotencyRepository;
         this.messageDomainPluginApi = messageDomainPluginApi;
@@ -292,7 +291,7 @@ public class ChannelMessagePublishingDomainApi implements ChannelMessagePublishi
         List<Long> recipients = channelContextApi.memberAccountIds(channel.channelId());
         ChannelMessage saved = messageRepository.save(message);
         List<Mention> mentions = messageMentionManager.persistMentions(saved, recipients);
-        messageAfterCommitPublisher.publishMessageCreatedAfterCommit(afterCommit, saved, recipients, mentions);
+        messageRealtimeNotifier.messageCreated(afterCommit, saved, recipients, mentions);
         return saved;
     }
 
