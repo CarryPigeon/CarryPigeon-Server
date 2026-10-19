@@ -1,8 +1,12 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.util.List;
-import org.springframework.dao.DataAccessException;
-import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MentionEntity;
@@ -10,9 +14,11 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 提及数据库服务。
- * 职责：在 database-impl 中提供 mention 记录的最小写入、读取与已读更新能力。
+ * 职责：在 database-impl 中提供提及记录的最小写入、读取与已读更新能力。
  * 边界：只负责数据库记录与实体映射，不承载提及解析规则。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusMentionDatabaseService implements MentionDatabaseService {
 
     private final MentionMapper mentionMapper;
@@ -22,17 +28,16 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
-     * 单条 SQL 批量插入提及记录；空集合不访问 Mapper。
+     * 批量写入提及记录；空集合不访问 Mapper。
      */
     @Override
     public void insertAll(List<MentionRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
         }
-        executeVoid(
-                () -> mentionMapper.insertAll(records.stream().map(this::toEntity).toList()),
-                "failed to batch insert mentions"
-        );
+        mentionMapper.insertAll(records.stream()
+                .map(MentionEntity::from)
+                .toList());
     }
 
     /**
@@ -40,15 +45,32 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
      */
     @Override
     public void deleteByMessageId(long messageId) {
-        executeVoid(() -> mentionMapper.deleteByMessageId(messageId), "failed to delete mentions by message");
+        mentionMapper.delete(new LambdaQueryWrapper<MentionEntity>()
+                .eq(MentionEntity::getMessageId, messageId));
     }
 
     /**
      * 查询账户的提及记录流。
+     * 输出：按提及 ID 倒序返回，最多 limit 条。
      */
     @Override
-    public List<MentionRecord> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
-        return execute(() -> mentionMapper.listByAccountId(accountId, cursorMentionId, limit, unreadOnly, channelId).stream().map(this::toRecord).toList(), "failed to query mentions");
+    public List<MentionRecord> findByAccountId(
+            long accountId,
+            Long cursorMentionId,
+            int limit,
+            boolean unreadOnly,
+            Long channelId
+    ) {
+        return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
+                        .eq(MentionEntity::getTargetAccountId, accountId)
+                        .lt(cursorMentionId != null, MentionEntity::getMentionId, cursorMentionId)
+                        .eq(unreadOnly, MentionEntity::getRead, false)
+                        .eq(channelId != null, MentionEntity::getChannelId, channelId)
+                        .orderByDesc(MentionEntity::getMentionId)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(MentionEntity::toRecord)
+                .toList();
     }
 
     /**
@@ -57,7 +79,10 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
      */
     @Override
     public boolean markAsRead(long accountId, long mentionId) {
-        return execute(() -> mentionMapper.markAsRead(accountId, mentionId) > 0, "failed to mark mention as read");
+        return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getMentionId, mentionId)
+                .set(MentionEntity::getRead, true)) > 0;
     }
 
     /**
@@ -66,52 +91,11 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
      */
     @Override
     public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
-        return execute(() -> mentionMapper.markAllAsRead(accountId, beforeMentionId, channelId), "failed to batch mark mentions as read");
-    }
-
-    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
-        try {
-            return operation.run();
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        }
-    }
-
-    private MentionRecord toRecord(MentionEntity entity) {
-        return new MentionRecord(entity.getMentionId(), entity.getChannelId(), entity.getMessageId(), entity.getFromAccountId(), entity.getTargetType(), entity.getTargetAccountId(), entity.getCreatedAt(), Boolean.TRUE.equals(entity.getRead()));
-    }
-
-    private MentionEntity toEntity(MentionRecord record) {
-        MentionEntity entity = new MentionEntity();
-        entity.setMentionId(record.mentionId());
-        entity.setChannelId(record.channelId());
-        entity.setMessageId(record.messageId());
-        entity.setFromAccountId(record.fromAccountId());
-        entity.setTargetType(record.targetType());
-        entity.setTargetAccountId(record.targetAccountId());
-        entity.setCreatedAt(record.createdAt());
-        entity.setRead(record.read());
-        return entity;
-    }
-
-    /**
-     * 有返回值的数据库访问操作。
-     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
-     */
-    @FunctionalInterface
-    private interface DatabaseOperation<T> { T run(); }
-
-    /**
-     * 无返回值的数据库访问操作。
-     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
-     */
-    @FunctionalInterface
-    private interface VoidDatabaseOperation { void run(); }
-
-    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
-        execute(() -> {
-            operation.run();
-            return null;
-        }, errorMessage);
+        return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getRead, false)
+                .le(beforeMentionId != null, MentionEntity::getMentionId, beforeMentionId)
+                .eq(channelId != null, MentionEntity::getChannelId, channelId)
+                .set(MentionEntity::getRead, true));
     }
 }

@@ -2,7 +2,9 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.jdbc;
 
 import java.sql.Timestamp;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.PluginMigrationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.PluginMigrationDatabaseService;
 
@@ -11,6 +13,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Plug
  * 职责：使用宿主 DataSource 维护 `plugin_schema_history` 表。
  * 边界：只记录迁移元数据，不执行插件自身迁移内容。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class JdbcPluginMigrationDatabaseService implements PluginMigrationDatabaseService {
 
     private static final String CREATE_TABLE_SQL = """

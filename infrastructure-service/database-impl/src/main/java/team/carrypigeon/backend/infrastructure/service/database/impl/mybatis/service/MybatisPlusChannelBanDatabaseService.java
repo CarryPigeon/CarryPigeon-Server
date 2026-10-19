@@ -3,9 +3,11 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.dao.DataAccessException;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 
-import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelBanEntity;
@@ -13,9 +15,11 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 频道封禁数据库服务。
- * 职责：在 database-impl 中完成频道封禁的最小读写能力。
+ * 职责：在 database-impl 中完成频道封禁的最小查询与写入能力。
  * 边界：只负责数据库记录映射，不承载封禁业务规则。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseService {
 
     private final ChannelBanMapper channelBanMapper;
@@ -29,33 +33,24 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
      */
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
-        return execute(
-                () -> Optional.ofNullable(channelBanMapper.findByChannelIdAndBannedAccountId(channelId, bannedAccountId))
-                        .map(this::toRecord),
-                "failed to query channel ban"
-        );
+        return Optional.ofNullable(channelBanMapper.selectOne(new LambdaQueryWrapper<ChannelBanEntity>()
+                        .eq(ChannelBanEntity::getChannelId, channelId)
+                        .eq(ChannelBanEntity::getBannedAccountId, bannedAccountId)))
+                .map(ChannelBanEntity::toRecord);
     }
 
     /**
      * 查询频道下全部封禁记录。
+     * 输出：按创建时间倒序排列。
      */
     @Override
     public List<ChannelBanRecord> findByChannelId(long channelId) {
-        return execute(
-                () -> channelBanMapper.findByChannelId(channelId).stream()
-                        .map(this::toRecord)
-                        .toList(),
-                "failed to query channel bans"
-        );
-    }
-
-    /**
-     * 判断频道是否存在封禁记录。
-     */
-    @Override
-    public boolean existsByChannelId(long channelId) {
-        return execute(() -> channelBanMapper.existsByChannelId(channelId),
-                "failed to query channel ban existence");
+        return channelBanMapper.selectList(new LambdaQueryWrapper<ChannelBanEntity>()
+                        .eq(ChannelBanEntity::getChannelId, channelId)
+                        .orderByDesc(ChannelBanEntity::getCreatedAt))
+                .stream()
+                .map(ChannelBanEntity::toRecord)
+                .toList();
     }
 
     /**
@@ -63,76 +58,15 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
      */
     @Override
     public void insert(ChannelBanRecord record) {
-        executeVoid(() -> channelBanMapper.insert(toEntity(record)), "failed to insert channel ban");
+        channelBanMapper.insert(ChannelBanEntity.from(record));
     }
 
     /**
      * 更新既有封禁记录。
+     * 约束：按频道与被封禁账户定位，不依赖封禁 ID。
      */
     @Override
     public void update(ChannelBanRecord record) {
-        executeVoid(() -> channelBanMapper.update(toEntity(record)), "failed to update channel ban");
-    }
-
-    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
-        try {
-            return operation.run();
-        } catch (DataAccessException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        }
-    }
-
-    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
-        execute(() -> {
-            operation.run();
-            return null;
-        }, errorMessage);
-    }
-
-    /**
-     * 有返回值的数据库访问操作。
-     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
-     */
-    @FunctionalInterface
-    private interface DatabaseOperation<T> {
-
-        T run();
-    }
-
-    /**
-     * 无返回值的数据库访问操作。
-     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
-     */
-    @FunctionalInterface
-    private interface VoidDatabaseOperation {
-
-        void run();
-    }
-
-    private ChannelBanRecord toRecord(ChannelBanEntity entity) {
-        return new ChannelBanRecord(
-                entity.getBanId(),
-                entity.getChannelId(),
-                entity.getBannedAccountId(),
-                entity.getOperatorAccountId(),
-                entity.getReason(),
-                entity.getExpiresAt(),
-                entity.getCreatedAt(),
-                entity.getRevokedAt()
-        );
-    }
-
-    private ChannelBanEntity toEntity(ChannelBanRecord record) {
-        ChannelBanEntity entity = new ChannelBanEntity();
-        entity.setChannelId(record.channelId());
-        entity.setBannedAccountId(record.bannedAccountId());
-        entity.setOperatorAccountId(record.operatorAccountId());
-        entity.setReason(record.reason());
-        entity.setExpiresAt(record.expiresAt());
-        entity.setCreatedAt(record.createdAt());
-        entity.setRevokedAt(record.revokedAt());
-        return entity;
+        channelBanMapper.updateById(ChannelBanEntity.from(record));
     }
 }

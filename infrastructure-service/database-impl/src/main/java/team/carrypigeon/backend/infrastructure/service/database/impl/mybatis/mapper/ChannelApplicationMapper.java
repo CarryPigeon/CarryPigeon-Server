@@ -6,8 +6,9 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 
 /**
  * 频道申请 Mapper。
- * 职责：提供 chat_channel_application 表的显式 SQL 访问入口。
+ * 职责：提供 chat_channel_application 表的 MyBatis-Plus 访问入口。
  * 边界：仅供 database-impl 内部服务使用。
  */
 @Mapper
-public interface ChannelApplicationMapper extends BaseMapper<ChannelApplicationEntity> {}
+public interface ChannelApplicationMapper extends BaseMapper<ChannelApplicationEntity> {
+}

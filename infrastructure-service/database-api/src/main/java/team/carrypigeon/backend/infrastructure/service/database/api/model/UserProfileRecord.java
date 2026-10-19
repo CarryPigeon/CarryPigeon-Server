@@ -1,11 +1,11 @@
-package team.carrypigeon.backend.infrastructure.service.database.api.user.profile;
+package team.carrypigeon.backend.infrastructure.service.database.api.model;
 
 import java.time.Instant;
 
 /**
  * 用户资料数据库记录契约。
- * 职责：表达用户资料持久化所需的最小统一投影字段。
- * 边界：同时服务查询与更新契约，不承载用户资料业务决策语义。
+ * 职责：表达 user_profile 表读写共用的最小持久化投影字段。
+ * 边界：只服务 database-api 最小数据库契约，不承载资料校验与展示规则。
  *
  * @param accountId 关联账户 ID
  * @param avatarUrl 用户头像地址

@@ -50,7 +50,7 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
      */
     @Override
     public List<ChannelUnread> listUnreadsByAccountId(long accountId) {
-        return channelReadStateDatabaseService.listUnreadsByAccountId(accountId).stream()
+        return channelReadStateDatabaseService.findUnreadsByAccountId(accountId).stream()
                 .map(this::toDomain)
                 .toList();
     }

@@ -1,12 +1,16 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.jdbc;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Component;
 
 /**
  * JDBC 客户端支持入口。
  * 职责：封装 database-impl 内部对 Spring JdbcClient 的访问。
  * 边界：该类型只允许在 database-impl 内使用，不进入 database-api 或 chat-domain。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class JdbcClientSupport {
 
     private final JdbcClient jdbcClient;

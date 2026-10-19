@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
-import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.user.profile.UserProfileRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 
 /**
  * 基于 database-api 的用户资料仓储适配器。
@@ -41,7 +41,7 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
      */
     @Override
     public List<UserProfile> findByAccountIds(List<Long> accountIds) {
-        return userProfileDatabaseService.findByAccountIds(accountIds).stream()
+        return userProfileDatabaseService.findByIds(accountIds).stream()
                 .map(this::toDomainModel)
                 .toList();
     }

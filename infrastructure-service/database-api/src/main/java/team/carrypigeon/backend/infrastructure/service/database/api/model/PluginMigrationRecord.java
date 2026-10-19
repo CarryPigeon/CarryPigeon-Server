@@ -5,6 +5,7 @@ import java.time.Instant;
 /**
  * 插件数据库迁移历史记录。
  * 职责：在 database-api 边界表达已执行插件迁移的最小审计信息。
+ * 边界：只记录迁移元数据，不解释插件业务数据，也不执行迁移内容。
  *
  * @param pluginId 插件唯一标识
  * @param pluginVersion 执行迁移时的插件版本

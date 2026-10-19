@@ -2,28 +2,29 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ma
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelReadStateEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelUnreadProjection;
 
 /**
  * 频道已读状态 Mapper。
+ * 职责：提供 chat_channel_read_state 表的读写入口。
+ * 边界：保留的显式 SQL 只有 UPSERT、条件推进和未读聚合，
+ * 这三类语义（ON DUPLICATE KEY、集合聚合）无法用 MyBatis-Plus 条件构造器表达。
  */
 @Mapper
 public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntity> {
 
-    @Select("""
-            SELECT channel_id, account_id, last_read_message_id, last_read_time, created_at, updated_at
-            FROM chat_channel_read_state
-            WHERE channel_id = #{channelId}
-              AND account_id = #{accountId}
-            LIMIT 1
-            """)
-    ChannelReadStateEntity findByChannelIdAndAccountId(@Param("channelId") long channelId, @Param("accountId") long accountId);
-
+    /**
+     * 新增或覆盖频道已读状态。
+     *
+     * @param entity 已读状态实体
+     * @return 受影响行数
+     */
     @Insert("""
             INSERT INTO chat_channel_read_state (
                 channel_id,
@@ -47,7 +48,13 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     int upsertState(ChannelReadStateEntity entity);
 
-    @org.apache.ibatis.annotations.Update("""
+    /**
+     * 仅当新锚点更靠后时推进已读状态。
+     *
+     * @param entity 已读状态实体
+     * @return 受影响行数；0 表示新锚点不比已存锚点更靠后
+     */
+    @Update("""
             INSERT INTO chat_channel_read_state (
                 channel_id, account_id, last_read_message_id, last_read_time, created_at, updated_at
             ) VALUES (
@@ -59,6 +66,12 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     int advanceIfNewer(ChannelReadStateEntity entity);
 
+    /**
+     * 聚合账户在各频道的未读消息数与最后已读时间。
+     *
+     * @param accountId 账户 ID
+     * @return 未读投影列表
+     */
     @Select("""
             <script>
             SELECT
@@ -80,5 +93,5 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             ORDER BY cm.channel_id ASC
             </script>
             """)
-    List<ChannelUnreadProjection> listUnreadsByAccountId(@Param("accountId") long accountId);
+    List<ChannelUnreadProjection> findUnreadsByAccountId(@Param("accountId") long accountId);
 }

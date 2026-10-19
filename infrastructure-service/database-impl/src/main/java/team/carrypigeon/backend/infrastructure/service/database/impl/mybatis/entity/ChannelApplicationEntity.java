@@ -1,20 +1,27 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.Instant;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 
 /**
- * 频道邀请持久化实体。
- * 职责：承接 chat_channel_application 表字段与 MyBatis 映射。
+ * 频道申请持久化实体。
+ * 职责：承接 chat_channel_application 表字段与 MyBatis-Plus 映射。
  * 边界：仅供 database-impl 内部使用，不暴露到 database-api。
  */
-@TableName("chat_channel_application")
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName("chat_channel_application")
 public class ChannelApplicationEntity {
-    @TableId
+
+    @TableId(value = "application_id", type = IdType.INPUT)
     private Long applicationId;
     private Long channelId;
     private Long applicantId;
@@ -23,27 +30,38 @@ public class ChannelApplicationEntity {
     private Instant createdAt;
     private Instant respondedAt;
 
-    public ChannelApplicationRecord toRecord(){
+    /**
+     * 将持久化实体转换为数据库记录契约。
+     *
+     * @return 对应数据库记录契约
+     */
+    public ChannelApplicationRecord toRecord() {
         return new ChannelApplicationRecord(
-            applicationId,
-            channelId,
-            applicantId,
-            reason,
-            status,
-            createdAt,
-            respondedAt
+                applicationId,
+                applicantId,
+                channelId,
+                reason,
+                status,
+                createdAt,
+                respondedAt
         );
     }
 
-    public static ChannelApplicationEntity from(ChannelApplicationRecord record){
-        ChannelApplicationEntity entity = new ChannelApplicationEntity();
-        entity.applicationId = record.applicationId();
-        entity.channelId = record.channelId();
-        entity.applicantId = record.applicantId();
-        entity.reason = record.reason();
-        entity.status = record.status();
-        entity.createdAt = record.createdAt();
-        entity.respondedAt = record.respondedAt();
-        return entity;
+    /**
+     * 将数据库记录契约转换为持久化实体。
+     *
+     * @param record 频道申请数据库记录契约
+     * @return 对应持久化实体
+     */
+    public static ChannelApplicationEntity from(ChannelApplicationRecord record) {
+        return new ChannelApplicationEntity(
+                record.applicationId(),
+                record.channelId(),
+                record.applicantId(),
+                record.reason(),
+                record.status(),
+                record.createdAt(),
+                record.respondedAt()
+        );
     }
 }

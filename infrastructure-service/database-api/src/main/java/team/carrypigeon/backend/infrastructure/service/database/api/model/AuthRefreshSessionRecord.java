@@ -1,14 +1,14 @@
-package team.carrypigeon.backend.infrastructure.service.database.api.auth.session;
+package team.carrypigeon.backend.infrastructure.service.database.api.model;
 
 import java.time.Instant;
 
 /**
  * 刷新会话数据库记录契约。
- * 职责：表达刷新会话持久化所需的最小统一投影字段。
- * 边界：同时服务查询、写入与撤销后的读取契约，不表达设备治理语义。
+ * 职责：表达 auth_refresh_session 表读写共用的最小持久化投影字段。
+ * 边界：只服务 database-api 最小数据库契约，不承载 token 轮换与设备治理规则。
  *
  * @param id 刷新会话 ID
- * @param accountId 账户 ID
+ * @param accountId 会话所属账户 ID
  * @param refreshTokenHash refresh token 摘要
  * @param expiresAt 过期时间
  * @param revoked 是否已撤销

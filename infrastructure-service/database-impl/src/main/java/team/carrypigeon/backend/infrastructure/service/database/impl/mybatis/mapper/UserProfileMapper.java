@@ -1,7 +1,8 @@
-package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.user.profile;
+package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.UserProfileEntity;
 
 /**
  * 用户资料 Mapper。

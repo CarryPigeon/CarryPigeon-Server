@@ -1,25 +1,29 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.springframework.dao.DataAccessException;
-import team.carrypigeon.backend.infrastructure.service.database.api.exception.DatabaseServiceException;
+import java.util.Optional;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MessageEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.support.SqlInClauseBatches;
 
 /**
  * MyBatis-Plus 消息数据库服务。
  * 职责：在 database-impl 中完成消息持久化投影的最小读写能力。
  * 边界：只负责持久化投影与实体之间的映射，不承载消息业务规则。
  */
+@Component
+@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusMessageDatabaseService implements MessageDatabaseService {
+
+    private static final String STATUS_SENT = "sent";
 
     private final MessageMapper messageMapper;
 
@@ -32,95 +36,94 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
      */
     @Override
     public void insert(MessageRecord record) {
-        executeVoid(() -> {
-            messageMapper.insert(toEntity(record));
-        }, "failed to insert message");
+        messageMapper.insert(MessageEntity.from(record));
     }
 
     /**
      * 按消息 ID 查询记录。
      */
     @Override
-    public java.util.Optional<MessageRecord> findById(long messageId) {
-        return execute(
-                () -> java.util.Optional.ofNullable(messageMapper.selectById(messageId))
-                        .map(this::toRecord),
-                "failed to query message"
-        );
+    public Optional<MessageRecord> findById(long messageId) {
+        return Optional.ofNullable(messageMapper.selectById(messageId))
+                .map(MessageEntity::toRecord);
     }
 
     /**
-     * 分片批量查询消息记录，避免合并转发按消息逐条访问数据库。
+     * 批量读取消息记录，供合并转发等场景避免逐条访问数据库。
      */
     @Override
-    public Map<Long, MessageRecord> findByIds(Collection<Long> messageIds) {
+    public List<MessageRecord> findByIds(Collection<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
-            return Map.of();
+            return List.of();
         }
-        return execute(
-                () -> SqlInClauseBatches.partition(messageIds).stream()
-                        .flatMap(batch -> messageMapper.findByIds(batch).stream())
-                        .map(this::toRecord)
-                        .collect(Collectors.toMap(
-                                MessageRecord::messageId,
-                                Function.identity(),
-                                (existing, ignored) -> existing,
-                                LinkedHashMap::new
-                        )),
-                "failed to batch query messages"
-        );
+        return messageMapper.selectByIds(messageIds).stream()
+                .map(MessageEntity::toRecord)
+                .toList();
     }
 
     /**
      * 更新既有消息记录。
+     * 边界：只更新 domain 载荷、提及、摘要与状态四列，不改写发送者与频道归属。
      */
     @Override
     public void update(MessageRecord record) {
-        executeVoid(() -> {
-            messageMapper.updateMessage(toEntity(record));
-        }, "failed to update message");
+        messageMapper.update(null, new LambdaUpdateWrapper<MessageEntity>()
+                .eq(MessageEntity::getMessageId, record.messageId())
+                .set(MessageEntity::getData, record.data())
+                .set(MessageEntity::getMentions, record.mentions())
+                .set(MessageEntity::getPreview, record.preview())
+                .set(MessageEntity::getStatus, record.status()));
     }
 
     /**
      * 查询频道内早于游标的消息记录。
+     * 输出：按消息 ID 倒序返回，最多 limit 条。
      */
     @Override
     public List<MessageRecord> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-        return execute(
-                () -> messageMapper.findByChannelIdBefore(channelId, cursorMessageId, limit)
-                        .stream()
-                        .map(this::toRecord)
-                        .toList(),
-                "failed to query channel messages"
-        );
+        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
+                        .eq(MessageEntity::getChannelId, channelId)
+                        .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
+                        .orderByDesc(MessageEntity::getMessageId)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(MessageEntity::toRecord)
+                .toList();
     }
 
     /**
      * 查询频道内晚于锚点的消息记录。
+     * 输出：按消息 ID 升序返回，最多 limit 条。
      */
     @Override
     public List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
-        return execute(
-                () -> messageMapper.findByChannelIdAfter(channelId, afterMessageId, limit)
-                        .stream()
-                        .map(this::toRecord)
-                        .toList(),
-                "failed to query channel messages after anchor"
-        );
+        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
+                        .eq(MessageEntity::getChannelId, channelId)
+                        .gt(MessageEntity::getMessageId, afterMessageId)
+                        .orderByAsc(MessageEntity::getMessageId)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(MessageEntity::toRecord)
+                .toList();
     }
 
     /**
-     * 按关键字搜索频道消息。
+     * 按关键字搜索频道消息，只匹配已发送状态。
      */
     @Override
     public List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit) {
-        return execute(
-                () -> messageMapper.searchByChannelId(channelId, keyword, limit)
-                        .stream()
-                        .map(this::toRecord)
-                        .toList(),
-                "failed to search channel messages"
-        );
+        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
+                        .eq(MessageEntity::getChannelId, channelId)
+                        .eq(MessageEntity::getStatus, STATUS_SENT)
+                        .and(wrapper -> wrapper
+                                .like(MessageEntity::getPreview, keyword)
+                                .or()
+                                .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
+                        .orderByDesc(MessageEntity::getMessageId)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(MessageEntity::toRecord)
+                .toList();
     }
 
     /**
@@ -138,83 +141,22 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
             Long afterMessageId,
             int limit
     ) {
-        return execute(
-                () -> messageMapper.searchByChannelIdWithFilters(
-                                channelId,
-                                keyword,
-                                cursorMessageId,
-                                senderAccountId,
-                                domain,
-                                beforeMessageId,
-                                afterMessageId,
-                                limit
-                        ).stream()
-                        .map(this::toRecord)
-                        .toList(),
-                "failed to search channel messages"
-        );
-    }
-
-    private <T> T execute(DatabaseOperation<T> operation, String errorMessage) {
-        try {
-            return operation.run();
-        } catch (RuntimeException exception) {
-            throw new DatabaseServiceException(errorMessage, exception);
-        }
-    }
-
-    private void executeVoid(VoidDatabaseOperation operation, String errorMessage) {
-        execute(() -> {
-            operation.run();
-            return null;
-        }, errorMessage);
-    }
-
-    private MessageRecord toRecord(MessageEntity entity) {
-        return new MessageRecord(
-                entity.getMessageId(),
-                entity.getSenderId(),
-                entity.getChannelId(),
-                entity.getDomain(),
-                entity.getDomainVersion(),
-                entity.getData(),
-                entity.getSendTime(),
-                entity.getMentions(),
-                entity.getPreview(),
-                entity.getStatus()
-        );
-    }
-
-    private MessageEntity toEntity(MessageRecord record) {
-        MessageEntity entity = new MessageEntity();
-        entity.setMessageId(record.messageId());
-        entity.setSenderId(record.senderId());
-        entity.setChannelId(record.channelId());
-        entity.setDomain(record.domain());
-        entity.setDomainVersion(record.domainVersion());
-        entity.setData(record.data());
-        entity.setSendTime(record.sendTime());
-        entity.setMentions(record.mentions());
-        entity.setPreview(record.preview());
-        entity.setStatus(record.status());
-        return entity;
-    }
-
-    /**
-     * 有返回值的数据库访问操作。
-     * 职责：让统一异常包装方法接收 mapper 查询或写入返回值。
-     */
-    @FunctionalInterface
-    private interface DatabaseOperation<T> {
-        T run();
-    }
-
-    /**
-     * 无返回值的数据库访问操作。
-     * 职责：让统一异常包装方法复用同一条数据库异常转换路径。
-     */
-    @FunctionalInterface
-    private interface VoidDatabaseOperation {
-        void run();
+        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
+                        .eq(MessageEntity::getChannelId, channelId)
+                        .eq(MessageEntity::getStatus, STATUS_SENT)
+                        .and(wrapper -> wrapper
+                                .like(MessageEntity::getPreview, keyword)
+                                .or()
+                                .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
+                        .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
+                        .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
+                        .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)
+                        .lt(beforeMessageId != null, MessageEntity::getMessageId, beforeMessageId)
+                        .gt(afterMessageId != null, MessageEntity::getMessageId, afterMessageId)
+                        .orderByDesc(MessageEntity::getMessageId)
+                        .last("LIMIT " + limit))
+                .stream()
+                .map(MessageEntity::toRecord)
+                .toList();
     }
 }

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -21,7 +22,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 @TableName("chat_channel")
 public class ChannelEntity {
 
-    @TableId
+    @TableId(value = "channel_id", type = IdType.INPUT)
     private Long channelId;
     private String name;
     private String brief;
@@ -31,27 +32,38 @@ public class ChannelEntity {
     private Instant createdAt;
     private Instant updatedAt;
 
-    public ChannelRecord toRecord(){
+    /**
+     * 将持久化实体转换为数据库记录契约。
+     *
+     * @return 对应数据库记录契约
+     */
+    public ChannelRecord toRecord() {
         return new ChannelRecord(
-            channelId,
-            name,
-            brief,
-            avatar,
-            systemChannel,
-            createdAt,
-            updatedAt
+                channelId,
+                name,
+                brief,
+                avatar,
+                systemChannel,
+                createdAt,
+                updatedAt
         );
     }
 
-    public static ChannelEntity from(ChannelRecord record){
+    /**
+     * 将数据库记录契约转换为持久化实体。
+     *
+     * @param record 频道数据库记录契约
+     * @return 对应持久化实体
+     */
+    public static ChannelEntity from(ChannelRecord record) {
         return new ChannelEntity(
-            record.id(),
-            record.name(),
-            record.brief(),
-            record.avatar(),
-            record.systemChannel(),
-            record.createdAt(),
-            record.updatedAt()
+                record.id(),
+                record.name(),
+                record.brief(),
+                record.avatar(),
+                record.systemChannel(),
+                record.createdAt(),
+                record.updatedAt()
         );
     }
 }

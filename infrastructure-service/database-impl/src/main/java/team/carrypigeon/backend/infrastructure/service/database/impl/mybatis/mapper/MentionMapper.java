@@ -1,22 +1,28 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.List;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MentionEntity;
 
 /**
  * 提及 Mapper。
+ * 职责：提供 chat_mention 表的 MyBatis-Plus 访问入口。
+ * 边界：仅供 database-impl 内部服务使用；唯一保留的显式 SQL 是批量插入，
+ * 因为 MyBatis-Plus BaseMapper 没有多行插入能力。
  */
 @Mapper
-public interface MentionMapper {
+public interface MentionMapper extends BaseMapper<MentionEntity> {
 
+    /**
+     * 单条 SQL 批量插入提及记录。
+     *
+     * @param mentions 待插入提及实体
+     * @return 受影响行数
+     */
     @Insert("""
-            <script>
             INSERT INTO chat_mention (
                 mention_id,
                 channel_id,
@@ -40,67 +46,6 @@ public interface MentionMapper {
                 #{mention.read}
               )
             </foreach>
-            </script>
             """)
     int insertAll(@Param("mentions") List<MentionEntity> mentions);
-
-    @Delete("""
-            DELETE FROM chat_mention
-            WHERE message_id = #{messageId}
-            """)
-    int deleteByMessageId(@Param("messageId") long messageId);
-
-    @Select("""
-            <script>
-            SELECT mention_id, channel_id, message_id, from_account_id, target_type, target_account_id, created_at, is_read
-            FROM chat_mention
-            WHERE target_account_id = #{accountId}
-            <if test="cursorMentionId != null">
-              AND mention_id &lt; #{cursorMentionId}
-            </if>
-            <if test="unreadOnly">
-              AND is_read = FALSE
-            </if>
-            <if test="channelId != null">
-              AND channel_id = #{channelId}
-            </if>
-            ORDER BY mention_id DESC
-            LIMIT #{limit}
-            </script>
-            """)
-    List<MentionEntity> listByAccountId(
-            @Param("accountId") long accountId,
-            @Param("cursorMentionId") Long cursorMentionId,
-            @Param("limit") int limit,
-            @Param("unreadOnly") boolean unreadOnly,
-            @Param("channelId") Long channelId
-    );
-
-    @Update("""
-            UPDATE chat_mention
-            SET is_read = TRUE
-            WHERE mention_id = #{mentionId}
-              AND target_account_id = #{accountId}
-            """)
-    int markAsRead(@Param("accountId") long accountId, @Param("mentionId") long mentionId);
-
-    @Update("""
-            <script>
-            UPDATE chat_mention
-            SET is_read = TRUE
-            WHERE target_account_id = #{accountId}
-              AND is_read = FALSE
-            <if test="beforeMentionId != null">
-              AND mention_id &lt;= #{beforeMentionId}
-            </if>
-            <if test="channelId != null">
-              AND channel_id = #{channelId}
-            </if>
-            </script>
-            """)
-    int markAllAsRead(
-            @Param("accountId") long accountId,
-            @Param("beforeMentionId") Long beforeMentionId,
-            @Param("channelId") Long channelId
-    );
 }

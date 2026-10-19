@@ -1,11 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelDiscoverProjection;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelEntity;
 
 /**
