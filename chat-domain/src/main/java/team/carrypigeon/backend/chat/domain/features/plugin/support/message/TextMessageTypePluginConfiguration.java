@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.plugin.support.message;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import team.carrypigeon.backend.chat.domain.features.plugin.config.PluginGovernanceProperties;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginRegistration;
 
 /**
  * 文本消息类型插件配置。

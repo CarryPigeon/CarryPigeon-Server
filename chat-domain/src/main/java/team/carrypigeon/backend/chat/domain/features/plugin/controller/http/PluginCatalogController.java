@@ -9,11 +9,11 @@ import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginCatalogApi;
-import team.carrypigeon.backend.chat.domain.features.plugin.controller.dto.PluginCatalogItemResponse;
-import team.carrypigeon.backend.chat.domain.features.plugin.controller.dto.PluginCatalogResponse;
-import team.carrypigeon.backend.chat.domain.features.plugin.controller.dto.PluginDomainResponse;
-import team.carrypigeon.backend.chat.domain.features.plugin.controller.dto.PluginDownloadResponse;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.catalog.PluginCatalogApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.controller.http.dto.PluginCatalogItemResponse;
+import team.carrypigeon.backend.chat.domain.features.plugin.controller.http.dto.PluginCatalogResponse;
+import team.carrypigeon.backend.chat.domain.features.plugin.controller.http.dto.PluginDomainResponse;
+import team.carrypigeon.backend.chat.domain.features.plugin.controller.http.dto.PluginDownloadResponse;
 
 /**
  * 插件目录 HTTP 入口。

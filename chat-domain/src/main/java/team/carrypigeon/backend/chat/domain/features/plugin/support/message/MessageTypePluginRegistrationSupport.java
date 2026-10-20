@@ -2,8 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.plugin.support.message;
 
 import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginDescriptor;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginDescriptor;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginRegistration;
 
 /**
  * 消息类型插件注册支持。

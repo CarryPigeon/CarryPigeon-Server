@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.verification.controller.dto.SendEmailCodeRequest;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.EmailVerificationApi;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.command.IssueEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.input.IssueEmailVerificationCodeCommand;
 
 /**
  * 邮箱验证 HTTP 入口。

@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;

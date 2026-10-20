@@ -26,23 +26,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.RecallChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.command.UploadMessageAttachmentCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageHistoryResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.ChannelMessageSearchResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.projection.MessageAttachmentUploadResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.query.GetChannelMessageHistoryQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.query.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageAttachmentApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageLifecycleApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessagePublishingApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.ChannelMessageTimelineApi;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.ChannelMessageV1Response;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.MessageAttachmentUploadResponse;
-import team.carrypigeon.backend.chat.domain.features.message.controller.dto.SendChannelMessageRequest;
-import team.carrypigeon.backend.chat.domain.features.message.controller.support.ChannelMessageV1ResponseMapper;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.RecallChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SendChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.UploadMessageAttachmentCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageHistoryResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.MessageAttachmentUploadResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessageHistoryQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageAttachmentApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageLifecycleApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageTimelineApi;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageV1Response;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.MessageAttachmentUploadResponse;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.SendChannelMessageRequest;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
@@ -66,20 +66,17 @@ public class ChannelMessageController {
     private final ChannelMessageTimelineApi channelMessageTimelineApi;
     private final ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
     private final ChannelMessageLifecycleApi channelMessageLifecycleApi;
-    private final ChannelMessageV1ResponseMapper responseMapper;
 
     public ChannelMessageController(
             ChannelMessagePublishingApi channelMessagePublishingApi,
             ChannelMessageTimelineApi channelMessageTimelineApi,
             ChannelMessageAttachmentApi channelMessageAttachmentDomainApi,
-            ChannelMessageLifecycleApi channelMessageLifecycleApi,
-            ChannelMessageV1ResponseMapper responseMapper
+            ChannelMessageLifecycleApi channelMessageLifecycleApi
     ) {
         this.channelMessagePublishingApi = channelMessagePublishingApi;
         this.channelMessageTimelineApi = channelMessageTimelineApi;
         this.channelMessageAttachmentDomainApi = channelMessageAttachmentDomainApi;
         this.channelMessageLifecycleApi = channelMessageLifecycleApi;
-        this.responseMapper = responseMapper;
     }
 
     /**
@@ -122,7 +119,7 @@ public class ChannelMessageController {
                 )
         );
         return CursorPageResponse.of(
-                result.messages().stream().map(responseMapper::toResponse).toList(),
+                result.messages().stream().map(ChannelMessageV1Response::from).toList(),
                 encodeCursor(HISTORY_CURSOR_SCOPE, result.nextCursor())
         );
     }
@@ -180,7 +177,7 @@ public class ChannelMessageController {
         boolean hasMore = result.messages().size() > limit;
         java.util.List<ChannelMessageResult> pageItems = hasMore ? result.messages().subList(0, limit) : result.messages();
         String nextCursor = hasMore ? encodeCursor(SEARCH_CURSOR_SCOPE, pageItems.getLast().messageId()) : null;
-        return CursorPageResponse.of(pageItems.stream().map(responseMapper::toResponse).toList(), nextCursor, hasMore);
+        return CursorPageResponse.of(pageItems.stream().map(ChannelMessageV1Response::from).toList(), nextCursor, hasMore);
     }
 
     @PostMapping("/{channelId}/messages")
@@ -205,7 +202,7 @@ public class ChannelMessageController {
                     requestBody.clientMessageId()
                 )
         );
-        return ResponseEntity.status(201).body(responseMapper.toResponse(result));
+        return ResponseEntity.status(201).body(ChannelMessageV1Response.from(result));
     }
 
     @PostMapping(path = "/{channelId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -260,7 +257,7 @@ public class ChannelMessageController {
         ChannelMessageResult result = channelMessageLifecycleApi.recallChannelMessage(
                 new RecallChannelMessageCommand(cpPrincipal.accountId(), channelId, messageId)
         );
-        return responseMapper.toResponse(result);
+        return ChannelMessageV1Response.from(result);
     }
 
     private java.util.List<Long> parseMentionIds(java.util.List<String> mentionIds) {

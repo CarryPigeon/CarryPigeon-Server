@@ -8,8 +8,8 @@ import jakarta.annotation.security.PermitAll;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import team.carrypigeon.backend.chat.domain.features.server.domain.projection.ServerDiscoveryDocument;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.ServerEntranceApi;
+import team.carrypigeon.backend.chat.domain.features.server.controller.http.dto.ServerDiscoveryResponse;
+import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 
 /**
  * 服务基础 HTTP 入口。
@@ -43,7 +43,7 @@ public class ServerController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回服务发现文档")
     })
-    public ServerDiscoveryDocument getServerDiscoveryDocument() {
-        return serverEntranceDomainApi.getServerDiscoveryDocument();
+    public ServerDiscoveryResponse getServerDiscoveryDocument() {
+        return ServerDiscoveryResponse.from(serverEntranceDomainApi.getServerDiscoveryDocument());
     }
 }

@@ -22,12 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
-import team.carrypigeon.backend.chat.domain.features.user.controller.dto.*;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.command.UpdateCurrentUserProfileCommand;
-import team.carrypigeon.backend.chat.domain.features.user.domain.projection.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.domain.query.GetUserProfileByAccountIdQuery;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.UserProfileApi;
+import team.carrypigeon.backend.chat.domain.features.user.controller.http.dto.*;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.GetUserProfileByAccountIdQuery;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**

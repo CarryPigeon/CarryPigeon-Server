@@ -1,0 +1,45 @@
+package team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message;
+
+import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.message.MessageDomainPluginApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.message.input.ValidateMessageDataCommand;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.message.result.ValidatedMessageDataResult;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+
+/**
+ * 消息 domain 插件 API 实现。
+ * 职责：按 domain 分派插件并收敛客户端可发送约束。
+ */
+@Service
+public class MessageDomainPluginDomainApi implements MessageDomainPluginApi {
+
+    private final ChannelMessagePluginRegistry pluginRegistry;
+
+    public MessageDomainPluginDomainApi(ChannelMessagePluginRegistry pluginRegistry) {
+        this.pluginRegistry = pluginRegistry;
+    }
+
+    @Override
+    public ValidatedMessageDataResult validateMessageData(ValidateMessageDataCommand command) {
+        ChannelMessagePlugin plugin = pluginRegistry.requireDomain(command.domain());
+        if (command.clientRequest() && !plugin.clientSendable()) {
+            throw ProblemException.of(PluginProblem.INVALID_INPUT, "domain is not client-sendable");
+        }
+        ChannelMessagePlugin.CanonicalData canonicalData = plugin.validateCanonicalData(
+                new ChannelMessagePlugin.ChannelMessageBuildContext(
+                        command.messageId(), command.channelId(), command.senderId(), command.sendTime()
+                ),
+                command.domainVersion(),
+                command.data()
+        );
+        return new ValidatedMessageDataResult(
+                plugin.supportedDomain(),
+                command.domainVersion(),
+                canonicalData.data(),
+                canonicalData.preview()
+        );
+    }
+
+}

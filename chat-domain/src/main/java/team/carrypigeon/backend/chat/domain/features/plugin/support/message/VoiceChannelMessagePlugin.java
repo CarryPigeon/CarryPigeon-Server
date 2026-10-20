@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.plugin.support.message;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.extension.ChannelMessagePlugin;
 import team.carrypigeon.backend.chat.domain.features.plugin.domain.problem.PluginProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;

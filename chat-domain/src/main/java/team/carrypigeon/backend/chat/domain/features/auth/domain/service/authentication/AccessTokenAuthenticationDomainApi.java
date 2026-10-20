@@ -1,0 +1,49 @@
+package team.carrypigeon.backend.chat.domain.features.auth.domain.service.authentication;
+
+import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.result.AccessTokenAuthenticationResult;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+
+/**
+ * Access token 认证领域 API 实现。
+ * 职责：调用 auth 内部 token codec，并把内部 claims 收敛为稳定认证投影。
+ * 边界：不签发 token，不处理 refresh session。
+ */
+@Service
+public class AccessTokenAuthenticationDomainApi implements AccessTokenAuthenticationApi {
+
+    private final AuthTokenCodec authTokenCodec;
+
+    public AccessTokenAuthenticationDomainApi(AuthTokenCodec authTokenCodec) {
+        this.authTokenCodec = authTokenCodec;
+    }
+
+    @Override
+    public AccessTokenAuthenticationResult authenticate(String accessToken) {
+        AuthTokenClaims claims = authTokenCodec.parseAccessToken(accessToken);
+        return new AccessTokenAuthenticationResult(
+                parseAccountId(claims.subject()),
+                claims.expiresAt()
+        );
+    }
+
+    private long parseAccountId(String subject) {
+        try {
+            long accountId = Long.parseLong(subject);
+            if (accountId <= 0L) {
+                throw invalidAccessToken();
+            }
+            return accountId;
+        } catch (NumberFormatException exception) {
+            throw invalidAccessToken();
+        }
+    }
+
+    private ProblemException invalidAccessToken() {
+        return ProblemException.of(AuthProblem.INVALID_ACCESS_TOKEN);
+    }
+}

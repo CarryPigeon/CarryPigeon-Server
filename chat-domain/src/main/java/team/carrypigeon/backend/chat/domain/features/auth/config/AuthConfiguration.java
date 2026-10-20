@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthPasswordLoginPolicy;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.service.AuthTokenSettings;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.session.AuthPasswordLoginPolicy;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.service.session.AuthTokenSettings;
 
 /**
  * 鉴权功能配置入口。

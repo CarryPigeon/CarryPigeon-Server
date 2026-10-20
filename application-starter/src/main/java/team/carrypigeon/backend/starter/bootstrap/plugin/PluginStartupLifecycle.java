@@ -2,7 +2,7 @@ package team.carrypigeon.backend.starter.bootstrap.plugin;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginRuntimeApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.runtime.PluginRuntimeApi;
 
 /**
  * 插件启动生命周期协调器。

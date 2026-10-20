@@ -3,7 +3,7 @@ package team.carrypigeon.backend.starter.config.plugin;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.PluginRuntimeApi;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.runtime.PluginRuntimeApi;
 import team.carrypigeon.backend.starter.bootstrap.plugin.PluginReadinessGate;
 import team.carrypigeon.backend.starter.bootstrap.plugin.PluginStartupLifecycle;
 import team.carrypigeon.backend.starter.support.http.PluginStartupGateFilter;

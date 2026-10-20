@@ -4,9 +4,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.FileReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.plugin.config.PluginGovernanceProperties;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginRegistration;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
 /**

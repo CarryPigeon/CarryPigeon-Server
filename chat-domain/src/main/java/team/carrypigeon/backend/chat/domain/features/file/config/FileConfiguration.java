@@ -4,7 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import team.carrypigeon.backend.chat.domain.features.file.domain.service.FileUploadShareKeyCodec;
+import team.carrypigeon.backend.chat.domain.features.file.domain.service.file.FileUploadShareKeyCodec;
 
 /**
  * 文件功能配置入口。

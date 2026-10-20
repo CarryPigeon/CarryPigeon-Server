@@ -1,29 +1,46 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
+import java.util.Locale;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.dto.*;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.command.*;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.AuthSessionTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.projection.RegisterResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.AuthSessionApi;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.CreateTokenSessionRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.LoginRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RefreshAccessTokenRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RevokeRefreshTokenRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.UpdateCurrentAccountEmailRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.input.RegisterCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.input.UpdateCurrentAccountEmailCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.AuthSessionApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.CreateTokenSessionCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.LoginCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.LogoutCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.RefreshTokenCommand;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.result.AuthSessionTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.result.AuthTokenResult;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
-
-import java.util.Locale;
 
 /**
  * 鉴权 HTTP 入口。
@@ -36,22 +53,18 @@ import java.util.Locale;
 @Tag(name = "认证与会话", description = "邮箱验证码、会话令牌签发、刷新与撤销。")
 public class AuthController {
 
-    private final AuthAccountApi authAccountDomainApi;
     private final AuthSessionApi authSessionDomainApi;
     private final AuthAccountApi authAccountApi;
 
     /**
      * 创建鉴权 HTTP 入口。
      *
-     * @param authAccountDomainApi 鉴权账号领域 API
      * @param authSessionDomainApi 鉴权会话领域 API
      */
     public AuthController(
-        AuthAccountApi authAccountDomainApi,
         AuthSessionApi authSessionDomainApi,
         AuthAccountApi authAccountApi
     ) {
-        this.authAccountDomainApi = authAccountDomainApi;
         this.authSessionDomainApi = authSessionDomainApi;
         this.authAccountApi = authAccountApi;
     }
@@ -68,7 +81,7 @@ public class AuthController {
             @ApiResponse(responseCode = "201", description = "注册成功")
     })
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterResult result = authAccountDomainApi.register(
+        RegisterResult result = authAccountApi.register(
             new RegisterCommand(request.username().trim(), request.password(),request.email(),request.code())
         );
         return ResponseEntity.status(201).body(new RegisterResponse(IdUtil.toString(result.accountId()), result.username()));
@@ -155,7 +168,6 @@ public class AuthController {
     /**
      * 更新用户邮箱
      *
-     * @param request 用于获取当前用户的request
      * @param body 具体的参数
      * */
     @PreAuthorize("isAuthenticated()")
@@ -163,7 +175,6 @@ public class AuthController {
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})
     public ResponseEntity<Void> updateEmail(
-        HttpServletRequest request,
         @AuthenticationPrincipal CpPrincipal cpPrincipal,
         @Valid @RequestBody UpdateCurrentAccountEmailRequest body
     ) {

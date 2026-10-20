@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.plugin.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistry;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.ChannelMessagePluginRegistration;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginRegistry;
+import team.carrypigeon.backend.chat.domain.features.plugin.domain.service.message.ChannelMessagePluginRegistration;
 
 /**
  * 消息插件装配配置。
