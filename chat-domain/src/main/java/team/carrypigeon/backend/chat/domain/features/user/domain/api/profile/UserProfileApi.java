@@ -34,10 +34,10 @@ public interface UserProfileApi {
      * 输出：目标账号的用户资料投影。
      * 约束：公开字段和可见性由领域实现控制。
      *
-     * @param query 按账号 ID 查询用户资料的查询对象
+     * @param accountId 用户id
      * @return 目标账号的用户资料投影
      */
-    UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdQuery query);
+    UserProfileResult findById(long accountId);
 
     /**
      * 批量查询公开用户资料。

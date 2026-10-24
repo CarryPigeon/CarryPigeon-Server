@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.api.message;
 
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.ForwardChannelMessageCommand;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 
@@ -13,7 +13,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
  * 失败语义：频道权限、消息类型、领域版本、附件引用和消息源不存在等问题由领域问题异常表达。
  * 调用方：message HTTP controller 通过本接口创建频道消息。
  */
-public interface ChannelMessagePublishingApi {
+public interface ChannelMessageApi {
 
     /**
      * 按 canonical envelope 发送频道消息。
@@ -27,14 +27,10 @@ public interface ChannelMessagePublishingApi {
     ChannelMessageResult sendChannelMessage(SendChannelMessageCommand command);
 
     /**
-     * 转发已有频道消息到目标频道。
-     * 输入：命令携带转发账号、源消息、目标频道和可选转发评论。
-     * 输出：目标频道中新创建的转发消息投影。
-     * 约束：源消息必须存在，目标频道必须允许当前账号发送消息。
+     * 撤回频道消息并清空可见内容与提醒元数据。
      *
-     * @param command 频道消息转发业务命令
-     * @return 创建后的转发消息投影
+     * @param command 频道消息撤回命令
+     * @return 撤回后的 canonical 消息投影
      */
-    ChannelMessageResult forwardChannelMessage(ForwardChannelMessageCommand command);
-
+    ChannelMessageResult recallChannelMessage(RecallChannelMessageCommand command);
 }

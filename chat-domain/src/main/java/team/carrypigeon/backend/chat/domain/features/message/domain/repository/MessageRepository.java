@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 
 /**
  * 消息仓储抽象。
@@ -18,7 +18,7 @@ public interface MessageRepository {
      * @param message 待持久化消息
      * @return 已持久化消息
      */
-    ChannelMessage save(ChannelMessage message);
+    CPChannelMessage save(CPChannelMessage message);
 
     /**
      * 按消息 ID 查询消息。
@@ -26,7 +26,7 @@ public interface MessageRepository {
      * @param messageId 消息 ID
      * @return 命中时返回消息
      */
-    java.util.Optional<ChannelMessage> findById(long messageId);
+    java.util.Optional<CPChannelMessage> findById(long messageId);
 
     /**
      * 批量查询指定消息。
@@ -34,7 +34,7 @@ public interface MessageRepository {
      * @param messageIds 待查询消息 ID 集合
      * @return 以消息 ID 为键的命中消息；不存在的消息不进入结果
      */
-    Map<Long, ChannelMessage> findByIds(Collection<Long> messageIds);
+    Map<Long, CPChannelMessage> findByIds(Collection<Long> messageIds);
 
     /**
      * 更新已存在的频道消息。
@@ -42,7 +42,7 @@ public interface MessageRepository {
      * @param message 待更新消息
      * @return 已更新消息
      */
-    ChannelMessage update(ChannelMessage message);
+    CPChannelMessage update(CPChannelMessage message);
 
     /**
      * 查询频道历史消息。
@@ -52,7 +52,7 @@ public interface MessageRepository {
      * @param limit 查询条数
      * @return 历史消息列表，按 messageId 倒序排列
      */
-    List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
+    List<CPChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit);
 
     /**
      * 查询频道内指定消息之后的消息。
@@ -62,7 +62,7 @@ public interface MessageRepository {
      * @param limit 查询条数
      * @return 消息列表，按 messageId 升序排列
      */
-    List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
+    List<CPChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
 
     /**
      * 在频道内按关键字搜索消息。
@@ -72,12 +72,12 @@ public interface MessageRepository {
      * @param limit 返回条数
      * @return 搜索命中消息列表
      */
-    List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit);
+    List<CPChannelMessage> searchByChannelId(long channelId, String keyword, int limit);
 
     /**
      * 在频道内按关键字和高级过滤条件搜索消息。
      */
-    List<ChannelMessage> searchByChannelId(
+    List<CPChannelMessage> searchByChannelId(
             long channelId,
             String keyword,
             Long cursorMessageId,

@@ -11,7 +11,6 @@ import java.time.Instant;
  * @param senderId 发送者账户 ID
  * @param channelId 频道 ID
  * @param domain 消息 domain
- * @param domainVersion domain 版本
  * @param data domain 专属数据 JSON object
  * @param sendTime 发送时间
  * @param mentions 提醒用户 ID JSON array
@@ -23,7 +22,6 @@ public record MessageRecord(
         long senderId,
         long channelId,
         String domain,
-        String domainVersion,
         String data,
         Instant sendTime,
         String mentions,

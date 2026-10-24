@@ -7,9 +7,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
@@ -26,7 +25,6 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
 
     private static final RealtimeEventType MESSAGE_CREATED = new RealtimeEventType("message.created");
     private static final RealtimeEventType MESSAGE_RECALLED = new RealtimeEventType("message.recalled");
-    private static final RealtimeEventType MENTION_CREATED = new RealtimeEventType("mention.created");
     private static final RealtimeEventType READ_STATE_UPDATED = new RealtimeEventType("read_state.updated");
 
     private final RealtimeEventApi realtimeEventApi;
@@ -54,9 +52,8 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
     @Override
     public void messageCreated(
             AfterCommitExecutor afterCommit,
-            ChannelMessage message,
-            Collection<Long> recipientAccountIds,
-            List<Mention> mentions
+            CPChannelMessage message,
+            Collection<Long> recipientAccountIds
     ) {
         afterCommit.execute(() -> {
             realtimeEventApi.publish(new RealtimeEvent(
@@ -64,27 +61,13 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
                     new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message)),
                     List.copyOf(recipientAccountIds)
             ));
-            for (Mention mention : mentions) {
-                realtimeEventApi.publish(new RealtimeEvent(
-                        MENTION_CREATED,
-                        new MentionCreatedPayload(
-                                Long.toString(mention.mentionId()),
-                                Long.toString(mention.channelId()),
-                                Long.toString(mention.messageId()),
-                                Long.toString(mention.fromAccountId()),
-                                Long.toString(mention.targetAccountId()),
-                                mention.createdAt().toEpochMilli()
-                        ),
-                        List.of(mention.targetAccountId())
-                ));
-            }
         });
     }
 
     @Override
     public void messageRecalled(
             AfterCommitExecutor afterCommit,
-            ChannelMessage message,
+            CPChannelMessage message,
             Collection<Long> recipientAccountIds
     ) {
         afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
@@ -104,13 +87,12 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
      * @param message 消息快照
      * @return 线上消息体
      */
-    private MessageBody toBody(ChannelMessage message) {
+    private MessageBody toBody(CPChannelMessage message) {
         return new MessageBody(
                 Long.toString(message.messageId()),
                 Long.toString(message.senderId()),
                 Long.toString(message.channelId()),
                 message.domain(),
-                message.domainVersion(),
                 message.data(),
                 message.sendTime().toEpochMilli(),
                 message.mentions().stream().map(String::valueOf).toList(),

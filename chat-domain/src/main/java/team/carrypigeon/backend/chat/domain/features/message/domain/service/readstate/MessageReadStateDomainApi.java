@@ -7,7 +7,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.input.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
@@ -50,7 +50,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
     public ChannelReadStateResult updateChannelReadState(UpdateChannelReadStateCommand command) {
         validate(command);
         return transactionRunner.runInTransaction(afterCommit -> {
-            ChannelMessage message = messageRepository.findById(command.lastReadMessageId())
+            CPChannelMessage message = messageRepository.findById(command.lastReadMessageId())
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             if (message.channelId() != command.channelId()) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);

@@ -75,9 +75,7 @@ public class UserProfileController {
             @Parameter(description = "目标账户 ID", example = "1001")
             @PathVariable @Positive(message = "accountId must be greater than 0") long accountId
     ) {
-        UserProfileResult result = userProfileDomainApi.getUserProfileByAccountId(
-                new GetUserProfileByAccountIdQuery(accountId)
-        );
+        UserProfileResult result = userProfileDomainApi.findById(accountId);
         AuthPublicAccount account = authAccountApi.getAccount(accountId);
         return new UserDetailProfileResponse(
                 result.accountId() + "",

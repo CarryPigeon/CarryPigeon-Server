@@ -4,8 +4,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageStatus;
 
 /**
  * 频道消息 canonical 结果投影。
@@ -17,12 +17,11 @@ public record ChannelMessageResult(
         long senderId,
         long channelId,
         String domain,
-        String domainVersion,
         Map<String, Object> data,
         Instant sendTime,
         List<Long> mentions,
         String preview,
-        MessageStatus status
+        CPMessageStatus status
 ) {
 
     /**
@@ -31,13 +30,12 @@ public record ChannelMessageResult(
      * @param message canonical 领域消息
      * @return 对应结果投影
      */
-    public static ChannelMessageResult from(ChannelMessage message) {
+    public static ChannelMessageResult from(CPChannelMessage message) {
         return new ChannelMessageResult(
                 message.messageId(),
                 message.senderId(),
                 message.channelId(),
                 message.domain(),
-                message.domainVersion(),
                 message.data(),
                 message.sendTime(),
                 message.mentions(),

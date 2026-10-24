@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageTimelineApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageHistoryResult;
@@ -44,7 +44,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
 
         if (query.aroundMessageId() != null) {
-            ChannelMessage targetMessage = requireMessage(query.aroundMessageId());
+            CPChannelMessage targetMessage = requireMessage(query.aroundMessageId());
             if (targetMessage.channelId() != channel.channelId()) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
@@ -57,7 +57,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
                             ),
                             messageRepository.findByChannelIdAfter(channel.channelId(), query.aroundMessageId(), afterCount).stream()
                     )
-                    .sorted(Comparator.comparingLong(ChannelMessage::messageId).reversed())
+                    .sorted(Comparator.comparingLong(CPChannelMessage::messageId).reversed())
                     .map(ChannelMessageResult::from)
                     .toList();
             return new ChannelMessageHistoryResult(messages, null);
@@ -168,7 +168,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
         return domain.trim();
     }
 
-    private ChannelMessage requireMessage(long messageId) {
+    private CPChannelMessage requireMessage(long messageId) {
         return messageRepository.findById(messageId)
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
     }

@@ -14,7 +14,6 @@ import java.util.Map;
  * @param domainVersion domain 版本
  * @param data domain 专属 canonical 数据
  * @param mentions 需要提醒的用户 ID
- * @param clientMessageId 客户端消息 ID，可为空
  */
 public record SendChannelMessageCommand(
         long accountId,
@@ -22,7 +21,6 @@ public record SendChannelMessageCommand(
         String domain,
         String domainVersion,
         Map<String, Object> data,
-        List<Long> mentions,
-        String clientMessageId
+        List<Long> mentions
 ) {
 }

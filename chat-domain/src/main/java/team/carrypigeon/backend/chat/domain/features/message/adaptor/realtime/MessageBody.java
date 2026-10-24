@@ -14,7 +14,6 @@ import java.util.Map;
  * @param uid 发送者账号 ID
  * @param cid 频道 ID
  * @param domain 消息域
- * @param domainVersion 消息域版本
  * @param data 消息域数据
  * @param sendTime 发送时间，epoch 毫秒
  * @param mentions 被提及账号 ID 列表
@@ -26,7 +25,6 @@ public record MessageBody(
         String uid,
         String cid,
         String domain,
-        String domainVersion,
         Map<String, Object> data,
         long sendTime,
         List<String> mentions,

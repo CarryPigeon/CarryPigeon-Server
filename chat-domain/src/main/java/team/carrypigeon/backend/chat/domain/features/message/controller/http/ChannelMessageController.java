@@ -10,8 +10,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
-import java.io.IOException;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,32 +19,27 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.RecallChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SendChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.UploadMessageAttachmentCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageSearchResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.MessageAttachmentUploadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessageHistoryQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageAttachmentApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageLifecycleApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageTimelineApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageV1Response;
-import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.MessageAttachmentUploadResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.SendChannelMessageRequest;
-import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageV1Response;
 import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 频道消息 HTTP 入口。
@@ -62,24 +55,19 @@ public class ChannelMessageController {
 
     private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
-    private final ChannelMessagePublishingApi channelMessagePublishingApi;
+    private final ChannelMessageApi channelMessageApi;
     private final ChannelMessageTimelineApi channelMessageTimelineApi;
-    private final ChannelMessageAttachmentApi channelMessageAttachmentDomainApi;
-    private final ChannelMessageLifecycleApi channelMessageLifecycleApi;
 
     public ChannelMessageController(
-            ChannelMessagePublishingApi channelMessagePublishingApi,
-            ChannelMessageTimelineApi channelMessageTimelineApi,
-            ChannelMessageAttachmentApi channelMessageAttachmentDomainApi,
-            ChannelMessageLifecycleApi channelMessageLifecycleApi
+            ChannelMessageApi channelMessageApi,
+            ChannelMessageTimelineApi channelMessageTimelineApi
     ) {
-        this.channelMessagePublishingApi = channelMessagePublishingApi;
+        this.channelMessageApi = channelMessageApi;
         this.channelMessageTimelineApi = channelMessageTimelineApi;
-        this.channelMessageAttachmentDomainApi = channelMessageAttachmentDomainApi;
-        this.channelMessageLifecycleApi = channelMessageLifecycleApi;
     }
 
     /**
+     * TODO 待审查
      * 查询频道历史消息。
      * 有两种查询模式，一种是cursor模式，从cursor消息向前查询，一种是around模式，查询目标消息前后的消息。
      *
@@ -125,6 +113,7 @@ public class ChannelMessageController {
     }
 
     /**
+     * TODO 待审查
      * 在频道内按关键字搜索消息。
      *
      * @param channelId 频道 ID
@@ -180,6 +169,14 @@ public class ChannelMessageController {
         return CursorPageResponse.of(pageItems.stream().map(ChannelMessageV1Response::from).toList(), nextCursor, hasMore);
     }
 
+    /**
+     * 发送消息
+     *
+     * @param channelId 标记消息通道
+     * @param requestBody 消息体{@link SendChannelMessageCommand}
+     * @param cpPrincipal 当前认证用户
+     * @return 统一响应包装的消息结果
+     * */
     @PostMapping("/{channelId}/messages")
     @Operation(
             summary = "发送消息",
@@ -191,56 +188,22 @@ public class ChannelMessageController {
             @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        ChannelMessageResult result = channelMessagePublishingApi.sendChannelMessage(
+        ChannelMessageResult result = channelMessageApi.sendChannelMessage(
                 new SendChannelMessageCommand(
                     cpPrincipal.accountId(),
                     channelId,
                     requestBody.domain(),
                     requestBody.domainVersion(),
                     requestBody.data(),
-                    parseMentionIds(requestBody.mentions()),
-                    requestBody.clientMessageId()
+                    parseMentionIds(requestBody.mentions())
                 )
         );
         return ResponseEntity.status(201).body(ChannelMessageV1Response.from(result));
     }
 
-    @PostMapping(path = "/{channelId}/messages/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "上传消息附件", description = "上传文件或语音附件并返回后续发送消息可用的稳定引用。")
-    public MessageAttachmentUploadResponse uploadMessageAttachment(
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-            @RequestParam(name = "message_type", required = false) String messageType,
-            @RequestPart("file") MultipartFile file,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
-    ) {
-        try {
-            MessageAttachmentUploadResult result = channelMessageAttachmentDomainApi.uploadMessageAttachment(
-                    new UploadMessageAttachmentCommand(
-                            cpPrincipal.accountId(),
-                            channelId,
-                            messageType,
-                            file.getOriginalFilename() == null ? file.getName() : file.getOriginalFilename(),
-                            file.getContentType(),
-                            file.getSize(),
-                            file.getInputStream()
-                    )
-            );
-            return new MessageAttachmentUploadResponse(
-                    result.objectKey(),
-                    result.shareKey(),
-                    result.filename(),
-                    result.mimeType(),
-                    result.size()
-            );
-        } catch (IOException exception) {
-            throw ProblemException.of(MessageProblem.ATTACHMENT_UPLOAD_READ_FAILED, exception);
-        }
-    }
-
     /**
      * 撤回指定频道消息。
-     * 输入：频道 ID 与消息 ID。
-     * 输出：撤回后的消息 v1 响应。
+     * 输入：频道 ID 与消息 ID
      *
      * @param channelId 频道 ID
      * @param messageId 消息 ID
@@ -254,17 +217,17 @@ public class ChannelMessageController {
             @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        ChannelMessageResult result = channelMessageLifecycleApi.recallChannelMessage(
+        ChannelMessageResult result = channelMessageApi.recallChannelMessage(
                 new RecallChannelMessageCommand(cpPrincipal.accountId(), channelId, messageId)
         );
         return ChannelMessageV1Response.from(result);
     }
 
-    private java.util.List<Long> parseMentionIds(java.util.List<String> mentionIds) {
+    private List<Long> parseMentionIds(List<String> mentionIds) {
         if (mentionIds == null || mentionIds.isEmpty()) {
-            return java.util.List.of();
+            return List.of();
         }
-        java.util.List<Long> parsedIds = new java.util.ArrayList<>();
+        List<Long> parsedIds = new ArrayList<>();
         for (String mentionId : mentionIds) {
             Long parsedId = parseOptionalSnowflake(mentionId, "mentions", false);
             if (parsedId == null || parsedId <= 0L) {

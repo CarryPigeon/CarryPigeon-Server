@@ -1,11 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 
 import java.util.Collection;
-import java.util.List;
 
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
@@ -21,13 +19,11 @@ public interface MessageEventNotifier {
      * @param afterCommit 提交后动作注册器
      * @param message 已持久化的消息快照
      * @param recipientAccountIds 接收账号快照
-     * @param mentions 本次消息产生的提及
      */
     void messageCreated(
             AfterCommitExecutor afterCommit,
-            ChannelMessage message,
-            Collection<Long> recipientAccountIds,
-            List<Mention> mentions
+            CPChannelMessage message,
+            Collection<Long> recipientAccountIds
     );
 
     /**
@@ -39,7 +35,7 @@ public interface MessageEventNotifier {
      */
     void messageRecalled(
             AfterCommitExecutor afterCommit,
-            ChannelMessage message,
+            CPChannelMessage message,
             Collection<Long> recipientAccountIds
     );
 

@@ -22,8 +22,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.message.dto.ForwardMessageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.message.dto.ForwardChannelMessageRequest;
-import team.carrypigeon.backend.chat.domain.features.message.controller.http.message.dto.ForwardMessageResponse;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessagePublishingApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,45 +39,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 @Tag(name = "消息资源", description = "按消息 ID 执行转发操作。")
 public class MessageController {
 
-    private final ChannelMessagePublishingApi channelMessagePublishingApi;
+    private final ChannelMessageApi channelMessageApi;
 
     /**
      * 创建消息资源 HTTP 入口。
      *
-     * @param channelMessagePublishingApi 频道消息发布领域 API
+     * @param channelMessageApi 频道消息发布领域 API
      */
     public MessageController(
-            ChannelMessagePublishingApi channelMessagePublishingApi
+            ChannelMessageApi channelMessageApi
     ) {
-        this.channelMessagePublishingApi = channelMessagePublishingApi;
-    }
-
-    /**
-     * 转发指定消息到目标频道。
-     * 输入：目标频道和可选转发评论。
-     * 输出：新创建的转发消息 v1 响应。
-     *
-     * @param messageId 源消息 ID
-     * @param body 转发请求
-     * @return 转发后创建的消息响应
-     */
-    @PostMapping("/{messageId}/forward")
-    @ApiResponses({@ApiResponse(responseCode = "201", description = "转发消息创建成功")})
-    public ResponseEntity<ForwardMessageResponse> forwardMessage(
-        @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
-        @Valid @NotNull(message = "request body must not be null") @RequestBody ForwardChannelMessageRequest body,
-        @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKeyHeader,
-        @AuthenticationPrincipal CpPrincipal principal
-        ) {
-        ChannelMessageResult result = channelMessagePublishingApi.forwardChannelMessage(new ForwardChannelMessageCommand(
-                principal.accountId(),
-                messageId,
-                parseTargetChannelId(body.targetCid()),
-                body.comment(),
-                parseMergedMessageIds(body.mergedMids()),
-                resolveIdempotencyKey(idempotencyKeyHeader, body.idempotencyKey())
-        ));
-        return ResponseEntity.status(201).body(ForwardMessageResponse.from(result));
+        this.channelMessageApi = channelMessageApi;
     }
 
     /**

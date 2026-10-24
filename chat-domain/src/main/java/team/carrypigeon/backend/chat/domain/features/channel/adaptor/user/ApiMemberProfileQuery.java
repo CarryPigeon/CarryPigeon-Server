@@ -40,7 +40,7 @@ public class ApiMemberProfileQuery implements MemberProfileQuery {
 
     @Override
     public MemberProfile findProfile(long accountId) {
-        return toProfile(userProfileApi.getUserProfileByAccountId(new GetUserProfileByAccountIdQuery(accountId)));
+        return toProfile(userProfileApi.findById(accountId));
     }
 
     private MemberProfile toProfile(UserProfileResult result) {

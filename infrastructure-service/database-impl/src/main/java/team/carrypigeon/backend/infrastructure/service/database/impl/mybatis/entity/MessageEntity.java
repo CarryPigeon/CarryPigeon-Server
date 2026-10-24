@@ -26,7 +26,6 @@ public class MessageEntity {
     private Long senderId;
     private Long channelId;
     private String domain;
-    private String domainVersion;
     private String data;
     private Instant sendTime;
     private String mentions;
@@ -44,7 +43,6 @@ public class MessageEntity {
                 senderId == null ? 0L : senderId,
                 channelId == null ? 0L : channelId,
                 domain,
-                domainVersion,
                 data,
                 sendTime,
                 mentions,
@@ -65,7 +63,6 @@ public class MessageEntity {
                 record.senderId(),
                 record.channelId(),
                 record.domain(),
-                record.domainVersion(),
                 record.data(),
                 record.sendTime(),
                 record.mentions(),

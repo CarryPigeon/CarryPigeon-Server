@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelMessage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageStatus;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
@@ -37,13 +37,13 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public ChannelMessage save(ChannelMessage message) {
+    public CPChannelMessage save(CPChannelMessage message) {
         messageDatabaseService.insert(toPersistenceRecord(message));
         return message;
     }
 
     @Override
-    public java.util.Optional<ChannelMessage> findById(long messageId) {
+    public java.util.Optional<CPChannelMessage> findById(long messageId) {
         return messageDatabaseService.findById(messageId).map(this::toDomainMessage);
     }
 
@@ -52,39 +52,39 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
      * 输出：数据库未命中的消息 ID 不进入结果映射。
      */
     @Override
-    public Map<Long, ChannelMessage> findByIds(Collection<Long> messageIds) {
+    public Map<Long, CPChannelMessage> findByIds(Collection<Long> messageIds) {
         return messageDatabaseService.findByIds(messageIds).stream()
                 .map(this::toDomainMessage)
                 .collect(Collectors.toMap(
-                        ChannelMessage::messageId,
+                        CPChannelMessage::messageId,
                         Function.identity(),
                         (existing, ignored) -> existing
                 ));
     }
 
     @Override
-    public ChannelMessage update(ChannelMessage message) {
+    public CPChannelMessage update(CPChannelMessage message) {
         messageDatabaseService.update(toPersistenceRecord(message));
         return message;
     }
 
     @Override
-    public List<ChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
+    public List<CPChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
         return map(messageDatabaseService.findByChannelIdBefore(channelId, cursorMessageId, limit));
     }
 
     @Override
-    public List<ChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
+    public List<CPChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
         return map(messageDatabaseService.findByChannelIdAfter(channelId, afterMessageId, limit));
     }
 
     @Override
-    public List<ChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
+    public List<CPChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
         return map(messageDatabaseService.searchByChannelId(channelId, keyword, limit));
     }
 
     @Override
-    public List<ChannelMessage> searchByChannelId(
+    public List<CPChannelMessage> searchByChannelId(
             long channelId,
             String keyword,
             Long cursorMessageId,
@@ -100,32 +100,30 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         ));
     }
 
-    private List<ChannelMessage> map(List<MessageRecord> records) {
+    private List<CPChannelMessage> map(List<MessageRecord> records) {
         return records.stream().map(this::toDomainMessage).toList();
     }
 
-    private ChannelMessage toDomainMessage(MessageRecord record) {
-        return new ChannelMessage(
+    private CPChannelMessage toDomainMessage(MessageRecord record) {
+        return new CPChannelMessage(
                 record.messageId(),
                 record.senderId(),
                 record.channelId(),
                 record.domain(),
-                record.domainVersion(),
                 parseData(record.data()),
                 record.sendTime(),
                 parseMentions(record.mentions()),
                 record.preview(),
-                MessageStatus.valueOf(record.status().toUpperCase(java.util.Locale.ROOT))
+                CPMessageStatus.valueOf(record.status().toUpperCase(java.util.Locale.ROOT))
         );
     }
 
-    private MessageRecord toPersistenceRecord(ChannelMessage message) {
+    private MessageRecord toPersistenceRecord(CPChannelMessage message) {
         return new MessageRecord(
                 message.messageId(),
                 message.senderId(),
                 message.channelId(),
                 message.domain(),
-                message.domainVersion(),
                 jsonProvider.toJson(message.data()),
                 message.sendTime(),
                 jsonProvider.toJson(message.mentions().stream().map(String::valueOf).toList()),

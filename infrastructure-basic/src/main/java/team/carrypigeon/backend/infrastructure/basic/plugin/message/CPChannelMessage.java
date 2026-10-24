@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.message.domain.model;
+package team.carrypigeon.backend.infrastructure.basic.plugin.message;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -15,27 +15,25 @@ import java.util.Map;
  * @param senderId 发送者账号 ID
  * @param channelId 所属频道 ID
  * @param domain 消息 domain
- * @param domainVersion domain 版本
  * @param data domain 专属 canonical 数据
  * @param sendTime 服务端发送时间
  * @param mentions 需要提醒的用户 ID 列表
  * @param preview 服务端派生摘要
  * @param status 消息状态
  */
-public record ChannelMessage(
+public record CPChannelMessage(
         long messageId,
         long senderId,
         long channelId,
         String domain,
-        String domainVersion,
         Map<String, Object> data,
         Instant sendTime,
         List<Long> mentions,
         String preview,
-        MessageStatus status
+        CPMessageStatus status
 ) {
 
-    public ChannelMessage {
+    public CPChannelMessage {
         data = data == null
                 ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(data));

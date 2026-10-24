@@ -13,7 +13,6 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfi
 import team.carrypigeon.backend.chat.domain.features.user.domain.problem.UserProblem;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.GetCurrentUserProfileQuery;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.GetUserProfileByAccountIdQuery;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
@@ -58,11 +57,11 @@ public class UserProfileDomainApi implements UserProfileApi {
     /**
      * 按账户 ID 查询用户资料。
      *
-     * @param query 查询对象
+     * @param accountId 用户id
      * @return 用户资料结果
      */
-    public UserProfileResult getUserProfileByAccountId(GetUserProfileByAccountIdQuery query) {
-        UserProfile userProfile = userProfileRepository.findByAccountId(query.accountId())
+    public UserProfileResult findById(long accountId) {
+        UserProfile userProfile = userProfileRepository.findByAccountId(accountId)
                 .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
         return toResult(userProfile, authAccountApi.getAccount(userProfile.accountId()).username());
     }
