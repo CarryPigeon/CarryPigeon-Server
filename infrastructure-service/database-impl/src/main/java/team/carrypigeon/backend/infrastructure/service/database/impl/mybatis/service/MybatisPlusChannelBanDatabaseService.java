@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -59,6 +58,68 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     @Override
     public void insert(ChannelBanRecord record) {
         channelBanMapper.insert(ChannelBanEntity.from(record));
+    }
+
+    /**
+     * 批量插入封禁记录。
+     */
+    @Override
+    public void insertAll(List<ChannelBanRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        channelBanMapper.insertAll(records.stream().map(ChannelBanEntity::from).toList());
+    }
+
+    /**
+     * 按封禁 ID 删除记录。
+     */
+    @Override
+    public void delete(long banId) {
+        channelBanMapper.deleteById(banId);
+    }
+
+    /**
+     * 按封禁 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> banIds) {
+        if (banIds == null || banIds.isEmpty()) {
+            return;
+        }
+        channelBanMapper.deleteByIds(banIds);
+    }
+
+    /**
+     * 查询封禁表全部记录。
+     */
+    @Override
+    public List<ChannelBanRecord> list() {
+        return channelBanMapper.selectList(null).stream()
+                .map(ChannelBanEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 按封禁 ID 查询记录。
+     */
+    @Override
+    public Optional<ChannelBanRecord> findById(long banId) {
+        return Optional.ofNullable(channelBanMapper.selectById(banId))
+                .map(ChannelBanEntity::toRecord);
+    }
+
+    /**
+     * 按封禁 ID 批量查询记录。
+     */
+    @Override
+    public List<ChannelBanRecord> findByIds(List<Long> banIds) {
+        if (banIds == null || banIds.isEmpty()) {
+            return List.of();
+        }
+        return channelBanMapper.selectByIds(banIds).stream()
+                .map(ChannelBanEntity::toRecord)
+                .toList();
     }
 
     /**

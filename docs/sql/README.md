@@ -67,3 +67,15 @@ mysql ... < docs/sql/99-reset.sql
 | 2 | 若干 VARCHAR 长度（`name`/`brief`/`avatar`/`reason`/`preview`/`data`） | 实体为 `String`，长度按字段语义与请求 DTO 的校验上限推断，未在实体中显式声明 |
 | 3 | `user_profile.sex` / `birthday` 的取值范围与单位 | 实体为 `Long`，语义由客户端与服务端约定，本脚本只保证类型 |
 | 4 | 索引集合 | 依据 Mapper/Service 里实际出现的过滤与排序条件推断；上线前应按真实查询计划复核 |
+
+## 6. 已有库升级提示
+
+本版 message 表结构与旧库存在以下差异，已有环境需要手工迁移：
+
+```sql
+ALTER TABLE chat_mention CHANGE COLUMN `read` is_read TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE chat_message DROP COLUMN domain_version;
+DROP TABLE IF EXISTS chat_message_idempotency;
+```
+
+新库直接按本目录脚本初始化，不需要执行以上语句。

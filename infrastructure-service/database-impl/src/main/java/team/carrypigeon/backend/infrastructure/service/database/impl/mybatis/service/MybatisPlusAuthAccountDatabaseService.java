@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,7 +60,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 批量读取鉴权账户。
      */
     @Override
-    public List<AuthAccountRecord> findByIds(Collection<Long> accountIds) {
+    public List<AuthAccountRecord> findByIds(List<Long> accountIds) {
         if (accountIds == null || accountIds.isEmpty()) {
             return List.of();
         }
@@ -76,6 +75,46 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
     @Override
     public void insert(AuthAccountRecord record) {
         authAccountMapper.insert(AuthAccountEntity.from(record));
+    }
+
+    /**
+     * 批量插入鉴权账户记录。
+     */
+    @Override
+    public void insertAll(List<AuthAccountRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        authAccountMapper.insertAll(records.stream().map(AuthAccountEntity::from).toList());
+    }
+
+    /**
+     * 按账户 ID 删除记录。
+     */
+    @Override
+    public void delete(long accountId) {
+        authAccountMapper.deleteById(accountId);
+    }
+
+    /**
+     * 按账户 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> accountIds) {
+        if (accountIds == null || accountIds.isEmpty()) {
+            return;
+        }
+        authAccountMapper.deleteByIds(accountIds);
+    }
+
+    /**
+     * 查询鉴权账户表全部记录。
+     */
+    @Override
+    public List<AuthAccountRecord> list() {
+        return authAccountMapper.selectList(null).stream()
+                .map(AuthAccountEntity::toRecord)
+                .toList();
     }
 
     /**

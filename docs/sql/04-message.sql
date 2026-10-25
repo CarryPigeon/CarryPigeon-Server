@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS chat_mention (
     target_type       VARCHAR(16) NOT NULL COMMENT '目标类型',
     target_account_id BIGINT      NOT NULL COMMENT '被提及账号 ID',
     created_at        DATETIME(3) NOT NULL COMMENT '创建时间',
-    `read`            TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '是否已读',
+    is_read           TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '是否已读',
     PRIMARY KEY (mention_id),
-    KEY idx_chat_mention_target (target_account_id, `read`, created_at),
+    KEY idx_chat_mention_target (target_account_id, is_read, created_at),
     KEY idx_chat_mention_message (message_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4

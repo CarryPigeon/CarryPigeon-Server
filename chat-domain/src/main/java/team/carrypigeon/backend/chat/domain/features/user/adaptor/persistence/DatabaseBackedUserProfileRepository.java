@@ -31,7 +31,7 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
      */
     @Override
     public Optional<UserProfile> findByAccountId(long accountId) {
-        return userProfileDatabaseService.findByAccountId(accountId)
+        return userProfileDatabaseService.findById(accountId)
                 .map(this::toDomainModel);
     }
 

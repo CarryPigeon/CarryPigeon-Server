@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -42,6 +43,67 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
     @Override
     public void insert(AuthRefreshSessionRecord record) {
         authRefreshSessionMapper.insert(AuthRefreshSessionEntity.from(record));
+    }
+
+    /**
+     * 批量插入刷新会话记录。
+     */
+    @Override
+    public void insertAll(List<AuthRefreshSessionRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        authRefreshSessionMapper.insertAll(records.stream().map(AuthRefreshSessionEntity::from).toList());
+    }
+
+    /**
+     * 按会话 ID 删除记录。
+     */
+    @Override
+    public void delete(long sessionId) {
+        authRefreshSessionMapper.deleteById(sessionId);
+    }
+
+    /**
+     * 按会话 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> sessionIds) {
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return;
+        }
+        authRefreshSessionMapper.deleteByIds(sessionIds);
+    }
+
+    /**
+     * 更新刷新会话记录。
+     */
+    @Override
+    public void update(AuthRefreshSessionRecord record) {
+        authRefreshSessionMapper.updateById(AuthRefreshSessionEntity.from(record));
+    }
+
+    /**
+     * 查询刷新会话表全部记录。
+     */
+    @Override
+    public List<AuthRefreshSessionRecord> list() {
+        return authRefreshSessionMapper.selectList(null).stream()
+                .map(AuthRefreshSessionEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 按会话 ID 批量查询刷新会话。
+     */
+    @Override
+    public List<AuthRefreshSessionRecord> findByIds(List<Long> sessionIds) {
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return List.of();
+        }
+        return authRefreshSessionMapper.selectByIds(sessionIds).stream()
+                .map(AuthRefreshSessionEntity::toRecord)
+                .toList();
     }
 
     /**

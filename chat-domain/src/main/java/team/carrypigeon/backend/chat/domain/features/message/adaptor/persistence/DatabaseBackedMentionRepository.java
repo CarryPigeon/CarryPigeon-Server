@@ -1,22 +1,26 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistence;
 
 import java.util.List;
+import java.util.Optional;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 
 /**
  * 基于 database-api 的提及仓储适配器。
- * 职责：在 message feature 内桥接领域 mention 模型与 database-api 记录契约。
+ * 职责：在 message feature 内桥接领域 mention 模型与 database-api 记录契约，并编排已读状态流转。
  * 边界：不定义 mention 解析规则，只负责已生成提及结果的持久化与读取。
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedMentionRepository implements MentionRepository {
+
+    private static final int ALL_ROWS = Integer.MAX_VALUE;
 
     private final MentionDatabaseService mentionDatabaseService;
 
@@ -59,18 +63,37 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
      */
     @Override
     public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
-        return mentionDatabaseService.findByAccountId(accountId, cursorMentionId, limit, unreadOnly, channelId).stream()
-                .map(record -> new Mention(record.mentionId(), record.channelId(), record.messageId(), record.fromAccountId(), record.targetType(), record.targetAccountId(), record.createdAt(), record.read()))
+        Boolean readFilter = unreadOnly ? Boolean.FALSE : null;
+        return mentionDatabaseService.find(new MentionQuery(accountId, cursorMentionId, readFilter, channelId, limit)).stream()
+                .map(this::toDomain)
                 .toList();
     }
 
     /**
      * 将单条提及标记为已读。
-     * 输出：返回是否真的发生了状态变更。
+     * 输出：返回目标提及是否存在且归属于当前账户。
      */
     @Override
     public boolean markAsRead(long accountId, long mentionId) {
-        return mentionDatabaseService.markAsRead(accountId, mentionId);
+        Optional<MentionRecord> existing = mentionDatabaseService.findById(mentionId);
+        if (existing.isEmpty() || existing.get().targetAccountId() != accountId) {
+            return false;
+        }
+        MentionRecord record = existing.get();
+        if (record.read()) {
+            return true;
+        }
+        mentionDatabaseService.update(new MentionRecord(
+                record.mentionId(),
+                record.channelId(),
+                record.messageId(),
+                record.fromAccountId(),
+                record.targetType(),
+                record.targetAccountId(),
+                record.createdAt(),
+                true
+        ));
+        return true;
     }
 
     /**
@@ -80,6 +103,37 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
      */
     @Override
     public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
-        return mentionDatabaseService.markAllAsRead(accountId, beforeMentionId, channelId);
+        List<MentionRecord> records = mentionDatabaseService.find(
+                new MentionQuery(accountId, beforeMentionId, Boolean.FALSE, channelId, ALL_ROWS)
+        );
+        if (records.isEmpty()) {
+            return 0;
+        }
+        mentionDatabaseService.updateAll(records.stream()
+                .map(record -> new MentionRecord(
+                        record.mentionId(),
+                        record.channelId(),
+                        record.messageId(),
+                        record.fromAccountId(),
+                        record.targetType(),
+                        record.targetAccountId(),
+                        record.createdAt(),
+                        true
+                ))
+                .toList());
+        return records.size();
+    }
+
+    private Mention toDomain(MentionRecord record) {
+        return new Mention(
+                record.mentionId(),
+                record.channelId(),
+                record.messageId(),
+                record.fromAccountId(),
+                record.targetType(),
+                record.targetAccountId(),
+                record.createdAt(),
+                record.read()
+        );
     }
 }

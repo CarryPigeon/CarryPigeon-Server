@@ -8,14 +8,15 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelUnread;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateKey;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
 
 /**
  * 基于 database-api 的频道已读状态仓储适配器。
- * 职责：在 message feature 内完成已读状态领域模型与 database-api 记录模型转换。
- * 边界：不计算未读规则，只桥接读写与结果投影。
+ * 职责：在 message feature 内完成已读状态领域模型与 database-api 记录模型转换，并编排“只前进不后退”规则。
+ * 边界：不解释未读统计 SQL；该能力属于 database 读模型例外。
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -32,7 +33,7 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
      */
     @Override
     public Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId) {
-        return channelReadStateDatabaseService.findByChannelIdAndAccountId(channelId, accountId).map(this::toDomain);
+        return channelReadStateDatabaseService.findById(new ChannelReadStateKey(channelId, accountId)).map(this::toDomain);
     }
 
     /**
@@ -47,7 +48,14 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
 
     @Override
     public boolean advanceIfNewer(ChannelReadState readState) {
-        return channelReadStateDatabaseService.advanceIfNewer(toRecord(readState));
+        Optional<ChannelReadState> current = channelReadStateDatabaseService
+                .findByIdForUpdate(new ChannelReadStateKey(readState.channelId(), readState.accountId()))
+                .map(this::toDomain);
+        if (current.isPresent() && current.get().lastReadMessageId() >= readState.lastReadMessageId()) {
+            return false;
+        }
+        channelReadStateDatabaseService.upsert(toRecord(readState));
+        return true;
     }
 
     /**

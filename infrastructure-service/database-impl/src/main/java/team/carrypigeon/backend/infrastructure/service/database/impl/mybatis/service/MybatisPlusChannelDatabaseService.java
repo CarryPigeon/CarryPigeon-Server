@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,6 +29,38 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     }
 
     /**
+     * 批量插入频道记录。
+     */
+    @Override
+    public void insertAll(List<ChannelRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        channelMapper.insertAll(records.stream().map(ChannelEntity::from).toList());
+    }
+
+    /**
+     * 按频道 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> channelIds) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return;
+        }
+        channelMapper.deleteByIds(channelIds);
+    }
+
+    /**
+     * 查询频道表全部记录。
+     */
+    @Override
+    public List<ChannelRecord> list() {
+        return channelMapper.selectList(null).stream()
+                .map(ChannelEntity::toRecord)
+                .toList();
+    }
+
+    /**
      * 查询全部 system 频道。
      */
     @Override
@@ -54,7 +85,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 批量读取频道。
      */
     @Override
-    public List<ChannelRecord> findByIds(Collection<Long> channelIds) {
+    public List<ChannelRecord> findByIds(List<Long> channelIds) {
         if (channelIds == null || channelIds.isEmpty()) {
             return List.of();
         }

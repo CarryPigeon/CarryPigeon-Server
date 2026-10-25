@@ -36,6 +36,60 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     }
 
     /**
+     * 批量插入频道成员关系。
+     */
+    @Override
+    public void insertAll(List<ChannelMemberRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        channelMemberMapper.insertAll(records.stream().map(ChannelMemberEntity::from).toList());
+    }
+
+    /**
+     * 按成员关系 ID 批量删除。
+     */
+    @Override
+    public void deleteAll(List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return;
+        }
+        channelMemberMapper.deleteByIds(memberIds);
+    }
+
+    /**
+     * 查询频道成员表全部记录。
+     */
+    @Override
+    public List<ChannelMemberRecord> list() {
+        return channelMemberMapper.selectList(null).stream()
+                .map(ChannelMemberEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 按成员关系 ID 查询。
+     */
+    @Override
+    public Optional<ChannelMemberRecord> findById(long memberId) {
+        return Optional.ofNullable(channelMemberMapper.selectById(memberId))
+                .map(ChannelMemberEntity::toRecord);
+    }
+
+    /**
+     * 按成员关系 ID 批量查询。
+     */
+    @Override
+    public List<ChannelMemberRecord> findByIds(List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return List.of();
+        }
+        return channelMemberMapper.selectByIds(memberIds).stream()
+                .map(ChannelMemberEntity::toRecord)
+                .toList();
+    }
+
+    /**
      * 按频道与账户定位成员关系。
      */
     @Override

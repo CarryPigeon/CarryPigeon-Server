@@ -69,6 +69,51 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
     }
 
     /**
+     * 批量插入申请记录。
+     */
+    @Override
+    public void insertAll(List<ChannelApplicationRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        channelApplicationMapper.insertAll(records.stream().map(ChannelApplicationEntity::from).toList());
+    }
+
+    /**
+     * 按申请 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> applicationIds) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            return;
+        }
+        channelApplicationMapper.deleteByIds(applicationIds);
+    }
+
+    /**
+     * 查询申请表全部记录。
+     */
+    @Override
+    public List<ChannelApplicationRecord> list() {
+        return channelApplicationMapper.selectList(null).stream()
+                .map(ChannelApplicationEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 按申请 ID 批量查询记录。
+     */
+    @Override
+    public List<ChannelApplicationRecord> findByIds(List<Long> applicationIds) {
+        if (applicationIds == null || applicationIds.isEmpty()) {
+            return List.of();
+        }
+        return channelApplicationMapper.selectByIds(applicationIds).stream()
+                .map(ChannelApplicationEntity::toRecord)
+                .toList();
+    }
+
+    /**
      * 更新既有申请记录。
      */
     @Override

@@ -1,12 +1,13 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MentionEntity;
@@ -14,8 +15,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 
 /**
  * MyBatis-Plus 提及数据库服务。
- * 职责：在 database-impl 中提供提及记录的最小写入、读取与已读更新能力。
- * 边界：只负责数据库记录与实体映射，不承载提及解析规则。
+ * 职责：在 database-impl 中提供提及表级读写与通用查询。
+ * 边界：不承载已读状态流转；read 过滤值由 Repository 传入。
  */
 @Component
 @ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
@@ -28,6 +29,14 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
+     * 写入单条提及记录。
+     */
+    @Override
+    public void insert(MentionRecord record) {
+        mentionMapper.insert(MentionEntity.from(record));
+    }
+
+    /**
      * 批量写入提及记录；空集合不访问 Mapper。
      */
     @Override
@@ -35,9 +44,77 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
         if (records == null || records.isEmpty()) {
             return;
         }
-        mentionMapper.insertAll(records.stream()
-                .map(MentionEntity::from)
-                .toList());
+        mentionMapper.insertAll(records.stream().map(MentionEntity::from).toList());
+    }
+
+    /**
+     * 按提及 ID 查询记录。
+     */
+    @Override
+    public Optional<MentionRecord> findById(long mentionId) {
+        return Optional.ofNullable(mentionMapper.selectById(mentionId))
+                .map(MentionEntity::toRecord);
+    }
+
+    /**
+     * 查询提及表全部记录。
+     */
+    @Override
+    public List<MentionRecord> list() {
+        return mentionMapper.selectList(null).stream()
+                .map(MentionEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 按提及 ID 批量查询记录。
+     */
+    @Override
+    public List<MentionRecord> findByIds(List<Long> mentionIds) {
+        if (mentionIds == null || mentionIds.isEmpty()) {
+            return List.of();
+        }
+        return mentionMapper.selectByIds(mentionIds).stream()
+                .map(MentionEntity::toRecord)
+                .toList();
+    }
+
+    /**
+     * 更新完整提及记录。
+     */
+    @Override
+    public void update(MentionRecord record) {
+        mentionMapper.updateById(MentionEntity.from(record));
+    }
+
+    /**
+     * 批量更新完整提及记录。
+     */
+    @Override
+    public void updateAll(List<MentionRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        mentionMapper.saveAll(records.stream().map(MentionEntity::from).toList());
+    }
+
+    /**
+     * 按提及 ID 删除记录。
+     */
+    @Override
+    public void delete(long mentionId) {
+        mentionMapper.deleteById(mentionId);
+    }
+
+    /**
+     * 按提及 ID 批量删除记录。
+     */
+    @Override
+    public void deleteAll(List<Long> mentionIds) {
+        if (mentionIds == null || mentionIds.isEmpty()) {
+            return;
+        }
+        mentionMapper.deleteByIds(mentionIds);
     }
 
     /**
@@ -50,52 +127,19 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
-     * 查询账户的提及记录流。
-     * 输出：按提及 ID 倒序返回，最多 limit 条。
+     * 按通用条件查询提及记录。
      */
     @Override
-    public List<MentionRecord> findByAccountId(
-            long accountId,
-            Long cursorMentionId,
-            int limit,
-            boolean unreadOnly,
-            Long channelId
-    ) {
+    public List<MentionRecord> find(MentionQuery query) {
         return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
-                        .eq(MentionEntity::getTargetAccountId, accountId)
-                        .lt(cursorMentionId != null, MentionEntity::getMentionId, cursorMentionId)
-                        .eq(unreadOnly, MentionEntity::getRead, false)
-                        .eq(channelId != null, MentionEntity::getChannelId, channelId)
+                        .eq(MentionEntity::getTargetAccountId, query.accountId())
+                        .lt(query.beforeMentionId() != null, MentionEntity::getMentionId, query.beforeMentionId())
+                        .eq(query.read() != null, MentionEntity::getRead, query.read())
+                        .eq(query.channelId() != null, MentionEntity::getChannelId, query.channelId())
                         .orderByDesc(MentionEntity::getMentionId)
-                        .last("LIMIT " + limit))
+                        .last("LIMIT " + query.limit()))
                 .stream()
                 .map(MentionEntity::toRecord)
                 .toList();
-    }
-
-    /**
-     * 将单条提及标记为已读。
-     * 输出：返回是否实际更新了记录。
-     */
-    @Override
-    public boolean markAsRead(long accountId, long mentionId) {
-        return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
-                .eq(MentionEntity::getTargetAccountId, accountId)
-                .eq(MentionEntity::getMentionId, mentionId)
-                .set(MentionEntity::getRead, true)) > 0;
-    }
-
-    /**
-     * 批量标记提及为已读。
-     * 输出：返回实际更新数量。
-     */
-    @Override
-    public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
-        return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
-                .eq(MentionEntity::getTargetAccountId, accountId)
-                .eq(MentionEntity::getRead, false)
-                .le(beforeMentionId != null, MentionEntity::getMentionId, beforeMentionId)
-                .eq(channelId != null, MentionEntity::getChannelId, channelId)
-                .set(MentionEntity::getRead, true));
     }
 }
