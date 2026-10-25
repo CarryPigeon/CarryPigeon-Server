@@ -2,11 +2,10 @@
 
 `mc-bridge` is a scenario-specific extension message example and a minimal startup-classpath plugin.
 
-This directory exists to keep scenario-specific example code out of the production `chat-domain` runtime code. It consumes the SPI and registration support owned by `chat-domain/features/plugin`.
+This directory exists to keep scenario-specific example code out of the production `chat-domain` runtime code. It consumes the message handler SPI owned by `infrastructure-basic`.
 
 ## Directory contents
 
-- `McBridgeMessageTypePluginConfiguration.java`
 - `McBridgeMessagePlugin.java`
 - `McBridgePluginAutoConfiguration.java`
 - `McBridgeSystemPlugin.java`

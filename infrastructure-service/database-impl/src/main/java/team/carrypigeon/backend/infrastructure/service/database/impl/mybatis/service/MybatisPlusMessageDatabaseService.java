@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,19 +48,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     /**
-     * 批量读取消息记录，供合并转发等场景避免逐条访问数据库。
-     */
-    @Override
-    public List<MessageRecord> findByIds(Collection<Long> messageIds) {
-        if (messageIds == null || messageIds.isEmpty()) {
-            return List.of();
-        }
-        return messageMapper.selectByIds(messageIds).stream()
-                .map(MessageEntity::toRecord)
-                .toList();
-    }
-
-    /**
      * 更新既有消息记录。
      * 边界：只更新 domain 载荷、提及、摘要与状态四列，不改写发送者与频道归属。
      */
@@ -101,25 +87,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                         .eq(MessageEntity::getChannelId, channelId)
                         .gt(MessageEntity::getMessageId, afterMessageId)
                         .orderByAsc(MessageEntity::getMessageId)
-                        .last("LIMIT " + limit))
-                .stream()
-                .map(MessageEntity::toRecord)
-                .toList();
-    }
-
-    /**
-     * 按关键字搜索频道消息，只匹配已发送状态。
-     */
-    @Override
-    public List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit) {
-        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
-                        .eq(MessageEntity::getChannelId, channelId)
-                        .eq(MessageEntity::getStatus, STATUS_SENT)
-                        .and(wrapper -> wrapper
-                                .like(MessageEntity::getPreview, keyword)
-                                .or()
-                                .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
-                        .orderByDesc(MessageEntity::getMessageId)
                         .last("LIMIT " + limit))
                 .stream()
                 .map(MessageEntity::toRecord)

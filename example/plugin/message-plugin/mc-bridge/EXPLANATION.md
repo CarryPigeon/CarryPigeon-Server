@@ -8,10 +8,10 @@ The main backend runtime should not carry scenario-specific sample code.
 
 ## What this sample demonstrates
 
-1. how to define a concrete extension `messageType`
-2. how to register that type with a dedicated configuration class
-3. how to add extension-specific payload validation through `validateCanonicalData(...)`
-4. how to still reuse the generic extension message handler base
+1. how to define a concrete message domain `Example:McBridge:V1`
+2. how to register a `CPChannelMessageHandler` bean from an external plugin
+3. how to add extension-specific payload validation in `handle(...)`
+4. how to return normalized canonical data without touching host persistence
 
 ## Minimal payload contract
 
@@ -25,15 +25,15 @@ The main backend runtime should not carry scenario-specific sample code.
 }
 ```
 
-The generic extension plugin validates `plugin_key`, `payload`, optional `text` and optional `metadata`. The example then requires `payload.event` to be a non-blank string and writes its trimmed value into canonical data.
+The example requires `payload.event` to be a non-blank string, writes its trimmed value into canonical data, and uses `text` as the message preview when present.
 
 ## Relationship to production code
 
-The production `plugin` feature keeps:
+The production message feature keeps:
 
 - unified message sending
-- extension whitelist control
-- extension registration support
-- generic extension message handling
+- message domain dispatch
+- payload validation and normalization inside handlers
+- persistence and realtime delivery outside handlers
 
 Concrete scenario examples like `mc-bridge` should be kept in `example/` or downstream modules.

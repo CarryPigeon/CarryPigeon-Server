@@ -11,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
  * 边界：不暴露消息发布、编辑、撤回、删除、附件上传和置顶能力。
  * 输入：消息历史和搜索查询对象。
  * 输出：消息历史页或搜索结果投影。
- * 失败语义：频道不存在、成员权限不足、游标非法和搜索条件非法由领域问题异常表达。
+ * 失败语义：频道不存在、成员权限不足、锚点消息不属于目标频道由领域问题异常表达；请求字段合法性由 controller 保证。
  * 调用方：controller 或其它 feature 通过本接口读取消息时间线，不直接读取消息仓储。
  */
 public interface ChannelMessageTimelineApi {

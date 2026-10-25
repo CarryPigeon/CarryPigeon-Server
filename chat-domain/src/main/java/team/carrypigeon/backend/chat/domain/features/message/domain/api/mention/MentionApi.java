@@ -10,7 +10,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.
  * 边界：不暴露 controller 协议、具体实现类和 mention 仓储细节。
  * 输入：提及列表查询对象或账号、mention、频道游标等稳定业务入参。
  * 输出：提及投影列表或已读标记副作用。
- * 失败语义：账号非法、mention 不存在、频道不可访问和游标非法由领域问题异常表达。
+ * 失败语义：目标 mention 不存在时由领域问题异常表达；请求字段合法性由 controller 保证。
  * 调用方：通过本接口读取和维护 mention 已读状态，不直接写 mention 存储。
  */
 public interface MentionApi {
@@ -41,7 +41,7 @@ public interface MentionApi {
      * 批量标记提及为已读。
      * 输入：账号 ID、可选 mention 上界和可选频道 ID。
      * 副作用：将范围内属于当前账号的 mention 标记为已读。
-     * 约束：范围过滤和频道可访问性由领域实现统一判断。
+     * 约束：范围过滤由调用方传入，更新条件始终包含当前账号。
      *
      * @param accountId 当前账号 ID
      * @param beforeMentionId 可选 mention 上界，通常表示只处理该 ID 之前的提及

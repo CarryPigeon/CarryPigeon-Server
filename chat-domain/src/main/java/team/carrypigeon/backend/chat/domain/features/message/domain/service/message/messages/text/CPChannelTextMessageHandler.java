@@ -2,10 +2,9 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import team.carrypigeon.backend.chat.domain.features.message.domain.capability.SenderProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
@@ -23,15 +22,15 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.MessageHandl
 public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
     private final ObjectMapper objectMapper;
     private final MessageRepository messageRepository;
-    private final UserProfileApi userProfileApi;
+    private final SenderProfileQuery senderProfileQuery;
 
     public CPChannelTextMessageHandler(
         ObjectMapper objectMapper,
-        MessageRepository messageRepository, UserProfileApi userProfileApi
+        MessageRepository messageRepository, SenderProfileQuery senderProfileQuery
     ) {
         this.objectMapper = objectMapper;
         this.messageRepository = messageRepository;
-        this.userProfileApi = userProfileApi;
+        this.senderProfileQuery = senderProfileQuery;
     }
 
     @Override
@@ -48,12 +47,12 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             // 查询
             CPChannelMessage cpChannelMessage = messageRepository.findById(Long.parseLong(originData.getReplyToMid()))
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-            // 查询发送人
-            UserProfileResult user = userProfileApi.findById(cpChannelMessage.senderId());
+            // 查询发送人名称
+            String senderName = senderProfileQuery.findSenderName(cpChannelMessage.senderId());
             // 组装数据
             data.setReplyToUser(
                 new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(
-                    user.username(),
+                    senderName,
                     cpChannelMessage.preview(),
                      cpChannelMessage.sendTime().toEpochMilli()
                     )

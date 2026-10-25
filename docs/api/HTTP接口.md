@@ -93,19 +93,16 @@
 
 | 方法 | 路径 | 鉴权 | 请求 | 响应 |
 |---|---|---|---|---|
-| GET | `/api/channels/{channelId}/messages` | 登录 | `cursor?`、`around_mid?`、`before?`、`after?`、`limit`(1..50) | `CursorPageResponse<ChannelMessageV1Response>` |
+| GET | `/api/channels/{channelId}/messages` | 登录 | `cursor?`、`around_mid?`、`before?`、`after?`、`limit`(1..50) | `CursorPageResponse<ChannelMessageResponse>` |
 | GET | `/api/channels/{channelId}/messages/search` | 登录 | `q?`、`keyword?`、`cursor?`、`sender_uid?`、`domain?`、`before_mid?`、`after_mid?`、`limit`(1..50) | 同上 |
-| POST | `/api/channels/{channelId}/messages` | 登录 | `SendChannelMessageRequest` | `ChannelMessageV1Response`（201） |
-| POST | `/api/channels/{channelId}/messages/attachments` | 登录 | `multipart/form-data`：`file`、`message_type?` | `MessageAttachmentUploadResponse` |
-| POST | `/api/channels/{channelId}/messages/{messageId}/recall` | 登录 | 路径参数 | `ChannelMessageV1Response` |
-| POST | `/api/messages/{messageId}/forward` | 登录 | `ForwardChannelMessageRequest` | `ChannelMessageV1Response`（201） |
+| POST | `/api/channels/{channelId}/messages` | 登录 | `SendChannelMessageRequest` | `ChannelMessageResponse`（201） |
+| POST | `/api/channels/{channelId}/messages/{messageId}/recall` | 登录 | 路径参数 | 空体（204） |
 
 语义：
 
 - 历史查询支持锚点（`around_mid`）与方向控制（`before`/`after`），三者与 `cursor` 不可混用。
-- 发送与转发是**幂等**的：同一幂等键重复提交返回首次结果，指纹不同返回 `idempotency_key_reused`。
-- 被禁言账号发送返回 `user_muted`；撤回权限不足返回 `channel_message_recall_forbidden`。
-- 附件上传依赖对象存储，不可用时返回 `storage_service_unavailable`。
+- `domain` 格式固定为 `主分类:子分类:版本号`，例如 `Core:Text:V1`；`data` 由对应 domain 的处理器校验。
+- 被禁言账号发送返回 `user_muted`；domain 不受支持返回 `unsupported_message_domain`；撤回权限不足返回 `channel_message_recall_forbidden`。
 
 ### 2.7 已读与提及
 
@@ -165,10 +162,10 @@
 | 401 | `token_expired` | access token 过期 |
 | 403 | `channel_owner_required` / `channel_role_forbidden` / `channel_kick_forbidden` / `file_access_forbidden` / `user_muted` | 权限不足 |
 | 404 | `not_found` | 目标资源不存在 |
-| 409 | `idempotency_key_reused` / `channel_delete_blocked` / `application_already_processed` / `conflict` | 状态冲突 |
+| 409 | `channel_delete_blocked` / `application_already_processed` / `conflict` | 状态冲突 |
 | 412 | `required_plugin_missing` | 客户端插件不齐 |
 | 413 | `payload_too_large` | 上传超限 |
-| 422 | `validation_failed` / `cursor_invalid` / `invalid_share_key` / `schema_invalid` | 入参不合法 |
+| 422 | `validation_failed` / `cursor_invalid` / `invalid_share_key` / `schema_invalid` / `unsupported_message_domain` | 入参不合法或 domain 不受支持 |
 | 503 | `storage_service_unavailable` / `mail_service_unavailable` / `email_delivery_failed` | 外部依赖不可用 |
 
 完整码表见 `docs/standards/异常与错误码.md` §4。
@@ -180,8 +177,8 @@
 1. 启动先调 `GET /api/server` 拿 `ws_url` 与能力开关，再决定是否建立实时连接（协议见 `docs/api/实时通道协议.md`）。
 2. 所有写操作都走 HTTP；实时通道只负责接收推送。
 3. 分页统一回传 `next_cursor`，不要自己拼游标。
-4. 幂等：消息发送/转发需带幂等键；同一键只对应一次业务结果。
-5. 429/503 需要退避重试；4xx 不要重试（除幂等冲突可读回首次结果）。
+4. 消息 `domain` 使用 `主分类:子分类:版本号` 形式，`data` 结构由对应 domain 决定。
+5. 429/503 需要退避重试；4xx 不要重试。
 
 ---
 
@@ -191,4 +188,4 @@
 |---|---|---|
 | 1 | 各 DTO 的字段级说明 | 当前由 OpenAPI 承载；后续按 feature 文档逐个补齐关键字段 |
 | 2 | `GET /api/users?ids=` 的批量上限 | 代码中未见显式上限，待确认后写入本文 |
-| 3 | 幂等键的传递位置（请求体字段名） | 见 `SendChannelMessageRequest` / `ForwardChannelMessageRequest`，待与客户端对齐后写入 |
+| 3 | 消息各 domain 的 `data` 字段说明 | 当前由 OpenAPI 与对应 handler 承载，后续按 domain 补齐 |

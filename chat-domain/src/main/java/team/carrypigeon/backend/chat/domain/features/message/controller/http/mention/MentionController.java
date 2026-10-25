@@ -4,11 +4,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.result.MentionResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.MentionApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionItemResponse;
@@ -25,12 +28,12 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.http.men
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.UpdateMentionReadStateRequest;
 import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 提及收件箱 HTTP 入口。
  */
+@Validated
 @RestController
 @RequestMapping("/api/mentions")
 @PreAuthorize("isAuthenticated()")
@@ -66,22 +69,39 @@ public class MentionController {
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回提及列表")})
     public MentionListResponse listMentions(
         @RequestParam(required = false) String cursor,
-        @RequestParam(defaultValue = "20") int limit,
+        @RequestParam(defaultValue = "20")
+            @Min(value = 1, message = "limit must be between 1 and 50")
+            @Max(value = 50, message = "limit must be between 1 and 50") int limit,
         @RequestParam(name = "unread_only", defaultValue = "false") boolean unreadOnly,
-        @RequestParam(name = "cid", required = false) String channelId,
+        @RequestParam(name = "cid", required = false)
+            @Positive(message = "cid must be greater than 0") Long channelId,
         @AuthenticationPrincipal CpPrincipal principal
     ) {
-        int normalizedLimit = normalizeLimit(limit);
         List<MentionItemResponse> queriedItems = mentionDomainApi.listMentions(new ListMentionsQuery(
                 principal.accountId(),
-                decodeCursor(cursor),
-                normalizedLimit,
+                OpaqueCursorCodec.decode(MENTION_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID),
+                limit,
                 unreadOnly,
-                parseOptionalSnowflake(channelId, "cid", false)
-        )).stream().map(this::toResponse).toList();
-        boolean hasMore = queriedItems.size() > normalizedLimit;
-        List<MentionItemResponse> items = hasMore ? queriedItems.subList(0, normalizedLimit) : queriedItems;
-        String nextCursor = hasMore ? OpaqueCursorCodec.encode(MENTION_CURSOR_SCOPE, Long.parseLong(items.get(items.size() - 1).mentionId())) : null;
+                channelId
+        )).stream()
+                .map(mention -> new MentionItemResponse(
+                        IdUtil.toString(mention.mentionId()),
+                        IdUtil.toString(mention.channelId()),
+                        IdUtil.toString(mention.messageId()),
+                        IdUtil.toString(mention.fromAccountId()),
+                        new MentionItemResponse.MentionTargetResponse(
+                                mention.targetType(),
+                                IdUtil.toString(mention.targetAccountId())
+                        ),
+                        mention.createdAt().toEpochMilli(),
+                        mention.read()
+                ))
+                .toList();
+        boolean hasMore = queriedItems.size() > limit;
+        List<MentionItemResponse> items = hasMore ? queriedItems.subList(0, limit) : queriedItems;
+        String nextCursor = hasMore
+                ? OpaqueCursorCodec.encode(MENTION_CURSOR_SCOPE, Long.parseLong(items.getLast().mentionId()))
+                : null;
         return new MentionListResponse(items, nextCursor, hasMore);
     }
 
@@ -96,9 +116,9 @@ public class MentionController {
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已标记为已读")})
     public ResponseEntity<Void> markMentionRead(
         @AuthenticationPrincipal CpPrincipal principal,
-        @PathVariable String mentionId
+        @PathVariable @Positive(message = "mentionId must be greater than 0") Long mentionId
     ) {
-        mentionDomainApi.markMentionRead(principal.accountId(), parseRequiredSnowflake(mentionId, "mention_id"));
+        mentionDomainApi.markMentionRead(principal.accountId(), mentionId);
         return ResponseEntity.noContent().build();
     }
 
@@ -114,76 +134,15 @@ public class MentionController {
     @Operation(summary = "批量标记提及已读", description = "按条件批量标记当前用户提及为已读。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "已批量标记为已读")})
     public ResponseEntity<Void> markMentionsRead(
-        @RequestBody(required = false) UpdateMentionReadStateRequest body,
+        @Valid @RequestBody(required = false) UpdateMentionReadStateRequest body,
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         mentionDomainApi.markMentionsRead(
                 principal.accountId(),
-                body == null ? null : parseOptionalSnowflake(body.beforeMentionId(), "before_mention_id", false),
-                body == null ? null : parseOptionalSnowflake(body.cid(), "cid", false)
+                body == null ? null : body.beforeMentionId(),
+                body == null ? null : body.cid()
         );
         return ResponseEntity.noContent().build();
     }
 
-    private MentionItemResponse toResponse(MentionResult result) {
-        return new MentionItemResponse(
-                IdUtil.toString(result.mentionId()),
-                IdUtil.toString(result.channelId()),
-                IdUtil.toString(result.messageId()),
-                IdUtil.toString(result.fromAccountId()),
-                new MentionItemResponse.MentionTargetResponse(result.targetType(), IdUtil.toString(result.targetAccountId())),
-                result.createdAt().toEpochMilli(),
-                result.read()
-        );
-    }
-
-    /**
-     * 解析 mention HTTP 查询中的可选雪花 ID。
-     * 失败语义：cursor 字段固定返回 `cursor_invalid`，其它字段返回字段级十进制雪花 ID 错误。
-     *
-     * @param rawValue 原始查询参数
-     * @param fieldName 字段显示名
-     * @param cursorField 是否为 cursor 字段
-     * @return 解析后的雪花 ID，缺失时为 null
-     */
-    private Long parseOptionalSnowflake(String rawValue, String fieldName, boolean cursorField) {
-        if (rawValue == null || rawValue.isBlank()) {
-            return null;
-        }
-        try {
-            return Long.parseLong(rawValue.trim());
-        } catch (NumberFormatException exception) {
-            if (cursorField) {
-                throw ProblemException.of(MessageProblem.CURSOR_INVALID);
-            }
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
-        }
-    }
-
-    private Long decodeCursor(String cursor) {
-        return OpaqueCursorCodec.decode(MENTION_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID);
-    }
-
-    private int normalizeLimit(int limit) {
-        if (limit <= 0 || limit > 50) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "limit must be between 1 and 50");
-        }
-        return limit;
-    }
-
-    /**
-     * 解析 mention HTTP 路径或查询中的必填雪花 ID。
-     * 失败语义：缺失或非十进制数字时返回字段级校验问题。
-     *
-     * @param rawValue 原始参数
-     * @param fieldName 字段显示名
-     * @return 解析后的雪花 ID
-     */
-    private long parseRequiredSnowflake(String rawValue, String fieldName) {
-        Long parsed = parseOptionalSnowflake(rawValue, fieldName, false);
-        if (parsed == null) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be decimal snowflake string");
-        }
-        return parsed;
-    }
 }

@@ -1,11 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistence;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -47,21 +44,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         return messageDatabaseService.findById(messageId).map(this::toDomainMessage);
     }
 
-    /**
-     * 批量读取消息并映射为领域对象。
-     * 输出：数据库未命中的消息 ID 不进入结果映射。
-     */
-    @Override
-    public Map<Long, CPChannelMessage> findByIds(Collection<Long> messageIds) {
-        return messageDatabaseService.findByIds(messageIds).stream()
-                .map(this::toDomainMessage)
-                .collect(Collectors.toMap(
-                        CPChannelMessage::messageId,
-                        Function.identity(),
-                        (existing, ignored) -> existing
-                ));
-    }
-
     @Override
     public CPChannelMessage update(CPChannelMessage message) {
         messageDatabaseService.update(toPersistenceRecord(message));
@@ -76,11 +58,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     @Override
     public List<CPChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
         return map(messageDatabaseService.findByChannelIdAfter(channelId, afterMessageId, limit));
-    }
-
-    @Override
-    public List<CPChannelMessage> searchByChannelId(long channelId, String keyword, int limit) {
-        return map(messageDatabaseService.searchByChannelId(channelId, keyword, limit));
     }
 
     @Override

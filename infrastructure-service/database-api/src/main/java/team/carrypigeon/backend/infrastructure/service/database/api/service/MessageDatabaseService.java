@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,15 +26,6 @@ public interface MessageDatabaseService {
      * @return 命中时返回消息记录，未命中时返回空
      */
     Optional<MessageRecord> findById(long messageId);
-
-    /**
-     * 批量读取消息记录，供合并转发等场景避免逐条查询。
-     * 输出：未命中的消息 ID 不进入结果，顺序不保证。
-     *
-     * @param messageIds 消息 ID 集合
-     * @return 命中的消息记录列表
-     */
-    List<MessageRecord> findByIds(Collection<Long> messageIds);
 
     /**
      * 更新已有消息记录。
@@ -66,17 +56,6 @@ public interface MessageDatabaseService {
      * @return 命中时返回消息记录列表
      */
     List<MessageRecord> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
-
-    /**
-     * 在频道内按关键字搜索已发送消息。
-     * 输出：按消息 ID 倒序返回，最多 limit 条。
-     *
-     * @param channelId 频道 ID
-     * @param keyword 搜索关键字
-     * @param limit 返回条数
-     * @return 搜索命中消息记录列表
-     */
-    List<MessageRecord> searchByChannelId(long channelId, String keyword, int limit);
 
     /**
      * 在频道内按关键字和高级过滤条件搜索已发送消息。

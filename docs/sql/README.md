@@ -13,7 +13,7 @@
 | 1 | `01-auth.sql` | `auth_account`、`auth_refresh_session` |
 | 2 | `02-user.sql` | `user_profile` |
 | 3 | `03-channel.sql` | `chat_channel`、`chat_channel_member`、`chat_channel_application`、`chat_channel_ban`、`chat_channel_read_state`，以及唯一 `system` 频道种子 |
-| 4 | `04-message.sql` | `chat_message`、`chat_mention`、`chat_message_idempotency` |
+| 4 | `04-message.sql` | `chat_message`、`chat_mention` |
 | — | `99-reset.sql` | 破坏性清理：删除上述全部表（仅在需要重置时先执行） |
 
 ## 2. 执行顺序
@@ -44,7 +44,7 @@ mysql ... < docs/sql/99-reset.sql
 | 无拼接件 | 不提供 all-in-one 脚本：同一份 DDL 只保留一份来源 |
 | 字符集 | 每张表显式 `utf8mb4` + `utf8mb4_unicode_ci` + InnoDB |
 | 无外键 | 表之间不建外键约束，一致性由应用保证（与现有仓储实现一致） |
-| 时间类型 | `DATETIME(3)`；幂等表用 `DATETIME(6)`（与 Mapper 里的精度一致） |
+| 时间类型 | 统一使用 `DATETIME(3)` |
 | 主键 | 业务 ID 由应用生成（雪花），不使用自增 |
 
 ---

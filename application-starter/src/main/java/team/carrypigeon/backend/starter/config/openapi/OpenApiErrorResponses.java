@@ -123,8 +123,7 @@ final class OpenApiErrorResponses {
         if (path == null) {
             return false;
         }
-        return ("POST".equals(httpMethod) && path.contains("/forward"))
-                || ("DELETE".equals(httpMethod) && "/api/channels/{channelId}".equals(path))
+        return ("DELETE".equals(httpMethod) && "/api/channels/{channelId}".equals(path))
                 || ("POST".equals(httpMethod)
                 && "/api/channels/{channelId}/applications/{applicationId}/decisions".equals(path));
     }
@@ -134,8 +133,7 @@ final class OpenApiErrorResponses {
             return false;
         }
         return "/api/users/me/background".equals(path)
-                || path.contains("/files/uploads/")
-                || path.endsWith("/messages/attachments");
+                || path.contains("/files/uploads/");
     }
 
     private static boolean supportsServiceUnavailable(String path) {
@@ -145,7 +143,6 @@ final class OpenApiErrorResponses {
         return "/api/auth/email_codes".equals(path)
                 || "/api/users/me/background".equals(path)
                 || "/api/files/uploads/{shareKey}".equals(path)
-                || "/api/files/download/{shareKey}".equals(path)
-                || "/api/channels/{channelId}/messages/attachments".equals(path);
+                || "/api/files/download/{shareKey}".equals(path);
     }
 }

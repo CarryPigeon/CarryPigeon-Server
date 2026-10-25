@@ -1,8 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 
 /**
@@ -27,14 +25,6 @@ public interface MessageRepository {
      * @return 命中时返回消息
      */
     java.util.Optional<CPChannelMessage> findById(long messageId);
-
-    /**
-     * 批量查询指定消息。
-     *
-     * @param messageIds 待查询消息 ID 集合
-     * @return 以消息 ID 为键的命中消息；不存在的消息不进入结果
-     */
-    Map<Long, CPChannelMessage> findByIds(Collection<Long> messageIds);
 
     /**
      * 更新已存在的频道消息。
@@ -63,16 +53,6 @@ public interface MessageRepository {
      * @return 消息列表，按 messageId 升序排列
      */
     List<CPChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit);
-
-    /**
-     * 在频道内按关键字搜索消息。
-     *
-     * @param channelId 频道 ID
-     * @param keyword 搜索关键字
-     * @param limit 返回条数
-     * @return 搜索命中消息列表
-     */
-    List<CPChannelMessage> searchByChannelId(long channelId, String keyword, int limit);
 
     /**
      * 在频道内按关键字和高级过滤条件搜索消息。

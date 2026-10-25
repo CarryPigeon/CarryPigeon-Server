@@ -20,8 +20,8 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 
 /**
  * 消息读状态领域 API 实现。
- * 职责：校验最后已读消息与频道成员关系，并维护只前进不后退的读状态。
- * 边界：未读统计由读状态仓储提供，不读取 channel 内部模型或仓储。
+ * 职责：校验最后已读消息的业务归属与频道成员关系，并维护只前进不后退的读状态。
+ * 边界：不承载请求字段校验；未读统计由读状态仓储提供，不读取 channel 内部模型或仓储。
  */
 @Service
 public class MessageReadStateDomainApi implements MessageReadStateApi {
@@ -48,7 +48,6 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
 
     @Override
     public ChannelReadStateResult updateChannelReadState(UpdateChannelReadStateCommand command) {
-        validate(command);
         return transactionRunner.runInTransaction(afterCommit -> {
             CPChannelMessage message = messageRepository.findById(command.lastReadMessageId())
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
@@ -83,7 +82,6 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
 
     @Override
     public List<ChannelUnreadResult> listUnreads(long accountId) {
-        requirePositive(accountId, "accountId");
         return readStateRepository.listUnreadsByAccountId(accountId).stream()
                 .map(item -> new ChannelUnreadResult(
                         IdUtil.toString(item.channelId()),
@@ -91,22 +89,6 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
                         item.lastReadTime() == null ? 0L : item.lastReadTime().toEpochMilli()
                 ))
                 .toList();
-    }
-
-    private void validate(UpdateChannelReadStateCommand command) {
-        if (command == null) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "command must not be null");
-        }
-        requirePositive(command.accountId(), "accountId");
-        requirePositive(command.channelId(), "channelId");
-        requirePositive(command.lastReadMessageId(), "lastReadMessageId");
-        requirePositive(command.lastReadTime(), "lastReadTime");
-    }
-
-    private void requirePositive(long value, String fieldName) {
-        if (value <= 0) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, fieldName + " must be greater than 0");
-        }
     }
 
     private ChannelReadStateResult toResult(ChannelReadState readState) {

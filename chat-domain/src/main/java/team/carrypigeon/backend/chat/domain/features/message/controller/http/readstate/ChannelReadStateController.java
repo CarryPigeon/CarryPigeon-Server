@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -21,14 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.input.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.ChannelReadStateResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UnreadItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UnreadListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UpdateChannelReadStateRequest;
-import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 频道读状态 HTTP 入口。
@@ -59,7 +55,7 @@ public class ChannelReadStateController {
         ChannelReadStateResult result = messageReadStateApi.updateChannelReadState(new UpdateChannelReadStateCommand(
                 principal.accountId(),
                 channelId,
-                parseLastReadMid(request.lastReadMid()),
+                request.lastReadMid(),
                 request.lastReadTime()
         ));
         return new ChannelReadStateResponse(result.cid(), result.uid(), result.lastReadMid(), result.lastReadTime());
@@ -77,27 +73,8 @@ public class ChannelReadStateController {
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
-                .map(this::toResponse)
+                .map(result -> new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime()))
                 .toList();
         return new UnreadListResponse(items);
-    }
-
-    private UnreadItemResponse toResponse(ChannelUnreadResult result) {
-        return new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime());
-    }
-
-    /**
-     * 解析更新已读状态使用的消息 ID。
-     * 失败语义：不是十进制雪花 ID 时返回字段级校验问题。
-     *
-     * @param rawValue 原始消息 ID
-     * @return 最后已读消息 ID
-     */
-    private long parseLastReadMid(String rawValue) {
-        try {
-            return Long.parseLong(rawValue);
-        } catch (NumberFormatException exception) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "last_read_mid must be decimal snowflake string");
-        }
     }
 }

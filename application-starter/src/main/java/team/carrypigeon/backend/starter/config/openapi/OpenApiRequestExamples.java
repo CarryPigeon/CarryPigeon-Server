@@ -127,24 +127,12 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("POST /api/channels/{channelId}/messages", jsonExample("发送文本消息", """
                     {
-                      "domain": "Core:Text",
-                      "domain_version": "1.0.0",
+                      "domain": "Core:Text:V1",
                       "data": {
-                        "text": "hello from Apifox"
+                        "content": "hello from Apifox",
+                        "reply_to_mid": ""
                       },
-                      "mentions": ["{{accountId}}"],
-                      "client_message_id": "apifox-msg-001"
-                    }
-                    """)),
-            Map.entry("POST /api/channels/{channelId}/messages/attachments", formExample(
-                    "上传消息附件",
-                    Map.of("message_type", "file", "file", "<select attachment file>"))),
-            Map.entry("POST /api/messages/{messageId}/forward", jsonExample("合并转发消息", """
-                    {
-                      "target_cid": "{{channelId}}",
-                      "comment": "FYI",
-                      "merged_mids": ["{{messageId}}", "{{secondMessageId}}"],
-                      "idempotency_key": "apifox-forward-001"
+                      "mentions": ["{{accountId}}"]
                     }
                     """)),
             Map.entry("PUT /api/channels/{channelId}/read_state", jsonExample("更新频道已读状态", """

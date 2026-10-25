@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Component
 public class CPChannelMessageDispatcher {
-    private final Map<String,CPChannelMessageHandler> handlers = new HashMap<>();
+    private final Map<String, CPChannelMessageHandler> handlers = new HashMap<>();
 
     public CPChannelMessageDispatcher(List<CPChannelMessageHandler> beansHandler) {
         beansHandler.forEach((handler) -> {
@@ -21,6 +21,12 @@ public class CPChannelMessageDispatcher {
         });
     }
 
+    /**
+     * 按消息 domain 获取处理器。
+     *
+     * @param domain 消息 domain
+     * @return 对应处理器
+     */
     public CPChannelMessageHandler dispatch(String domain) {
         CPChannelMessageHandler handler = handlers.get(domain);
         if (handler == null) {
@@ -42,5 +48,24 @@ public class CPChannelMessageDispatcher {
             });
         }
         return handler;
+    }
+
+    /**
+     * 判断指定消息 domain 是否已注册处理器。
+     *
+     * @param domain 消息 domain
+     * @return 已注册时返回 true
+     */
+    public boolean supports(String domain) {
+        return domain != null && handlers.containsKey(domain);
+    }
+
+    /**
+     * 返回当前已注册的消息 domain 快照。
+     *
+     * @return 已排序的消息 domain 列表
+     */
+    public List<String> supportedDomains() {
+        return handlers.keySet().stream().sorted().toList();
     }
 }

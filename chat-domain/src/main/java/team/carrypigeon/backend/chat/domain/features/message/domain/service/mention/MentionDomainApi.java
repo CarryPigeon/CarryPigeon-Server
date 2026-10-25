@@ -12,7 +12,7 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 /**
  * 提及领域服务。
  * 职责：承接提及列表查询与已读状态更新用例。
- * 边界：这里只编排提及读取和已读变更，不负责提及生成。
+ * 边界：不承载请求字段校验；这里只编排提及读取和已读变更，不负责提及生成。
  */
 @Service
 public class MentionDomainApi implements MentionApi {
@@ -29,8 +29,7 @@ public class MentionDomainApi implements MentionApi {
      * 输出：面向控制器的提及结果集合。
      */
     public List<MentionResult> listMentions(ListMentionsQuery query) {
-        int normalizedLimit = Math.max(1, Math.min(query.limit(), 50));
-        return mentionRepository.listByAccountId(query.accountId(), query.cursorMentionId(), normalizedLimit + 1, query.unreadOnly(), query.channelId()).stream()
+        return mentionRepository.listByAccountId(query.accountId(), query.cursorMentionId(), query.limit() + 1, query.unreadOnly(), query.channelId()).stream()
                 .map(mention -> new MentionResult(mention.mentionId(), mention.channelId(), mention.messageId(), mention.fromAccountId(), mention.targetType(), mention.targetAccountId(), mention.createdAt(), mention.read()))
                 .toList();
     }

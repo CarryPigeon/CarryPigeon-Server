@@ -12,7 +12,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Messag
 
 /**
  * 消息 canonical 持久化实体。
- * 职责：承接 chat_message 的十个统一字段与 MyBatis-Plus 映射。
+ * 职责：承接 chat_message 的九个统一字段与 MyBatis-Plus 映射。
  * 边界：data 与 mentions 保持 JSON 文本，不解释 domain 业务语义。
  */
 @Data

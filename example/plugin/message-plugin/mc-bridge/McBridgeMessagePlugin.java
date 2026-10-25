@@ -2,27 +2,21 @@ package example.plugin.messageplugin.mcbridge;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.plugin.support.message.PluginChannelMessagePlugin;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.MessageHandler;
 
 /**
- * Example specialized extension handler for mc-bridge.
- * It shows how an extension can layer custom payload validation on top of the generic extension handler.
+ * Example specialized message handler for mc-bridge.
+ * It shows how a plugin can validate and normalize its own domain payload.
  */
-public class McBridgeMessagePlugin extends PluginChannelMessagePlugin {
-
-    public McBridgeMessagePlugin() {
-        super(McBridgeMessageTypePluginConfiguration.MESSAGE_TYPE);
-    }
+@MessageHandler("Example:McBridge:V1")
+public class McBridgeMessagePlugin implements CPChannelMessageHandler {
 
     @Override
-    public CanonicalData validateCanonicalData(
-            ChannelMessageBuildContext context,
-            String domainVersion,
-            Map<String, Object> rawData
-    ) {
-        CanonicalData canonicalData = super.validateCanonicalData(context, domainVersion, rawData);
-        Object payloadValue = canonicalData.data().get("payload");
+    public CPChannelMessage handle(CPChannelMessage message) {
+        Object payloadValue = message.data().get("payload");
         if (!(payloadValue instanceof Map<?, ?> payload)) {
             throw ProblemException.of(McBridgeProblem.PAYLOAD_NOT_OBJECT);
         }
@@ -33,8 +27,21 @@ public class McBridgeMessagePlugin extends PluginChannelMessagePlugin {
         Map<String, Object> normalizedPayload = new LinkedHashMap<>();
         payload.forEach((key, value) -> normalizedPayload.put((String) key, value));
         normalizedPayload.put("event", event.trim());
-        Map<String, Object> normalizedData = new LinkedHashMap<>(canonicalData.data());
+        Map<String, Object> normalizedData = new LinkedHashMap<>(message.data());
         normalizedData.put("payload", normalizedPayload);
-        return new CanonicalData(normalizedData, canonicalData.preview());
+        String text = message.data().get("text") instanceof String value && !value.isBlank()
+                ? value
+                : "A player joined";
+        return new CPChannelMessage(
+                message.messageId(),
+                message.senderId(),
+                message.channelId(),
+                message.domain(),
+                normalizedData,
+                message.sendTime(),
+                message.mentions(),
+                text,
+                message.status()
+        );
     }
 }

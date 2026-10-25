@@ -25,7 +25,7 @@ dependencies:
 
 extensions:
   message_domains:
-    - Example:McBridge
+    - Example:McBridge:V1
   http: false
   websocket: false
   scheduled_jobs: false

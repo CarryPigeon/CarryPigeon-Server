@@ -14,7 +14,7 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 public interface MessageEventNotifier {
 
     /**
-     * 通知新消息，并按被提及账号逐个下发提及事件。
+     * 通知新消息。
      *
      * @param afterCommit 提交后动作注册器
      * @param message 已持久化的消息快照

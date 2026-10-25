@@ -9,7 +9,6 @@
 SET NAMES utf8mb4;
 
 -- 按依赖反向顺序删除（子表在前）
-DROP TABLE IF EXISTS chat_message_idempotency;
 DROP TABLE IF EXISTS chat_mention;
 DROP TABLE IF EXISTS chat_message;
 
