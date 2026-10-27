@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DiscoverChannelsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 
@@ -29,16 +28,16 @@ public class ChannelQueryDomainApi implements ChannelQueryApi {
     }
 
     @Override
-    public List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query) {
+    public List<DiscoverChannelResult> discoverChannels(long accountId, String keyword, Long cursorChannelId, int limit) {
         // 关键字统一在此归一：空白串与 null 等价，都表示不按关键字过滤
-        String normalizedKeyword = query.keyword() == null || query.keyword().isBlank()
+        String normalizedKeyword = keyword == null || keyword.isBlank()
             ? null
-            : query.keyword().trim();
+            : keyword.trim();
         // 多取一条交由调用方判定 hasMore，使分页语义不进入仓储层
         return channelRepository.discoverChannels(
                 normalizedKeyword,
-                query.cursorChannelId(),
-                query.limit() + HAS_MORE_PROBE
+                cursorChannelId,
+                limit + HAS_MORE_PROBE
             ).stream()
             .map(DiscoverChannelResult::from)
             .toList();

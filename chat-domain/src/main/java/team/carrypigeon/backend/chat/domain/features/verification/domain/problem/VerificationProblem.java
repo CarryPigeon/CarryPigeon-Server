@@ -10,8 +10,9 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
 public enum VerificationProblem implements ProblemMapping {
 
     /** 验证码入参或验证码本身不合法。 */
-    INVALID_INPUT(422, "validation_failed", "validation failed"),
-
+    INVALID_CODE(422, "validation_failed", "validation failed"),
+    /**邮箱不合法*/
+    INVALID_EMAIL(422, "invalid_email", "invalid email"),
     /** 邮件服务未就绪。 */
     MAIL_UNAVAILABLE(503, "mail_service_unavailable", "mail service is unavailable"),
 

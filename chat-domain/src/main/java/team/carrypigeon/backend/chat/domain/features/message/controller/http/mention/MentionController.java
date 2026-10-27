@@ -54,6 +54,7 @@ public class MentionController {
     }
 
     /**
+     * TODO 待审核
      * 查询当前账号的提及收件箱。
      * 输入：游标、数量、未读筛选和可选频道筛选。
      * 输出：提及列表分页响应。
@@ -123,6 +124,7 @@ public class MentionController {
     }
 
     /**
+     * TODO 待处理
      * 批量标记当前账号提及为已读。
      * 输入：可选 mention 上界和可选频道 ID。
      * 副作用：将匹配范围内的提及标记为已读。

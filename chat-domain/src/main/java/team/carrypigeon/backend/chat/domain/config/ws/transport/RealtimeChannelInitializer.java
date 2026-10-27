@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
@@ -28,33 +28,32 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final RealtimeServerProperties properties;
     private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
-    private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeConnectionIndex realtimeConnectionIndex;
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeCommandRegistry commandRegistry;
     private final RealtimeResumeCoordinator resumeCoordinator;
+    private final AuthTokenApi authTokenApi;
 
     public RealtimeChannelInitializer(
-            RealtimeServerProperties properties,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeConnectionIndex realtimeConnectionIndex,
-            RealtimeFrameCodec frameCodec,
-            RealtimeCommandRegistry commandRegistry,
-            RealtimeResumeCoordinator resumeCoordinator
+        RealtimeServerProperties properties,
+        IdGenerator idGenerator,
+        TimeProviderImpl timeProvider,
+        ServerIdentityProperties serverIdentityProperties,
+        RealtimeConnectionIndex realtimeConnectionIndex,
+        RealtimeFrameCodec frameCodec,
+        RealtimeCommandRegistry commandRegistry,
+        RealtimeResumeCoordinator resumeCoordinator, AuthTokenApi authTokenApi
     ) {
         this.properties = properties;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeConnectionIndex = realtimeConnectionIndex;
         this.frameCodec = frameCodec;
         this.commandRegistry = commandRegistry;
         this.resumeCoordinator = resumeCoordinator;
+        this.authTokenApi = authTokenApi;
     }
 
     @Override
@@ -66,15 +65,15 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         pipeline.addLast(RealtimeChannelHandler.idleStateHandler(properties.readIdleTimeoutSeconds()));
         pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
         pipeline.addLast(new RealtimeChannelHandler(
-                idGenerator,
-                timeProvider,
-                accessTokenAuthenticationApi,
-                serverIdentityProperties,
-                realtimeConnectionIndex,
-                frameCodec,
-                commandRegistry,
-                resumeCoordinator,
-                properties.authenticationTimeoutSeconds()
+            idGenerator,
+            timeProvider,
+            serverIdentityProperties,
+            realtimeConnectionIndex,
+            frameCodec,
+            commandRegistry,
+            resumeCoordinator,
+            authTokenApi,
+            properties.authenticationTimeoutSeconds()
         ));
     }
 }

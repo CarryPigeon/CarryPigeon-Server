@@ -12,9 +12,9 @@ import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.config.server.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeAuthSession;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.result.AccessTokenAuthenticationResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeFrame;
@@ -28,22 +28,22 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 @Slf4j
 public final class RealtimeAuthenticationCoordinator {
     private final TimeProviderImpl timeProvider;
-    private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
     private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeConnectionIndex realtimeConnectionIndex;
+    private final AuthTokenApi authTokenApi;
     private final int authenticationTimeoutSeconds;
     private final RealtimeFrameCodec frameCodec;
 
     public RealtimeAuthenticationCoordinator(
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeConnectionIndex realtimeConnectionIndex,
-            int authenticationTimeoutSeconds,
-            RealtimeFrameCodec frameCodec
+        TimeProviderImpl timeProvider,
+        ServerIdentityProperties serverIdentityProperties,
+        RealtimeConnectionIndex realtimeConnectionIndex,
+        AuthTokenApi authTokenApi,
+        int authenticationTimeoutSeconds,
+        RealtimeFrameCodec frameCodec
     ) {
         this.timeProvider = timeProvider;
-        this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
+        this.authTokenApi = authTokenApi;
         this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeConnectionIndex = realtimeConnectionIndex;
         this.authenticationTimeoutSeconds = authenticationTimeoutSeconds;
@@ -70,7 +70,7 @@ public final class RealtimeAuthenticationCoordinator {
             log.debug("Realtime authentication failed, reason=unauthorized, id={}, reauth={}", requestId, reauth);
             throw ProblemException.of(AuthProblem.AUTHENTICATION_REQUIRED);
         }
-        AccessTokenAuthenticationResult authentication = accessTokenAuthenticationApi.authenticate(accessToken);
+        AccessTokenAuthenticationResult authentication = authTokenApi.authenticate(accessToken);
         CpPrincipal principal = new CpPrincipal(authentication.accountId());
         replacePrincipal(context, principal);
         cancelAuthenticationTimeout(context);

@@ -17,9 +17,6 @@ public record CreateChannelRequest(
         String name,
         @Schema(description = "频道简介", example = "")
         @NotNull(message = "brief must not be null")
-        String brief,
-        @Schema(description = "频道头像相对路径", example = "")
-        @NotNull(message = "avatar must not be null")
-        String avatar
+        String brief
 ) {
 }

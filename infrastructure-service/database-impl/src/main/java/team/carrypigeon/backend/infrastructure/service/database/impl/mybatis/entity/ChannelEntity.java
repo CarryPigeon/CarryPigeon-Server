@@ -26,7 +26,6 @@ public class ChannelEntity {
     private Long channelId;
     private String name;
     private String brief;
-    private String avatar;
     @TableField("is_system")
     private Boolean systemChannel;
     private Instant createdAt;
@@ -42,7 +41,6 @@ public class ChannelEntity {
                 channelId,
                 name,
                 brief,
-                avatar,
                 systemChannel,
                 createdAt,
                 updatedAt
@@ -60,7 +58,6 @@ public class ChannelEntity {
                 record.id(),
                 record.name(),
                 record.brief(),
-                record.avatar(),
                 record.systemChannel(),
                 record.createdAt(),
                 record.updatedAt()

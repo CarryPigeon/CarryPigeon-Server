@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.verification.domain.servic
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.input.IssueEmailVerificationCodeCommand;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.input.VerifyEmailVerificationCodeCommand;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
  * 邮箱验证领域 API 实现。
@@ -21,16 +21,21 @@ public class EmailVerificationDomainApi implements EmailVerificationApi {
     }
 
     @Override
-    public void issueCode(IssueEmailVerificationCodeCommand command) {
-        emailVerificationCapability.issueCode(normalizeEmail(command.email()));
+    public void issueCode(String email) {
+        if(email==null||email.isBlank()){
+            throw ProblemException.of(VerificationProblem.INVALID_EMAIL);
+        }
+        emailVerificationCapability.issueCode(email);
     }
 
     @Override
-    public void verifyCode(VerifyEmailVerificationCodeCommand command) {
-        emailVerificationCapability.verifyCode(normalizeEmail(command.email()), command.code());
-    }
-
-    private String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase();
+    public void verifyCode(String email,String code) {
+        if(email==null||email.isBlank()){
+            throw ProblemException.of(VerificationProblem.INVALID_EMAIL);
+        }
+        if (code == null || code.isBlank()) {
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
+        }
+        emailVerificationCapability.verifyCode(email, code);
     }
 }

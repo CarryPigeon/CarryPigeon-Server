@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel
 
 import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DiscoverChannelsQuery;
 
 /**
  * 频道查询领域 API。
@@ -17,13 +16,13 @@ public interface ChannelQueryApi {
 
     /**
      * 发现可加入或可浏览的频道。
-     * 输入：发现查询包含当前账号、关键字和分页条件。
-     * 输出：频道发现结果投影列表。
-     * 约束：已禁言、不可见或不满足发现策略的频道不应出现在结果中。
      *
-     * @param query 频道发现查询条件
+     * @param accountId 账号标识
+     * @param keyword 关键字
+     * @param cursorChannelId 分页标识
+     * @param limit 分页大小
      * @return 频道发现结果投影列表
      */
-    List<DiscoverChannelResult> discoverChannels(DiscoverChannelsQuery query);
+    List<DiscoverChannelResult> discoverChannels(long accountId, String keyword, Long cursorChannelId, int limit);
 
 }

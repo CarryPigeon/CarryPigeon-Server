@@ -69,6 +69,7 @@ public class ChannelMessageController {
     }
 
     /**
+     * TODO 待审核
      * 查询频道历史消息。
      * 两种模式：cursor 模式从游标向前查询；around 模式查询目标消息前后的消息。
      * 约束：cursor 与 around_mid 不能同时使用；before/after 为空时使用默认窗口。
@@ -132,6 +133,7 @@ public class ChannelMessageController {
     }
 
     /**
+     * TODO 待审核
      * 在频道内按关键字搜索消息。
      *
      * @param channelId 频道 ID

@@ -7,9 +7,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.CreateChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DeleteChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
@@ -88,53 +85,36 @@ public class ChannelDomainApi implements ChannelApi {
         return ChannelResult.from(channel);
     }
 
-    /**
-     * 创建频道并把创建者设为所有者。
-     * 输入：命令携带创建者账号与频道名称、简介、头像。
-     * 输出：创建完成后的频道投影。
-     * 副作用：写入频道记录与创建者的 OWNER 成员关系，并在事务提交后通知该账号的频道集合发生变化。
-     * 约束：创建的始终是普通频道，系统频道不通过本入口产生。
-     *
-     * @param command 频道创建命令
-     * @return 创建后的频道投影
-     */
     @Override
-    public ChannelResult createChannel(CreateChannelCommand command) {
+    public ChannelResult createChannel(long accountId, String name, String brief) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 频道与创建者的成员关系必须同事务写入，否则会出现"频道存在但没有任何成员"的孤儿频道
             long channelId = idGenerator.nextLongId();
             Instant now = timeProvider.nowInstant();
             Channel channel = new Channel(
                 channelId,
-                command.name().trim(),
-                command.brief() == null ? "" : command.brief().trim(),
-                command.avatar() == null ? "" : command.avatar().trim(),
+                name.trim(),
+                brief == null ? "" : brief.trim(),
                 false,
                 now,
                 now
             );
             channelRepository.save(channel);
             // 创建者直接落 OWNER 角色，这是后续所有频道治理动作的权限来源
-            channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), command.accountId(), ChannelMemberRole.OWNER, now));
+            channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), accountId, ChannelMemberRole.OWNER, now));
             // 提交后通知该账号刷新可见频道集合，回滚时不应发出通知
-            channelEventNotifier.accountChannelsChanged(afterCommit, command.accountId());
+            channelEventNotifier.accountChannelsChanged(afterCommit, accountId);
             return ChannelResult.from(channel);
         });
     }
 
-    /**
-     * 删除频道。
-     * 约束：仅频道所有者可删除，且频道不存在申请、禁言、消息或审计等依赖数据。
-     *
-     * @param command 频道删除命令
-     */
     @Override
-    public void deleteChannel(DeleteChannelCommand command) {
+    public void deleteChannel(long operatorAccountId, long channelId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者必须先是频道成员，再判断其角色，避免把"非成员"与"角色不足"混为一类拒绝
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
@@ -142,8 +122,8 @@ public class ChannelDomainApi implements ChannelApi {
             // 存在申请或禁言记录时拒绝删除，避免留下指向已删频道的孤儿数据
             // TODO: 消息与审计数据当前未纳入依赖检查，需要在补齐级联清理后一并拦截
             if (
-                !channelApplicationRepository.list(command.channelId()).isEmpty()
-                    || !channelBanRepository.list(command.channelId()).isEmpty()
+                !channelApplicationRepository.list(channelId).isEmpty()
+                    || !channelBanRepository.list(channelId).isEmpty()
             ) {
                 throw ProblemException.of(ChannelProblem.DELETE_BLOCKED);
             }
@@ -155,22 +135,12 @@ public class ChannelDomainApi implements ChannelApi {
         });
     }
 
-    /**
-     * 更新频道资料。
-     * 输入：命令携带操作者、目标频道与新的名称、简介。
-     * 输出：更新后的频道投影。
-     * 副作用：覆盖频道名称与简介，并在事务提交后向频道全体成员发出资料变化通知。
-     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色；头像与创建时间不在本用例的更新范围内。
-     *
-     * @param command 频道资料更新命令
-     * @return 更新后的频道投影
-     */
     @Override
-    public ChannelResult updateChannelProfile(UpdateChannelProfileCommand command) {
-        return transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+    public void updateChannelProfile(long operatorAccountId, long channelId, String name, String brief) {
+        transactionRunner.runInTransaction(afterCommit -> {
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 资料修改按成员角色放行，不再按频道类型区分；系统频道的成员角色为 MEMBER，因此天然被这一层拦住
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
@@ -179,9 +149,8 @@ public class ChannelDomainApi implements ChannelApi {
             // 领域模型不可变，这里以原主键与原始创建时间重建频道对象；其余未参与本次更新的字段需显式保留
             Channel updated = new Channel(
                 channel.id(),
-                command.name().trim(),
-                command.brief() == null ? "" : command.brief().trim(),
-                channel.avatar(),
+                name.trim(),
+                brief == null ? "" : brief.trim(),
                 false,
                 channel.createdAt(),
                 timeProvider.nowInstant()
@@ -192,7 +161,7 @@ public class ChannelDomainApi implements ChannelApi {
                 afterCommit,
                 updated.id(),
                 ChannelChangeScope.PROFILE,
-                channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList()
+                channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList()
             );
             return ChannelResult.from(updated);
         });

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.input.IssueEmailVerificationCodeCommand;
 
 /**
  * 邮箱验证 HTTP 入口。
@@ -44,7 +43,7 @@ public class EmailVerificationController {
             @ApiResponse(responseCode = "204", description = "验证码请求受理成功")
     })
     public ResponseEntity<Void> sendEmailCode(@Valid @RequestBody SendEmailCodeRequest request) {
-        emailVerificationApi.issueCode(new IssueEmailVerificationCodeCommand(request.email()));
+        emailVerificationApi.issueCode(request.email());
         return ResponseEntity.noContent().build();
     }
 }

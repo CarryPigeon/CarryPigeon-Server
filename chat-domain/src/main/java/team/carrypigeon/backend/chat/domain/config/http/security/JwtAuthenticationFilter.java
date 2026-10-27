@@ -11,8 +11,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.result.AccessTokenAuthenticationResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 
 import java.io.IOException;
 import java.util.List;
@@ -25,10 +25,10 @@ import java.util.List;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final AccessTokenAuthenticationApi accessTokenAuthenticationApi;
+    private final AuthTokenApi authTokenApi;
 
-    public JwtAuthenticationFilter(AccessTokenAuthenticationApi accessTokenAuthenticationApi) {
-        this.accessTokenAuthenticationApi = accessTokenAuthenticationApi;
+    public JwtAuthenticationFilter(AuthTokenApi authTokenApi) {
+        this.authTokenApi = authTokenApi;
     }
 
     @Override
@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
         AccessTokenAuthenticationResult result;
         try {
-         result = accessTokenAuthenticationApi.authenticate(token);
+         result = authTokenApi.authenticate(token);
         }catch (Exception e) {
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

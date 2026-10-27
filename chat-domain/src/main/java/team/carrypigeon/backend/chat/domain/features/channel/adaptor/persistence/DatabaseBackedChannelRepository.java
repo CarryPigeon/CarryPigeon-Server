@@ -87,7 +87,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 record.id(),
                 record.name(),
                 record.brief(),
-                record.avatar(),
                 record.systemChannel(),
                 record.createdAt(),
                 record.updatedAt()
@@ -124,7 +123,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
                 channel.id(),
                 channel.name(),
                 channel.brief(),
-                channel.avatar(),
                 channel.systemChannel(),
                 channel.createdAt(),
                 channel.updatedAt()

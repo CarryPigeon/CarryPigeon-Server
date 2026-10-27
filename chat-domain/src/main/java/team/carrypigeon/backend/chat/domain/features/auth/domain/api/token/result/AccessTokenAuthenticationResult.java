@@ -1,0 +1,12 @@
+package team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result;
+
+import java.time.Instant;
+
+/**
+ * Access token 认证结果。
+ *
+ * @param accountId 已认证账号 ID
+ * @param expiresAt access token 过期时间
+ */
+public record AccessTokenAuthenticationResult(long accountId, Instant expiresAt) {
+}

@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthPublicAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
@@ -78,7 +78,7 @@ public class UserProfileDomainApi implements UserProfileApi {
         }
         List<UserProfile> profiles = userProfileRepository.findByAccountIds(accountIds);
         Map<Long, String> usernames = authAccountApi.getAccounts(accountIds).stream()
-                .collect(Collectors.toMap(AuthPublicAccount::id, AuthPublicAccount::username, (left, right) -> left));
+                .collect(Collectors.toMap(AuthAccount::id, AuthAccount::username, (left, right) -> left));
         return profiles.stream()
                 .map(profile -> toResult(profile, usernames.get(profile.accountId())))
                 .toList();

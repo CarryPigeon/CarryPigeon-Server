@@ -8,14 +8,16 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
+
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.server.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.authentication.AccessTokenAuthenticationApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
@@ -40,27 +42,27 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     private final RealtimeCommandRegistry commandRegistry;
 
     public RealtimeChannelHandler(
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
-            AccessTokenAuthenticationApi accessTokenAuthenticationApi,
-            ServerIdentityProperties serverIdentityProperties,
-            RealtimeConnectionIndex realtimeConnectionIndex,
-            RealtimeFrameCodec frameCodec,
-            RealtimeCommandRegistry commandRegistry,
-            RealtimeResumeCoordinator resumeCoordinator,
-            int authenticationTimeoutSeconds
+        IdGenerator idGenerator,
+        TimeProviderImpl timeProvider,
+        ServerIdentityProperties serverIdentityProperties,
+        RealtimeConnectionIndex realtimeConnectionIndex,
+        RealtimeFrameCodec frameCodec,
+        RealtimeCommandRegistry commandRegistry,
+        RealtimeResumeCoordinator resumeCoordinator,
+        AuthTokenApi authTokenApi,
+        int authenticationTimeoutSeconds
     ) {
         this.idGenerator = idGenerator;
         this.frameCodec = frameCodec;
         this.commandRegistry = commandRegistry;
         this.resumeCoordinator = resumeCoordinator;
         this.authenticationCoordinator = new RealtimeAuthenticationCoordinator(
-                timeProvider,
-                accessTokenAuthenticationApi,
-                serverIdentityProperties,
-                realtimeConnectionIndex,
-                authenticationTimeoutSeconds,
-                frameCodec
+            timeProvider,
+            serverIdentityProperties,
+            realtimeConnectionIndex,
+            authTokenApi,
+            authenticationTimeoutSeconds,
+            frameCodec
         );
     }
 
@@ -70,18 +72,18 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             String sessionId = idGenerator.nextStringId();
             context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(sessionId);
             log.debug("Realtime handshake completed, uri={}, sessionId={}",
-                    handshakeComplete.requestUri(), sessionId);
+                handshakeComplete.requestUri(), sessionId);
             authenticationCoordinator.scheduleAuthenticationTimeout(context);
             return;
         }
         if (event instanceof IdleStateEvent) {
             log.debug("Closing idle realtime connection, sessionId={}",
-                    context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get());
+                context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get());
             writeFrame(context, new RealtimeFrame.CommandError(
-                    null,
-                    RealtimeFrameCodec.COMMAND_FRAME_TYPE,
-                    "idle_timeout",
-                    "realtime connection is idle"
+                null,
+                RealtimeFrameCodec.COMMAND_FRAME_TYPE,
+                "idle_timeout",
+                "realtime connection is idle"
             )).addListener(ChannelFutureListener.CLOSE);
             return;
         }
@@ -130,7 +132,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
      * 分派顺序：解析信封 → 校验信封 → 查找处理器 → 认证前置 → 交给处理器。
      *
      * @param context Netty 通道上下文
-     * @param frame 客户端文本帧
+     * @param frame   客户端文本帧
      */
     private void handleFrame(ChannelHandlerContext context, TextWebSocketFrame frame) {
         RealtimeClientMessage request = null;
@@ -138,7 +140,7 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             request = frameCodec.decode(frame.text());
             if (log.isDebugEnabled()) {
                 log.debug("Realtime frame received, type={}, id={}, bytes={}",
-                        request.type(), request.id(), frame.text().length());
+                    request.type(), request.id(), frame.text().length());
             }
             frameCodec.validate(request);
             Optional<RealtimeCommandHandler> handler = commandRegistry.find(request.type());
@@ -153,8 +155,8 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
                 return;
             }
             handler.get().handle(
-                    new RealtimeCommandScopeImpl(context, request, authenticationCoordinator, resumeCoordinator, frameCodec),
-                    request
+                new RealtimeCommandScopeImpl(context, request, authenticationCoordinator, resumeCoordinator, frameCodec),
+                request
             );
         } catch (RealtimeProtocolException exception) {
             log.debug("Realtime frame rejected, reason={}", exception.reason());
@@ -176,10 +178,10 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
      * 约束：未认证连接只有一次出错机会，写完后必须关闭，避免匿名连接长期占用。
      */
     private void writeErrorAndCloseIfUnauthenticated(
-            ChannelHandlerContext context,
-            RealtimeClientMessage request,
-            String reason,
-            String message
+        ChannelHandlerContext context,
+        RealtimeClientMessage request,
+        String reason,
+        String message
     ) {
         if (authenticationCoordinator.isAuthenticated(context)) {
             writeFrame(context, commandError(request, reason, message));
@@ -190,10 +192,10 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
 
     private RealtimeFrame.CommandError commandError(RealtimeClientMessage request, String reason, String message) {
         return new RealtimeFrame.CommandError(
-                request == null ? null : request.id(),
-                request == null ? RealtimeFrameCodec.COMMAND_FRAME_TYPE : request.type(),
-                reason,
-                message
+            request == null ? null : request.id(),
+            request == null ? RealtimeFrameCodec.COMMAND_FRAME_TYPE : request.type(),
+            reason,
+            message
         );
     }
 

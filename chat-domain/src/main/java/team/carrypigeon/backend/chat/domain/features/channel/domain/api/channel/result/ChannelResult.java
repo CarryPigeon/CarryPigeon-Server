@@ -13,7 +13,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
  * @param channelId 频道 ID
  * @param name 频道名称
  * @param brief 频道简介；可能为空字符串
- * @param avatar 频道头像相对路径；可能为空字符串
  * @param systemChannel 是否为系统频道
  * @param createdAt 频道创建时间
  * @param updatedAt 频道资料最近更新时间
@@ -22,7 +21,6 @@ public record ChannelResult(
         long channelId,
         String name,
         String brief,
-        String avatar,
         boolean systemChannel,
         Instant createdAt,
         Instant updatedAt
@@ -34,7 +32,6 @@ public record ChannelResult(
                 channel.id(),
                 channel.name(),
                 channel.brief(),
-                channel.avatar(),
                 channel.systemChannel(),
                 channel.createdAt(),
                 channel.updatedAt()

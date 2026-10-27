@@ -64,11 +64,8 @@ public class CacheBackedEmailVerificationCapability implements EmailVerification
      */
     @Override
     public void verifyCode(String email, String code) {
-        if (code == null || code.isBlank()) {
-            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
-        }
         if (!cacheService.consumeIfEquals(cacheKey(email), code)) {
-            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
         }
     }
 

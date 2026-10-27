@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -17,6 +18,10 @@ public record UpdateCurrentAccountEmailRequest(
         String email,
         @Schema(description = "邮箱验证码", example = "123456")
         @NotBlank(message = "code must not be blank")
+        @Pattern(
+            regexp = "^[0-9]{6}$",
+            message = "code must be a 6-digit number"
+        )
         String code
 ) {
 }

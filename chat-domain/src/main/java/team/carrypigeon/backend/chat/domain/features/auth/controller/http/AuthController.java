@@ -12,40 +12,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.CreateTokenSessionRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.LoginRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RefreshAccessTokenRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RevokeRefreshTokenRequest;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.UpdateCurrentAccountEmailRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.input.RegisterCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.input.UpdateCurrentAccountEmailCommand;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.AuthSessionApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.CreateTokenSessionCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.LoginCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.LogoutCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.input.RefreshTokenCommand;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.result.AuthSessionTokenResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.session.result.AuthTokenResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AuthTokenResult;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
- * 鉴权 HTTP 入口。
- * 职责：承接账号注册、会话令牌签发、刷新与撤销等 v1 公共鉴权协议请求。
- * 边界：当前阶段不扩展 OAuth、SSO、复杂权限与主业务资源接口。
+ * 账号和鉴权相关的api文档
+ * 职责：只负责登陆注册、会话创建、token签收等相关功能
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -53,122 +35,161 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 @Tag(name = "认证与会话", description = "邮箱验证码、会话令牌签发、刷新与撤销。")
 public class AuthController {
 
-    private final AuthSessionApi authSessionDomainApi;
+    private final AuthTokenApi authTokenApi;
     private final AuthAccountApi authAccountApi;
 
-    /**
-     * 创建鉴权 HTTP 入口。
-     *
-     * @param authSessionDomainApi 鉴权会话领域 API
-     */
     public AuthController(
-        AuthSessionApi authSessionDomainApi,
+        AuthTokenApi authTokenApi,
         AuthAccountApi authAccountApi
     ) {
-        this.authSessionDomainApi = authSessionDomainApi;
+        this.authTokenApi = authTokenApi;
         this.authAccountApi = authAccountApi;
     }
 
     /**
-     * 用户名密码注册。
-     *
-     * @param request 注册请求
-     * @return 注册成功结果
+     * 用户名密码注册<br/>
+     * 注册需要邮箱进行验证<br/>
+     * 用户名和邮箱都必须唯一的绑定到一个账户上</br>
+     * 请求格式：
+     * ```json
+     * {
+     *     "username": "string",
+     *     "password": "string",
+     *     "email": "string",
+     *     "code": "string"
+     * }
+     * ```
+     * <br/>
+     * 登陆后响应用户id和用户名，用于用户登录时候
      */
     @PostMapping("/register")
     @Operation(summary = "用户注册", description = "使用用户名邮箱以及密码创建新账户。")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "注册成功")
     })
-    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
-        RegisterResult result = authAccountApi.register(
-            new RegisterCommand(request.username().trim(), request.password(),request.email(),request.code())
-        );
-        return ResponseEntity.status(201).body(new RegisterResponse(IdUtil.toString(result.accountId()), result.username()));
+    public ResponseEntity<RegisterResponseBody> register(
+        @Valid @RequestBody RegisterRequestBody request
+    ) {
+        RegisterResult result = authAccountApi.register(request.username().trim(), request.password(),request.email().toLowerCase(Locale.ROOT),request.code());
+        return ResponseEntity.status(201).body(new RegisterResponseBody(IdUtil.toString(result.accountId()), result.username()));
     }
 
     /**
-     * 用户名密码登录。
-     *
-     * @param request 登录请求
-     * @return 会话令牌响应
+     * 用户名密码登录，可通过配置文件配置限制用户名密码登录<br/>
+     * 参考请求：
+     * ```json
+     * {
+     *     "username": "string",
+     *     "password": "string"
+     * }
+     * ```
+     * <br/>
+     * 登陆后响应会话令牌，用于后续请求认证
      */
-    @PostMapping("/login")
+    @PostMapping("/login/pwd")
     @Operation(summary = "用户名密码登录", description = "使用用户名密码创建会话并签发 token。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
     })
-    public AuthSessionTokenResponse login(@Valid @RequestBody LoginRequest request) {
-        AuthTokenResult result = authSessionDomainApi.login(
-            new LoginCommand(request.username().trim(), request.password())
-        );
-        return toSessionTokenResponse(result);
+    public ResponseEntity<AuthSessionTokenResponse> loginByPWD(@Valid @RequestBody PWDLoginRequestBody request) {
+        AuthTokenResult result = authTokenApi.loginByPWD(request.username().trim(), request.password());
+        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+            "Bearer",
+            result.accessToken(),
+            result.expiresIn(),
+            result.refreshToken(),
+            IdUtil.toString(result.accountId())
+        ));
     }
 
     /**
-     * 创建会话并签发 token。
-     *
-     * @param request 会话创建请求
-     * @return v1 会话令牌响应
+     * 邮箱验证码登录<br/>
+     * 参考请求：
+     * ```json
+     * {
+     *     "email": "string",
+     *     "code": "string"
+     * }
+     * ```
+     * <br/>
+     * 登陆后响应会话令牌，用于后续请求认证
      */
-    @PostMapping("/tokens")
-    @Operation(summary = "创建会话并签发 token", description = "使用邮箱验证码创建会话")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "会话创建请求体。当前仅支持 `email_code` 授权类型，并要求提供客户端上下文；device_id 为可选字段。", required = true,
-            content = @Content(schema = @Schema(implementation = CreateTokenSessionRequest.class)))
+    @PostMapping("/login/email")
+    @Operation(summary = "邮箱验证码登录", description = "使用邮箱验证码创建会话并签发 token。")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回会话令牌结果；required gate 不满足时返回 412")
+        @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
     })
-    public AuthSessionTokenResponse createTokenSession(@Valid @RequestBody CreateTokenSessionRequest request) {
-        AuthSessionTokenResult result = authSessionDomainApi.createTokenSession(
-                new CreateTokenSessionCommand(request.grantType(), request.email().trim().toLowerCase(), request.code())
-        );
-        return toSessionTokenResponse(result);
+    public ResponseEntity<AuthSessionTokenResponse> loginByEmail(
+        @Valid @RequestBody EmailLoginRequestBody request
+    ) {
+        AuthTokenResult result = authTokenApi.loginByEmail(request.email(),request.code());
+        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+            "Bearer",
+            result.accessToken(),
+            result.expiresIn(),
+            result.refreshToken(),
+            IdUtil.toString(result.accountId())
+        ));
     }
 
     /**
-     * 使用 refresh token 刷新 access token。
-     *
-     * @param request 刷新请求
-     * @return v1 会话令牌响应
+     * 使用 refresh token 刷新 access token<br/>
+     * 示例请求：
+     * ```json
+     * {
+     *     "refresh_token": "string"
+     * }
+     * ```
+     * @return 会话令牌响应
      */
     @PostMapping("/refresh")
     @Operation(summary = "刷新访问令牌", description = "使用 refresh token 刷新 access token，可同时轮换 refresh token。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "刷新请求体。包含 refresh token 与可选客户端上下文。", required = true,
-            content = @Content(schema = @Schema(implementation = RefreshAccessTokenRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
     })
-    public AuthSessionTokenResponse refresh(@Valid @RequestBody RefreshAccessTokenRequest request) {
-        AuthSessionTokenResult result = authSessionDomainApi.refreshTokenSession(
-            new RefreshTokenCommand(request.refreshToken().trim())
-        );
-        return toSessionTokenResponse(result);
+    public ResponseEntity<AuthSessionTokenResponse> refresh(
+        @Valid @RequestBody RefreshAccessTokenRequestBody request
+    ) {
+        AuthTokenResult result = authTokenApi.refreshToken(request.refreshToken().trim());
+        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+            "Bearer",
+            result.accessToken(),
+            result.expiresIn(),
+            result.refreshToken(),
+            IdUtil.toString(result.accountId())
+        ));
     }
 
     /**
-     * 撤销 refresh token。
-     *
-     * @param request 注销请求
-     * @return HTTP 204
+     * 撤销 refresh token<br/>
+     * 参考请求：
+     * ```json
+     * {
+     *     "refresh_token": "string"
+     * }
+     * ```
      */
     @PostMapping("/revoke")
     @Operation(summary = "撤销 refresh token", description = "撤销指定 refresh token 对应的 refresh session。")
-    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "撤销请求体。当前仅要求 refresh token。", required = true,
-            content = @Content(schema = @Schema(implementation = RevokeRefreshTokenRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "撤销成功")
     })
-    public ResponseEntity<Void> revoke(@Valid @RequestBody RevokeRefreshTokenRequest request) {
-        authSessionDomainApi.logout(
-            new LogoutCommand(request.refreshToken())
-        );
+    public ResponseEntity<Void> revoke(
+        @Valid @RequestBody RevokeRefreshTokenRequestBody request
+    ) {
+        authTokenApi.logout(request.refreshToken());
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * 更新用户邮箱
-     *
-     * @param body 具体的参数
+     * 更新用户邮箱<br/>
+     * 参考请求：<br/>
+     * ```json
+     * {
+     *     "email": "string",
+     *     "code": "string"
+     * }
+     * ```
      * */
     @PreAuthorize("isAuthenticated()")
     @PutMapping("/me/email")
@@ -179,32 +200,9 @@ public class AuthController {
         @Valid @RequestBody UpdateCurrentAccountEmailRequest body
     ) {
         // 更新数据
-        authAccountApi.updateCurrentAccountEmail(new UpdateCurrentAccountEmailCommand(
-            cpPrincipal.accountId(),
-            body.email().trim().toLowerCase(Locale.ROOT),
-            body.code()
-        ));
+        authAccountApi.updateEmail(cpPrincipal.accountId(), body.email().trim().toLowerCase(Locale.ROOT), body.code());
         // 响应
         return ResponseEntity.noContent().build();
     }
 
-    private AuthSessionTokenResponse toSessionTokenResponse(AuthSessionTokenResult result) {
-        return new AuthSessionTokenResponse(
-                "Bearer",
-                result.accessToken(),
-                result.expiresIn(),
-                result.refreshToken(),
-                IdUtil.toString(result.accountId())
-        );
-    }
-
-    private AuthSessionTokenResponse toSessionTokenResponse(AuthTokenResult result) {
-        return new AuthSessionTokenResponse(
-                "Bearer",
-                result.accessToken(),
-                result.expiresIn(),
-                result.refreshToken(),
-                IdUtil.toString(result.accountId())
-        );
-    }
 }

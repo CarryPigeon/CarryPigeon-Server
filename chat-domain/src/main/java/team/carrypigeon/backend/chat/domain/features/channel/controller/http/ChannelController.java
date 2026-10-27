@@ -28,18 +28,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelListResponse;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelListResponseItem;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelQueryResponse;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBodyList;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBody;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.CreateChannelRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.DiscoverChannelResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.UpdateChannelProfileRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.CreateChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DeleteChannelCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.DiscoverChannelsQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.input.UpdateChannelProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
@@ -72,11 +67,7 @@ public class ChannelController {
     }
 
     /**
-     * 返回当前账号存在成员关系的频道列表。
-     * 约束：频道可见性以成员关系为唯一标准，非成员频道不会出现在结果中。
-     *
-     * @param cpPrincipal 当前认证用户
-     * @return 可见频道摘要列表
+     * 返回当前账号存在成员关系的频道列表<br/>
      */
     @GetMapping
     @Operation(
@@ -85,22 +76,24 @@ public class ChannelController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "响应体为频道列表外壳，channels 为频道摘要数组",
-                    content = @Content(schema = @Schema(implementation = ChannelListResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ChannelResponseBodyList.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ChannelListResponse listChannels(
+    public ResponseEntity<ChannelResponseBodyList> listChannels(
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return new ChannelListResponse(channelApi.listChannels(cpPrincipal.accountId()).stream()
+        return ResponseEntity.ok().body(new ChannelResponseBodyList(channelApi.listChannels(cpPrincipal.accountId()).stream()
             .map(
-                result -> new ChannelListResponseItem(
+                result -> new ChannelResponseBody(
                     IdUtil.toString(result.channelId()),
                     result.name(),
-                    result.brief()
+                    result.brief(),
+                    result.systemChannel(),
+                    result.createdAt().toEpochMilli()
                 )
             )
-            .toList());
+            .toList()));
     }
 
     /**
@@ -118,7 +111,7 @@ public class ChannelController {
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "响应体为频道详情，含 cid、name、brief、system_channel、created_at",
-                    content = @Content(schema = @Schema(implementation = ChannelQueryResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ChannelResponseBody.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "当前账号不是该频道成员，reason 为 channel_membership_required",
@@ -126,13 +119,13 @@ public class ChannelController {
             @ApiResponse(responseCode = "404", description = "频道不存在",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ChannelQueryResponse getChannelById(
+    public ChannelResponseBody getChannelById(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelResult result = channelApi.getChannelById(cpPrincipal.accountId(), channelId);
-        return new ChannelQueryResponse(
+        return new ChannelResponseBody(
             IdUtil.toString(result.channelId()),
             result.name(),
             result.brief(),
@@ -142,6 +135,7 @@ public class ChannelController {
     }
 
     /**
+     * TODO 待审核
      * 按关键字与不透明游标发现频道。
      * 约束：游标由本接口签发，非法或过期的游标按参数错误拒绝。
      *
@@ -176,12 +170,7 @@ public class ChannelController {
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         Long cursorChannelId = OpaqueCursorCodec.decode("channel_discover", cursor, ChannelProblem.CURSOR_INVALID);
-        List<DiscoverChannelResult> items = channelQueryApi.discoverChannels(new DiscoverChannelsQuery(
-            cpPrincipal.accountId(),
-            keyword,
-            cursorChannelId,
-            limit
-        ));
+        List<DiscoverChannelResult> items = channelQueryApi.discoverChannels(cpPrincipal.accountId(), keyword, cursorChannelId, limit);
         boolean hasMore = items.size() > limit;
         List<DiscoverChannelResult> pageItems = hasMore ? items.subList(0, limit) : items;
         String nextCursor = hasMore
@@ -201,55 +190,44 @@ public class ChannelController {
     }
 
     /**
-     * 创建频道并把创建者设为所有者。
-     * 副作用：持久化频道与创建者的所有者成员关系。
-     *
-     * @param body 频道创建请求
-     * @param cpPrincipal 当前认证用户
-     * @return 新建频道摘要，HTTP 201
+     * 创建频道并把创建者设为所有者<br/>
+     * 请求示例：
+     * ```json
+     * {
+     *     "name": "频道名称",
+     *     "brief": "频道简介"
+     * }
+     * ```
      */
     @PostMapping
     @Operation(
             summary = "创建频道",
-            description = "创建普通频道并把创建者设为其所有者。三个字段均必填，brief 与 avatar 允许空字符串。",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    description = "请求体为频道创建字段：name 必填且不超过 128 字符，brief 与 avatar 必填但允许空字符串",
-                    content = @Content(schema = @Schema(implementation = CreateChannelRequest.class))
-            )
+            description = "创建普通频道并把创建者设为其所有者。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "响应体为新建频道摘要项，含 cid、name、brief",
-                    content = @Content(schema = @Schema(implementation = ChannelListResponseItem.class))),
+                    content = @Content(schema = @Schema(implementation = ChannelResponseBody.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "422", description = "请求体字段非法，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ResponseEntity<ChannelListResponseItem> createChannel(
+    public ResponseEntity<ChannelResponseBody> createChannel(
         @Valid @RequestBody CreateChannelRequest body,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        ChannelResult result = channelApi.createChannel(new CreateChannelCommand(
-            cpPrincipal.accountId(),
-            body.name(),
-            body.brief(),
-            body.avatar()
-        ));
-        return ResponseEntity.status(201).body(new ChannelListResponseItem(
+        ChannelResult result = channelApi.createChannel(cpPrincipal.accountId(), body.name(), body.brief());
+        return ResponseEntity.status(201).body(new ChannelResponseBody(
             IdUtil.toString(result.channelId()),
             result.name(),
-            result.brief()
+            result.brief(),
+            result.systemChannel(),
+            result.createdAt().toEpochMilli()
         ));
     }
 
     /**
      * 删除指定频道。
-     * 约束：仅频道所有者可删除；频道仍存在申请或禁言依赖数据时拒绝删除。
-     *
-     * @param channelId 目标频道 ID
-     * @param cpPrincipal 当前认证用户
-     * @return 无内容响应，HTTP 204
      */
     @DeleteMapping("/{channelId}")
     @Operation(
@@ -272,28 +250,25 @@ public class ChannelController {
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelApi.deleteChannel(new DeleteChannelCommand(cpPrincipal.accountId(), channelId));
+        channelApi.deleteChannel(cpPrincipal.accountId(), channelId);
         return ResponseEntity.noContent().build();
     }
 
     /**
-     * 更新指定频道的名称与简介。
-     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
-     *
-     * @param channelId 目标频道 ID
-     * @param body 频道资料更新请求
-     * @param cpPrincipal 当前认证用户
-     * @return 无内容响应，HTTP 204
+     * 更新指定频道的名称与简介
+     * <br/>
+     * 请求示例：
+     * ```json
+     * {
+     *     "name": "频道名称",
+     *     "brief": "频道简介"
+     * }
+     * ```
      */
     @PatchMapping("/{channelId}")
     @Operation(
             summary = "更新频道资料",
-            description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。成功返回 204，响应体为空。",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    description = "请求体仅含 name 与 brief：name 必填且不超过 128 字符，brief 必填但允许空字符串",
-                    content = @Content(schema = @Schema(implementation = UpdateChannelProfileRequest.class))
-            )
+            description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。成功返回 204，响应体为空。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "更新成功，响应体为空"),
@@ -312,12 +287,7 @@ public class ChannelController {
         @Valid @RequestBody UpdateChannelProfileRequest body,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelApi.updateChannelProfile(new UpdateChannelProfileCommand(
-            cpPrincipal.accountId(),
-            channelId,
-            body.name(),
-            body.brief()
-        ));
+        channelApi.updateChannelProfile(cpPrincipal.accountId(), channelId, body.name(), body.brief());
         return ResponseEntity.noContent().build();
     }
 }

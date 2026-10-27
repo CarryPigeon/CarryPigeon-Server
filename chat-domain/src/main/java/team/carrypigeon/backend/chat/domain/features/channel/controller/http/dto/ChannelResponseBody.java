@@ -1,0 +1,21 @@
+package team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/**
+ * 频道详情响应。
+ * 职责：承载按频道资料所需的频道标识、名称、简介、系统频道标记与创建时间。
+ */
+public record ChannelResponseBody(
+    @Schema(description = "频道 ID", example = "123456")
+    String cid,
+    @Schema(description = "频道名称", example = "技术交流")
+    String name,
+    @Schema(description = "频道简介", example = "一个关于技术交流的频道")
+    String brief,
+    @Schema(description = "是否为系统频道", example = "true")
+    boolean systemChannel,
+    @Schema(description = "创建时间（epoch 毫秒）", example = "1700000000000")
+    Long createdAt
+) {
+}

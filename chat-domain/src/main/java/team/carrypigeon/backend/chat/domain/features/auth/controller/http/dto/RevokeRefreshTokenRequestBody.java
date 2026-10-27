@@ -1,0 +1,16 @@
+package team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+
+/**
+ * 撤销 refresh token 请求。
+ * 职责：承载 `POST /api/auth/revoke` 的最小输入。
+ * 边界：当前仅按 refresh token 定位会话；设备标识保留为可选客户端上下文字段。
+ */
+public record RevokeRefreshTokenRequestBody(
+        @Schema(description = "待撤销的 refresh token", example = "eyJhbGciOiJIUzI1NiJ9.refresh.token")
+        @NotBlank(message = "refresh_token must not be blank")
+        String refreshToken
+) {
+}

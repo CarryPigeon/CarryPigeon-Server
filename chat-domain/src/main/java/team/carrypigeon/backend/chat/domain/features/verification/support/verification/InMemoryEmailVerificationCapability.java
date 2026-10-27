@@ -66,16 +66,16 @@ public class InMemoryEmailVerificationCapability implements EmailVerificationCap
     @Override
     public void verifyCode(String email, String code) {
         if (code == null || code.isBlank()) {
-            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
         }
         String normalizedEmail = normalize(email);
         EmailCodeEntry entry = issuedCodes.get(normalizedEmail);
         Instant now = timeProvider.nowInstant();
         if (entry == null || entry.expiresAt().isBefore(now) || !entry.code().equals(code)) {
-            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
         }
         if (!issuedCodes.remove(normalizedEmail, entry)) {
-            throw ProblemException.of(VerificationProblem.INVALID_INPUT, "email code is invalid");
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
         }
     }
 

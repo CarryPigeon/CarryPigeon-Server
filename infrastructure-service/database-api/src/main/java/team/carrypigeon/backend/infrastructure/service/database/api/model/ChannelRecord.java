@@ -10,7 +10,6 @@ import java.time.Instant;
  * @param id 频道 ID
  * @param name 频道名称
  * @param brief 频道简介
- * @param avatar 频道头像相对路径
  * @param systemChannel 是否为默认频道
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
@@ -19,7 +18,6 @@ public record ChannelRecord(
         long id,
         String name,
         String brief,
-        String avatar,
         boolean systemChannel,
         Instant createdAt,
         Instant updatedAt

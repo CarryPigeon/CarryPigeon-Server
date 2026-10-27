@@ -62,13 +62,17 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
     @Override
     public ChannelMessageResult sendChannelMessage(SendChannelMessageCommand command) {
         CPChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
+            // 拉取上下文
             ChannelContext channelContext = channelContextApi.requireMemberContext(command.channelId(), command.accountId());
+            // 检查权限
             if (channelContext.isMuted()) {
                 throw ProblemException.of(MessageProblem.USER_MUTED);
             }
+            // 存在性校验
             if (!channelMessageDispatcher.supports(command.domain())) {
                 throw ProblemException.of(MessageProblem.UNSUPPORTED_DOMAIN);
             }
+            // 组装消息
             CPChannelMessage message = new CPChannelMessage(
                     idGenerator.nextLongId(),
                     command.accountId(),
@@ -80,8 +84,11 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
                     "",
                     CPMessageStatus.SENT
             );
+            // 处理消息
             CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(command.domain());
+            // 持久化消息
             CPChannelMessage saved = messageRepository.save(handler.handle(message));
+            // 通知所有人
             messageEventNotifier.messageCreated(
                     afterCommit,
                     saved,
@@ -95,11 +102,14 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
     @Override
     public void recallChannelMessage(RecallChannelMessageCommand command) {
         transactionRunner.runInTransaction(afterCommit -> {
+            // 查询已有的消息
             CPChannelMessage existingMessage = messageRepository.findById(command.messageId())
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
+            // 验证消息属于该频道
             if (existingMessage.channelId() != command.channelId()) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
+            // 验证操作权限
             ChannelContext operatorContext = channelContextApi.requireMemberContext(
                     existingMessage.channelId(),
                     command.accountId()
@@ -110,9 +120,11 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
             if (operatorContext.isMuted() || (!senderRecallingOwnMessage && !moderatorRecallingMemberMessage)) {
                 throw ProblemException.of(MessageProblem.RECALL_FORBIDDEN);
             }
+            // 撤销消息
             if (existingMessage.status() == CPMessageStatus.RECALLED) {
                 return;
             }
+            // 通知所有人
             List<Long> recipients = channelContextApi.memberAccountIds(existingMessage.channelId());
             CPChannelMessage recalledMessage = new CPChannelMessage(
                     existingMessage.messageId(),
@@ -125,8 +137,11 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
                     "消息已撤回",
                     CPMessageStatus.RECALLED
             );
+            // 更新消息
             messageRepository.update(recalledMessage);
+            // 删除提及
             mentionRepository.deleteByMessageId(existingMessage.messageId());
+            // 通知所有人
             messageEventNotifier.messageRecalled(afterCommit, recalledMessage, recipients);
         });
     }

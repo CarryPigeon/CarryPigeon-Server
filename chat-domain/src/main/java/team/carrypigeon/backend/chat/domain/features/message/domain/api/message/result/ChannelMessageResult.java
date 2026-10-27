@@ -13,15 +13,7 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageSta
  * 边界：不包含发送者资料快照、编辑字段或 domain 专属顶层字段。
  */
 public record ChannelMessageResult(
-        long messageId,
-        long senderId,
-        long channelId,
-        String domain,
-        Map<String, Object> data,
-        Instant sendTime,
-        List<Long> mentions,
-        String preview,
-        CPMessageStatus status
+        long messageId
 ) {
 
     /**
@@ -32,15 +24,7 @@ public record ChannelMessageResult(
      */
     public static ChannelMessageResult from(CPChannelMessage message) {
         return new ChannelMessageResult(
-                message.messageId(),
-                message.senderId(),
-                message.channelId(),
-                message.domain(),
-                message.data(),
-                message.sendTime(),
-                message.mentions(),
-                message.preview(),
-                message.status()
+                message.messageId()
         );
     }
 }

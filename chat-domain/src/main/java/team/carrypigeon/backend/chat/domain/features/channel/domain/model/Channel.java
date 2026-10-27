@@ -10,7 +10,6 @@ import java.time.Instant;
  * @param id 频道 ID
  * @param name 频道名称；创建与更新时由领域服务去除首尾空白
  * @param brief 频道简介；允许空字符串，不允许为 {@code null}
- * @param avatar 频道头像相对路径；允许空字符串，不允许为 {@code null}
  * @param systemChannel 是否为系统频道；系统频道仅在账号初始化时自动建立成员关系，不参与成员治理
  * @param createdAt 频道创建时间
  * @param updatedAt 频道资料最近更新时间
@@ -19,7 +18,6 @@ public record Channel(
         long id,
         String name,
         String brief,
-        String avatar,
         boolean systemChannel,
         Instant createdAt,
         Instant updatedAt
