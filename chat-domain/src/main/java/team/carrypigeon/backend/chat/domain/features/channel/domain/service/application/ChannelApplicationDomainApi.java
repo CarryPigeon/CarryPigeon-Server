@@ -6,12 +6,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.CreateChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.DecideChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.ListChannelApplicationsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
@@ -60,27 +57,17 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
         this.transactionRunner = transactionRunner;
     }
 
-    /**
-     * 创建频道入群申请。
-     * 输入：命令携带申请账号、目标频道与申请理由。
-     * 输出：新建申请的投影。
-     * 副作用：写入一条 PENDING 申请，并替换该账号在同一频道的历史申请记录。
-     * 约束：申请账号不能已是频道成员；同频道已存在 PENDING 申请时拒绝重复提交。
-     *
-     * @param command 频道入群申请创建命令
-     * @return 创建后的频道申请投影
-     */
     @Override
-    public ChannelApplicationResult createChannelApplication(CreateChannelApplicationCommand command) {
+    public ChannelApplicationResult createChannelApplication(long accountId, long channelId, String reason) {
         return transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 已是成员时无需申请，直接按参数错误拒绝
-            if (channelMemberRepository.findByRelation(channel.id(), command.accountId()).isPresent()) {
+            if (channelMemberRepository.findByRelation(channel.id(), accountId).isPresent()) {
                 throw ProblemException.of(ChannelProblem.INVALID_INPUT, "current account is already a channel member");
             }
             // 同一 (频道, 申请人) 至多保留一条申请：已审批的历史记录会被本次申请覆盖
-            ChannelApplication existingApplication = channelApplicationRepository.findByRelation(channel.id(), command.accountId())
+            ChannelApplication existingApplication = channelApplicationRepository.findByRelation(channel.id(), accountId)
                     .orElse(null);
             if (existingApplication != null && existingApplication.status() == ChannelApplicationStatus.PENDING) {
                 throw ProblemException.of(ChannelProblem.INVALID_INPUT, "pending channel application already exists");
@@ -89,12 +76,12 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                 // 先删旧记录再写入新记录，保证替换过程与下方写入处于同一事务，不会留下两行
                 channelApplicationRepository.delete(existingApplication.applicationId());
             }
-            String reason = command.reason() == null || command.reason().isBlank() ? "" : command.reason().trim();
+            String normalizedReason = reason == null || reason.isBlank() ? "" : reason.trim();
             ChannelApplication application = new ChannelApplication(
                 idGenerator.nextLongId(),
-                command.accountId(),
+                accountId,
                 channel.id(),
-                reason,
+                normalizedReason,
                 ChannelApplicationStatus.PENDING,
                 timeProvider.nowInstant(),
                 null
@@ -105,27 +92,18 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                     afterCommit,
                     channel.id(),
                     ChannelChangeScope.APPLICATIONS,
-                    channelMemberRepository.listByChannelId(command.channelId()).stream().map(ChannelMember::accountId).toList());
+                    channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList());
             // 申请人自身也需要刷新频道集合，其视角不属于上面的频道成员快照
-            channelEventNotifier.accountChannelsChanged(afterCommit, command.accountId());
-            return ChannelApplicationResult.from(application, reason);
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
+            return ChannelApplicationResult.from(application, normalizedReason);
         });
     }
 
-    /**
-     * 查询频道入群申请列表。
-     * 输入：查询对象携带请求者账号与目标频道。
-     * 输出：该频道全部申请记录的投影列表。
-     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色；申请理由为空时统一返回空字符串而非 null。
-     *
-     * @param query 入群申请列表查询
-     * @return 入群申请投影列表
-     */
     @Override
-    public List<ChannelApplicationResult> listChannelApplications(ListChannelApplicationsQuery query) {
-        Channel channel = channelRepository.findById(query.channelId())
+    public List<ChannelApplicationResult> listChannelApplications(long accountId, long channelId) {
+        Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-        ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
+        ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 申请名单属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
@@ -140,37 +118,27 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                 .toList();
     }
 
-    /**
-     * 审批频道入群申请。
-     * 输入：命令携带审批操作者、申请所属频道、申请 ID 与审批决定。
-     * 输出：审批后的申请投影。
-     * 副作用：更新申请状态与响应时间；批准时新增一条 MEMBER 成员关系，并在事务提交后通知申请集、成员集与申请人频道集合变化。
-     * 约束：申请必须归属于命令声明的频道且处于 PENDING 状态；审批人必须具备该频道 OWNER 或 ADMIN 角色；申请人不能已是成员。
-     *
-     * @param command 入群申请审批命令
-     * @return 审批后的申请投影
-     */
     @Override
-    public ChannelApplicationResult decideChannelApplication(DecideChannelApplicationCommand command) {
+    public ChannelApplicationResult decideChannelApplication(long operatorAccountId, long channelId, long applicationId, String decision) {
         return transactionRunner.runInTransaction(afterCommit -> {
-            ChannelApplication application = channelApplicationRepository.findById(command.applicationId())
+            ChannelApplication application = channelApplicationRepository.findById(applicationId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND));
             // 归属校验：路径声明的频道必须与申请实际所属频道一致，否则按不存在处理以免泄露其它频道的申请存在性
-            if (application.channelId() != command.channelId()) {
+            if (application.channelId() != channelId) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND);
             }
             // 幂等保护：只有 PENDING 申请可被审批，重复审批按冲突拒绝
             if (application.status() != ChannelApplicationStatus.PENDING) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_ALREADY_PROCESSED);
             }
-            ChannelMember operator = channelMemberRepository.findByRelation(application.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(application.channelId(), operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 审批属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_DECIDE_FORBIDDEN);
             }
             // 协议层只传字符串决定，这里收敛为固定枚举，未知取值按参数错误拒绝
-            ChannelApplicationStatus decidedStatus = switch (command.decision().trim().toLowerCase()) {
+            ChannelApplicationStatus decidedStatus = switch (decision.trim().toLowerCase()) {
                 case "approve" -> ChannelApplicationStatus.ACCEPTED;
                 case "reject" -> ChannelApplicationStatus.DECLINED;
                 default -> throw ProblemException.of(ChannelProblem.INVALID_INPUT, "decision must be approve or reject");
@@ -204,7 +172,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                         afterCommit, application.channelId(), ChannelChangeScope.MEMBERS, recipientAccountIds);
             }
             // 申请人视角的频道集合也需要刷新，与上面的频道成员快照相互独立
-            channelEventNotifier.accountChannelsChanged(afterCommit, application.applicantId());
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(application.applicantId()));
             return ChannelApplicationResult.from(
                     updated,
                     updated.reason() == null || updated.reason().isBlank() ? "" : updated.reason().trim()

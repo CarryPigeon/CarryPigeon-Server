@@ -10,10 +10,5 @@ import java.time.Instant;
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
-public record InitializeUserAccountProfileCommand(
-        long accountId,
-        String nickname,
-        Instant createdAt,
-        Instant updatedAt
-) {
+public record InitializeUserAccountProfileCommand(long accountId, String nickname, Instant createdAt, Instant updatedAt) {
 }

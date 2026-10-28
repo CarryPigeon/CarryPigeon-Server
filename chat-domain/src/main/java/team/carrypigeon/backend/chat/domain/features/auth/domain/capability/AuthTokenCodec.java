@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.auth.domain.capability;
 
 import java.time.Instant;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
 
 /**
  * 鉴权令牌编解码能力。

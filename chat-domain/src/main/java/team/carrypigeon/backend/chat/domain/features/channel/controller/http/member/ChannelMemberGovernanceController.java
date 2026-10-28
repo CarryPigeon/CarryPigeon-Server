@@ -25,10 +25,6 @@ import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.DemoteChannelAdminCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.KickChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.ListChannelMembersQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.PromoteChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
@@ -81,9 +77,7 @@ public class ChannelMemberGovernanceController {
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        List<ChannelMemberResult> result = channelMembershipApi.listChannelMembers(
-                new ListChannelMembersQuery(cpPrincipal.accountId(), channelId)
-        );
+        List<ChannelMemberResult> result = channelMembershipApi.listChannelMembers(cpPrincipal.accountId(), channelId);
         return new ChannelMemberListResponse(result.stream().map(
             res -> new ChannelMemberResponse(
                 IdUtil.toString(res.accountId()),
@@ -128,9 +122,7 @@ public class ChannelMemberGovernanceController {
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelMembershipApi.promoteChannelMember(
-                new PromoteChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
-        );
+        channelMembershipApi.promoteChannelMember(cpPrincipal.accountId(), channelId, targetAccountId);
         return ResponseEntity.noContent().build();
     }
 
@@ -167,9 +159,7 @@ public class ChannelMemberGovernanceController {
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelMembershipApi.demoteChannelAdmin(
-                new DemoteChannelAdminCommand(cpPrincipal.accountId(), channelId, targetAccountId)
-        );
+        channelMembershipApi.demoteChannelAdmin(cpPrincipal.accountId(), channelId, targetAccountId);
         return ResponseEntity.noContent().build();
     }
 
@@ -206,9 +196,7 @@ public class ChannelMemberGovernanceController {
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelMembershipApi.kickChannelMember(
-                new KickChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
-        );
+        channelMembershipApi.kickChannelMember(cpPrincipal.accountId(), channelId, targetAccountId);
         return ResponseEntity.noContent().build();
     }
 }

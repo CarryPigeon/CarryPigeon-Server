@@ -34,7 +34,7 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
 
     @Override
     public List<ChannelApplication> list(long channelId) {
-        return channelApplicationDatabaseService.findByChannelId(channelId).stream()
+        return channelApplicationDatabaseService.listByChannelId(channelId).stream()
             .map(this::toDomain)
             .toList();
     }

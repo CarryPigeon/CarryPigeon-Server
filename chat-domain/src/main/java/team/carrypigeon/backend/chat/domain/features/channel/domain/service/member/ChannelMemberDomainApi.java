@@ -7,19 +7,14 @@ import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfileQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.DemoteChannelAdminCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.KickChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.ListChannelMembersQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.PromoteChannelMemberCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.TransferChannelOwnershipCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.MemberProfile;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -54,22 +49,13 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         this.transactionRunner = transactionRunner;
     }
 
-    /**
-     * 查询频道成员列表。
-     * 输入：查询对象携带请求者账号与目标频道。
-     * 输出：频道全部成员的投影列表，含用户名、头像与角色。
-     * 约束：请求者本人必须是该频道成员；成员资料缺失时对应投影字段为空，不做兜底填充。
-     *
-     * @param query 频道成员列表查询条件
-     * @return 频道成员投影列表
-     */
     @Override
-    public List<ChannelMemberResult> listChannelMembers(ListChannelMembersQuery query) {
+    public List<ChannelMemberResult> listChannelMembers(long accountId, long channelId) {
         // 先确认频道存在，避免把"频道不存在"与"不是成员"混为一类拒绝
-        Channel channel = channelRepository.findById(query.channelId())
+        Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 读取权限下放到成员身份：只要请求者本人是成员，就允许查看完整成员列表
-        channelMemberRepository.findByRelation(query.channelId(), query.accountId())
+        channelMemberRepository.findByRelation(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         List<ChannelMember> members = channelMemberRepository.listByChannelId(channel.id());
         // 一次性批量取回全部成员资料并按账号建索引，避免在下方映射时逐个查询
@@ -82,24 +68,15 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             .toList();
     }
 
-    /**
-     * 将普通成员提升为频道管理员。
-     * 输入：命令携带操作者、目标频道与被提升成员账号。
-     * 输出：提升后的成员投影。
-     * 副作用：把目标成员的频道角色改为 ADMIN，并在事务提交后向频道全体成员发出成员集变化通知。
-     * 约束：仅频道 OWNER 可提升；目标成员当前角色必须是 MEMBER；角色变更与成员集通知必须同事务。
-     *
-     * @param command 成员提升命令
-     */
     @Override
-    public void promoteChannelMember(PromoteChannelMemberCommand command) {
+    public void promoteChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能自行扩张管理员数量
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -119,33 +96,24 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             );
             channelMemberRepository.update(promotedMember);
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
-            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                     .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
                     afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
-            return ChannelMemberResult.from(promotedMember, memberProfileQuery.findProfile(command.targetAccountId()));
+            return ChannelMemberResult.from(promotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
     }
 
-    /**
-     * 将频道管理员降级为普通成员。
-     * 输入：命令携带操作者、目标频道与被降级管理员账号。
-     * 输出：降级后的成员投影。
-     * 副作用：把目标成员的频道角色改回 MEMBER，并在事务提交后向频道全体成员发出成员集变化通知。
-     * 约束：仅频道 OWNER 可降级；目标成员当前角色必须是 ADMIN；角色变更与成员集通知必须同事务。
-     *
-     * @param command 管理员降级命令
-     */
     @Override
-    public void demoteChannelAdmin(DemoteChannelAdminCommand command) {
+    public void demoteChannelAdmin(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 获取频道信息
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能撤销其它管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -166,33 +134,23 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             );
             channelMemberRepository.update(demotedMember);
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
-            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                 .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
-            return ChannelMemberResult.from(demotedMember, memberProfileQuery.findProfile(command.targetAccountId()));
+            return ChannelMemberResult.from(demotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
     }
 
-    /**
-     * 转移频道所有权。
-     * 输入：命令携带现任所有者、目标频道与接管成员账号。
-     * 输出：原所有者与新所有者转移后的角色投影。
-     * 副作用：原 OWNER 降为 ADMIN、目标成员升为 OWNER，并在事务提交后向频道全体成员发出成员集变化通知。
-     * 约束：仅现任 OWNER 可发起；目标不能已经是 OWNER；两次角色变更必须处于同一事务。
-     *
-     * @param command 所有权转移命令
-     * @return 所有权转移结果投影
-     */
     @Override
-    public ChannelOwnershipTransferResult transferChannelOwnership(TransferChannelOwnershipCommand command) {
+    public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
         return transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 目标不是成员时按资源不存在处理，与操作者非成员的拒绝语义区分开
-            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 只有现任 OWNER 才能发起转移，避免 ADMIN 自行接管频道
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -221,7 +179,7 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             channelMemberRepository.update(previousOwner);
             channelMemberRepository.update(newOwner);
             // 先降原 OWNER 再升新 OWNER，顺序保证任意中间点都只有一个 OWNER
-            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                 .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
@@ -229,23 +187,14 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
         });
     }
 
-    /**
-     * 将成员踢出频道。
-     * 输入：命令携带操作者、目标频道与被移除成员账号。
-     * 输出：无返回值，成功即表示成员关系已删除。
-     * 副作用：删除目标成员关系，并在事务提交后同时通知频道成员集变化与被移除账号刷新频道列表。
-     * 约束：调用方必须具备 OWNER 或 ADMIN 角色；目标成员当前角色必须是 MEMBER，OWNER 与 ADMIN 不可被移除。
-     *
-     * @param command 踢出成员命令
-     */
     @Override
-    public void kickChannelMember(KickChannelMemberCommand command) {
+    public void kickChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 治理动作要求 OWNER 或 ADMIN，普通成员不能移除他人
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
@@ -257,13 +206,13 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             }
             // 删除成员关系后重新取快照，通知中不再包含被移除者
             channelMemberRepository.delete(target.id());
-            List<Long> accounts = channelMemberRepository.listByChannelId(command.channelId())
+            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                 .stream().map(ChannelMember::accountId).toList();
             // 通知频道内其余成员刷新成员列表
             channelEventNotifier.channelChanged(
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
-            channelEventNotifier.accountChannelsChanged(afterCommit, target.accountId());
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(target.accountId()));
         });
     }
 

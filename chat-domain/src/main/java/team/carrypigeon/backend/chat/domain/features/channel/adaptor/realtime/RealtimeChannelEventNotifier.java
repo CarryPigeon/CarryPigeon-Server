@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
@@ -44,11 +44,11 @@ public class RealtimeChannelEventNotifier implements ChannelEventNotifier {
     }
 
     @Override
-    public void accountChannelsChanged(AfterCommitExecutor afterCommit, long accountId) {
+    public void accountChannelsChanged(AfterCommitExecutor afterCommit, List<Long> accountIds) {
         afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
                 CHANNELS_CHANGED,
                 new ChannelsChangedPayload(REFRESH_HINT),
-                List.of(accountId)
+                accountIds
         )));
     }
 

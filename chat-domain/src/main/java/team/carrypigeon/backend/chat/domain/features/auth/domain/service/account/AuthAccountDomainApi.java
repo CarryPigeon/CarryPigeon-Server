@@ -82,7 +82,7 @@ public class AuthAccountDomainApi implements AuthAccountApi {
             // 数据持久化
             AuthAccount savedAccount = authAccountRepository.save(account);
             // 副作用创建用户信息表原始数据
-            authAccountProvisioner.provisionAccount(savedAccount, savedAccount.username());
+            authAccountProvisioner.provisionAccount(savedAccount);
             return new RegisterResult(savedAccount.id(), savedAccount.username());
         });
     }

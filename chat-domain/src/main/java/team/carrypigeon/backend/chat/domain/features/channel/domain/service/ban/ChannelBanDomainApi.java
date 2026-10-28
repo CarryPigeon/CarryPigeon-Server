@@ -8,12 +8,10 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.ListChannelBansQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
@@ -60,20 +58,11 @@ public class ChannelBanDomainApi implements ChannelBanApi {
         this.idGenerator = idGenerator;
     }
 
-    /**
-     * 查询频道禁言列表。
-     * 输入：查询对象携带请求者账号与目标频道。
-     * 输出：该频道全部禁言记录的列表项投影，包含已解除与已过期的历史记录。
-     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
-     *
-     * @param query 频道禁言列表查询条件
-     * @return 禁言列表项投影列表
-     */
     @Override
-    public List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query) {
-        Channel channel = channelRepository.findById(query.channelId())
+    public List<ChannelBanListItemResult> listChannelBans(long accountId, long channelId) {
+        Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-        ChannelMember operator = channelMemberRepository.findByRelation(query.channelId(), query.accountId())
+        ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 禁言台账属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER
@@ -86,16 +75,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             .toList();
     }
 
-    /**
-     * 对频道成员执行禁言。
-     * 输入：命令携带操作者、目标频道、目标成员、禁言原因与可选持续秒数。
-     * 输出：禁言记录投影。
-     * 副作用：新建或覆盖该成员的禁言记录，并在事务提交后通知频道成员与目标账号。
-     * 约束：调用方必须具备 OWNER 或 ADMIN 角色；目标角色必须是 MEMBER；已生效的禁言不允许重复设置。
-     *
-     * @param command 频道成员禁言命令
-     * @return 禁言结果投影
-     */
     @Override
     public ChannelBanResult banChannelMember(BanChannelMemberCommand command) {
         return transactionRunner.runInTransaction(afterCommit -> {
@@ -153,21 +132,10 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             }
             List<Long> recipients = channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS, recipients);
-            // 被禁言者自身也要刷新状态，它仍在成员快照中但需要单独的偏好与状态更新
-            channelEventNotifier.accountChannelsChanged(afterCommit, target.accountId());
             return ChannelBanResult.from(ban);
         });
     }
 
-    /**
-     * 按绝对截止时间对频道成员执行禁言。
-     * 输入：命令携带禁言截止毫秒时间戳，为空表示不设置自动到期。
-     * 输出：禁言记录投影。
-     * 约束：截止时间必须晚于当前时间；协议层的绝对时间在此换算为内部持续秒数后复用禁言用例。
-     *
-     * @param command 按绝对过期时间的禁言命令
-     * @return 禁言结果投影
-     */
     @Override
     public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
         Long durationSeconds = null;
@@ -184,23 +152,13 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             command.reason(), durationSeconds));
     }
 
-    /**
-     * 解除频道成员的禁言。
-     * 输入：命令携带操作者、目标频道与目标成员账号。
-     * 输出：解除后的禁言记录投影。
-     * 副作用：把禁言记录标记为已解除，并在事务提交后通知频道成员与目标账号。
-     * 约束：调用方必须具备 OWNER 或 ADMIN 角色；目标必须存在仍然生效的禁言记录。
-     *
-     * @param command 解除频道成员禁言命令
-     * @return 解除后的禁言结果投影
-     */
     @Override
-    public ChannelBanResult unbanChannelMember(UnbanChannelMemberCommand command) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+    public void unbanChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
+        transactionRunner.runInTransaction(afterCommit -> {
             // 查询基础信息
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言解除同样属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
@@ -208,7 +166,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
             }
             ChannelBan existingBan = channelBanRepository.findByRelation(
-                    channel.id(), command.targetAccountId())
+                    channel.id(), targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.BAN_NOT_FOUND));
             // 只有仍然生效的记录才可解除：已解除或已过期的记录重复解除按参数错误拒绝
             if (existingBan.revokedAt() != null
@@ -228,8 +186,6 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 channel.id(),
                 ChannelChangeScope.BANS,
                 channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList());
-            channelEventNotifier.accountChannelsChanged(afterCommit, command.targetAccountId());
-            return ChannelBanResult.from(revokedBan);
         });
     }
 

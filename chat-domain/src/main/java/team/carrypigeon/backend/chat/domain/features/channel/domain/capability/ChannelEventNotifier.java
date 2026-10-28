@@ -1,7 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.capability;
 
 import java.util.Collection;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import java.util.List;
+
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
@@ -30,7 +31,7 @@ public interface ChannelEventNotifier {
      * 通知某账号其可见频道集合已失效。
      *
      * @param afterCommit 提交后动作注册器
-     * @param accountId 账号 ID
+     * @param ids 账号 ID
      */
-    void accountChannelsChanged(AfterCommitExecutor afterCommit, long accountId);
+    void accountChannelsChanged(AfterCommitExecutor afterCommit, List<Long> ids);
 }

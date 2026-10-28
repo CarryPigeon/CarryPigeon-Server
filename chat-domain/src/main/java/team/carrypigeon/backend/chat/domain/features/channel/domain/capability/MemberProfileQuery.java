@@ -2,12 +2,10 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.capability;
 
 import java.util.Collection;
 import java.util.Map;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.MemberProfile;
 
 /**
  * 频道成员展示资料查询能力。
  * 职责：为频道视图提供成员身份字段，隔离资料来源 feature。
- * 边界：只返回频道视图需要的展示字段，不暴露资料维护能力或其它 feature 的类型。
  */
 public interface MemberProfileQuery {
 

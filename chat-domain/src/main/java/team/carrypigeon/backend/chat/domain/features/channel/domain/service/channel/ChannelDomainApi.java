@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
@@ -103,7 +103,7 @@ public class ChannelDomainApi implements ChannelApi {
             // 创建者直接落 OWNER 角色，这是后续所有频道治理动作的权限来源
             channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), accountId, ChannelMemberRole.OWNER, now));
             // 提交后通知该账号刷新可见频道集合，回滚时不应发出通知
-            channelEventNotifier.accountChannelsChanged(afterCommit, accountId);
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelResult.from(channel);
         });
     }
@@ -119,19 +119,22 @@ public class ChannelDomainApi implements ChannelApi {
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
             }
-            // 存在申请或禁言记录时拒绝删除，避免留下指向已删频道的孤儿数据
-            // TODO: 消息与审计数据当前未纳入依赖检查，需要在补齐级联清理后一并拦截
-            if (
-                !channelApplicationRepository.list(channelId).isEmpty()
-                    || !channelBanRepository.list(channelId).isEmpty()
-            ) {
-                throw ProblemException.of(ChannelProblem.DELETE_BLOCKED);
-            }
-            // 先删成员关系再删频道：频道记录是成员关系的外键目标，顺序不能颠倒
+            // 获取成员关系
+            List<Long> members = channelMemberRepository.listByChannelId(channelId).stream()
+                .map(ChannelMember::accountId)
+                .toList();
+
+            // 删除依赖数据
+            channelApplicationRepository.list(channelId).forEach(application -> {
+                channelApplicationRepository.delete(application.applicationId());
+            });
+            channelBanRepository.list(channelId).forEach(ban -> {
+                channelBanRepository.delete(ban.banId());
+            });
             channelMemberRepository.deleteByChannelId(channel.id());
             channelRepository.delete(channel.id());
-            // TODO: 频道删除后应通知全部原成员刷新频道列表，当前仅通知操作者本人
-            channelEventNotifier.accountChannelsChanged(afterCommit, operator.accountId());
+            // 通知成员
+            channelEventNotifier.accountChannelsChanged(afterCommit, members);
         });
     }
 

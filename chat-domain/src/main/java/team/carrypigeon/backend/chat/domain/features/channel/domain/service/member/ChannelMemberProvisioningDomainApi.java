@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service.mem
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberProvisioningApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.input.InitializeChannelMembershipsCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
@@ -11,6 +10,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -35,18 +35,18 @@ public class ChannelMemberProvisioningDomainApi implements ChannelMemberProvisio
     }
 
     @Override
-    public void initializeMemberships(InitializeChannelMembershipsCommand command) {
+    public void initializeMemberships(long accountId, Instant joinedAt) {
         List<Channel> systemChannels = channelRepository.listSystemChannels();
         for (Channel systemChannel : systemChannels) {
             // 幂等保护：账号已在该频道存在成员关系时跳过，避免重复注册或多链路调用产生重复行
-            if (channelMemberRepository.findByRelation(systemChannel.id(), command.accountId()).isEmpty()) {
+            if (channelMemberRepository.findByRelation(systemChannel.id(), accountId).isEmpty()) {
                 // 系统频道的成员统一以 MEMBER 角色加入，不分配 OWNER 或 ADMIN，因此不参与频道治理
                 channelMemberRepository.save(new ChannelMember(
                     idGenerator.nextLongId(),
                     systemChannel.id(),
-                    command.accountId(),
+                    accountId,
                     ChannelMemberRole.MEMBER,
-                    command.joinedAt()
+                    joinedAt
                 ));
             }
         }

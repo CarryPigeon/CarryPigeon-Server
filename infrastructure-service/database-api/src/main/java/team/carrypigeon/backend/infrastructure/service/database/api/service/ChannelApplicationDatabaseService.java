@@ -86,5 +86,5 @@ public interface ChannelApplicationDatabaseService {
      * @param channelId 频道 ID
      * @return 申请记录列表
      */
-    List<ChannelApplicationRecord> findByChannelId(long channelId);
+    List<ChannelApplicationRecord> listByChannelId(long channelId);
 }

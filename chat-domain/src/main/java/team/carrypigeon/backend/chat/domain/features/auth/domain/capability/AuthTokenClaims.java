@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.auth.domain.model;
+package team.carrypigeon.backend.chat.domain.features.auth.domain.capability;
 
 import java.time.Instant;
 

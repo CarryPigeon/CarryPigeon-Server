@@ -6,7 +6,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthT
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;

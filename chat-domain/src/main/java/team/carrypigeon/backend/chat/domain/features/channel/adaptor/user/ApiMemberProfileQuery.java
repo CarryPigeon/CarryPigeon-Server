@@ -6,10 +6,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfileQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.MemberProfile;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.GetUserProfileByAccountIdQuery;
 
 /**
  * 基于 user feature 的成员展示资料适配器。

@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.
 
 import java.time.Instant;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.model.MemberProfile;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
 
 /**
  * 频道成员结果投影。

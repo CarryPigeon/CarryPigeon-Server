@@ -27,10 +27,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.ListChannelBansQuery;
 import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
@@ -148,9 +146,7 @@ public class ChannelBansController {
             @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        channelBanApi.unbanChannelMember(
-                new UnbanChannelMemberCommand(cpPrincipal.accountId(), channelId, targetAccountId)
-        );
+        channelBanApi.unbanChannelMember(cpPrincipal.accountId(), channelId, targetAccountId);
         return ResponseEntity.noContent().build();
     }
 
@@ -182,9 +178,8 @@ public class ChannelBansController {
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return new ChannelBanListResponse(channelBanApi.listChannelBans(
-                new ListChannelBansQuery(cpPrincipal.accountId(), channelId)
-        ).stream().map(this::toChannelBanListItemResponse).toList());
+        return new ChannelBanListResponse(channelBanApi.listChannelBans(cpPrincipal.accountId(), channelId)
+            .stream().map(this::toChannelBanListItemResponse).toList());
     }
 
     private ChannelBanListItemResponse toChannelBanListItemResponse(ChannelBanListItemResult result) {

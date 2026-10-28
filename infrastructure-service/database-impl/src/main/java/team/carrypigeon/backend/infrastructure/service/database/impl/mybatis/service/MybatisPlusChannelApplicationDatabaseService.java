@@ -52,7 +52,7 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
      * 查询频道下的全部申请记录。
      */
     @Override
-    public List<ChannelApplicationRecord> findByChannelId(long channelId) {
+    public List<ChannelApplicationRecord> listByChannelId(long channelId) {
         return channelApplicationMapper.selectList(new LambdaQueryWrapper<ChannelApplicationEntity>()
                         .eq(ChannelApplicationEntity::getChannelId, channelId))
                 .stream()

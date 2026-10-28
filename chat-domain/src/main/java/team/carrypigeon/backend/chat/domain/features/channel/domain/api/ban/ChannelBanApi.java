@@ -5,9 +5,7 @@ import java.util.List;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.UnbanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.ListChannelBansQuery;
 
 /**
  * 频道禁言领域 API。
@@ -22,12 +20,11 @@ public interface ChannelBanApi {
 
     /**
      * 查询频道禁言台账。
-     * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色；返回结果包含已解除与已过期的历史记录。
-     *
-     * @param query 禁言列表查询条件
+     * @param accountId 账号 ID
+     * @param channelId 频道 ID
      * @return 禁言列表项投影列表
      */
-    List<ChannelBanListItemResult> listChannelBans(ListChannelBansQuery query);
+    List<ChannelBanListItemResult> listChannelBans(long accountId, long channelId);
 
     /**
      * 按持续时长对频道成员执行禁言。
@@ -50,11 +47,9 @@ public interface ChannelBanApi {
 
     /**
      * 解除频道成员的禁言。
-     * 约束：调用方必须具备 OWNER 或 ADMIN 角色；目标必须存在仍然生效的禁言记录。
-     * 副作用：标记禁言记录为已解除，并在事务提交后通知频道成员与目标账号。
-     *
-     * @param command 解除频道成员禁言命令
-     * @return 解除后的禁言结果投影
+     * @param operatorAccountId 操作者账号 ID
+     * @param channelId 频道 ID
+     * @param targetAccountId 目标账号 ID
      */
-    ChannelBanResult unbanChannelMember(UnbanChannelMemberCommand command);
+    void unbanChannelMember(long operatorAccountId, long channelId, long targetAccountId);
 }

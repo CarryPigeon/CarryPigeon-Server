@@ -22,10 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.CreateChannelApplicationCommand;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.DecideChannelApplicationCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.input.ListChannelApplicationsQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationResponse;
@@ -89,11 +86,7 @@ public class ChannelApplicationController {
         @Valid @RequestBody CreateChannelApplicationRequest request,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationApi.createChannelApplication(new CreateChannelApplicationCommand(
-            cpPrincipal.accountId(),
-            channelId,
-            request.reason()
-        )));
+        return toResponse(channelApplicationApi.createChannelApplication(cpPrincipal.accountId(), channelId, request.reason()));
     }
 
     /**
@@ -122,7 +115,7 @@ public class ChannelApplicationController {
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         List<ChannelApplicationResponse> items = channelApplicationApi
-            .listChannelApplications(new ListChannelApplicationsQuery(cpPrincipal.accountId(), channelId)).stream()
+            .listChannelApplications(cpPrincipal.accountId(), channelId).stream()
             .map(this::toResponse)
             .toList();
         return new ChannelApplicationListResponse(items);
@@ -173,12 +166,12 @@ public class ChannelApplicationController {
         @Valid @RequestBody DecideChannelApplicationRequest request,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationApi.decideChannelApplication(new DecideChannelApplicationCommand(
+        return toResponse(channelApplicationApi.decideChannelApplication(
             cpPrincipal.accountId(),
             channelId,
             applicationId,
             request.decision()
-        )));
+        ));
     }
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {

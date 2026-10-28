@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.features.channel.domain.model;
+package team.carrypigeon.backend.chat.domain.features.channel.domain.capability;
 
 /**
  * 频道变化范围。

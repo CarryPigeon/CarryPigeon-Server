@@ -45,4 +45,12 @@ public interface ChannelBanRepository {
      * @param channelBan 待更新禁言记录
      */
     void update(ChannelBan channelBan);
+
+    /**
+     * 删除禁言记录。
+     * 约束：按 banId 删除，调用方必须沿用既有 banId；重新发号会导致删除命中不到任何行。
+     *
+     * @param banId 禁言记录 ID
+     */
+    void delete(long banId);
 }

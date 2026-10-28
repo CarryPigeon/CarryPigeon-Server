@@ -11,7 +11,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenClaims;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenClaims;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;

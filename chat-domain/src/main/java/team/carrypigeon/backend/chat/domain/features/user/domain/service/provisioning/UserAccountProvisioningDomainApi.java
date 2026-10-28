@@ -6,6 +6,8 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.api.provisionin
 import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfile;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 
+import java.time.Instant;
+
 /**
  * 用户账号资料初始化 API 实现。
  * 职责：在 user feature 内创建新账号对应的初始公开资料。
@@ -21,11 +23,11 @@ public class UserAccountProvisioningDomainApi implements UserAccountProvisioning
     }
 
     @Override
-    public void initializeProfile(InitializeUserAccountProfileCommand command) {
+    public void initializeProfile(long accountId, Instant createdAt, Instant updatedAt) {
         userProfileRepository.save(UserProfile.initial(
-                command.accountId(),
-                command.createdAt(),
-                command.updatedAt()
+                accountId,
+                createdAt,
+                updatedAt
         ));
     }
 }
