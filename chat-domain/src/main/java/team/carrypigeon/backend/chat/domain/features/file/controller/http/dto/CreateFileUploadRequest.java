@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.file.controller.http.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import org.hibernate.validator.constraints.Range;
 
 /**
  * 申请文件上传请求。
@@ -17,8 +18,7 @@ public record CreateFileUploadRequest(
         String mimeType,
         @Schema(description = "文件大小（字节）", example = "123456")
         @Positive(message = "size_bytes must be greater than 0")
-        long sizeBytes,
-        @Schema(description = "可选 sha256", example = "")
-        String sha256
+        @Range(min = 1,max=500 * 1024 * 1024L, message = "size_bytes must be greater than 1,lower than 500Mb")
+        long sizeBytes
 ) {
 }

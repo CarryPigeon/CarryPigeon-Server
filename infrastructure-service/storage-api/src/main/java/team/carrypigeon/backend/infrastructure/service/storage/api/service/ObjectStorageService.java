@@ -1,11 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.storage.api.service;
 
+import java.io.InputStream;
+import java.time.Duration;
 import java.util.Optional;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 
 /**
@@ -16,33 +14,35 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.model.Storage
 public interface ObjectStorageService {
 
     /**
-     * 上传对象内容。
+     * 上传对象内容
      *
-     * @param command 上传命令
-     * @return 上传后的对象信息
+     * @param objectKey 对象键
+     * @param content   对象内容输入流
+     * @param size      对象内容大小
+     * @param contentType 对象内容类型
      */
-    StorageObject put(PutObjectCommand command);
+    StorageObject put(String objectKey, InputStream content, long size, String contentType);
 
     /**
-     * 读取对象元信息。
+     * 读取对象元信息
      *
-     * @param command 读取命令
+     * @param objectKey 对象键
      * @return 对象不存在时返回空；存在时仅返回元信息，不强制打开对象内容流
      */
-    Optional<StorageObject> get(GetObjectCommand command);
+    Optional<StorageObject> get(String objectKey);
 
     /**
      * 删除指定对象。
      *
-     * @param command 删除命令
+     * @param objectKey 对象键
      */
-    void delete(DeleteObjectCommand command);
+    void delete(String objectKey);
 
     /**
      * 创建对象访问预签名 URL。
      *
-     * @param command 预签名 URL 命令
+     * @param objectKey 对象键
      * @return 预签名 URL
      */
-    PresignedUrl createPresignedUrl(PresignedUrlCommand command);
+    PresignedUrl createPresignedUrl(String objectKey, Duration ttl);
 }

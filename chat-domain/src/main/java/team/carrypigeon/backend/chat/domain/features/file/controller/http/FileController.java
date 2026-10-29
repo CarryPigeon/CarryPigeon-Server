@@ -6,7 +6,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -110,6 +109,9 @@ public class FileController {
         @AuthenticationPrincipal CpPrincipal principal,
         HttpServletRequest request
     ) {
+        if (request.getContentType() == null) {
+            throw ProblemException.of(FileProblem.INVALID_INPUT, "file content must not be null");
+        }
         try {
             fileTransferDomainApi.uploadFile(
                     principal.accountId(),
@@ -130,10 +132,9 @@ public class FileController {
      * 输出：对象带内容流时直接返回二进制，否则重定向到预签名地址。
      *
      * @param shareKey 下载 share key
-     * @param principal 认证主体
      * @return 文件内容响应或下载重定向响应
      */
-    @PermitAll
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/download/{shareKey}")
     @Operation(summary = "获取文件下载", description = "按 share_key 返回下载入口。")
     @ApiResponses({
@@ -144,14 +145,9 @@ public class FileController {
             @ApiResponse(responseCode = "404", description = "文件不存在")
     })
     public ResponseEntity<?> download(
-        @PathVariable String shareKey,
-        @AuthenticationPrincipal CpPrincipal principal
+        @PathVariable String shareKey
     ) {
-        Long accountId = null;
-        if (!fileTransferDomainApi.isServerAvatar(shareKey)) {
-            accountId = principal.accountId();
-        }
-        FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(accountId, shareKey)
+        FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(shareKey)
                 .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
         String type = downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType();
         if (downloadResult.content().isPresent()) {
@@ -165,4 +161,8 @@ public class FileController {
                 .header(HttpHeaders.CONTENT_TYPE, type)
                 .build();
     }
+
+    /**
+     * TODO 下载服务端头像
+     * */
 }

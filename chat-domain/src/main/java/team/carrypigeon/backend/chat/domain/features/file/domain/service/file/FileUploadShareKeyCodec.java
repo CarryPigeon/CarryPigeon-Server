@@ -15,9 +15,19 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
  */
 public class FileUploadShareKeyCodec {
 
+    /**
+     * share_key 前缀。
+     * */
     private static final String SHARE_KEY_PREFIX = "shr_";
+    /**
+     * HMAC 算法名称
+     * */
     private static final String HMAC_ALGORITHM = "HmacSHA256";
 
+    /**
+     * 签名密钥
+     * TODO 使用动态签名密钥
+     * */
     private final byte[] signingSecret;
 
     public FileUploadShareKeyCodec(String signingSecret) {
@@ -26,55 +36,50 @@ public class FileUploadShareKeyCodec {
         }
         this.signingSecret = signingSecret.getBytes(StandardCharsets.UTF_8);
     }
-
     /**
      * 生成稳定上传 share_key。
      *
      * @param ownerAccountId 上传归属账户
      * @param fileId 文件 ID
      * @param declaredSizeBytes 客户端声明大小
+     * @param expiresAt share_key 过期时间
      * @return 稳定对外 share_key
      */
-    public String issue(long ownerAccountId, long fileId, long declaredSizeBytes) {
-        return issue(ownerAccountId, fileId, declaredSizeBytes, Instant.now().plusSeconds(600));
-    }
-
     public String issue(long ownerAccountId, long fileId, long declaredSizeBytes, Instant expiresAt) {
         if (expiresAt == null) {
             throw new IllegalArgumentException("expiresAt must not be null");
         }
         String payload = ownerAccountId + ":" + fileId + ":" + declaredSizeBytes + ":" + expiresAt.toEpochMilli();
-        return SHARE_KEY_PREFIX + base64Url(payload) + "." + sign(payload);
+        return SHARE_KEY_PREFIX
+            + Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8))
+            + "." + sign(payload);
     }
 
     /**
      * 解析并校验 share_key。
      *
      * @param shareKey 对外 share_key
+     * @param now 当前时间
      * @return 已校验的上传 share_key 快照
      */
-    public IssuedUploadShareKey parse(String shareKey) {
-        return parse(shareKey, Instant.now());
-    }
-
     public IssuedUploadShareKey parse(String shareKey, Instant now) {
         if (shareKey == null || shareKey.isBlank() || !shareKey.startsWith(SHARE_KEY_PREFIX)) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         String encoded = shareKey.substring(SHARE_KEY_PREFIX.length());
         int dotIndex = encoded.lastIndexOf('.');
         if (dotIndex <= 0 || dotIndex >= encoded.length() - 1) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         String encodedPayload = encoded.substring(0, dotIndex);
         String signature = encoded.substring(dotIndex + 1);
         String payload = decodeBase64(encodedPayload);
         if (!constantTimeEquals(sign(payload), signature)) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         String[] segments = payload.split(":");
         if (segments.length != 4) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
         try {
             long ownerAccountId = Long.parseLong(segments[0]);
@@ -83,20 +88,14 @@ public class FileUploadShareKeyCodec {
             long expiresAtEpochMillis = Long.parseLong(segments[3]);
             if (ownerAccountId <= 0 || fileId <= 0 || declaredSizeBytes <= 0
                     || now == null || expiresAtEpochMillis <= now.toEpochMilli()) {
-                throw invalidShareKey();
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
             }
             return new IssuedUploadShareKey(ownerAccountId, fileId, declaredSizeBytes, expiresAtEpochMillis);
         } catch (NumberFormatException exception) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
     }
 
-    /**
-     * 为上传 share_key 推导 canonical object key。
-     */
-    public String objectKey(IssuedUploadShareKey shareKey) {
-        return "files/accounts/" + shareKey.ownerAccountId() + "/" + shareKey.fileId();
-    }
 
     /**
      * 为上传 share_key payload 生成 HMAC 签名。
@@ -115,10 +114,6 @@ public class FileUploadShareKeyCodec {
         }
     }
 
-    private String base64Url(String payload) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(payload.getBytes(StandardCharsets.UTF_8));
-    }
-
     /**
      * 解码 share_key 中的 payload 段。
      * 失败语义：Base64 非法时统一映射为 share_key 无效，避免泄漏内部编码细节。
@@ -130,18 +125,8 @@ public class FileUploadShareKeyCodec {
         try {
             return new String(Base64.getUrlDecoder().decode(encodedPayload), StandardCharsets.UTF_8);
         } catch (IllegalArgumentException exception) {
-            throw invalidShareKey();
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
-    }
-
-    /**
-     * 构造统一的 share_key 校验失败问题。
-     * 约束：格式、签名、字段数量和字段取值错误都收敛到同一个对外失败语义。
-     *
-     * @return share_key 无效问题异常
-     */
-    private ProblemException invalidShareKey() {
-        return ProblemException.of(FileProblem.INVALID_SHARE_KEY);
     }
 
     /**

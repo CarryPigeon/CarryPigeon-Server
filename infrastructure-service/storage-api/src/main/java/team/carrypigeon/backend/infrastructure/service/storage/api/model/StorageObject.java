@@ -15,21 +15,7 @@ import java.util.Optional;
  */
 public record StorageObject(String objectKey, String contentType, long size, Optional<InputStream> content) {
 
-    public StorageObject {
-        PutObjectCommand.validateObjectKey(objectKey);
-        if (size < 0) {
-            throw new IllegalArgumentException("storage object size must not be negative");
-        }
-    }
-
     public static StorageObject metadata(String objectKey, String contentType, long size) {
         return new StorageObject(objectKey, contentType, size, Optional.empty());
-    }
-
-    public static StorageObject withContent(String objectKey, String contentType, long size, InputStream content) {
-        if (content == null) {
-            throw new IllegalArgumentException("storage object content must not be null");
-        }
-        return new StorageObject(objectKey, contentType, size, Optional.of(content));
     }
 }

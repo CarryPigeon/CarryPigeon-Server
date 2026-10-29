@@ -8,14 +8,13 @@ import io.minio.StatObjectResponse;
 import io.minio.StatObjectArgs;
 import io.minio.errors.ErrorResponseException;
 import io.minio.http.Method;
+
+import java.io.InputStream;
+import java.time.Duration;
 import java.util.Optional;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.exception.StorageServiceException;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.DeleteObjectCommand;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.GetObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrlCommand;
-import team.carrypigeon.backend.infrastructure.service.storage.api.model.PutObjectCommand;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
@@ -41,44 +40,35 @@ public class MinioObjectStorageService implements ObjectStorageService {
         this.timeProvider = timeProvider;
     }
 
-    /**
-     * 把对象写入 MinIO。
-     * 输入：对象键、内容流、大小和内容类型。
-     * 输出：返回写入后的对象元数据快照。
-     * 失败：任意 MinIO SDK 异常都会被统一包装为 `StorageServiceException`。
-     */
+
     @Override
-    public StorageObject put(PutObjectCommand command) {
+    public StorageObject put(String objectKey, InputStream content, long size, String contentType) {
         try {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(properties.bucket())
-                            .object(command.objectKey())
-                            .stream(command.content(), command.size(), -1)
-                            .contentType(command.contentType())
+                            .object(objectKey)
+                            .stream(content, size, -1)
+                            .contentType(contentType)
                             .build()
             );
-            return StorageObject.metadata(command.objectKey(), command.contentType(), command.size());
+            return StorageObject.metadata(objectKey, contentType, size);
         } catch (Exception ex) {
-            throw new StorageServiceException("failed to put storage object: " + command.objectKey(), ex);
+            throw new StorageServiceException("failed to put storage object: " + objectKey, ex);
         }
     }
 
-    /**
-     * 读取对象元数据和内容流。
-     * 输出：对象不存在时返回空，存在时返回带输入流的 `StorageObject`。
-     */
     @Override
-    public Optional<StorageObject> get(GetObjectCommand command) {
+    public Optional<StorageObject> get(String objectKey) {
         try {
             StatObjectResponse stat = minioClient.statObject(
                     StatObjectArgs.builder()
                             .bucket(properties.bucket())
-                            .object(command.objectKey())
+                            .object(objectKey)
                             .build()
             );
             return Optional.of(StorageObject.metadata(
-                    command.objectKey(),
+                    objectKey,
                     stat.contentType(),
                     stat.size()
             ));
@@ -86,9 +76,9 @@ public class MinioObjectStorageService implements ObjectStorageService {
             if ("NoSuchKey".equalsIgnoreCase(ex.errorResponse().code()) || "NoSuchObject".equalsIgnoreCase(ex.errorResponse().code())) {
                 return Optional.empty();
             }
-            throw new StorageServiceException("failed to read storage object: " + command.objectKey(), ex);
+            throw new StorageServiceException("failed to read storage object: " + objectKey, ex);
         } catch (Exception ex) {
-            throw new StorageServiceException("failed to read storage object: " + command.objectKey(), ex);
+            throw new StorageServiceException("failed to read storage object: " + objectKey, ex);
         }
     }
 
@@ -97,16 +87,16 @@ public class MinioObjectStorageService implements ObjectStorageService {
      * 约束：对象是否存在由 MinIO 自身处理，这里只做异常收口。
      */
     @Override
-    public void delete(DeleteObjectCommand command) {
+    public void delete(String objectKey) {
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder()
                             .bucket(properties.bucket())
-                            .object(command.objectKey())
+                            .object(objectKey)
                             .build()
             );
         } catch (Exception ex) {
-            throw new StorageServiceException("failed to delete storage object: " + command.objectKey(), ex);
+            throw new StorageServiceException("failed to delete storage object: " + objectKey, ex);
         }
     }
 
@@ -115,19 +105,19 @@ public class MinioObjectStorageService implements ObjectStorageService {
      * 输出：返回带绝对过期时间的下载 URL。
      */
     @Override
-    public PresignedUrl createPresignedUrl(PresignedUrlCommand command) {
+    public PresignedUrl createPresignedUrl(String objectKey, Duration ttlSeconds) {
         try {
             String url = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .method(Method.GET)
                             .bucket(properties.bucket())
-                            .object(command.objectKey())
-                            .expiry((int) command.ttl().toSeconds())
+                            .object(objectKey)
+                            .expiry((int) ttlSeconds.toSeconds())
                             .build()
             );
-            return new PresignedUrl(java.net.URI.create(url), timeProvider.nowInstant().plus(command.ttl()));
+            return new PresignedUrl(java.net.URI.create(url), timeProvider.nowInstant().plus(ttlSeconds));
         } catch (Exception ex) {
-            throw new StorageServiceException("failed to create presigned url for object: " + command.objectKey(), ex);
+            throw new StorageServiceException("failed to create presigned url for object: " + objectKey, ex);
         }
     }
 }
