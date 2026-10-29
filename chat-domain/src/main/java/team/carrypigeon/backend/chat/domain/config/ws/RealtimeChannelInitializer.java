@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.transport;
+package team.carrypigeon.backend.chat.domain.config.ws;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -7,8 +7,9 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
+import team.carrypigeon.backend.chat.domain.config.ws.handlers.RealtimeContextHandler;
+import team.carrypigeon.backend.chat.domain.config.ws.handlers.RealtimeHandler;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -55,20 +56,26 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     @Override
     protected void initChannel(SocketChannel channel) {
         ChannelPipeline pipeline = channel.pipeline();
+        // http解码
         pipeline.addLast(new HttpServerCodec());
+        // http消息聚合
         pipeline.addLast(new HttpObjectAggregator(65536));
-        pipeline.addLast(new RealtimeChannelSession(properties.path()));
-        pipeline.addLast(RealtimeChannelHandler.idleStateHandler(properties.readIdleTimeoutSeconds()));
-        pipeline.addLast(new WebSocketServerProtocolHandler(properties.path()));
-        pipeline.addLast(new RealtimeChannelHandler(
-            idGenerator,
+        // 升级为WebSocket
+        pipeline.addLast(new WebSocketServerProtocolHandler("/api/ws"));
+        // 空闲检测
+        pipeline.addLast(RealtimeHandler.idleStateHandler(properties.getReadIdleTimeoutSeconds()));
+        // WebSocket处理
+        // 上下文注入
+        pipeline.addLast(new RealtimeContextHandler());
+        // 事件处理
+        pipeline.addLast(new RealtimeHandler(
             timeProvider,
             realtimeConnectionIndex,
             frameCodec,
             commandRegistry,
             resumeCoordinator,
             authTokenApi,
-            properties.authenticationTimeoutSeconds()
+            properties.getAuthenticationTimeoutSeconds()
         ));
     }
 }

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.transport;
+package team.carrypigeon.backend.chat.domain.config.ws.handlers;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -13,13 +13,13 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.chat.domain.config.ws.RealtimeAuthenticationCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeProtocolException;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeFrame;
@@ -33,15 +33,13 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
  * 边界：认证机制、续传与帧编解码由聚焦协作对象承担；聊天写入只走 HTTP。
  */
 @Slf4j
-public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
-    private final IdGenerator idGenerator;
+public class RealtimeHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeAuthenticationCoordinator authenticationCoordinator;
     private final RealtimeResumeCoordinator resumeCoordinator;
     private final RealtimeCommandRegistry commandRegistry;
 
-    public RealtimeChannelHandler(
-        IdGenerator idGenerator,
+    public RealtimeHandler(
         TimeProviderImpl timeProvider,
         RealtimeConnectionIndex realtimeConnectionIndex,
         RealtimeFrameCodec frameCodec,
@@ -50,7 +48,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         AuthTokenApi authTokenApi,
         int authenticationTimeoutSeconds
     ) {
-        this.idGenerator = idGenerator;
         this.frameCodec = frameCodec;
         this.commandRegistry = commandRegistry;
         this.resumeCoordinator = resumeCoordinator;
@@ -66,16 +63,11 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete handshakeComplete) {
-            String sessionId = idGenerator.nextStringId();
-            context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).set(sessionId);
-            log.debug("Realtime handshake completed, uri={}, sessionId={}",
-                handshakeComplete.requestUri(), sessionId);
+            log.debug("Realtime handshake completed, uri={}", handshakeComplete.requestUri());
             authenticationCoordinator.scheduleAuthenticationTimeout(context);
             return;
         }
         if (event instanceof IdleStateEvent) {
-            log.debug("Closing idle realtime connection, sessionId={}",
-                context.channel().attr(RealtimeChannelSession.SESSION_ID_KEY).get());
             writeFrame(context, new RealtimeFrame.CommandError(
                 null,
                 RealtimeFrameCodec.COMMAND_FRAME_TYPE,
@@ -89,49 +81,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, TextWebSocketFrame frame) {
-        RealtimeChannelSession.run(context, () -> handleFrame(context, frame));
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext context) throws Exception {
-        RealtimeChannelSession.run(context, () -> authenticationCoordinator.channelInactive(context));
-        super.channelInactive(context);
-    }
-
-    /**
-     * 记录异常并关闭当前实时连接。
-     * 副作用：写入异常日志并主动关闭 Netty 通道，避免异常连接继续留在会话表中。
-     */
-    @Override
-    public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
-        RealtimeChannelSession.run(context, () -> {
-            log.warn("Closing realtime channel because of exception", cause);
-            context.close();
-        });
-    }
-
-    /**
-     * 创建实时连接读空闲检测处理器。
-     * 输出：指定时间无入站数据即触发空闲事件，供本处理器关闭连接。
-     *
-     * @param readIdleTimeoutSeconds 读空闲秒数
-     * @return Netty 空闲检测处理器
-     */
-    public static IdleStateHandler idleStateHandler(int readIdleTimeoutSeconds) {
-        if (readIdleTimeoutSeconds <= 0) {
-            throw new IllegalArgumentException("readIdleTimeoutSeconds must be greater than 0");
-        }
-        return new IdleStateHandler(readIdleTimeoutSeconds, 0, 0, TimeUnit.SECONDS);
-    }
-
-    /**
-     * 解析并分派一条客户端命令。
-     * 分派顺序：解析信封 → 校验信封 → 查找处理器 → 认证前置 → 交给处理器。
-     *
-     * @param context Netty 通道上下文
-     * @param frame   客户端文本帧
-     */
-    private void handleFrame(ChannelHandlerContext context, TextWebSocketFrame frame) {
         RealtimeClientMessage request = null;
         try {
             request = frameCodec.decode(frame.text());
@@ -168,6 +117,36 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
             log.warn("Failed to handle realtime frame", exception);
             writeErrorAndCloseIfUnauthenticated(context, request, "internal_error", "internal server error");
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext context) throws Exception {
+        authenticationCoordinator.channelInactive(context);
+        super.channelInactive(context);
+    }
+
+    /**
+     * 记录异常并关闭当前实时连接。
+     * 副作用：写入异常日志并主动关闭 Netty 通道，避免异常连接继续留在会话表中。
+     */
+    @Override
+    public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
+        log.warn("Closing realtime channel because of exception", cause);
+        context.close();
+    }
+
+    /**
+     * 创建实时连接读空闲检测处理器。
+     * 输出：指定时间无入站数据即触发空闲事件，供本处理器关闭连接。
+     *
+     * @param readIdleTimeoutSeconds 读空闲秒数
+     * @return Netty 空闲检测处理器
+     */
+    public static IdleStateHandler idleStateHandler(int readIdleTimeoutSeconds) {
+        if (readIdleTimeoutSeconds <= 0) {
+            throw new IllegalArgumentException("readIdleTimeoutSeconds must be greater than 0");
+        }
+        return new IdleStateHandler(readIdleTimeoutSeconds, 0, 0, TimeUnit.SECONDS);
     }
 
     /**

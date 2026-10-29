@@ -8,8 +8,6 @@ import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCli
 /**
  * 实时通道帧编解码器。
  * 职责：把下行帧编码为唯一形态的线上 envelope，解析并校验上行 envelope，同时固化线上协议字面量。
- * 边界：不读取连接状态、不执行认证或续传；不产生传输实现对象，编解码结果是纯文本。
- * 约束：信封字段命名依赖项目统一 Jackson snake_case 策略，因此与全局序列化约定同处固定基建。
  */
 @Component
 public final class RealtimeFrameCodec {

@@ -1,7 +1,8 @@
-package team.carrypigeon.backend.chat.domain.config.ws.transport;
+package team.carrypigeon.backend.chat.domain.config.ws.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import team.carrypigeon.backend.chat.domain.config.ws.RealtimeAuthenticationCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeAuthSession;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandScope;

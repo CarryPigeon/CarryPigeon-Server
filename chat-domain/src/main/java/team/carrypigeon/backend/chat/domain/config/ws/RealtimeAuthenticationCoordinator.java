@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.transport;
+package team.carrypigeon.backend.chat.domain.config.ws;
 
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -6,9 +6,11 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.config.ws.context.RealtimeContext;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeAuthSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -88,20 +90,20 @@ public final class RealtimeAuthenticationCoordinator {
     public void scheduleAuthenticationTimeout(ChannelHandlerContext context) {
         cancelAuthenticationTimeout(context);
         ScheduledFuture<?> timeoutFuture = context.executor().schedule(
-                () -> RealtimeChannelSession.run(context, () -> {
+                () -> {
                     if (context.channel().isActive() && !isAuthenticated(context)) {
                         log.debug("Realtime authentication timeout, closing connection");
                         context.writeAndFlush(errorFrame(
-                                "auth",
-                                "authentication_timeout",
-                                "authentication frame was not received in time"
+                            "auth",
+                            "authentication_timeout",
+                            "authentication frame was not received in time"
                         )).addListener(ChannelFutureListener.CLOSE);
                     }
-                }),
+                },
                 authenticationTimeoutSeconds,
                 TimeUnit.SECONDS
         );
-        context.channel().attr(RealtimeChannelSession.AUTHENTICATION_TIMEOUT_FUTURE_KEY).set(timeoutFuture);
+        RealtimeContext.setAuthenticationTimeoutFutureKey(context.channel(), timeoutFuture);
     }
 
     /**
@@ -111,7 +113,7 @@ public final class RealtimeAuthenticationCoordinator {
      * @return 已认证时返回 true
      */
     public boolean isAuthenticated(ChannelHandlerContext context) {
-        return context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get() != null;
+        return RealtimeContext.getAuthenticatedPrincipalKey(context.channel()) != null;
     }
 
     /**
@@ -121,7 +123,7 @@ public final class RealtimeAuthenticationCoordinator {
      * @return 账号 ID；未认证时为 0
      */
     public long accountId(ChannelHandlerContext context) {
-        CpPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        CpPrincipal principal = RealtimeContext.getAuthenticatedPrincipalKey(context.channel());
         return principal == null ? 0L : principal.accountId();
     }
 
@@ -134,7 +136,7 @@ public final class RealtimeAuthenticationCoordinator {
     public void channelInactive(ChannelHandlerContext context) {
         cancelAuthenticationTimeout(context);
         cancelAccessTokenExpiration(context);
-        CpPrincipal principal = context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).get();
+        CpPrincipal principal = RealtimeContext.getAuthenticatedPrincipalKey(context.channel());
         if (principal != null) {
             realtimeConnectionIndex.unregister(principal.accountId(), context.channel());
             log.debug("Realtime connection closed, uid={}", principal.accountId());
@@ -150,20 +152,17 @@ public final class RealtimeAuthenticationCoordinator {
     }
 
     private void replacePrincipal(ChannelHandlerContext context, CpPrincipal principal) {
-        CpPrincipal previousPrincipal = context.channel()
-                .attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY)
-                .get();
-        if (previousPrincipal != null && previousPrincipal.accountId() != principal.accountId()) {
+        CpPrincipal previousPrincipal = RealtimeContext.getAuthenticatedPrincipalKey(context.channel());
+        if (previousPrincipal != null && !Objects.equals(previousPrincipal.accountId(), principal.accountId())) {
             realtimeConnectionIndex.unregister(previousPrincipal.accountId(), context.channel());
         }
-        context.channel().attr(RealtimeChannelSession.AUTHENTICATED_PRINCIPAL_KEY).set(principal);
+        RealtimeContext.setAuthenticatedPrincipalKey(context.channel(), principal);
         realtimeConnectionIndex.register(principal.accountId(), context.channel());
     }
 
     private void cancelAuthenticationTimeout(ChannelHandlerContext context) {
-        ScheduledFuture<?> timeoutFuture = context.channel()
-                .attr(RealtimeChannelSession.AUTHENTICATION_TIMEOUT_FUTURE_KEY)
-                .getAndSet(null);
+        ScheduledFuture<?> timeoutFuture = RealtimeContext.getAuthenticationTimeoutFutureKey(context.channel());
+        RealtimeContext.setAuthenticationTimeoutFutureKey(context.channel(), null);
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
         }
@@ -171,13 +170,11 @@ public final class RealtimeAuthenticationCoordinator {
 
     private void scheduleAccessTokenExpiration(ChannelHandlerContext context, Instant expiresAt) {
         cancelAccessTokenExpiration(context);
-        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).set(expiresAt);
+        RealtimeContext.setAccessTokenExpiresAtKey(context.channel(), expiresAt);
         long delayMillis = Math.max(0L, Duration.between(timeProvider.nowInstant(), expiresAt).toMillis());
         ScheduledFuture<?> expirationFuture = context.executor().schedule(
-                () -> RealtimeChannelSession.run(context, () -> {
-                    Instant currentExpiresAt = context.channel()
-                            .attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY)
-                            .get();
+                () ->  {
+                    Instant currentExpiresAt = RealtimeContext.getAccessTokenExpiresAtKey(context.channel());
                     if (context.channel().isActive()
                             && isAuthenticated(context)
                             && expiresAt.equals(currentExpiresAt)) {
@@ -185,20 +182,19 @@ public final class RealtimeAuthenticationCoordinator {
                         context.writeAndFlush(errorFrame("auth", "token_expired", "access token is expired"))
                                 .addListener(ChannelFutureListener.CLOSE);
                     }
-                }),
+                },
                 delayMillis,
                 TimeUnit.MILLISECONDS
         );
-        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRATION_FUTURE_KEY).set(expirationFuture);
+        RealtimeContext.setAccessTokenExpirationFutureKey(context.channel(), expirationFuture);
     }
 
     private void cancelAccessTokenExpiration(ChannelHandlerContext context) {
-        ScheduledFuture<?> expirationFuture = context.channel()
-                .attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRATION_FUTURE_KEY)
-                .getAndSet(null);
+        ScheduledFuture<?> expirationFuture = RealtimeContext.getAccessTokenExpirationFutureKey(context.channel());
+        RealtimeContext.setAccessTokenExpirationFutureKey(context.channel(), null);
         if (expirationFuture != null) {
             expirationFuture.cancel(false);
         }
-        context.channel().attr(RealtimeChannelSession.ACCESS_TOKEN_EXPIRES_AT_KEY).set(null);
+        RealtimeContext.setAccessTokenExpiresAtKey(context.channel(), null);
     }
 }

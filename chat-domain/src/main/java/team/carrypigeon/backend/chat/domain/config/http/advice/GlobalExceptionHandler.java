@@ -316,7 +316,7 @@ public class GlobalExceptionHandler {
                 descriptor.status().value(),
                 descriptor.reason(),
                 descriptor.message(),
-                MDC.get(LogKeys.REQUEST_ID),
+                MDC.get(LogKeys.SESSION_ID),
                 descriptor.details()
         ));
         if (descriptor.status() == HttpStatus.UNAUTHORIZED) {

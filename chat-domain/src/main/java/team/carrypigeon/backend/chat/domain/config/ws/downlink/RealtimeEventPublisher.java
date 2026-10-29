@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.config.ws.downlink;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
 import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +45,7 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
         this.frameCodec = frameCodec;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.maxPayloadBytes = properties.maxPayloadBytes();
+        this.maxPayloadBytes = properties.getMaxPayloadByte();
     }
 
     /**

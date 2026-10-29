@@ -41,7 +41,7 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter implements Ordere
         String requestId = resolveRequestId(request);
         String traceId = resolveTraceId(request, requestId);
         try (LogContexts.Scope ignored = LogContexts.openScope()) {
-            LogContexts.requestId(requestId);
+            LogContexts.sessionId(requestId);
             LogContexts.traceId(traceId);
             LogContexts.route(resolveRoute(request));
             filterChain.doFilter(request, response);

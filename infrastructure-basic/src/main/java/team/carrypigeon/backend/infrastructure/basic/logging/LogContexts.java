@@ -21,10 +21,11 @@ public final class LogContexts {
     }
 
     /**
-     * 写入当前请求的 request id。
+     * 写入当前请求的 session id。
+     * session id在WebSocket中用于标识用户会话，http中用于标识请求会话
      */
-    public static void requestId(String requestId) {
-        put(LogKeys.REQUEST_ID, requestId);
+    public static void sessionId(String requestId) {
+        put(LogKeys.SESSION_ID, requestId);
     }
 
     /**

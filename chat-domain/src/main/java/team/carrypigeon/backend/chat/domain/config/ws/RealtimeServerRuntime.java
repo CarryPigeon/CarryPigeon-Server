@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.transport;
+package team.carrypigeon.backend.chat.domain.config.ws;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
@@ -10,7 +10,6 @@ import java.net.InetSocketAddress;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 
 /**
  * Netty 实时通道运行时。
@@ -44,37 +43,35 @@ public class RealtimeServerRuntime implements SmartLifecycle {
             log.info("Realtime Netty server start skipped because runtime is already running");
             return;
         }
-        if (!properties.enabled()) {
+        if (!properties.isEnabled()) {
             log.info(
-                    "Realtime Netty server start skipped because realtime is disabled (host={}, port={}, path={})",
-                    properties.host(),
-                    properties.port(),
-                    properties.path()
+                    "Realtime Netty server start skipped because realtime is disabled (host={}, port={})",
+                    properties.getHost(),
+                    properties.getPort()
             );
             return;
         }
         log.info(
-                "Starting realtime Netty server on {}:{}{} with bossThreads={} workerThreads={}",
-                properties.host(),
-                properties.port(),
-                properties.path(),
-                properties.bossThreads(),
-                properties.workerThreads()
+                "Starting realtime Netty server on {}:{} with bossThreads={} workerThreads={}",
+                properties.getHost(),
+                properties.getPort(),
+                properties.getBossThreads(),
+                properties.getWorkerThreads()
         );
-        bossGroup = new NioEventLoopGroup(Math.max(1, properties.bossThreads()));
-        workerGroup = properties.workerThreads() > 0
-                ? new NioEventLoopGroup(properties.workerThreads())
+        bossGroup = new NioEventLoopGroup(Math.max(1, properties.getBossThreads()));
+        workerGroup = properties.getWorkerThreads() > 0
+                ? new NioEventLoopGroup(properties.getWorkerThreads())
                 : new NioEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(initializer);
-            serverChannel = bootstrap.bind(new InetSocketAddress(properties.host(), properties.port()))
+            serverChannel = bootstrap.bind(new InetSocketAddress(properties.getHost(), properties.getPort()))
                     .sync()
                     .channel();
             running = true;
-            log.info("Realtime Netty server started on {}:{}{}", properties.host(), properties.port(), properties.path());
+            log.info("Realtime Netty server started on {}:{}", properties.getHost(), properties.getPort());
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             shutdownGroups();

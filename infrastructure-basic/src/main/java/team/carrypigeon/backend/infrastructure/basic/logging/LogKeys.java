@@ -9,7 +9,7 @@ package team.carrypigeon.backend.infrastructure.basic.logging;
 public final class LogKeys {
 
     public static final String TRACE_ID = "trace_id";
-    public static final String REQUEST_ID = "request_id";
+    public static final String SESSION_ID = "session_id";
     public static final String ROUTE = "route";
     public static final String UID = "uid";
 

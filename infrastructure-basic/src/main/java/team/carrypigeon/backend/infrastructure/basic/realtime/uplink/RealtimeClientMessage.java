@@ -6,7 +6,6 @@ import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeProtocolEx
 /**
  * 实时通道客户端消息。
  * 职责：定义客户端命令帧的统一 envelope，并提供可选的通用字段读取。
- * 边界：只承载 envelope 结构，不解释具体命令语义；命令私有字段由对应处理器自行读取。
  *
  * @param type 命令类型
  * @param id 客户端请求 ID

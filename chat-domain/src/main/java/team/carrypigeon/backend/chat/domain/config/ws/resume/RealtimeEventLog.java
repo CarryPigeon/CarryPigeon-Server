@@ -16,8 +16,6 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
  * 实时事件窗口。
  * 职责：按接收账号保存最近一段时间的事件帧，供断线续传按 eventId 回放。
  * 边界：只存帧本身，不存接收人集合；不广播、不编码、不判断业务语义。
- * 容量语义：账号数达到上限且新账号需要建档时，先回收事件已全部过期的账号；回收后仍无空位则不建档，
- * 该账号通过 HTTP 全量同步恢复，已有窗口不受影响。
  */
 @Component
 public class RealtimeEventLog {
@@ -38,9 +36,9 @@ public class RealtimeEventLog {
     public RealtimeEventLog(RealtimeServerProperties properties, TimeProvider timeProvider) {
         this(
                 timeProvider,
-                properties.eventRetention().toMillis(),
-                properties.maxEventsPerAccount(),
-                properties.maxEventAccounts()
+                properties.getEventRetention().toMillis(),
+                properties.getMaxEventsPerAccount(),
+                properties.getMaxEventAccounts()
         );
     }
 
