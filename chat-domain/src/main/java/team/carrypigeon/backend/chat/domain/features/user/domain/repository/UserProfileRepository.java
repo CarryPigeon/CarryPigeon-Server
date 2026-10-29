@@ -31,15 +31,13 @@ public interface UserProfileRepository {
      * 保存新的用户资料。
      *
      * @param userProfile 待保存资料
-     * @return 已保存资料
      */
-    UserProfile save(UserProfile userProfile);
+    void save(UserProfile userProfile);
 
     /**
      * 更新已有用户资料。
      *
      * @param userProfile 待更新资料
-     * @return 已更新资料
      */
-    UserProfile update(UserProfile userProfile);
+    void update(UserProfile userProfile);
 }

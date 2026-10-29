@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.service.file.Fi
  * 边界：只负责 Bean 装配，不承载文件上传、下载或频道治理规则。
  */
 @Configuration
-@EnableConfigurationProperties(FileShareKeyProperties.class)
+@EnableConfigurationProperties({FileShareKeyProperties.class, ServerAvatarProperty.class})
 public class FileConfiguration {
 
     /**

@@ -13,7 +13,6 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.chat.domain.config.server.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
@@ -44,7 +43,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
     public RealtimeChannelHandler(
         IdGenerator idGenerator,
         TimeProviderImpl timeProvider,
-        ServerIdentityProperties serverIdentityProperties,
         RealtimeConnectionIndex realtimeConnectionIndex,
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
@@ -58,7 +56,6 @@ public class RealtimeChannelHandler extends SimpleChannelInboundHandler<TextWebS
         this.resumeCoordinator = resumeCoordinator;
         this.authenticationCoordinator = new RealtimeAuthenticationCoordinator(
             timeProvider,
-            serverIdentityProperties,
             realtimeConnectionIndex,
             authTokenApi,
             authenticationTimeoutSeconds,

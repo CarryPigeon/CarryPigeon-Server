@@ -6,17 +6,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import team.carrypigeon.backend.starter.bootstrap.plugin.PluginPreflight;
 
 /**
  * Spring Boot 启动入口。
  * <p>
  * 职责：启动 Spring 容器，并作为最终运行时的装配入口。
- * 边界：该类只负责框架能力开关、组件扫描与配置绑定扫描，不承载核心业务规则。
- * 依赖：业务能力来自 `chat-domain`，固定基础设施能力来自 `infrastructure-basic`，
- * 具体外部实现由 `infrastructure-service` 的 `*-impl` 以组件形式参与装配。
  */
 @SpringBootApplication
 @EnableScheduling
@@ -36,17 +33,8 @@ public class ApplicationStarter {
      */
     public static void main(String[] args) {
         log.info("Application is starting...");
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        PluginPreflight.Result preflight = PluginPreflight.verify(classLoader);
-        log.info(
-                "Plugin preflight passed: hostVersion={}, buildHash={}, pluginCount={}",
-                preflight.hostIdentity().version(),
-                preflight.hostIdentity().buildHash(),
-                preflight.manifestCatalog().manifests().size()
-        );
         SpringApplication application = new SpringApplication(ApplicationStarter.class);
-        application.addInitializers(context -> context.getBeanFactory()
-                .registerSingleton("pluginManifestCatalog", preflight.manifestCatalog()));
+        application.addInitializers(ConfigurableApplicationContext::getBeanFactory);
         application.run(args);
         log.info("Application is running ...");
     }

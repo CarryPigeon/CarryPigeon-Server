@@ -7,7 +7,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result
 
 /**
  * 文件传输领域 API。
- * 职责：暴露上传授权、同源上传、资料背景图上传和下载能力。
+ * 职责：暴露上传授权、上传写入和文件下载能力。
  * 边界：不暴露 controller 协议、对象存储适配实现和 share_key 解析细节。
  */
 public interface FileTransferApi {
@@ -16,12 +16,10 @@ public interface FileTransferApi {
      * 创建文件上传授权。
      *
      * @param accountId 上传发起账号 ID
-     * @param filename 原始文件名
-     * @param mimeType 文件 MIME 类型
      * @param sizeBytes 文件大小，单位字节
      * @return 文件上传授权投影
      */
-    FileUploadGrantResult createUploadGrant(long accountId, String filename, String mimeType, long sizeBytes);
+    FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes);
 
     /**
      * 使用已签发 share key 上传文件内容。

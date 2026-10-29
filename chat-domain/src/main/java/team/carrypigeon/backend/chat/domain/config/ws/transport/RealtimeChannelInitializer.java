@@ -7,7 +7,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.config.server.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
@@ -28,7 +27,6 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
     private final RealtimeServerProperties properties;
     private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
-    private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeConnectionIndex realtimeConnectionIndex;
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeCommandRegistry commandRegistry;
@@ -39,7 +37,6 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         RealtimeServerProperties properties,
         IdGenerator idGenerator,
         TimeProviderImpl timeProvider,
-        ServerIdentityProperties serverIdentityProperties,
         RealtimeConnectionIndex realtimeConnectionIndex,
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
@@ -48,7 +45,6 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         this.properties = properties;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeConnectionIndex = realtimeConnectionIndex;
         this.frameCodec = frameCodec;
         this.commandRegistry = commandRegistry;
@@ -67,7 +63,6 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         pipeline.addLast(new RealtimeChannelHandler(
             idGenerator,
             timeProvider,
-            serverIdentityProperties,
             realtimeConnectionIndex,
             frameCodec,
             commandRegistry,

@@ -17,8 +17,6 @@ public interface CacheService {
      *
      * @param key 缓存键
      * @return 命中时返回缓存值，未命中时返回空
-     * @throws IllegalArgumentException 当缓存键为空白字符串时抛出
-     * @throws team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException 当缓存后端访问失败时抛出
      */
     Optional<String> get(String key);
 
@@ -28,8 +26,6 @@ public interface CacheService {
      * @param key 缓存键
      * @param value 缓存值
      * @param ttl 缓存存活时间
-     * @throws IllegalArgumentException 当缓存键为空白、缓存值为 null、或 TTL 不为正数时抛出
-     * @throws team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException 当缓存后端访问失败时抛出
      */
     void set(String key, String value, Duration ttl);
 
@@ -37,8 +33,6 @@ public interface CacheService {
      * 删除指定缓存键。
      *
      * @param key 缓存键
-     * @throws IllegalArgumentException 当缓存键为空白字符串时抛出
-     * @throws team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException 当缓存后端访问失败时抛出
      */
     void delete(String key);
 
@@ -57,9 +51,7 @@ public interface CacheService {
      * 判断指定缓存键是否存在。
      *
      * @param key 缓存键
-     * @return 存在时返回 true
-     * @throws IllegalArgumentException 当缓存键为空白字符串时抛出
-     * @throws team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException 当缓存后端访问失败时抛出
+     * @return 是否存在
      */
     boolean exists(String key);
 }

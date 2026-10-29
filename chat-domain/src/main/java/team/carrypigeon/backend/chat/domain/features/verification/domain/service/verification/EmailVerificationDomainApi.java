@@ -22,20 +22,11 @@ public class EmailVerificationDomainApi implements EmailVerificationApi {
 
     @Override
     public void issueCode(String email) {
-        if(email==null||email.isBlank()){
-            throw ProblemException.of(VerificationProblem.INVALID_EMAIL);
-        }
         emailVerificationCapability.issueCode(email);
     }
 
     @Override
     public void verifyCode(String email,String code) {
-        if(email==null||email.isBlank()){
-            throw ProblemException.of(VerificationProblem.INVALID_EMAIL);
-        }
-        if (code == null || code.isBlank()) {
-            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
-        }
         emailVerificationCapability.verifyCode(email, code);
     }
 }

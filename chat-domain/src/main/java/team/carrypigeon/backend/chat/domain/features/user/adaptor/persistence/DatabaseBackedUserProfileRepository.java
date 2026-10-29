@@ -50,18 +50,16 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
      * 持久化新的用户资料。
      */
     @Override
-    public UserProfile save(UserProfile userProfile) {
+    public void save(UserProfile userProfile) {
         userProfileDatabaseService.insert(toWriteRecord(userProfile));
-        return userProfile;
     }
 
     /**
      * 更新既有用户资料。
      */
     @Override
-    public UserProfile update(UserProfile userProfile) {
+    public void update(UserProfile userProfile) {
         userProfileDatabaseService.update(toWriteRecord(userProfile));
-        return userProfile;
     }
 
     private UserProfile toDomainModel(UserProfileRecord record) {

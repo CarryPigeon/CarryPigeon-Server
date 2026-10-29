@@ -11,10 +11,6 @@ import jakarta.validation.constraints.Size;
  * 边界：当前仅收敛到可由现有资料模型承接的字段。
  */
 public record PatchCurrentUserProfileRequest(
-        @Schema(description = "新的展示名", example = "Alice")
-        @NotBlank(message = "username must not be blank")
-        @Size(max = 64, message = "username length must be less than or equal to 64")
-        String username,
         @Schema(description = "用户头像相对路径", example = "avatars/u/1001.png")
         @NotNull(message = "avatar must not be null")
         @Size(max = 512, message = "avatar length must be less than or equal to 512")

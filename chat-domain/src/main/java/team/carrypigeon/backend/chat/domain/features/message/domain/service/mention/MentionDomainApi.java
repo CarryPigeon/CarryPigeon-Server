@@ -23,31 +23,21 @@ public class MentionDomainApi implements MentionApi {
         this.mentionRepository = mentionRepository;
     }
 
-    /**
-     * 查询账户的提及列表。
-     * 输入：账户、游标、未读过滤和可选频道范围。
-     * 输出：面向控制器的提及结果集合。
-     */
+    @Override
     public List<MentionResult> listMentions(ListMentionsQuery query) {
         return mentionRepository.listByAccountId(query.accountId(), query.cursorMentionId(), query.limit() + 1, query.unreadOnly(), query.channelId()).stream()
                 .map(mention -> new MentionResult(mention.mentionId(), mention.channelId(), mention.messageId(), mention.fromAccountId(), mention.targetType(), mention.targetAccountId(), mention.createdAt(), mention.read()))
                 .toList();
     }
 
-    /**
-     * 把单条提及标记为已读。
-     * 失败：当目标提及不存在时返回 not-found。
-     */
+    @Override
     public void markMentionRead(long accountId, long mentionId) {
         if (!mentionRepository.markAsRead(accountId, mentionId)) {
             throw ProblemException.of(MessageProblem.MENTION_NOT_FOUND);
         }
     }
 
-    /**
-     * 批量标记提及为已读。
-     * 输入：账户、可选上界游标和可选频道过滤范围。
-     */
+    @Override
     public void markMentionsRead(long accountId, Long beforeMentionId, Long channelId) {
         mentionRepository.markAllAsRead(accountId, beforeMentionId, channelId);
     }

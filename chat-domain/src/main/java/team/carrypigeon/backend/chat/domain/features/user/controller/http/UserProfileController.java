@@ -116,9 +116,16 @@ public class UserProfileController {
     }
 
     /**
-     * 按 v1 协议更新当前登录用户公开资料。
-     * 不包含用户名、邮箱和密码等account表信息
-     *
+     * 更新当前登录用户公开资料。<br/>
+     * 不包含用户名、邮箱和密码等account表信息<br/>
+     * ```json
+     * {
+     *   "avatar": "string",
+     *   "brief": "string",
+     *   "sex": 0,
+     *   "birthday": 0
+     * }
+     * ```
      * @param body 用户资料更新请求
      * @return HTTP 204
      */
@@ -130,11 +137,11 @@ public class UserProfileController {
             @ApiResponse(responseCode = "404", description = "资料不存在"),
             @ApiResponse(responseCode = "422", description = "请求体字段非法")
     })
-    public ResponseEntity<Void> patchCurrentUserProfile(
+    public ResponseEntity<Void> updateUserProfile(
             @AuthenticationPrincipal CpPrincipal cpPrincipal,
             @Valid @RequestBody PatchCurrentUserProfileRequest body
     ) {
-        userProfileDomainApi.updateCurrentUserProfile(
+        userProfileDomainApi.updateUserProfile(
                 new UpdateCurrentUserProfileCommand(
                     cpPrincipal.accountId(),
                     body.avatar(),
@@ -146,6 +153,13 @@ public class UserProfileController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * TODO 待审核必要性
+     * 获取当前登录用户资料。
+     *
+     * @param cpPrincipal 当前登录用户
+     * @return 统一响应包装的用户资料
+     */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/me")
     @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")

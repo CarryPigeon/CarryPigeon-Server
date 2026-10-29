@@ -29,7 +29,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.Chan
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
+import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**

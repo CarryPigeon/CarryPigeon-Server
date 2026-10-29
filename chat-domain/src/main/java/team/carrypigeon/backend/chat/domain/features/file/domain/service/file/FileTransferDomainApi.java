@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service.file;
 
 import java.io.InputStream;
-import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -25,7 +24,6 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 public class FileTransferDomainApi implements FileTransferApi {
 
     private static final Duration UPLOAD_URL_TTL = Duration.ofMinutes(10);
-    private static final Duration DOWNLOAD_URL_TTL = Duration.ofMinutes(30);
 
     private final ObjectStorageService objectStorageService;
     private final IdGenerator idGenerator;
@@ -45,7 +43,7 @@ public class FileTransferDomainApi implements FileTransferApi {
     }
 
     @Override
-    public FileUploadGrantResult createUploadGrant(long accountId, String filename, String mimeType, long sizeBytes) {
+    public FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes) {
         long fileId = idGenerator.nextLongId();
         Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
         String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
@@ -59,18 +57,13 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     @Override
     public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content) {
-        // 进行相关校验
-        FileUploadShareKeyCodec.IssuedUploadShareKey parse = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
-        if (parse.ownerAccountId() != accountId) {
+        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
+        if (issuedShareKey.ownerAccountId() != accountId) {
             throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
-        if (parse.expiresAtEpochMillis() < timeProvider.nowInstant().toEpochMilli()) {
+        if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
             throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
         }
-        if (parse.declaredSizeBytes() != sizeBytes) {
-            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
-        }
-
         objectStorageService.put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
     }
 
@@ -83,14 +76,10 @@ public class FileTransferDomainApi implements FileTransferApi {
             return Optional.empty();
         }
         StorageObject object = storageObject.get();
-        Optional<URI> redirectUrl = object.content().isPresent()
-                ? Optional.empty()
-                : Optional.of(objectStorageService.createPresignedUrl(objectKey, DOWNLOAD_URL_TTL).url());
         return Optional.of(new FileDownloadResult(
                 object.contentType(),
                 object.size(),
-                object.content(),
-                redirectUrl
+                object.content().orElseThrow()
         ));
     }
 }

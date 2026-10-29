@@ -10,9 +10,8 @@ import java.util.Map;
  *
  * @param accountId 账号 ID
  * @param expiresAt 访问令牌过期时间
- * @param serverId 服务端标识
  */
-public record RealtimeAuthSession(long accountId, Instant expiresAt, String serverId) {
+public record RealtimeAuthSession(long accountId, Instant expiresAt) {
 
     /**
      * 认证成功应答载荷。
@@ -23,8 +22,7 @@ public record RealtimeAuthSession(long accountId, Instant expiresAt, String serv
     public Map<String, Object> ackData() {
         return Map.of(
                 "uid", Long.toString(accountId),
-                "expires_at", expiresAt.toEpochMilli(),
-                "server_id", serverId
+                "expires_at", expiresAt.toEpochMilli()
         );
     }
 }

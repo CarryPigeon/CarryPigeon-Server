@@ -38,9 +38,9 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
-import team.carrypigeon.backend.chat.domain.shared.controller.CursorPageResponse;
-import team.carrypigeon.backend.chat.domain.shared.controller.OpaqueCursorCodec;
-import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
+import team.carrypigeon.backend.chat.domain.config.http.CursorPageResponse;
+import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
+import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**

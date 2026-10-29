@@ -14,7 +14,6 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.
 /**
  * 服务基础 HTTP 入口。
  * 职责：承接服务发现与认证后的节点 presence 查询入口。
- * 边界：这里只承载 v1 公开入口协议，不扩展 WS 业务事件与主业务资源接口。
  */
 @RestController
 @RequestMapping("/api/server")
@@ -33,7 +32,7 @@ public class ServerController {
     }
 
     /**
-     * 返回 v1 服务发现文档。
+     * 服务发现文档。
      *
      * @return 客户端握手阶段的发现信息
      */

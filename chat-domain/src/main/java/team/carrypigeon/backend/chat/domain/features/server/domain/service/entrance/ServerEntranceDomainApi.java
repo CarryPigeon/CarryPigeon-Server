@@ -1,14 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.server.domain.service.entrance;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.config.ws.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.features.server.config.ServerMetaProperties;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
-import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerCapabilities;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerDiscoveryDocument;
-import team.carrypigeon.backend.chat.domain.features.plugin.domain.api.catalog.PluginCatalogApi;
-import team.carrypigeon.backend.chat.domain.shared.domain.server.ServerIdentityProvider;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
 /**
@@ -19,47 +16,28 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 @Service
 public class ServerEntranceDomainApi implements ServerEntranceApi {
 
-    private static final String DEFAULT_BRIEF = "A self-hosted chat server";
-    private static final String DEFAULT_AVATAR = "/api/files/download/server_avatar";
-    private static final String API_VERSION = "1.0";
-
-    private final ServerIdentityProvider serverIdentityProvider;
-    private final String applicationName;
+    private final ServerMetaProperties serverMetaProperties;
     private final RealtimeServerProperties realtimeServerProperties;
     private final TimeProviderImpl timeProvider;
-    private final PluginCatalogApi pluginCatalogApi;
 
     @Autowired
     public ServerEntranceDomainApi(
-            ServerIdentityProvider serverIdentityProvider,
-            @Value("${spring.application.name:CarryPigeonBackend}") String applicationName,
-            RealtimeServerProperties realtimeServerProperties,
-            TimeProviderImpl timeProvider,
-            PluginCatalogApi pluginCatalogApi
+        ServerMetaProperties serverMetaProperties,
+        RealtimeServerProperties realtimeServerProperties,
+        TimeProviderImpl timeProvider
     ) {
-        this.serverIdentityProvider = serverIdentityProvider;
-        this.applicationName = applicationName;
+        this.serverMetaProperties = serverMetaProperties;
         this.realtimeServerProperties = realtimeServerProperties;
         this.timeProvider = timeProvider;
-        this.pluginCatalogApi = pluginCatalogApi;
     }
 
-    /**
-     * 返回 v1 服务发现文档。
-     *
-     * @return 客户端握手阶段可直接消费的发现信息
-     */
+    @Override
     public ServerDiscoveryDocument getServerDiscoveryDocument() {
         return new ServerDiscoveryDocument(
-                serverIdentityProvider.id(),
-                applicationName,
-                DEFAULT_BRIEF,
-                DEFAULT_AVATAR,
-                API_VERSION,
-                API_VERSION,
+                serverMetaProperties.getId(),
+                serverMetaProperties.getName(),
+                serverMetaProperties.getDescription(),
                 realtimeServerProperties.wsUrl(),
-                pluginCatalogApi.requiredPluginIds(),
-                new ServerCapabilities(true, true, realtimeServerProperties.enabled()),
                 timeProvider.nowMillis()
         );
     }

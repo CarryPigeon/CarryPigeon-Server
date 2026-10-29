@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.shared.controller.support.HttpRequestMdcFilter;
+import team.carrypigeon.backend.chat.domain.config.http.support.HttpRequestMdcFilter;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 

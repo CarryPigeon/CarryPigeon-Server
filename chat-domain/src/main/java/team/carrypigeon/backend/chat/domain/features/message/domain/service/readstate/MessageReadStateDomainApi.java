@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.input.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
@@ -47,25 +46,25 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
     }
 
     @Override
-    public ChannelReadStateResult updateChannelReadState(UpdateChannelReadStateCommand command) {
+    public ChannelReadStateResult updateChannelReadState(long accountId, long channelId, long lastReadMessageId, long lastReadTime) {
         return transactionRunner.runInTransaction(afterCommit -> {
-            CPChannelMessage message = messageRepository.findById(command.lastReadMessageId())
+            CPChannelMessage message = messageRepository.findById(lastReadMessageId)
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-            if (message.channelId() != command.channelId()) {
+            if (message.channelId() != channelId) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
-            channelContextApi.requireMemberContext(command.channelId(), command.accountId());
+            channelContextApi.requireMemberContext(channelId, accountId);
             ChannelReadState current = readStateRepository
-                    .findByChannelIdAndAccountId(command.channelId(), command.accountId())
+                    .findByChannelIdAndAccountId(channelId, accountId)
                     .orElse(null);
-            if (current != null && current.lastReadMessageId() >= command.lastReadMessageId()) {
+            if (current != null && current.lastReadMessageId() >= lastReadMessageId) {
                 return toResult(current);
             }
-            Instant readTime = Instant.ofEpochMilli(command.lastReadTime());
+            Instant readTime = Instant.ofEpochMilli(lastReadTime);
             ChannelReadState updated = new ChannelReadState(
-                    command.channelId(),
-                    command.accountId(),
-                    command.lastReadMessageId(),
+                    channelId,
+                    accountId,
+                    lastReadMessageId,
                     readTime,
                     current == null ? readTime : current.createdAt(),
                     readTime
@@ -74,7 +73,7 @@ public class MessageReadStateDomainApi implements MessageReadStateApi {
                 messageEventNotifier.readStateUpdated(afterCommit, updated);
                 return toResult(updated);
             }
-            return readStateRepository.findByChannelIdAndAccountId(command.channelId(), command.accountId())
+            return readStateRepository.findByChannelIdAndAccountId(channelId, accountId)
                     .map(this::toResult)
                     .orElseGet(() -> toResult(updated));
         });

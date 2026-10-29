@@ -107,11 +107,11 @@ public class RedisCacheService implements CacheService {
         requireKey(key);
         requireValue(expectedValue);
         try {
-            return Boolean.TRUE.equals(redisTemplate.execute(
-                    CONSUME_IF_EQUALS_SCRIPT,
-                    List.of(key),
-                    expectedValue
-            ));
+            return redisTemplate.execute(
+                CONSUME_IF_EQUALS_SCRIPT,
+                List.of(key),
+                expectedValue
+            );
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to consume cache entry", ex);
         }
@@ -131,7 +131,7 @@ public class RedisCacheService implements CacheService {
     public boolean exists(String key) {
         requireKey(key);
         try {
-            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+            return redisTemplate.hasKey(key);
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to check cache entry", ex);
         }

@@ -6,8 +6,6 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.RecallChannelMessageCommand;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SendChannelMessageCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
@@ -60,61 +58,61 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
     }
 
     @Override
-    public ChannelMessageResult sendChannelMessage(SendChannelMessageCommand command) {
-        CPChannelMessage persisted = transactionRunner.runInTransaction(afterCommit -> {
+    public ChannelMessageResult sendChannelMessage(long accountId, long channelId, String domain, Map<String, Object> data, List<Long> mentions) {
+        long messageId = transactionRunner.runInTransaction(afterCommit -> {
             // 拉取上下文
-            ChannelContext channelContext = channelContextApi.requireMemberContext(command.channelId(), command.accountId());
+            ChannelContext channelContext = channelContextApi.requireMemberContext(channelId, accountId);
             // 检查权限
             if (channelContext.isMuted()) {
                 throw ProblemException.of(MessageProblem.USER_MUTED);
             }
             // 存在性校验
-            if (!channelMessageDispatcher.supports(command.domain())) {
+            if (!channelMessageDispatcher.supports(domain)) {
                 throw ProblemException.of(MessageProblem.UNSUPPORTED_DOMAIN);
             }
             // 组装消息
             CPChannelMessage message = new CPChannelMessage(
                     idGenerator.nextLongId(),
-                    command.accountId(),
-                    command.channelId(),
-                    command.domain(),
-                    command.data(),
+                    accountId,
+                    channelId,
+                    domain,
+                    data,
                     timeProvider.nowInstant(),
-                    command.mentions(),
+                    mentions,
                     "",
                     CPMessageStatus.SENT
             );
             // 处理消息
-            CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(command.domain());
+            CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(domain);
             // 持久化消息
             CPChannelMessage saved = messageRepository.save(handler.handle(message));
             // 通知所有人
             messageEventNotifier.messageCreated(
                     afterCommit,
                     saved,
-                    channelContextApi.memberAccountIds(command.channelId())
+                    channelContextApi.memberAccountIds(channelId)
             );
-            return saved;
+            return saved.messageId();
         });
-        return ChannelMessageResult.from(persisted);
+        return new ChannelMessageResult(messageId);
     }
 
     @Override
-    public void recallChannelMessage(RecallChannelMessageCommand command) {
+    public void recallChannelMessage(long accountId, long channelId, long messageId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 查询已有的消息
-            CPChannelMessage existingMessage = messageRepository.findById(command.messageId())
+            CPChannelMessage existingMessage = messageRepository.findById(messageId)
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             // 验证消息属于该频道
-            if (existingMessage.channelId() != command.channelId()) {
+            if (existingMessage.channelId() != channelId) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             // 验证操作权限
             ChannelContext operatorContext = channelContextApi.requireMemberContext(
                     existingMessage.channelId(),
-                    command.accountId()
+                    accountId
             );
-            boolean senderRecallingOwnMessage = existingMessage.senderId() == command.accountId();
+            boolean senderRecallingOwnMessage = existingMessage.senderId() == accountId;
             boolean moderatorRecallingMemberMessage = operatorContext.isModerator()
                     && !channelContextApi.moderatorAccounts(existingMessage.channelId()).contains(existingMessage.senderId());
             if (operatorContext.isMuted() || (!senderRecallingOwnMessage && !moderatorRecallingMemberMessage)) {

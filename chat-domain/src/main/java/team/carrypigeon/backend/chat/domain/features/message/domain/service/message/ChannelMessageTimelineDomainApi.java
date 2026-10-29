@@ -56,7 +56,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
                             messageRepository.findByChannelIdAfter(channel.channelId(), query.aroundMessageId(), afterCount).stream()
                     )
                     .sorted(Comparator.comparingLong(CPChannelMessage::messageId).reversed())
-                    .map(ChannelMessageResult::from)
+                    .map(cpChannelMessage -> new ChannelMessageResult(cpChannelMessage.messageId()))
                     .toList();
             return new ChannelMessageHistoryResult(messages, null);
         }
@@ -65,7 +65,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
                         query.cursorMessageId(),
                         query.limit() + 1
                 ).stream()
-                .map(ChannelMessageResult::from)
+                .map(cpChannelMessage -> new ChannelMessageResult(cpChannelMessage.messageId()))
                 .toList();
         boolean hasMore = messages.size() > query.limit();
         List<ChannelMessageResult> pageItems = hasMore ? messages.subList(0, query.limit()) : messages;
@@ -86,7 +86,7 @@ public class ChannelMessageTimelineDomainApi implements ChannelMessageTimelineAp
                         query.afterMessageId(),
                         query.limit() + 1
                 ).stream()
-                .map(ChannelMessageResult::from)
+                .map(cpChannelMessage -> new ChannelMessageResult(cpChannelMessage.messageId()))
                 .toList();
         return new ChannelMessageSearchResult(messages);
     }

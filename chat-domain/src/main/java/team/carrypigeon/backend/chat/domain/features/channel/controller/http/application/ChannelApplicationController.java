@@ -28,7 +28,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.controller.http.app
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.CreateChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.DecideChannelApplicationRequest;
-import team.carrypigeon.backend.chat.domain.shared.controller.error.ApiErrorResponse;
+import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**

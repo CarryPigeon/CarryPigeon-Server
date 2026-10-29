@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.config.server.ServerIdentityProperties;
 import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
 import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeAuthSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -28,7 +27,6 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 @Slf4j
 public final class RealtimeAuthenticationCoordinator {
     private final TimeProviderImpl timeProvider;
-    private final ServerIdentityProperties serverIdentityProperties;
     private final RealtimeConnectionIndex realtimeConnectionIndex;
     private final AuthTokenApi authTokenApi;
     private final int authenticationTimeoutSeconds;
@@ -36,7 +34,6 @@ public final class RealtimeAuthenticationCoordinator {
 
     public RealtimeAuthenticationCoordinator(
         TimeProviderImpl timeProvider,
-        ServerIdentityProperties serverIdentityProperties,
         RealtimeConnectionIndex realtimeConnectionIndex,
         AuthTokenApi authTokenApi,
         int authenticationTimeoutSeconds,
@@ -44,7 +41,6 @@ public final class RealtimeAuthenticationCoordinator {
     ) {
         this.timeProvider = timeProvider;
         this.authTokenApi = authTokenApi;
-        this.serverIdentityProperties = serverIdentityProperties;
         this.realtimeConnectionIndex = realtimeConnectionIndex;
         this.authenticationTimeoutSeconds = authenticationTimeoutSeconds;
         this.frameCodec = frameCodec;
@@ -79,8 +75,7 @@ public final class RealtimeAuthenticationCoordinator {
                 authentication.accountId(), requestId, reauth);
         return new RealtimeAuthSession(
                 authentication.accountId(),
-                authentication.expiresAt(),
-                serverIdentityProperties.id()
+                authentication.expiresAt()
         );
     }
 

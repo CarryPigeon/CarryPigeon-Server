@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+
 import java.util.List;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.input.UpdateChannelReadStateCommand;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.ChannelReadStateResponse;
@@ -39,7 +39,7 @@ public class ChannelReadStateController {
     private final MessageReadStateApi messageReadStateApi;
 
     public ChannelReadStateController(
-            MessageReadStateApi messageReadStateApi
+        MessageReadStateApi messageReadStateApi
     ) {
         this.messageReadStateApi = messageReadStateApi;
     }
@@ -52,12 +52,12 @@ public class ChannelReadStateController {
         @Valid @RequestBody UpdateChannelReadStateRequest request,
         @AuthenticationPrincipal CpPrincipal principal
     ) {
-        ChannelReadStateResult result = messageReadStateApi.updateChannelReadState(new UpdateChannelReadStateCommand(
-                principal.accountId(),
-                channelId,
-                request.lastReadMid(),
-                request.lastReadTime()
-        ));
+        ChannelReadStateResult result = messageReadStateApi.updateChannelReadState(
+            principal.accountId(),
+            channelId,
+            request.lastReadMid(),
+            request.lastReadTime()
+        );
         return new ChannelReadStateResponse(result.cid(), result.uid(), result.lastReadMid(), result.lastReadTime());
     }
 
@@ -73,8 +73,8 @@ public class ChannelReadStateController {
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
-                .map(result -> new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime()))
-                .toList();
+            .map(result -> new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime()))
+            .toList();
         return new UnreadListResponse(items);
     }
 }
