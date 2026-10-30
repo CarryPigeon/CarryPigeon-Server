@@ -1,4 +1,6 @@
-package team.carrypigeon.backend.infrastructure.basic.realtime.downlink;
+package team.carrypigeon.backend.infrastructure.basic.realtime;
+
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
 
 /**
  * 服务端下行帧。

@@ -29,20 +29,6 @@ public record RealtimeClientMessage(
     }
 
     /**
-     * 读取客户端声明的最后事件 ID，用于认证成功后的续传。
-     *
-     * @return 最后事件 ID，缺失时为 null
-     */
-    public String lastEventId() {
-        Map<String, Object> resume = objectValue("resume");
-        if (resume == null) {
-            return null;
-        }
-        Object value = resume.get("last_event_id");
-        return value == null ? null : String.valueOf(value);
-    }
-
-    /**
      * 读取客户端命令载荷中的文本字段。
      *
      * @param key data 字段名

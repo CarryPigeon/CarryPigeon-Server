@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.uplink;
+package team.carrypigeon.backend.infrastructure.basic.realtime.connection;
 
 import java.time.Instant;
 import java.util.Map;

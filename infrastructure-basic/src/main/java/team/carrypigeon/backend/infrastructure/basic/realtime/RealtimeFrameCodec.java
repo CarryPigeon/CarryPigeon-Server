@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.basic.realtime;
 
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeFrame;
 import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeClientMessage;
 
 /**
@@ -70,21 +69,6 @@ public final class RealtimeFrameCodec {
      */
     public RealtimeClientMessage decode(String text) {
         return jsonProvider.fromJson(text, RealtimeClientMessage.class);
-    }
-
-    /**
-     * 校验客户端 envelope 的最小结构。
-     * 失败语义：envelope 缺失或 type 缺失、空白时抛出 {@link RealtimeProtocolException}。
-     *
-     * @param message 客户端消息
-     */
-    public void validate(RealtimeClientMessage message) {
-        if (message == null) {
-            throw new RealtimeProtocolException("frame_invalid", "frame must be an object");
-        }
-        if (message.type() == null || message.type().isBlank()) {
-            throw new RealtimeProtocolException("type_blank", "type must not be blank");
-        }
     }
 
     /**

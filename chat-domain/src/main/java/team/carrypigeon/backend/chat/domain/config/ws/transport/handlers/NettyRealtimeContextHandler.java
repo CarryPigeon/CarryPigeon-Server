@@ -1,11 +1,11 @@
-package team.carrypigeon.backend.chat.domain.config.ws.handlers;
+package team.carrypigeon.backend.chat.domain.config.ws.transport.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.config.ws.context.RealtimeContext;
+import team.carrypigeon.backend.chat.domain.config.ws.transport.NettyRealtimeAttributes;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAttributes;
 
 import java.util.UUID;
 
@@ -14,21 +14,22 @@ import java.util.UUID;
  * 包含用户id,request id,trace id，以及路由信息
  *
  */
-public class RealtimeContextHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+public class NettyRealtimeContextHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, TextWebSocketFrame msg) {
+        RealtimeAttributes attributes = new NettyRealtimeAttributes(ctx.channel());
         try (LogContexts.Scope ignored = LogContexts.openScope()) {
-            CpPrincipal principal = RealtimeContext.getAuthenticatedPrincipalKey(ctx.channel());
-            if (principal != null) {
-                LogContexts.uid(String.valueOf(principal.accountId()));
+            Long accountId = attributes.getAccountId();
+            if (accountId != null) {
+                LogContexts.uid(String.valueOf(accountId));
             }
             LogContexts.route("websocket");
             String id = UUID.randomUUID().toString();
             LogContexts.traceId(id);
-            String sessionId = RealtimeContext.getSessionIdKey(ctx.channel());
+            String sessionId = attributes.getSessionId();
             if (sessionId==null){
                 sessionId = UUID.randomUUID().toString();
-                RealtimeContext.setSessionIdKey(ctx.channel(), sessionId);
+                attributes.setSessionId(sessionId);
             }
             LogContexts.sessionId(sessionId);
             ctx.fireChannelRead(msg.retain());

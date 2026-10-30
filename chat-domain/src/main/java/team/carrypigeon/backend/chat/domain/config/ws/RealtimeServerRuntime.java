@@ -10,6 +10,8 @@ import java.net.InetSocketAddress;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.chat.domain.config.ws.transport.NettyHandlerInitializer;
+import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProperties;
 
 /**
  * Netty 实时通道运行时。
@@ -20,13 +22,13 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class RealtimeServerRuntime implements SmartLifecycle {
     private final RealtimeServerProperties properties;
-    private final RealtimeChannelInitializer initializer;
+    private final NettyHandlerInitializer initializer;
     private volatile boolean running;
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
     private Channel serverChannel;
 
-    public RealtimeServerRuntime(RealtimeServerProperties properties, RealtimeChannelInitializer initializer) {
+    public RealtimeServerRuntime(RealtimeServerProperties properties, NettyHandlerInitializer initializer) {
         this.properties = properties;
         this.initializer = initializer;
     }

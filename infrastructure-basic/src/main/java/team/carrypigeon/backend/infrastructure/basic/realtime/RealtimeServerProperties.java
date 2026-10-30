@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws;
+package team.carrypigeon.backend.infrastructure.basic.realtime;
 
 import java.time.Duration;
 

@@ -1,11 +1,10 @@
-package team.carrypigeon.backend.chat.domain.config.ws.uplink;
+package team.carrypigeon.backend.infrastructure.basic.realtime.uplink;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandHandler;
 
 /**
  * 实时上行命令注册表。

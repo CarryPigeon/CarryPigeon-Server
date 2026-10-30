@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws.handlers;
+package team.carrypigeon.backend.chat.domain.config.ws.transport.handlers;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -13,19 +13,18 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.chat.domain.config.ws.RealtimeAuthenticationCoordinator;
-import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
-import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
-import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
-import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.chat.domain.config.ws.transport.*;
+import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandRegistry;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthState;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeProtocolException;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeFrame;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAttributes;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnection;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeScheduler;
+import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrame;
 import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeClientMessage;
 import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandHandler;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * Netty 实时通道处理器。
@@ -33,38 +32,32 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
  * 边界：认证机制、续传与帧编解码由聚焦协作对象承担；聊天写入只走 HTTP。
  */
 @Slf4j
-public class RealtimeHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
     private final RealtimeFrameCodec frameCodec;
-    private final RealtimeAuthenticationCoordinator authenticationCoordinator;
-    private final RealtimeResumeCoordinator resumeCoordinator;
+    private final RealtimeAuthState realtimeAuthState;
     private final RealtimeCommandRegistry commandRegistry;
+    private final TimeProvider timeProvider;
+    private final int authenticationTimeoutSeconds;
 
-    public RealtimeHandler(
-        TimeProviderImpl timeProvider,
-        RealtimeConnectionIndex realtimeConnectionIndex,
+    public NettyRealtimeServiceHandler(
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
-        RealtimeResumeCoordinator resumeCoordinator,
-        AuthTokenApi authTokenApi,
+        RealtimeAuthState realtimeAuthState,
+        TimeProvider timeProvider,
         int authenticationTimeoutSeconds
     ) {
         this.frameCodec = frameCodec;
+        this.realtimeAuthState = realtimeAuthState;
         this.commandRegistry = commandRegistry;
-        this.resumeCoordinator = resumeCoordinator;
-        this.authenticationCoordinator = new RealtimeAuthenticationCoordinator(
-            timeProvider,
-            realtimeConnectionIndex,
-            authTokenApi,
-            authenticationTimeoutSeconds,
-            frameCodec
-        );
+        this.timeProvider = timeProvider;
+        this.authenticationTimeoutSeconds = authenticationTimeoutSeconds;
     }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
         if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete handshakeComplete) {
             log.debug("Realtime handshake completed, uri={}", handshakeComplete.requestUri());
-            authenticationCoordinator.scheduleAuthenticationTimeout(context);
+            new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider).scheduleAuthenticationTimeout(authenticationTimeoutSeconds);
             return;
         }
         if (event instanceof IdleStateEvent) {
@@ -81,47 +74,42 @@ public class RealtimeHandler extends SimpleChannelInboundHandler<TextWebSocketFr
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, TextWebSocketFrame frame) {
-        RealtimeClientMessage request = null;
+        RealtimeClientMessage request = frameCodec.decode(frame.text());
+        // 创建上下文
+        RealtimeConnection connection = new NettyRealtimeConnection(context);
+        RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
+        RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes,timeProvider);
         try {
-            request = frameCodec.decode(frame.text());
-            if (log.isDebugEnabled()) {
-                log.debug("Realtime frame received, type={}, id={}, bytes={}",
-                    request.type(), request.id(), frame.text().length());
+            if (request == null) {
+                throw new RealtimeProtocolException("frame_invalid", "frame must be an object");
             }
-            frameCodec.validate(request);
+            if (request.type() == null || request.type().isBlank()) {
+                throw new RealtimeProtocolException("type_blank", "type must not be blank");
+            }
+
             Optional<RealtimeCommandHandler> handler = commandRegistry.find(request.type());
             if (handler.isEmpty()) {
-                log.debug("Realtime frame rejected, reason=unsupported_command, type={}", request.type());
-                writeErrorAndCloseIfUnauthenticated(context, request, "unsupported_command", "unsupported realtime command");
+                writeErrorAndCloseIfUnauthenticated(context,attributes, request, "unsupported_command", "unsupported realtime command");
                 return;
             }
-            if (handler.get().requiresAuthentication() && !authenticationCoordinator.isAuthenticated(context)) {
-                log.debug("Realtime frame rejected, reason=unauthorized, type={}", request.type());
-                writeErrorAndCloseIfUnauthenticated(context, request, "unauthorized", "auth must be the first realtime command");
+            if (handler.get().requiresAuthentication() && attributes.getAccountId() == null) {
+                writeErrorAndCloseIfUnauthenticated(context, attributes, request, "unauthorized", "auth must be the first realtime command");
                 return;
             }
-            handler.get().handle(
-                new RealtimeCommandScopeImpl(context, request, authenticationCoordinator, resumeCoordinator, frameCodec),
-                request
-            );
-        } catch (RealtimeProtocolException exception) {
-            log.debug("Realtime frame rejected, reason={}", exception.reason());
-            writeErrorAndCloseIfUnauthenticated(context, request, "validation_failed", exception.getMessage());
-        } catch (InfrastructureException exception) {
-            log.debug("Realtime frame rejected, reason=request_body_invalid", exception);
-            writeErrorAndCloseIfUnauthenticated(context, request, "validation_failed", "request body is invalid");
-        } catch (ProblemException exception) {
-            log.debug("Realtime frame rejected, reason={}", exception.reason());
-            writeErrorAndCloseIfUnauthenticated(context, request, exception.reason(), exception.getMessage());
+
+            handler.get().handle(request, connection, attributes, scheduler, realtimeAuthState);
+
         } catch (RuntimeException exception) {
-            log.warn("Failed to handle realtime frame", exception);
-            writeErrorAndCloseIfUnauthenticated(context, request, "internal_error", "internal server error");
+            writeErrorAndCloseIfUnauthenticated(context, attributes, request, "internal_server_error", "internal server error");
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
-        authenticationCoordinator.channelInactive(context);
+        RealtimeConnection connection = new NettyRealtimeConnection(context);
+        RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
+        RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes, timeProvider);
+        realtimeAuthState.onChannelInactive(connection,attributes,scheduler);
         super.channelInactive(context);
     }
 
@@ -131,7 +119,6 @@ public class RealtimeHandler extends SimpleChannelInboundHandler<TextWebSocketFr
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
-        log.warn("Closing realtime channel because of exception", cause);
         context.close();
     }
 
@@ -155,11 +142,12 @@ public class RealtimeHandler extends SimpleChannelInboundHandler<TextWebSocketFr
      */
     private void writeErrorAndCloseIfUnauthenticated(
         ChannelHandlerContext context,
+        RealtimeAttributes attributes,
         RealtimeClientMessage request,
         String reason,
         String message
     ) {
-        if (authenticationCoordinator.isAuthenticated(context)) {
+        if (attributes.getAccountId() != null) {
             writeFrame(context, commandError(request, reason, message));
             return;
         }

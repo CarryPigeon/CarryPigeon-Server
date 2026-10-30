@@ -1,5 +1,10 @@
 package team.carrypigeon.backend.infrastructure.basic.realtime.uplink;
 
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthState;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAttributes;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnection;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeScheduler;
+
 /**
  * 实时通道上行命令处理器。
  * 职责：处理一条客户端命令，并通过上下文回复结果。
@@ -24,10 +29,18 @@ public interface RealtimeCommandHandler {
 
     /**
      * 处理一条命令。
-     * 失败语义：抛出 {@code ProblemException} 或 {@code RealtimeProtocolException} 时由分派层转换为命令错误帧。
      *
-     * @param context 当前连接上下文
-     * @param command 客户端命令
+     * @param message           命令数据
+     * @param connection        当前连接
+     * @param attributes        连接属性
+     * @param scheduler         调度器
+     * @param realtimeAuthState 认证状态
      */
-    void handle(RealtimeCommandContext context, RealtimeClientMessage command);
+    void handle(
+        RealtimeClientMessage message,
+        RealtimeConnection connection,
+        RealtimeAttributes attributes,
+        RealtimeScheduler scheduler,
+        RealtimeAuthState realtimeAuthState
+    );
 }

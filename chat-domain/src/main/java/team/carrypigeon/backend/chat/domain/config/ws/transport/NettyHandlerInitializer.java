@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.ws;
+package team.carrypigeon.backend.chat.domain.config.ws.transport;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -7,13 +7,11 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.chat.domain.config.ws.downlink.RealtimeConnectionIndex;
-import team.carrypigeon.backend.chat.domain.config.ws.handlers.RealtimeContextHandler;
-import team.carrypigeon.backend.chat.domain.config.ws.handlers.RealtimeHandler;
-import team.carrypigeon.backend.chat.domain.config.ws.resume.RealtimeResumeCoordinator;
-import team.carrypigeon.backend.chat.domain.config.ws.uplink.RealtimeCommandRegistry;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.chat.domain.config.ws.transport.handlers.NettyRealtimeContextHandler;
+import team.carrypigeon.backend.chat.domain.config.ws.transport.handlers.NettyRealtimeServiceHandler;
+import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProperties;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthState;
+import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandRegistry;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 
@@ -23,34 +21,26 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
  * 边界：只装配协议处理链，不负责服务启动与线程生命周期，也不承载命令语义。
  */
 @Component
-public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel> {
+public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final RealtimeServerProperties properties;
-    private final IdGenerator idGenerator;
     private final TimeProviderImpl timeProvider;
-    private final RealtimeConnectionIndex realtimeConnectionIndex;
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeCommandRegistry commandRegistry;
-    private final RealtimeResumeCoordinator resumeCoordinator;
-    private final AuthTokenApi authTokenApi;
+    private final RealtimeAuthState realtimeAuthState;
 
-    public RealtimeChannelInitializer(
+    public NettyHandlerInitializer(
         RealtimeServerProperties properties,
-        IdGenerator idGenerator,
         TimeProviderImpl timeProvider,
-        RealtimeConnectionIndex realtimeConnectionIndex,
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
-        RealtimeResumeCoordinator resumeCoordinator, AuthTokenApi authTokenApi
+        RealtimeAuthState realtimeAuthState
     ) {
         this.properties = properties;
-        this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
-        this.realtimeConnectionIndex = realtimeConnectionIndex;
+        this.realtimeAuthState = realtimeAuthState;
         this.frameCodec = frameCodec;
         this.commandRegistry = commandRegistry;
-        this.resumeCoordinator = resumeCoordinator;
-        this.authTokenApi = authTokenApi;
     }
 
     @Override
@@ -63,18 +53,16 @@ public class RealtimeChannelInitializer extends ChannelInitializer<SocketChannel
         // 升级为WebSocket
         pipeline.addLast(new WebSocketServerProtocolHandler("/api/ws"));
         // 空闲检测
-        pipeline.addLast(RealtimeHandler.idleStateHandler(properties.getReadIdleTimeoutSeconds()));
+        pipeline.addLast(NettyRealtimeServiceHandler.idleStateHandler(properties.getReadIdleTimeoutSeconds()));
         // WebSocket处理
         // 上下文注入
-        pipeline.addLast(new RealtimeContextHandler());
+        pipeline.addLast(new NettyRealtimeContextHandler());
         // 事件处理
-        pipeline.addLast(new RealtimeHandler(
-            timeProvider,
-            realtimeConnectionIndex,
+        pipeline.addLast(new NettyRealtimeServiceHandler(
             frameCodec,
             commandRegistry,
-            resumeCoordinator,
-            authTokenApi,
+            realtimeAuthState,
+            timeProvider,
             properties.getAuthenticationTimeoutSeconds()
         ));
     }
