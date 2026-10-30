@@ -4,6 +4,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnection;
 
+import java.util.Objects;
+
 /**
  * 实时命令作用域实现。
  * 职责：把一次命令处理绑定到当前连接、当前命令与回复出口，并实现内建命令所需的认证与续传能力。
@@ -37,5 +39,17 @@ public final class NettyRealtimeConnection implements RealtimeConnection {
     @Override
     public void close() {
         context.close();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NettyRealtimeConnection other)) return false;
+        return context.channel().equals(other.context.channel());
+    }
+
+    @Override
+    public int hashCode() {
+        return context.channel().hashCode();
     }
 }
