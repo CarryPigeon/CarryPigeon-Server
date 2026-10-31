@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel;
 
-import java.util.List;
-
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
+
+import java.util.List;
 
 /**
  * 频道核心领域 API。

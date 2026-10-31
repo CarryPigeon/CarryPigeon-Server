@@ -1,14 +1,16 @@
-package team.carrypigeon.backend.chat.domain.config.http.support;
+package team.carrypigeon.backend.chat.domain.config.http.support.log;
+
+import java.io.IOException;
+import java.util.UUID;
+
+import org.springframework.core.Ordered;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.UUID;
-import org.springframework.core.Ordered;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /**

@@ -2,10 +2,11 @@ package team.carrypigeon.backend.infrastructure.basic.realtime;
 
 import java.time.Duration;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * 实时通道配置。
