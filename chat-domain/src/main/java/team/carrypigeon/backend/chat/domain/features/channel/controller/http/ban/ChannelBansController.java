@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,10 +21,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanListItemResponse;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
@@ -31,6 +34,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.resu
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道禁言 HTTP 入口。
@@ -161,25 +166,44 @@ public class ChannelBansController {
     @GetMapping("/{channelId}/bans")
     @Operation(
             summary = "获取禁言列表",
-            description = "返回指定频道的禁言记录列表。列表包含已解除与已过期的历史记录，由调用方按 until 自行过滤。"
+            description = "分页返回指定频道的禁言记录列表。列表包含已解除与已过期的历史记录，由调用方按 until 自行过滤。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为禁言列表外壳，items 为禁言记录数组",
-                    content = @Content(schema = @Schema(implementation = ChannelBanListResponse.class))),
+            @ApiResponse(responseCode = "200", description = "响应体为分页外壳，items 为禁言记录数组",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_ban_forbidden",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "频道不存在",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "page 或 page_size 超出范围，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ChannelBanListResponse listChannelBans(
+    public PageResponse<ChannelBanListItemResponse> listChannelBans(
             @Parameter(description = "目标频道 ID", example = "2001")
             @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @Parameter(description = "页码，从 1 开始", example = "1")
+            @RequestParam(name = "page", defaultValue = "1")
+            @Min(value = 1, message = "page must be greater than 0") int page,
+            @Parameter(description = "每页条数，范围 1..50", example = "20")
+            @RequestParam(name = "page_size", defaultValue = "20")
+            @Min(value = 1, message = "page_size must be between 1 and 50")
+            @Max(value = 50, message = "page_size must be between 1 and 50") int pageSize,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return new ChannelBanListResponse(channelBanApi.listChannelBans(cpPrincipal.accountId(), channelId)
-            .stream().map(this::toChannelBanListItemResponse).toList());
+        PageResult<ChannelBanListItemResult> result = channelBanApi.listChannelBans(
+                cpPrincipal.accountId(),
+                channelId,
+                new PageQuery(page, pageSize)
+        );
+        return new PageResponse<>(
+                result.items().stream().map(this::toChannelBanListItemResponse).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total(),
+                result.hasMore()
+        );
     }
 
     private ChannelBanListItemResponse toChannelBanListItemResponse(ChannelBanListItemResult result) {

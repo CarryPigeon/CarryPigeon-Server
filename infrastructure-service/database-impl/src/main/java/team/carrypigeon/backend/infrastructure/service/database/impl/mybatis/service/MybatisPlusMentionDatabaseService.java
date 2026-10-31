@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
@@ -57,13 +61,21 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     }
 
     /**
-     * 查询提及表全部记录。
+     * 分页查询提及记录。
      */
     @Override
-    public List<MentionRecord> list() {
-        return mentionMapper.selectList(null).stream()
-                .map(MentionEntity::toRecord)
-                .toList();
+    public PageResult<MentionRecord> list(PageQuery query) {
+        IPage<MentionEntity> result = mentionMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<MentionEntity>()
+                        .orderByAsc(MentionEntity::getMentionId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(MentionEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

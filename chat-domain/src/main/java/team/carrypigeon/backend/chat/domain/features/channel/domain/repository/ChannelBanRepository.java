@@ -1,8 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
-import java.util.List;
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道禁言仓储抽象。
@@ -22,13 +23,14 @@ public interface ChannelBanRepository {
     Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId);
 
     /**
-     * 查询频道下的全部禁言记录。
-     * 说明：包含已解除与已过期的历史记录，不做生效性过滤。
+     * 分页查询频道下的禁言记录。
+     * 说明：包含已解除与已过期的历史记录，不做生效性过滤；按封禁 ID 倒序返回。
      *
      * @param channelId 频道 ID
-     * @return 禁言记录列表；频道无禁言时返回空列表
+     * @param page 分页参数
+     * @return 分页禁言记录
      */
-    List<ChannelBan> list(long channelId);
+    PageResult<ChannelBan> page(long channelId, PageQuery page);
 
     /**
      * 保存新的禁言记录。
@@ -53,4 +55,12 @@ public interface ChannelBanRepository {
      * @param banId 禁言记录 ID
      */
     void delete(long banId);
+
+    /**
+     * 删除频道下的全部禁言记录。
+     * 用途：频道删除时一次性清理依赖数据，避免先查全量再逐条删除。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 }

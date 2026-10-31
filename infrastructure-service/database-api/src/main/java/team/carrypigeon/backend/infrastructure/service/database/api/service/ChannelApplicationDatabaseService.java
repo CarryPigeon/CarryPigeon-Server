@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface ChannelApplicationDatabaseService {
     void update(ChannelApplicationRecord record);
 
     /**
-     * 查询申请表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询申请记录。
+     * 说明：按申请 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 申请记录列表
+     * @param page 分页参数
+     * @return 分页申请记录
      */
-    List<ChannelApplicationRecord> list();
+    PageResult<ChannelApplicationRecord> list(PageQuery page);
 
     /**
      * 按申请 ID 查询申请记录。
@@ -81,10 +84,19 @@ public interface ChannelApplicationDatabaseService {
     Optional<ChannelApplicationRecord> findByChannelAndApplicant(long channelId, long applicantId);
 
     /**
-     * 查询频道下的全部申请记录。
+     * 分页查询频道下的申请记录。
+     * 输出：按申请 ID 倒序返回，供申请列表分页使用。
      *
      * @param channelId 频道 ID
-     * @return 申请记录列表
+     * @param page 分页参数
+     * @return 分页申请记录
      */
-    List<ChannelApplicationRecord> listByChannelId(long channelId);
+    PageResult<ChannelApplicationRecord> pageApplicationsByChannelId(long channelId, PageQuery page);
+
+    /**
+     * 删除频道下的全部申请记录。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 }

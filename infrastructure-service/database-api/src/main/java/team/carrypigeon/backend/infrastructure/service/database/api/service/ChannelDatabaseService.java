@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 
@@ -49,12 +51,13 @@ public interface ChannelDatabaseService {
     void update(ChannelRecord record);
 
     /**
-     * 查询频道表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询频道记录。
+     * 说明：按频道 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 频道记录列表
+     * @param page 分页参数
+     * @return 分页频道记录
      */
-    List<ChannelRecord> list();
+    PageResult<ChannelRecord> list(PageQuery page);
 
     /**
      * 按频道 ID 查询频道。

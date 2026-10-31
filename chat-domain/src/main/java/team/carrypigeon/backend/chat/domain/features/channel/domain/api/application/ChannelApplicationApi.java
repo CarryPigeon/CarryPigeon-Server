@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.application;
 
-import java.util.List;
-
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道申请流领域 API。
@@ -26,13 +26,14 @@ public interface ChannelApplicationApi {
     ChannelApplicationResult createChannelApplication(long accountId, long channelId, String reason);
 
     /**
-     * 查询频道加入申请列表。
+     * 分页查询频道加入申请列表。
      *
      * @param accountId 操作者账号
      * @param channelId 频道
-     * @return 频道申请投影列表
+     * @param page 分页参数
+     * @return 分页频道申请投影
      */
-    List<ChannelApplicationResult> listChannelApplications(long accountId, long channelId);
+    PageResult<ChannelApplicationResult> listChannelApplications(long accountId, long channelId, PageQuery page);
 
     /**
      * 审批频道加入申请。

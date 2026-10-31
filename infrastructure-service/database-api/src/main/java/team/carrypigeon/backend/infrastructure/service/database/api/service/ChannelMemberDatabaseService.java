@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface ChannelMemberDatabaseService {
     void update(ChannelMemberRecord record);
 
     /**
-     * 查询频道成员表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询频道成员记录。
+     * 说明：按成员关系 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 成员关系列表
+     * @param page 分页参数
+     * @return 分页成员关系记录
      */
-    List<ChannelMemberRecord> list();
+    PageResult<ChannelMemberRecord> list(PageQuery page);
 
     /**
      * 按成员关系 ID 查询。
@@ -89,6 +92,7 @@ public interface ChannelMemberDatabaseService {
 
     /**
      * 查询频道下的全部成员关系。
+     * 说明：这是显式全量快照能力，供通知接收人与治理快照使用，不参与分页列表。
      *
      * @param channelId 频道 ID
      * @return 成员关系列表
@@ -96,10 +100,22 @@ public interface ChannelMemberDatabaseService {
     List<ChannelMemberRecord> findMembersByChannelId(long channelId);
 
     /**
-     * 查询账户参与的全部成员关系。
+     * 分页查询账户参与的全部成员关系。
+     * 输出：按频道 ID 倒序返回，供频道列表分页使用。
      *
      * @param accountId 账户 ID
-     * @return 成员关系列表
+     * @param page 分页参数
+     * @return 分页成员关系记录
      */
-    List<ChannelMemberRecord> findMembersByAccountId(long accountId);
+    PageResult<ChannelMemberRecord> pageMembersByAccountId(long accountId, PageQuery page);
+
+    /**
+     * 分页查询频道下的成员关系。
+     * 输出：按成员关系 ID 倒序返回，供频道成员列表分页使用。
+     *
+     * @param channelId 频道 ID
+     * @param page 分页参数
+     * @return 分页成员关系记录
+     */
+    PageResult<ChannelMemberRecord> pageMembersByChannelId(long channelId, PageQuery page);
 }

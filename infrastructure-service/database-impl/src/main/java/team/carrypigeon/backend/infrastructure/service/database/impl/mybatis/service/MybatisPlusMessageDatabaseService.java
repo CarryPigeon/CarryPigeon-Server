@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
@@ -67,13 +71,21 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     /**
-     * 查询消息表全部记录。
+     * 分页查询消息记录。
      */
     @Override
-    public List<MessageRecord> list() {
-        return messageMapper.selectList(null).stream()
-                .map(MessageEntity::toRecord)
-                .toList();
+    public PageResult<MessageRecord> list(PageQuery query) {
+        IPage<MessageEntity> result = messageMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<MessageEntity>()
+                        .orderByAsc(MessageEntity::getMessageId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(MessageEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

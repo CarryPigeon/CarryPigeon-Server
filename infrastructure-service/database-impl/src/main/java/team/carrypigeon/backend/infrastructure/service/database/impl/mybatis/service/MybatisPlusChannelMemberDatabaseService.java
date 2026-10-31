@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
@@ -58,13 +62,21 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     }
 
     /**
-     * 查询频道成员表全部记录。
+     * 分页查询频道成员记录。
      */
     @Override
-    public List<ChannelMemberRecord> list() {
-        return channelMemberMapper.selectList(null).stream()
-                .map(ChannelMemberEntity::toRecord)
-                .toList();
+    public PageResult<ChannelMemberRecord> list(PageQuery query) {
+        IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .orderByAsc(ChannelMemberEntity::getMemberId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**
@@ -127,6 +139,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
 
     /**
      * 查询频道下的全部成员关系。
+     * 说明：显式全量快照，供通知接收人与治理快照使用。
      */
     @Override
     public List<ChannelMemberRecord> findMembersByChannelId(long channelId) {
@@ -138,14 +151,40 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     }
 
     /**
-     * 查询账户参与的全部频道成员关系。
+     * 分页查询账户参与的全部频道成员关系。
      */
     @Override
-    public List<ChannelMemberRecord> findMembersByAccountId(long accountId) {
-        return channelMemberMapper.selectList(new LambdaQueryWrapper<ChannelMemberEntity>()
-                        .eq(ChannelMemberEntity::getAccountId, accountId))
-                .stream()
-                .map(ChannelMemberEntity::toRecord)
-                .toList();
+    public PageResult<ChannelMemberRecord> pageMembersByAccountId(long accountId, PageQuery query) {
+        IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .eq(ChannelMemberEntity::getAccountId, accountId)
+                        .orderByDesc(ChannelMemberEntity::getChannelId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
+    }
+
+    /**
+     * 分页查询频道下的成员关系。
+     */
+    @Override
+    public PageResult<ChannelMemberRecord> pageMembersByChannelId(long channelId, PageQuery query) {
+        IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .eq(ChannelMemberEntity::getChannelId, channelId)
+                        .orderByDesc(ChannelMemberEntity::getMemberId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 }

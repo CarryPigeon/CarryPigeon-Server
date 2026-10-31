@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
@@ -51,13 +55,21 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     }
 
     /**
-     * 查询频道表全部记录。
+     * 分页查询频道记录。
      */
     @Override
-    public List<ChannelRecord> list() {
-        return channelMapper.selectList(null).stream()
-                .map(ChannelEntity::toRecord)
-                .toList();
+    public PageResult<ChannelRecord> list(PageQuery query) {
+        IPage<ChannelEntity> result = channelMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelEntity>()
+                        .orderByAsc(ChannelEntity::getChannelId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 
@@ -61,8 +63,28 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
-    public List<ChannelMember> listByAccountId(long accountId) {
-        return channelMemberDatabaseService.findMembersByAccountId(accountId).stream().map(this::toDomain).toList();
+    public PageResult<ChannelMember> pageByAccountId(long accountId, PageQuery page) {
+        return toPage(channelMemberDatabaseService.pageMembersByAccountId(accountId, page));
+    }
+
+    @Override
+    public PageResult<ChannelMember> pageByChannelId(long channelId, PageQuery page) {
+        return toPage(channelMemberDatabaseService.pageMembersByChannelId(channelId, page));
+    }
+
+    /**
+     * 把成员关系分页记录转换为领域分页结果。
+     *
+     * @param result 持久化分页结果
+     * @return 领域分页结果
+     */
+    private PageResult<ChannelMember> toPage(PageResult<ChannelMemberRecord> result) {
+        return new PageResult<>(
+                result.items().stream().map(this::toDomain).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total()
+        );
     }
 
     /**

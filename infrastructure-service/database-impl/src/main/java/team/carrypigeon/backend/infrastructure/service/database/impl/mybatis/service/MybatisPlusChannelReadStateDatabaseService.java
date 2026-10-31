@@ -5,9 +5,13 @@ import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateKey;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
@@ -86,13 +90,22 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
     }
 
     /**
-     * 查询已读状态表全部记录。
+     * 分页查询已读状态记录。
      */
     @Override
-    public List<ChannelReadStateRecord> list() {
-        return channelReadStateMapper.selectList(null).stream()
-                .map(ChannelReadStateEntity::toRecord)
-                .toList();
+    public PageResult<ChannelReadStateRecord> list(PageQuery query) {
+        IPage<ChannelReadStateEntity> result = channelReadStateMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelReadStateEntity>()
+                        .orderByAsc(ChannelReadStateEntity::getChannelId)
+                        .orderByAsc(ChannelReadStateEntity::getAccountId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelReadStateEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

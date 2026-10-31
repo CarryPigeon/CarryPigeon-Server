@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.channel.adaptor.persistence;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -8,6 +7,8 @@ import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 
@@ -33,11 +34,16 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     @Override
-    public List<ChannelBan> list(long channelId) {
+    public PageResult<ChannelBan> page(long channelId, PageQuery page) {
         // 返回该频道全部禁言记录（含已解除与已过期），是否仍然生效由调用方按 revokedAt 与 expiresAt 判定
-        return channelBanDatabaseService.findByChannelId(channelId).stream()
-                .map(this::toDomain)
-                .toList();
+        PageResult<ChannelBanRecord> result =
+                channelBanDatabaseService.pageBansByChannelId(channelId, page);
+        return new PageResult<>(
+                result.items().stream().map(this::toDomain).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total()
+        );
     }
 
     @Override
@@ -54,6 +60,12 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     @Override
     public void delete(long banId) {
         channelBanDatabaseService.delete(banId);
+    }
+
+    @Override
+    public void deleteByChannelId(long channelId) {
+        // 频道删除时一次性清理禁言记录，避免先加载全量禁言再逐条删除
+        channelBanDatabaseService.deleteByChannelId(channelId);
     }
 
     /**

@@ -22,6 +22,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;

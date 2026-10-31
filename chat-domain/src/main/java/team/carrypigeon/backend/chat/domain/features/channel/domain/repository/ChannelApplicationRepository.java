@@ -1,9 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
-import java.util.List;
 import java.util.Optional;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道申请仓储抽象。
@@ -32,13 +33,14 @@ public interface ChannelApplicationRepository {
     Optional<ChannelApplication> findByRelation(long channelId, long applicantId);
 
     /**
-     * 查询频道下的全部申请记录。
-     * 说明：当前不提供分页，调用方直接消费全量列表。
+     * 分页查询频道下的申请记录。
+     * 输出：按申请 ID 倒序返回。
      *
      * @param channelId 频道 ID
-     * @return 申请记录列表；频道无申请时返回空列表
+     * @param page 分页参数
+     * @return 分页申请记录
      */
-    List<ChannelApplication> list(long channelId);
+    PageResult<ChannelApplication> page(long channelId, PageQuery page);
 
     /**
      * 保存新的申请记录。
@@ -63,4 +65,12 @@ public interface ChannelApplicationRepository {
      * @param applicationId 申请 ID
      */
     void delete(long applicationId);
+
+    /**
+     * 删除频道下的全部申请记录。
+     * 用途：频道删除时一次性清理依赖数据，避免先查全量再逐条删除。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 }

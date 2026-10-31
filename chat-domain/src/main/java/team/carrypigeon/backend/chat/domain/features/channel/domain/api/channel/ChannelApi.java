@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
-
-import java.util.List;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道核心领域 API。
@@ -12,12 +12,13 @@ import java.util.List;
 public interface ChannelApi {
 
     /**
-     * 查询当前账号可见的频道列表。
+     * 分页查询当前账号可见的频道列表。
      *
      * @param accountId 当前账号 ID
-     * @return 可见频道投影列表；账号未加入任何频道时返回空列表
+     * @param page 分页参数
+     * @return 分页频道投影；账号未加入任何频道时返回空页
      */
-    List<ChannelResult> listChannels(long accountId);
+    PageResult<ChannelResult> listChannels(long accountId, PageQuery page);
 
     /**
      * 查询当前账号可见的单个频道。

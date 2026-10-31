@@ -17,6 +17,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -59,7 +61,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
     }
 
     @Override
-    public List<ChannelBanListItemResult> listChannelBans(long accountId, long channelId) {
+    public PageResult<ChannelBanListItemResult> listChannelBans(long accountId, long channelId, PageQuery page) {
         Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
@@ -70,9 +72,11 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
         }
         // 这里不过滤 revokedAt 与 expiresAt，由调用方按需判定记录是否仍然生效
-        return channelBanRepository.list(channel.id()).stream()
+        PageResult<ChannelBan> bans = channelBanRepository.page(channel.id(), page);
+        List<ChannelBanListItemResult> items = bans.items().stream()
             .map(ChannelBanListItemResult::from)
             .toList();
+        return new PageResult<>(items, bans.page(), bans.pageSize(), bans.total());
     }
 
     @Override

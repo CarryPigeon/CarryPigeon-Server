@@ -1,11 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban;
 
-import java.util.List;
-
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道禁言领域 API。
@@ -19,12 +19,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.resu
 public interface ChannelBanApi {
 
     /**
-     * 查询频道禁言台账。
+     * 分页查询频道禁言台账。
      * @param accountId 账号 ID
      * @param channelId 频道 ID
-     * @return 禁言列表项投影列表
+     * @param page 分页参数
+     * @return 分页禁言列表项投影
      */
-    List<ChannelBanListItemResult> listChannelBans(long accountId, long channelId);
+    PageResult<ChannelBanListItemResult> listChannelBans(long accountId, long channelId, PageQuery page);
 
     /**
      * 按持续时长对频道成员执行禁言。

@@ -3,9 +3,14 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import java.util.List;
 import java.util.Optional;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.UserProfileEntity;
@@ -73,13 +78,21 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
     }
 
     /**
-     * 查询用户资料表全部记录。
+     * 分页查询用户资料记录。
      */
     @Override
-    public List<UserProfileRecord> list() {
-        return userProfileMapper.selectList(null).stream()
-                .map(UserProfileEntity::toRecord)
-                .toList();
+    public PageResult<UserProfileRecord> list(PageQuery query) {
+        IPage<UserProfileEntity> result = userProfileMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<UserProfileEntity>()
+                        .orderByAsc(UserProfileEntity::getAccountId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(UserProfileEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

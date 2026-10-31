@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface ChannelBanDatabaseService {
     void update(ChannelBanRecord record);
 
     /**
-     * 查询封禁表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询封禁记录。
+     * 说明：按封禁 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 封禁记录列表
+     * @param page 分页参数
+     * @return 分页封禁记录
      */
-    List<ChannelBanRecord> list();
+    PageResult<ChannelBanRecord> list(PageQuery page);
 
     /**
      * 按封禁 ID 查询记录。
@@ -81,10 +84,19 @@ public interface ChannelBanDatabaseService {
     Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId);
 
     /**
-     * 查询频道下的全部封禁记录。
+     * 分页查询频道下的封禁记录。
+     * 输出：按封禁 ID 倒序返回，供禁言列表分页使用。
      *
      * @param channelId 频道 ID
-     * @return 封禁记录列表
+     * @param page 分页参数
+     * @return 分页封禁记录
      */
-    List<ChannelBanRecord> findByChannelId(long channelId);
+    PageResult<ChannelBanRecord> pageBansByChannelId(long channelId, PageQuery page);
+
+    /**
+     * 删除频道下的全部封禁记录。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 }

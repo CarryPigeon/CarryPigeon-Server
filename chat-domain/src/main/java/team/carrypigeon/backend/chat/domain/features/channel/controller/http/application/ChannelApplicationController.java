@@ -8,9 +8,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
-
-import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,16 +20,19 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationListResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.CreateChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.DecideChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道申请 HTTP 入口。
@@ -98,27 +101,43 @@ public class ChannelApplicationController {
      * @return 入群申请列表响应
      */
     @GetMapping("/{channelId}/applications")
-    @Operation(summary = "获取入群申请列表", description = "按频道读取入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
+    @Operation(summary = "获取入群申请列表", description = "分页读取频道入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为申请列表外壳，items 为申请数组",
-                    content = @Content(schema = @Schema(implementation = ChannelApplicationListResponse.class))),
+            @ApiResponse(responseCode = "200", description = "响应体为分页外壳，items 为申请数组",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_invite_forbidden",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "频道不存在",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "page 或 page_size 超出范围，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ChannelApplicationListResponse listApplications(
+    public PageResponse<ChannelApplicationResponse> listApplications(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @Parameter(description = "页码，从 1 开始", example = "1")
+        @RequestParam(name = "page", defaultValue = "1")
+        @Min(value = 1, message = "page must be greater than 0") int page,
+        @Parameter(description = "每页条数，范围 1..50", example = "20")
+        @RequestParam(name = "page_size", defaultValue = "20")
+        @Min(value = 1, message = "page_size must be between 1 and 50")
+        @Max(value = 50, message = "page_size must be between 1 and 50") int pageSize,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        List<ChannelApplicationResponse> items = channelApplicationApi
-            .listChannelApplications(cpPrincipal.accountId(), channelId).stream()
-            .map(this::toResponse)
-            .toList();
-        return new ChannelApplicationListResponse(items);
+        PageResult<ChannelApplicationResult> result = channelApplicationApi.listChannelApplications(
+                cpPrincipal.accountId(),
+                channelId,
+                new PageQuery(page, pageSize)
+        );
+        return new PageResponse<>(
+                result.items().stream().map(this::toResponse).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total(),
+                result.hasMore()
+        );
     }
 
     /**

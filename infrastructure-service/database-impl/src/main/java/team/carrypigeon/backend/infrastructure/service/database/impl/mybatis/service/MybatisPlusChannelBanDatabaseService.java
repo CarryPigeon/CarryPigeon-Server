@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelBanEntity;
@@ -39,17 +43,22 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     /**
-     * 查询频道下全部封禁记录。
-     * 输出：按创建时间倒序排列。
+     * 分页查询频道下的封禁记录。
      */
     @Override
-    public List<ChannelBanRecord> findByChannelId(long channelId) {
-        return channelBanMapper.selectList(new LambdaQueryWrapper<ChannelBanEntity>()
+    public PageResult<ChannelBanRecord> pageBansByChannelId(long channelId, PageQuery query) {
+        IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelBanEntity>()
                         .eq(ChannelBanEntity::getChannelId, channelId)
-                        .orderByDesc(ChannelBanEntity::getCreatedAt))
-                .stream()
-                .map(ChannelBanEntity::toRecord)
-                .toList();
+                        .orderByDesc(ChannelBanEntity::getBanId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelBanEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**
@@ -91,13 +100,21 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     /**
-     * 查询封禁表全部记录。
+     * 分页查询封禁记录。
      */
     @Override
-    public List<ChannelBanRecord> list() {
-        return channelBanMapper.selectList(null).stream()
-                .map(ChannelBanEntity::toRecord)
-                .toList();
+    public PageResult<ChannelBanRecord> list(PageQuery query) {
+        IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelBanEntity>()
+                        .orderByAsc(ChannelBanEntity::getBanId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelBanEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**
@@ -129,5 +146,14 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     @Override
     public void update(ChannelBanRecord record) {
         channelBanMapper.updateById(ChannelBanEntity.from(record));
+    }
+
+    /**
+     * 删除频道下的全部封禁记录。
+     */
+    @Override
+    public void deleteByChannelId(long channelId) {
+        channelBanMapper.delete(new LambdaQueryWrapper<ChannelBanEntity>()
+                .eq(ChannelBanEntity::getChannelId, channelId));
     }
 }

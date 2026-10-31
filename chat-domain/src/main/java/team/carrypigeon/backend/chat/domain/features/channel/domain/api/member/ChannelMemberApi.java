@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.member;
 
-import java.util.List;
-
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道成员治理领域 API。
@@ -12,11 +12,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.r
 public interface ChannelMemberApi {
 
     /**
-     * 查询频道成员列表。
+     * 分页查询频道成员列表。
      * @param accountId 账号 ID
      * @param channelId 频道 ID
+     * @param page 分页参数
+     * @return 分页成员投影
      */
-    List<ChannelMemberResult> listChannelMembers(long accountId, long channelId);
+    PageResult<ChannelMemberResult> listChannelMembers(long accountId, long channelId, PageQuery page);
 
     /**
      * 将普通成员提升为频道管理员。

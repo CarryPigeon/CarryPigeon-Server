@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道成员仓储抽象。
@@ -24,6 +26,7 @@ public interface ChannelMemberRepository {
 
     /**
      * 查询频道下的全部活跃成员。
+     * 说明：显式全量快照，供通知接收人与治理快照使用，不参与分页列表。
      *
      * @param channelId 频道 ID
      * @return 成员关系列表；频道无成员时返回空列表
@@ -31,13 +34,24 @@ public interface ChannelMemberRepository {
     List<ChannelMember> listByChannelId(long channelId);
 
     /**
-     * 查询账号参与的全部频道成员关系。
-     * 用途：拼接账号可见频道集合。
+     * 分页查询账号参与的全部频道成员关系。
+     * 输出：按频道 ID 倒序返回，供频道列表分页使用。
      *
      * @param accountId 账户 ID
-     * @return 成员关系列表；账号未加入任何频道时返回空列表
+     * @param page 分页参数
+     * @return 分页成员关系
      */
-    List<ChannelMember> listByAccountId(long accountId);
+    PageResult<ChannelMember> pageByAccountId(long accountId, PageQuery page);
+
+    /**
+     * 分页查询频道下的活跃成员。
+     * 输出：按成员关系 ID 倒序返回，供成员列表分页使用。
+     *
+     * @param channelId 频道 ID
+     * @param page 分页参数
+     * @return 分页成员关系
+     */
+    PageResult<ChannelMember> pageByChannelId(long channelId, PageQuery page);
 
     /**
      * 保存新的成员关系。

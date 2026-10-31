@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateKey;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
@@ -50,12 +52,13 @@ public interface ChannelReadStateDatabaseService {
     void update(ChannelReadStateRecord record);
 
     /**
-     * 查询已读状态表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询已读状态记录。
+     * 说明：按 (频道 ID, 账户 ID) 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 已读状态记录列表
+     * @param page 分页参数
+     * @return 分页已读状态记录
      */
-    List<ChannelReadStateRecord> list();
+    PageResult<ChannelReadStateRecord> list(PageQuery page);
 
     /**
      * 按复合主键查询记录。

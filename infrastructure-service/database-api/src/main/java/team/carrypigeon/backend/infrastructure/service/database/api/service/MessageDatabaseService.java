@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 
@@ -50,12 +52,13 @@ public interface MessageDatabaseService {
     void update(MessageRecord record);
 
     /**
-     * 查询消息表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用，业务查询应使用 find 或专用搜索。
+     * 分页查询消息记录。
+     * 说明：按消息 ID 升序返回，仅供离线维护与元能力完整性使用；业务查询使用 find 或专用搜索。
      *
-     * @return 消息记录列表
+     * @param page 分页参数
+     * @return 分页消息记录
      */
-    List<MessageRecord> list();
+    PageResult<MessageRecord> list(PageQuery page);
 
     /**
      * 按消息 ID 查询消息记录。

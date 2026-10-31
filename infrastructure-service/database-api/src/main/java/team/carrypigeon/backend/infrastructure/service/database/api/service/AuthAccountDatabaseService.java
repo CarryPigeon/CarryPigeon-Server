@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAccountRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface AuthAccountDatabaseService {
     void update(AuthAccountRecord record);
 
     /**
-     * 查询鉴权账户表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询鉴权账户记录。
+     * 说明：按账户 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 账户记录列表
+     * @param page 分页参数
+     * @return 分页账户记录
      */
-    List<AuthAccountRecord> list();
+    PageResult<AuthAccountRecord> list(PageQuery page);
 
     /**
      * 按账户 ID 查询鉴权账户。

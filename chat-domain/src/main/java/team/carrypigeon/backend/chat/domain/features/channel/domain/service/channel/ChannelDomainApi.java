@@ -3,6 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service.cha
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -14,6 +17,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
@@ -61,17 +66,23 @@ public class ChannelDomainApi implements ChannelApi {
     }
 
     @Override
-    public List<ChannelResult> listChannels(long accountId) {
-        // 可见性唯一标准：账号在当前频道存在成员映射
-        List<ChannelMember> memberships = channelMemberRepository.listByAccountId(accountId);
-        if (memberships.isEmpty()) {
-            return List.of();
+    public PageResult<ChannelResult> listChannels(long accountId, PageQuery page) {
+        // 可见性唯一标准：账号在当前频道存在成员映射，分页也落在成员关系表上
+        PageResult<ChannelMember> memberships = channelMemberRepository.pageByAccountId(accountId, page);
+        if (memberships.items().isEmpty()) {
+            return new PageResult<>(List.of(), memberships.page(), memberships.pageSize(), memberships.total());
         }
         List<Channel> channels = channelRepository.listByIds(
-            memberships.stream().map(ChannelMember::channelId).toList());
-        return channels.stream()
-            .map(ChannelResult::from)
-            .toList();
+                memberships.items().stream().map(ChannelMember::channelId).toList());
+        Map<Long, Channel> channelById = channels.stream()
+                .collect(Collectors.toMap(Channel::id, channel -> channel));
+        // 数据库 IN 查询不保证顺序，这里按成员关系分页结果重排，保证翻页边界稳定
+        List<ChannelResult> items = memberships.items().stream()
+                .map(member -> channelById.get(member.channelId()))
+                .filter(Objects::nonNull)
+                .map(ChannelResult::from)
+                .toList();
+        return new PageResult<>(items, memberships.page(), memberships.pageSize(), memberships.total());
     }
 
     @Override
@@ -124,13 +135,9 @@ public class ChannelDomainApi implements ChannelApi {
                 .map(ChannelMember::accountId)
                 .toList();
 
-            // 删除依赖数据
-            channelApplicationRepository.list(channelId).forEach(application -> {
-                channelApplicationRepository.delete(application.applicationId());
-            });
-            channelBanRepository.list(channelId).forEach(ban -> {
-                channelBanRepository.delete(ban.banId());
-            });
+            // 删除依赖数据：集合级删除，避免先加载全量申请/禁言再逐条删除
+            channelApplicationRepository.deleteByChannelId(channelId);
+            channelBanRepository.deleteByChannelId(channelId);
             channelMemberRepository.deleteByChannelId(channel.id());
             channelRepository.delete(channel.id());
             // 通知成员

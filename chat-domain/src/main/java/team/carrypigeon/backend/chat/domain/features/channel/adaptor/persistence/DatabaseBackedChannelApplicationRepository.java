@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.channel.adaptor.persistence;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -9,6 +8,8 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelApplicationDatabaseService;
 
@@ -33,10 +34,15 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     }
 
     @Override
-    public List<ChannelApplication> list(long channelId) {
-        return channelApplicationDatabaseService.listByChannelId(channelId).stream()
-            .map(this::toDomain)
-            .toList();
+    public PageResult<ChannelApplication> page(long channelId, PageQuery page) {
+        PageResult<ChannelApplicationRecord> result =
+                channelApplicationDatabaseService.pageApplicationsByChannelId(channelId, page);
+        return new PageResult<>(
+                result.items().stream().map(this::toDomain).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total()
+        );
     }
 
     @Override
@@ -53,6 +59,12 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     public void delete(long applicationId) {
         // 物理删除；重新申请场景会先写入新记录再删除旧记录，以保持同一 (频道, 申请人) 至多一条
         channelApplicationDatabaseService.delete(applicationId);
+    }
+
+    @Override
+    public void deleteByChannelId(long channelId) {
+        // 频道删除时一次性清理申请记录，避免先加载全量申请再逐条删除
+        channelApplicationDatabaseService.deleteByChannelId(channelId);
     }
 
     @Override

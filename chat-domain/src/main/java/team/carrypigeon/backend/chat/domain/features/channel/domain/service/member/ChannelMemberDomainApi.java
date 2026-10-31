@@ -16,6 +16,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
@@ -50,22 +52,23 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
     }
 
     @Override
-    public List<ChannelMemberResult> listChannelMembers(long accountId, long channelId) {
+    public PageResult<ChannelMemberResult> listChannelMembers(long accountId, long channelId, PageQuery page) {
         // 先确认频道存在，避免把"频道不存在"与"不是成员"混为一类拒绝
         Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 读取权限下放到成员身份：只要请求者本人是成员，就允许查看完整成员列表
         channelMemberRepository.findByRelation(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-        List<ChannelMember> members = channelMemberRepository.listByChannelId(channel.id());
-        // 一次性批量取回全部成员资料并按账号建索引，避免在下方映射时逐个查询
-        List<Long> accountIds = members.stream().map(ChannelMember::accountId).toList();
+        PageResult<ChannelMember> members = channelMemberRepository.pageByChannelId(channel.id(), page);
+        // 只对当前页成员批量取资料，避免为分页加载全频道成员资料
+        List<Long> accountIds = members.items().stream().map(ChannelMember::accountId).toList();
         Map<Long, MemberProfile> profiles = memberProfileQuery.findProfiles(accountIds);
 
         // 成员资料缺失时对应投影字段为空，这里不补默认值，由协议层决定如何展示
-        return members.stream()
+        List<ChannelMemberResult> items = members.items().stream()
             .map(member -> ChannelMemberResult.from(member, profiles.get(member.accountId())))
             .toList();
+        return new PageResult<>(items, members.page(), members.pageSize(), members.total());
     }
 
     @Override

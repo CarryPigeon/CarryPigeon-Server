@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,10 +22,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBodyList;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBody;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.CreateChannelRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.UpdateChannelProfileRequest;
@@ -32,6 +35,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
 /**
  * 频道基础 HTTP 入口。
@@ -62,28 +67,45 @@ public class ChannelController {
     @GetMapping
     @Operation(
             summary = "获取频道列表",
-            description = "返回当前登录账号存在成员关系的频道列表。无可见频道时返回空数组，不返回 404。"
+            description = "分页返回当前登录账号存在成员关系的频道列表。无可见频道时返回空 items，不返回 404。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为频道列表外壳，channels 为频道摘要数组",
-                    content = @Content(schema = @Schema(implementation = ChannelResponseBody.class))),
+            @ApiResponse(responseCode = "200", description = "响应体为分页外壳，items 为频道摘要数组",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
             @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
+                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "422", description = "page 或 page_size 超出范围，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
-    public ResponseEntity<ChannelResponseBodyList> listChannels(
+    public PageResponse<ChannelResponseBody> listChannels(
+        @Parameter(description = "页码，从 1 开始", example = "1")
+        @RequestParam(name = "page", defaultValue = "1")
+        @Min(value = 1, message = "page must be greater than 0") int page,
+        @Parameter(description = "每页条数，范围 1..50", example = "20")
+        @RequestParam(name = "page_size", defaultValue = "20")
+        @Min(value = 1, message = "page_size must be between 1 and 50")
+        @Max(value = 50, message = "page_size must be between 1 and 50") int pageSize,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        return ResponseEntity.ok().body(new ChannelResponseBodyList(channelApi.listChannels(cpPrincipal.accountId()).stream()
-            .map(
-                result -> new ChannelResponseBody(
-                    IdUtil.toString(result.channelId()),
-                    result.name(),
-                    result.brief(),
-                    result.systemChannel(),
-                    result.createdAt().toEpochMilli()
-                )
-            )
-            .toList()));
+        PageResult<ChannelResult> result = channelApi.listChannels(
+                cpPrincipal.accountId(),
+                new PageQuery(page, pageSize)
+        );
+        return new PageResponse<>(
+                result.items().stream()
+                        .map(channel -> new ChannelResponseBody(
+                                IdUtil.toString(channel.channelId()),
+                                channel.name(),
+                                channel.brief(),
+                                channel.systemChannel(),
+                                channel.createdAt().toEpochMilli()
+                        ))
+                        .toList(),
+                result.page(),
+                result.pageSize(),
+                result.total(),
+                result.hasMore()
+        );
     }
 
     /**

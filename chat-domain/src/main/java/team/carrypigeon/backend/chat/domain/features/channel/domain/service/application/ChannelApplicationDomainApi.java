@@ -15,6 +15,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
@@ -100,7 +102,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
     }
 
     @Override
-    public List<ChannelApplicationResult> listChannelApplications(long accountId, long channelId) {
+    public PageResult<ChannelApplicationResult> listChannelApplications(long accountId, long channelId, PageQuery page) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
@@ -109,13 +111,15 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
             throw ProblemException.of(ChannelProblem.APPLICATION_LIST_FORBIDDEN);
         }
+        PageResult<ChannelApplication> applications = channelApplicationRepository.page(channel.id(), page);
         // 申请理由在持久化层允许为 null，这里统一归一为空字符串后再暴露给协议层
-        return channelApplicationRepository.list(channel.id()).stream()
+        List<ChannelApplicationResult> items = applications.items().stream()
                 .map(invite -> ChannelApplicationResult.from(
                         invite,
                         invite.reason() == null || invite.reason().isBlank() ? "" : invite.reason().trim()
                 ))
                 .toList();
+        return new PageResult<>(items, applications.page(), applications.pageSize(), applications.total());
     }
 
     @Override

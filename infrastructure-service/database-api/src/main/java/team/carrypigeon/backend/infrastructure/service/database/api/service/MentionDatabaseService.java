@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 
@@ -50,12 +52,13 @@ public interface MentionDatabaseService {
     void update(MentionRecord record);
 
     /**
-     * 查询提及表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询提及记录。
+     * 说明：按提及 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 提及记录列表
+     * @param page 分页参数
+     * @return 分页提及记录
      */
-    List<MentionRecord> list();
+    PageResult<MentionRecord> list(PageQuery page);
 
     /**
      * 按提及 ID 查询记录。

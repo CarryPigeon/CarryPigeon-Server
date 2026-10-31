@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface AuthRefreshSessionDatabaseService {
     void update(AuthRefreshSessionRecord record);
 
     /**
-     * 查询刷新会话表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询刷新会话记录。
+     * 说明：按会话 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 会话记录列表
+     * @param page 分页参数
+     * @return 分页会话记录
      */
-    List<AuthRefreshSessionRecord> list();
+    PageResult<AuthRefreshSessionRecord> list(PageQuery page);
 
     /**
      * 按会话 ID 查询刷新会话。

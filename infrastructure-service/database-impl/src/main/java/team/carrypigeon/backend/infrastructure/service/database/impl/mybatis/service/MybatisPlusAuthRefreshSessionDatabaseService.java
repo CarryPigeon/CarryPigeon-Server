@@ -4,10 +4,15 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.AuthRefreshSessionEntity;
@@ -84,13 +89,21 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
     }
 
     /**
-     * 查询刷新会话表全部记录。
+     * 分页查询刷新会话记录。
      */
     @Override
-    public List<AuthRefreshSessionRecord> list() {
-        return authRefreshSessionMapper.selectList(null).stream()
-                .map(AuthRefreshSessionEntity::toRecord)
-                .toList();
+    public PageResult<AuthRefreshSessionRecord> list(PageQuery query) {
+        IPage<AuthRefreshSessionEntity> result = authRefreshSessionMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<AuthRefreshSessionEntity>()
+                        .orderByAsc(AuthRefreshSessionEntity::getId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(AuthRefreshSessionEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**

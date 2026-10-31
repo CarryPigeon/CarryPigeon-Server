@@ -4,9 +4,13 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelApplicationDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelApplicationEntity;
@@ -49,15 +53,22 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
     }
 
     /**
-     * 查询频道下的全部申请记录。
+     * 分页查询频道下的申请记录。
      */
     @Override
-    public List<ChannelApplicationRecord> listByChannelId(long channelId) {
-        return channelApplicationMapper.selectList(new LambdaQueryWrapper<ChannelApplicationEntity>()
-                        .eq(ChannelApplicationEntity::getChannelId, channelId))
-                .stream()
-                .map(ChannelApplicationEntity::toRecord)
-                .toList();
+    public PageResult<ChannelApplicationRecord> pageApplicationsByChannelId(long channelId, PageQuery query) {
+        IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelApplicationEntity>()
+                        .eq(ChannelApplicationEntity::getChannelId, channelId)
+                        .orderByDesc(ChannelApplicationEntity::getApplicationId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**
@@ -91,13 +102,21 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
     }
 
     /**
-     * 查询申请表全部记录。
+     * 分页查询申请记录。
      */
     @Override
-    public List<ChannelApplicationRecord> list() {
-        return channelApplicationMapper.selectList(null).stream()
-                .map(ChannelApplicationEntity::toRecord)
-                .toList();
+    public PageResult<ChannelApplicationRecord> list(PageQuery query) {
+        IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
+                new Page<>(query.page(), query.pageSize(), true),
+                new LambdaQueryWrapper<ChannelApplicationEntity>()
+                        .orderByAsc(ChannelApplicationEntity::getApplicationId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
+                query.page(),
+                query.pageSize(),
+                result.getTotal()
+        );
     }
 
     /**
@@ -127,5 +146,14 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
     @Override
     public void delete(long applicationId) {
         channelApplicationMapper.deleteById(applicationId);
+    }
+
+    /**
+     * 删除频道下的全部申请记录。
+     */
+    @Override
+    public void deleteByChannelId(long channelId) {
+        channelApplicationMapper.delete(new LambdaQueryWrapper<ChannelApplicationEntity>()
+                .eq(ChannelApplicationEntity::getChannelId, channelId));
     }
 }

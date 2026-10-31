@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 
 /**
@@ -48,12 +50,13 @@ public interface UserProfileDatabaseService {
     void update(UserProfileRecord record);
 
     /**
-     * 查询用户资料表全部记录。
-     * 说明：仅供元能力完整性与离线维护使用。
+     * 分页查询用户资料记录。
+     * 说明：按账户 ID 升序返回，供离线维护与元能力完整性使用。
      *
-     * @return 资料记录列表
+     * @param page 分页参数
+     * @return 分页资料记录
      */
-    List<UserProfileRecord> list();
+    PageResult<UserProfileRecord> list(PageQuery page);
 
     /**
      * 按账户 ID 查询用户资料。
