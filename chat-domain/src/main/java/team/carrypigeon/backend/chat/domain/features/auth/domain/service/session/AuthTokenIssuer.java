@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service.session;
 
 import java.time.Instant;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthRefreshSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthTokenPair;
@@ -8,29 +9,30 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.TokenHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 鉴权 token 签发协作对象。
  * 职责：生成 access/refresh token pair，并持久化 refresh session。
  * 边界：不校验登录凭据、不校验 refresh token 是否有效、不处理事务边界。
  */
-class AuthTokenIssuer {
+@Component
+public class AuthTokenIssuer {
 
     private final AuthRefreshSessionRepository authRefreshSessionRepository;
     private final TokenHasher tokenHasher;
     private final AuthTokenCodec authTokenCodec;
     private final AuthTokenSettings authTokenSettings;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
 
-    AuthTokenIssuer(
+    public AuthTokenIssuer(
             AuthRefreshSessionRepository authRefreshSessionRepository,
             TokenHasher tokenHasher,
             AuthTokenCodec authTokenCodec,
             AuthTokenSettings authTokenSettings,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider
+            TimeProvider timeProvider
     ) {
         this.authRefreshSessionRepository = authRefreshSessionRepository;
         this.tokenHasher = tokenHasher;

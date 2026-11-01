@@ -15,7 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.problem.UserPro
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
@@ -28,13 +28,13 @@ public class UserProfileDomainApi implements UserProfileApi {
 
     private final UserProfileRepository userProfileRepository;
     private final UserAuthAccountAdaptor userAuthAccountAdaptor;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
 
     public UserProfileDomainApi(
         UserProfileRepository userProfileRepository,
         UserAuthAccountAdaptor userAuthAccountAdaptor,
-        TimeProviderImpl timeProvider,
+        TimeProvider timeProvider,
         TransactionRunner transactionRunner
     ) {
         this.userProfileRepository = userProfileRepository;

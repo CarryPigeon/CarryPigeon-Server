@@ -100,6 +100,21 @@ class JwtAuthenticationFilterTests {
         assertEquals(42L, ((CpPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).accountId());
     }
 
+    @Test
+    void acceptsCaseInsensitiveBearerScheme() throws Exception {
+        when(authTokenApi.authenticate("ok"))
+                .thenReturn(new AccessTokenAuthenticationResult(42L, Instant.now().plusSeconds(60)));
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/me");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "bearer ok");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertSame(request, chain.getRequest());
+        assertEquals(42L, ((CpPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal()).accountId());
+    }
+
     private MockHttpServletRequest requestWithToken(String token) {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/me");
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);

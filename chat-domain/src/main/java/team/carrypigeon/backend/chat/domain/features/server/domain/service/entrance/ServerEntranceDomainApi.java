@@ -6,7 +6,7 @@ import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProp
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerMetaProperties;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerDiscoveryDocument;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 服务基础领域服务。
@@ -18,13 +18,13 @@ public class ServerEntranceDomainApi implements ServerEntranceApi {
 
     private final ServerMetaProperties serverMetaProperties;
     private final RealtimeServerProperties realtimeServerProperties;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
 
     @Autowired
     public ServerEntranceDomainApi(
         ServerMetaProperties serverMetaProperties,
         RealtimeServerProperties realtimeServerProperties,
-        TimeProviderImpl timeProvider
+        TimeProvider timeProvider
     ) {
         this.serverMetaProperties = serverMetaProperties;
         this.realtimeServerProperties = realtimeServerProperties;

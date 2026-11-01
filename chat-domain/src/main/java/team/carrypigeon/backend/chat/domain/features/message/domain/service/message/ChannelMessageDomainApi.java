@@ -21,7 +21,7 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMes
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageDispatcher;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageStatus;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
@@ -39,7 +39,7 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
     private final MentionRepository mentionRepository;
     private final MessageEventNotifier messageEventNotifier;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final CPChannelMessageDispatcher channelMessageDispatcher;
 
@@ -49,7 +49,7 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
             MentionRepository mentionRepository,
             MessageEventNotifier messageEventNotifier,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
+            TimeProvider timeProvider,
             TransactionRunner transactionRunner,
             CPChannelMessageDispatcher channelMessageDispatcher
     ) {

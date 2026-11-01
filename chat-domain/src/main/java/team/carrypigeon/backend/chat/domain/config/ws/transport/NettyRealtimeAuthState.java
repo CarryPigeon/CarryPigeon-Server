@@ -58,6 +58,7 @@ public final class NettyRealtimeAuthState implements RealtimeAuthState {
         log.info("Realtime authentication succeeded, uid={}, previousUid={}",
                 result.accountId(), previousAccountId);
 
+        scheduler.cancelAuthTimeout();
         scheduler.scheduleAccessTokenExpiration(result.expiresAt());
 
         return new RealtimeAuthSession(result.accountId(), result.expiresAt());

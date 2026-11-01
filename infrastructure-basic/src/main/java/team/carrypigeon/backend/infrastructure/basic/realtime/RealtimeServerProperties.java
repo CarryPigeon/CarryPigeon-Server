@@ -19,6 +19,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @ConfigurationProperties(prefix = "cp.chat.server.realtime")
 public class RealtimeServerProperties{
+
+    /**
+     * 固定 WebSocket 握手路径。
+     * 约束：路径属于已发布协议的一部分，不再通过配置覆盖。
+     */
+    public static final String WEBSOCKET_PATH = "/api/ws";
+
     boolean enabled;
     String host;
     int port;
@@ -40,6 +47,6 @@ public class RealtimeServerProperties{
         if (!enabled) {
             return null;
         }
-        return "wss://" + host + ":" + port+"/api/ws";
+        return "wss://" + host + ":" + port + WEBSOCKET_PATH;
     }
 }

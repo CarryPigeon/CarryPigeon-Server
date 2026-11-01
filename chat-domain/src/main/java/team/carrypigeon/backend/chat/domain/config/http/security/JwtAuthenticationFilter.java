@@ -31,6 +31,8 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final AuthTokenApi authTokenApi;
     private final JsonProvider jsonProvider;
 
@@ -45,13 +47,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
         // 获取请求头中的认证信息
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        // 判断是否有认证信息
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        // 判断是否有认证信息；Bearer scheme 按 RFC 大小写不敏感
+        if (authHeader == null
+                || authHeader.length() < BEARER_PREFIX.length()
+                || !authHeader.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
             filterChain.doFilter(request, response);
             return;
         }
         // 获取认证信息
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+        if (token.isEmpty()) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         AccessTokenAuthenticationResult result;
         try {
              result = authTokenApi.authenticate(token);

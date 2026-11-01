@@ -8,14 +8,12 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberProvisioningApi;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.provisioning.UserAccountProvisioningApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
@@ -30,26 +28,22 @@ public class AuthAccountDomainApi implements AuthAccountApi {
     private final AuthAccountProvisioner authAccountProvisioner;
     private final PasswordHasher passwordHasher;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
 
     @Autowired
     public AuthAccountDomainApi(
             AuthAccountRepository authAccountRepository,
-            UserAccountProvisioningApi userAccountProvisioningApi,
-            ChannelMemberProvisioningApi channelAccountProvisioningApi,
+            AuthAccountProvisioner authAccountProvisioner,
             PasswordHasher passwordHasher,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
+            TimeProvider timeProvider,
             TransactionRunner transactionRunner,
             EmailVerificationApi emailVerificationApi
     ) {
         this.authAccountRepository = authAccountRepository;
-        this.authAccountProvisioner = new AuthAccountProvisioner(
-                userAccountProvisioningApi,
-                channelAccountProvisioningApi
-        );
+        this.authAccountProvisioner = authAccountProvisioner;
         this.passwordHasher = passwordHasher;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;

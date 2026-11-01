@@ -16,7 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * HS256 JWT 鉴权令牌 codec 实现。
@@ -34,12 +34,12 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
 
     private final AuthJwtProperties properties;
     private final JsonProviderImpl jsonProvider;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
 
     public HmacJwtAuthTokenService(
             AuthJwtProperties properties,
             JsonProviderImpl jsonProvider,
-            TimeProviderImpl timeProvider
+            TimeProvider timeProvider
     ) {
         this.properties = properties;
         this.jsonProvider = jsonProvider;

@@ -13,7 +13,7 @@ import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProp
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthState;
 import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandRegistry;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 实时通道初始化器。
@@ -24,14 +24,14 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final RealtimeServerProperties properties;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeCommandRegistry commandRegistry;
     private final RealtimeAuthState realtimeAuthState;
 
     public NettyHandlerInitializer(
         RealtimeServerProperties properties,
-        TimeProviderImpl timeProvider,
+        TimeProvider timeProvider,
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
         RealtimeAuthState realtimeAuthState
@@ -51,7 +51,7 @@ public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
         // http消息聚合
         pipeline.addLast(new HttpObjectAggregator(65536));
         // 升级为WebSocket
-        pipeline.addLast(new WebSocketServerProtocolHandler("/api/ws"));
+        pipeline.addLast(new WebSocketServerProtocolHandler(RealtimeServerProperties.WEBSOCKET_PATH));
         // 空闲检测
         pipeline.addLast(NettyRealtimeServiceHandler.idleStateHandler(properties.getReadIdleTimeoutSeconds()));
         // WebSocket处理

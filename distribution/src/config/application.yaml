@@ -105,8 +105,6 @@ cp:
         host: 127.0.0.1
         # 职责：定义 Netty WebSocket 服务监听端口。
         port: 18080
-        # 职责：定义 Netty WebSocket 握手路径。
-        path: /api/ws
         # 职责：定义 Netty boss 线程数。
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。

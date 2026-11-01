@@ -18,9 +18,8 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthPro
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
-import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
@@ -39,7 +38,7 @@ public class AuthSessionDomainApi implements AuthTokenApi {
     private final AuthTokenIssuer authTokenIssuer;
     private final AuthTokenSettings authTokenSettings;
     private final AuthPasswordLoginPolicy passwordLoginPolicy;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
 
@@ -51,9 +50,9 @@ public class AuthSessionDomainApi implements AuthTokenApi {
             TokenHasher tokenHasher,
             AuthTokenCodec authTokenCodec,
             AuthTokenSettings authTokenSettings,
+            AuthTokenIssuer authTokenIssuer,
             AuthPasswordLoginPolicy passwordLoginPolicy,
-            IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
+            TimeProvider timeProvider,
             TransactionRunner transactionRunner,
             EmailVerificationApi emailVerificationApi
     ) {
@@ -62,14 +61,7 @@ public class AuthSessionDomainApi implements AuthTokenApi {
         this.passwordHasher = passwordHasher;
         this.tokenHasher = tokenHasher;
         this.authTokenCodec = authTokenCodec;
-        this.authTokenIssuer = new AuthTokenIssuer(
-                authRefreshSessionRepository,
-                tokenHasher,
-                authTokenCodec,
-                authTokenSettings,
-                idGenerator,
-                timeProvider
-        );
+        this.authTokenIssuer = authTokenIssuer;
         this.authTokenSettings = authTokenSettings;
         this.passwordLoginPolicy = passwordLoginPolicy;
         this.timeProvider = timeProvider;

@@ -12,7 +12,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FilePro
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
@@ -28,13 +28,13 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     private final ObjectStorageService objectStorageService;
     private final IdGenerator idGenerator;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
 
     public FileTransferDomainApi(
             ObjectStorageService objectStorageService,
             IdGenerator idGenerator,
-            TimeProviderImpl timeProvider,
+            TimeProvider timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec
     ) {
         this.objectStorageService = objectStorageService;
