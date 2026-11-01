@@ -4,6 +4,7 @@ import java.util.Objects;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthSession;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
@@ -53,6 +54,9 @@ public final class NettyRealtimeAuthState implements RealtimeAuthState {
         }
         attributes.setAccountId(result.accountId());
         connectionManager.register(result.accountId(), connection);
+        LogContexts.uid(String.valueOf(result.accountId()));
+        log.info("Realtime authentication succeeded, uid={}, previousUid={}",
+                result.accountId(), previousAccountId);
 
         scheduler.scheduleAccessTokenExpiration(result.expiresAt());
 

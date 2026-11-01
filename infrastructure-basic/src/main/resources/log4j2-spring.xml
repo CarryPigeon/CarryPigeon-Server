@@ -5,15 +5,23 @@
         <Property name="LOG_HOME">${sys:cp.log.home:-${env:CP_LOG_HOME:-./service-logs}}</Property>
         <!-- 职责：限制压缩归档保留时间；可通过 -Dcp.log.retention 或 CP_LOG_RETENTION 覆盖。 -->
         <Property name="LOG_RETENTION">${sys:cp.log.retention:-${env:CP_LOG_RETENTION:-30d}}</Property>
-        <!-- 职责：统一文本日志字段顺序；使用 logger name 避免调用者位置解析的栈回溯成本。 -->
-        <Property name="TEXT_LOG_PATTERN">%d{ISO8601} %-5level [%t] trace_id=%X{trace_id} request_id=%X{request_id} route=%X{route} uid=%X{uid} %logger{48} - %msg%n%throwable</Property>
+        <!-- 职责：审计归档保留时间；可通过 -Dcp.log.audit-retention 或 CP_LOG_AUDIT_RETENTION 覆盖。 -->
+        <Property name="AUDIT_RETENTION">${sys:cp.log.audit-retention:-${env:CP_LOG_AUDIT_RETENTION:-180d}}</Property>
+        <!-- 职责：统一所有 appender 的日志时区；默认跟随项目主要部署时区，可通过 -Dcp.log.timezone 覆盖。 -->
+        <Property name="LOG_TIME_ZONE">${sys:cp.log.timezone:-${env:CP_LOG_TIMEZONE:-Asia/Shanghai}}</Property>
+        <!-- 职责：统一时间格式并携带时区偏移，避免不同 appender 或不同节点的时间无法对齐。 -->
+        <Property name="LOG_TIME">%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}{${LOG_TIME_ZONE}}</Property>
+        <!-- 职责：统一上下文字段顺序；session_id 在 HTTP 中为请求 id，在 WS 中为单帧 id。 -->
+        <Property name="LOG_CONTEXT">scope=%X{scope} session_id=%X{session_id} trace_id=%X{trace_id} route=%X{route} uid=%X{uid}</Property>
+        <!-- 职责：统一文本日志格式；使用 logger name 避免调用者位置解析的栈回溯成本。 -->
+        <Property name="TEXT_LOG_PATTERN">${LOG_TIME} %-5level [%t] ${LOG_CONTEXT} %logger{48} - %msg%n%throwable</Property>
     </Properties>
 
     <Appenders>
         <!-- 控制台日志用于开发期与容器环境快速观测。 -->
         <Console name="consoleAppender" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%style{%d{ISO8601}}{bright,green} %highlight{%-5level} [%style{%t}{bright,blue}] %style{trace_id=%X{trace_id} request_id=%X{request_id} route=%X{route} uid=%X{uid}}{bright,magenta} %style{%logger{48}}{bright,yellow} - %msg%n%style{%throwable}{red}"
+                    pattern="%style{${LOG_TIME}}{bright,green} %highlight{%-5level} [%style{%t}{bright,blue}] %style{${LOG_CONTEXT}}{bright,magenta} %style{%logger{48}}{bright,yellow} - %msg%n%style{%throwable}{red}"
                     charset="UTF-8" disableAnsi="false" noConsoleNoAnsi="true"/>
         </Console>
 
@@ -104,9 +112,33 @@
             </Policies>
             <DefaultRolloverStrategy max="100"/>
         </RollingFile>
+
+        <!-- 审计日志独立落盘，避免业务运行日志与安全审计共用保留策略。 -->
+        <RollingFile name="auditFileAppender"
+                     fileName="${LOG_HOME}/audit.log"
+                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/audit-%d{yyyy-MM-dd}-%i.log.gz"
+                     filePermissions="rw-r-----">
+            <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30">
+                <Delete basePath="${LOG_HOME}" maxDepth="2">
+                    <IfFileName glob="audit-*.log.gz"/>
+                    <IfLastModified age="${AUDIT_RETENTION}"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
+        <!-- 业务审计统一走独立 logger；additivity=false 避免与业务运行日志重复。 -->
+        <Logger name="team.carrypigeon.audit" level="info" additivity="false">
+            <AppenderRef ref="auditFileAppender"/>
+            <AppenderRef ref="consoleAppender" level="info"/>
+        </Logger>
+
         <!-- Root 统一定义项目默认日志策略，具体业务模块不应各自复制一套日志基建规则。 -->
         <Root level="info">
             <AppenderRef ref="allFileAppender" level="all"/>

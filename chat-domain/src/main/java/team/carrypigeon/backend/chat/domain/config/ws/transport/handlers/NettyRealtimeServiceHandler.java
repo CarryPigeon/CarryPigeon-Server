@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.ws.transport.*;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
 import team.carrypigeon.backend.infrastructure.basic.realtime.uplink.RealtimeCommandRegistry;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAuthState;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
@@ -55,21 +58,25 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
 
     @Override
     public void userEventTriggered(ChannelHandlerContext context, Object event) throws Exception {
-        if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete handshakeComplete) {
-            log.debug("Realtime handshake completed, uri={}", handshakeComplete.requestUri());
-            new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider).scheduleAuthenticationTimeout(authenticationTimeoutSeconds);
-            return;
+        try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.WS)) {
+            if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete handshakeComplete) {
+                log.info("Realtime handshake completed, channelId={}, uri={}",
+                        context.channel().id().asShortText(), handshakeComplete.requestUri());
+                new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider).scheduleAuthenticationTimeout(authenticationTimeoutSeconds);
+                return;
+            }
+            if (event instanceof IdleStateEvent) {
+                log.info("Realtime connection idle timeout, channelId={}", context.channel().id().asShortText());
+                writeFrame(context, new RealtimeFrame.CommandError(
+                    null,
+                    RealtimeFrameCodec.COMMAND_FRAME_TYPE,
+                    "idle_timeout",
+                    "realtime connection is idle"
+                )).addListener(ChannelFutureListener.CLOSE);
+                return;
+            }
+            super.userEventTriggered(context, event);
         }
-        if (event instanceof IdleStateEvent) {
-            writeFrame(context, new RealtimeFrame.CommandError(
-                null,
-                RealtimeFrameCodec.COMMAND_FRAME_TYPE,
-                "idle_timeout",
-                "realtime connection is idle"
-            )).addListener(ChannelFutureListener.CLOSE);
-            return;
-        }
-        super.userEventTriggered(context, event);
     }
 
     @Override
@@ -83,16 +90,23 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             if (request == null) {
                 throw new RealtimeProtocolException("frame_invalid", "frame must be an object");
             }
+            if (request.id() != null && !request.id().isBlank()) {
+                // 帧级关联：客户端请求 id 优先，缺失时沿用 ContextHandler 生成的帧 id。
+                LogContexts.sessionId(request.id());
+                LogContexts.traceId(request.id());
+            }
             if (request.type() == null || request.type().isBlank()) {
                 throw new RealtimeProtocolException("type_blank", "type must not be blank");
             }
 
             Optional<RealtimeCommandHandler> handler = commandRegistry.find(request.type());
             if (handler.isEmpty()) {
+                log.info("Realtime frame rejected, type={}, reason=unsupported_command", request.type());
                 writeErrorAndCloseIfUnauthenticated(context,attributes, request, "unsupported_command", "unsupported realtime command");
                 return;
             }
             if (handler.get().requiresAuthentication() && attributes.getAccountId() == null) {
+                log.info("Realtime frame rejected, type={}, reason=unauthorized", request.type());
                 writeErrorAndCloseIfUnauthenticated(context, attributes, request, "unauthorized", "auth must be the first realtime command");
                 return;
             }
@@ -100,17 +114,23 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             handler.get().handle(request, connection, attributes, scheduler, realtimeAuthState);
 
         } catch (RuntimeException exception) {
+            logRealtimeFailure(request, exception);
             writeErrorAndCloseIfUnauthenticated(context, attributes, request, "internal_server_error", "internal server error");
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
-        RealtimeConnection connection = new NettyRealtimeConnection(context);
-        RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
-        RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes, timeProvider);
-        realtimeAuthState.onChannelInactive(connection,attributes,scheduler);
-        super.channelInactive(context);
+        try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.WS)) {
+            RealtimeConnection connection = new NettyRealtimeConnection(context);
+            RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
+            RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes, timeProvider);
+            Long accountId = attributes.getAccountId();
+            realtimeAuthState.onChannelInactive(connection,attributes,scheduler);
+            log.info("Realtime connection closed, channelId={}, uid={}",
+                    context.channel().id().asShortText(), accountId);
+            super.channelInactive(context);
+        }
     }
 
     /**
@@ -119,7 +139,30 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
      */
     @Override
     public void exceptionCaught(ChannelHandlerContext context, Throwable cause) {
+        try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.WS)) {
+            log.warn("Realtime channel exception, channelId={}", context.channel().id().asShortText(), cause);
+        }
         context.close();
+    }
+
+    /**
+     * 按失败语义记录实时帧异常。
+     * 约定：协议错误与业务拒绝属于可预期失败，按 info 记录；未预期异常按 warn 保留堆栈。
+     *
+     * @param request 当前帧请求，可能为空
+     * @param exception 待记录的异常
+     */
+    private void logRealtimeFailure(RealtimeClientMessage request, RuntimeException exception) {
+        String requestType = request == null ? null : request.type();
+        if (exception instanceof RealtimeProtocolException protocolException) {
+            log.info("Realtime frame rejected, type={}, reason={}", requestType, protocolException.reason());
+            return;
+        }
+        if (exception instanceof ProblemException problemException) {
+            log.info("Realtime frame rejected, type={}, reason={}", requestType, problemException.reason());
+            return;
+        }
+        log.warn("Realtime frame failed, type={}", requestType, exception);
     }
 
     /**

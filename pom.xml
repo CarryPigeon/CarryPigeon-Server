@@ -31,7 +31,8 @@
         <skipTests>false</skipTests>
         <test.groups></test.groups>
         <test.excludedGroups></test.excludedGroups>
-        <jacoco.version>0.8.12</jacoco.version>
+        <!-- JaCoCo 0.8.14 起支持 Java 25 class 文件；0.8.12 在 JDK 25 下无法插桩。 -->
+        <jacoco.version>0.8.14</jacoco.version>
         <jacoco.minimum.line.coverage>0.30</jacoco.minimum.line.coverage>
         <jacoco.minimum.branch.coverage>0.30</jacoco.minimum.branch.coverage>
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>

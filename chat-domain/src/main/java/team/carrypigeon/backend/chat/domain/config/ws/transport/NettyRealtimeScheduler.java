@@ -5,6 +5,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
+import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAttributes;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeScheduler;
@@ -15,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public final class NettyRealtimeScheduler implements RealtimeScheduler {
 
     private final ChannelHandlerContext context;
@@ -40,13 +44,14 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
     @Override
     public void scheduleAuthenticationTimeout(int timeoutSeconds) {
         cancelAuthTimeout();
-        authTimeoutFuture = context.executor().schedule(() -> {
+        authTimeoutFuture = context.executor().schedule(LogContexts.wrap(LogScope.WS, () -> {
             Channel channel = context.channel();
             if (channel.isActive() && attributes.getAccountId() == null) {
+                log.info("Realtime authentication timeout, channelId={}", channel.id().asShortText());
                 context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", "authentication_timeout", "authentication frame was not received in time"))))
                     .addListener(ChannelFutureListener.CLOSE);
             }
-        }, timeoutSeconds, TimeUnit.SECONDS);
+        }), timeoutSeconds, TimeUnit.SECONDS);
     }
 
     @Override
@@ -55,15 +60,17 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
         currentTokenExpiresAt = expiresAt;
         long delayMillis = Math.max(0L,
             Duration.between(timeProvider.nowInstant(), expiresAt).toMillis());
-        tokenExpirationFuture = context.executor().schedule(() -> {
+        tokenExpirationFuture = context.executor().schedule(LogContexts.wrap(LogScope.WS, () -> {
             Channel channel = context.channel();
             if (channel.isActive()
                     && attributes.getAccountId() != null
                     && expiresAt.equals(currentTokenExpiresAt)) {
+                log.info("Realtime access token expired, channelId={}, uid={}",
+                        channel.id().asShortText(), attributes.getAccountId());
                 context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", "token_expired", "access token is expired"))))
                     .addListener(ChannelFutureListener.CLOSE);
             }
-        }, delayMillis, TimeUnit.MILLISECONDS);
+        }), delayMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override

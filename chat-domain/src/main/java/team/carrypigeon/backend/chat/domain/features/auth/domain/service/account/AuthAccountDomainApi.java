@@ -14,6 +14,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
@@ -58,33 +59,40 @@ public class AuthAccountDomainApi implements AuthAccountApi {
 
     @Override
     public RegisterResult register(String username, String password,String email,String code) {
-        return transactionRunner.runInTransaction(() -> {
-            // 存在性校验，确保username和邮箱的唯一性
-            authAccountRepository.findByUsername(username)
-                    .ifPresent(existing -> {
-                        throw ProblemException.of(AuthProblem.USERNAME_ALREADY_EXISTS);
-                    });
-            authAccountRepository.findByEmail(email)
-                    .ifPresent(existing -> {
-                        throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
-                    });
-            // 邮箱验证码校验
-            emailVerificationApi.verifyCode(email, code);
-            // 用户信息创建
-            AuthAccount account = new AuthAccount(
-                    idGenerator.nextLongId(),
-                    username,
-                    passwordHasher.hash(password),
-                    email,
-                    timeProvider.nowInstant(),
-                    timeProvider.nowInstant()
-            );
-            // 数据持久化
-            AuthAccount savedAccount = authAccountRepository.save(account);
-            // 副作用创建用户信息表原始数据
-            authAccountProvisioner.provisionAccount(savedAccount);
-            return new RegisterResult(savedAccount.id(), savedAccount.username());
-        });
+        try {
+            RegisterResult result = transactionRunner.runInTransaction(() -> {
+                // 存在性校验，确保username和邮箱的唯一性
+                authAccountRepository.findByUsername(username)
+                        .ifPresent(existing -> {
+                            throw ProblemException.of(AuthProblem.USERNAME_ALREADY_EXISTS);
+                        });
+                authAccountRepository.findByEmail(email)
+                        .ifPresent(existing -> {
+                            throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
+                        });
+                // 邮箱验证码校验
+                emailVerificationApi.verifyCode(email, code);
+                // 用户信息创建
+                AuthAccount account = new AuthAccount(
+                        idGenerator.nextLongId(),
+                        username,
+                        passwordHasher.hash(password),
+                        email,
+                        timeProvider.nowInstant(),
+                        timeProvider.nowInstant()
+                );
+                // 数据持久化
+                AuthAccount savedAccount = authAccountRepository.save(account);
+                // 副作用创建用户信息表原始数据
+                authAccountProvisioner.provisionAccount(savedAccount);
+                return new RegisterResult(savedAccount.id(), savedAccount.username());
+            });
+            AuditLogs.success("auth.register", result.accountId());
+            return result;
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.register", null, exception.reason());
+            throw exception;
+        }
     }
 
     @Override
@@ -103,29 +111,35 @@ public class AuthAccountDomainApi implements AuthAccountApi {
 
     @Override
     public void updateEmail(long accountId, String email, String code) {
-        // 验证邮箱验证码
-        emailVerificationApi.verifyCode(email, code);
+        try {
+            // 验证邮箱验证码
+            emailVerificationApi.verifyCode(email, code);
 
-        transactionRunner.runInTransaction(() -> {
-            // 获取当前用户
-            AuthAccount existingAccount = authAccountRepository.findById(accountId)
-                    .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
-            // 判断新邮箱是否与已有邮箱绑定
-            authAccountRepository.findByEmail(email)
-                    .filter(account -> account.id() != accountId)
-                    .ifPresent(account -> {
-                        throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
-                    });
-            // 更新用户邮箱
-            authAccountRepository.update(new AuthAccount(
-                    existingAccount.id(),
-                    existingAccount.username(),
-                    existingAccount.passwordHash(),
-                    email,
-                    existingAccount.createdAt(),
-                    timeProvider.nowInstant()
-            ));
-        });
+            transactionRunner.runInTransaction(() -> {
+                // 获取当前用户
+                AuthAccount existingAccount = authAccountRepository.findById(accountId)
+                        .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
+                // 判断新邮箱是否与已有邮箱绑定
+                authAccountRepository.findByEmail(email)
+                        .filter(account -> account.id() != accountId)
+                        .ifPresent(account -> {
+                            throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
+                        });
+                // 更新用户邮箱
+                authAccountRepository.update(new AuthAccount(
+                        existingAccount.id(),
+                        existingAccount.username(),
+                        existingAccount.passwordHash(),
+                        email,
+                        existingAccount.createdAt(),
+                        timeProvider.nowInstant()
+                ));
+            });
+            AuditLogs.success("auth.email_change", accountId);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.email_change", accountId, exception.reason());
+            throw exception;
+        }
     }
 
 }

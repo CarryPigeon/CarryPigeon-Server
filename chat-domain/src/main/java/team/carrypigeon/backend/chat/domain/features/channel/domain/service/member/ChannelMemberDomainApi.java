@@ -22,6 +22,7 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 
 /**
  * 频道治理领域服务。
@@ -105,6 +106,8 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                     afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             return ChannelMemberResult.from(promotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
+        AuditLogs.success("channel.member.promote", operatorAccountId,
+                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
     @Override
@@ -143,11 +146,13 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             return ChannelMemberResult.from(demotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
+        AuditLogs.success("channel.member.demote", operatorAccountId,
+                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
     @Override
     public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+        ChannelOwnershipTransferResult result = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
@@ -188,6 +193,9 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             return ChannelOwnershipTransferResult.from(previousOwner, newOwner);
         });
+        AuditLogs.success("channel.member.transfer", operatorAccountId,
+                "channel_id", channelId, "target_uid", targetAccountId);
+        return result;
     }
 
     @Override
@@ -217,6 +225,8 @@ public class ChannelMemberDomainApi implements ChannelMemberApi {
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(target.accountId()));
         });
+        AuditLogs.success("channel.member.kick", operatorAccountId,
+                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
 }

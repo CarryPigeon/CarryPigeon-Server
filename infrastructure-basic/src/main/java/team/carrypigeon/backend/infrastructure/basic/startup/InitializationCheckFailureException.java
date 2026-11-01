@@ -10,6 +10,17 @@ import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureExc
 public class InitializationCheckFailureException extends InfrastructureException {
 
     public InitializationCheckFailureException(String checkName, String message) {
-        super("Initialization check failed [" + checkName + "]: " + message);
+        this(checkName, message, null);
+    }
+
+    /**
+     * 创建保留根因的初始化检查失败异常。
+     *
+     * @param checkName 检查名称
+     * @param message 失败说明
+     * @param cause 原始异常，可为空
+     */
+    public InitializationCheckFailureException(String checkName, String message, Throwable cause) {
+        super("Initialization check failed [" + checkName + "]: " + message, cause);
     }
 }

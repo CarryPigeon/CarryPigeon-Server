@@ -26,6 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -98,7 +99,7 @@ public class ChannelDomainApi implements ChannelApi {
 
     @Override
     public ChannelResult createChannel(long accountId, String name, String brief) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+        ChannelResult result = transactionRunner.runInTransaction(afterCommit -> {
             // 频道与创建者的成员关系必须同事务写入，否则会出现"频道存在但没有任何成员"的孤儿频道
             long channelId = idGenerator.nextLongId();
             Instant now = timeProvider.nowInstant();
@@ -117,6 +118,8 @@ public class ChannelDomainApi implements ChannelApi {
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelResult.from(channel);
         });
+        AuditLogs.success("channel.create", accountId, "channel_id", result.channelId());
+        return result;
     }
 
     @Override
@@ -143,6 +146,7 @@ public class ChannelDomainApi implements ChannelApi {
             // 通知成员
             channelEventNotifier.accountChannelsChanged(afterCommit, members);
         });
+        AuditLogs.success("channel.delete", operatorAccountId, "channel_id", channelId);
     }
 
     @Override
@@ -175,6 +179,7 @@ public class ChannelDomainApi implements ChannelApi {
             );
             return ChannelResult.from(updated);
         });
+        AuditLogs.success("channel.update", operatorAccountId, "channel_id", channelId);
     }
 
 }

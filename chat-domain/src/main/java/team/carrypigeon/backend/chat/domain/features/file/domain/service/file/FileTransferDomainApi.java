@@ -11,6 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
@@ -47,6 +48,8 @@ public class FileTransferDomainApi implements FileTransferApi {
         long fileId = idGenerator.nextLongId();
         Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
         String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
+        AuditLogs.success("file.upload_grant", accountId,
+                "file_id", fileId, "size_bytes", sizeBytes);
         return new FileUploadGrantResult(
                 fileId,
                 shareKey,
@@ -57,14 +60,21 @@ public class FileTransferDomainApi implements FileTransferApi {
 
     @Override
     public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content) {
-        FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
-        if (issuedShareKey.ownerAccountId() != accountId) {
-            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+        try {
+            FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
+            if (issuedShareKey.ownerAccountId() != accountId) {
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+            }
+            if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+            }
+            objectStorageService.put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
+            AuditLogs.success("file.upload", accountId,
+                    "file_id", issuedShareKey.fileId(), "size_bytes", sizeBytes);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("file.upload", accountId, exception.reason());
+            throw exception;
         }
-        if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
-            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
-        }
-        objectStorageService.put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
     }
 
 

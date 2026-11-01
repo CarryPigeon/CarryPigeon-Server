@@ -23,6 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -61,7 +62,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
 
     @Override
     public ChannelApplicationResult createChannelApplication(long accountId, long channelId, String reason) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+        ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 已是成员时无需申请，直接按参数错误拒绝
@@ -99,6 +100,10 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelApplicationResult.from(application, normalizedReason);
         });
+        AuditLogs.success("channel.application.create", accountId,
+                "channel_id", result.channelId(),
+                "application_id", result.applicationId());
+        return result;
     }
 
     @Override
@@ -124,7 +129,7 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
 
     @Override
     public ChannelApplicationResult decideChannelApplication(long operatorAccountId, long channelId, long applicationId, String decision) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+        ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
             ChannelApplication application = channelApplicationRepository.findById(applicationId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND));
             // 归属校验：路径声明的频道必须与申请实际所属频道一致，否则按不存在处理以免泄露其它频道的申请存在性
@@ -182,6 +187,12 @@ public class ChannelApplicationDomainApi implements ChannelApplicationApi {
                     updated.reason() == null || updated.reason().isBlank() ? "" : updated.reason().trim()
             );
         });
+        AuditLogs.success("channel.application.decide", operatorAccountId,
+                "channel_id", channelId,
+                "application_id", applicationId,
+                "target_uid", result.accountId(),
+                "decision", result.status());
+        return result;
     }
 
 }

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.http.support.log;
+package team.carrypigeon.backend.chat.domain.config.http.log;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -12,6 +12,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
 
 /**
  * HTTP 请求 MDC 上下文过滤器。
@@ -42,10 +43,11 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter implements Ordere
     ) throws ServletException, IOException {
         String requestId = resolveRequestId(request);
         String traceId = resolveTraceId(request, requestId);
-        try (LogContexts.Scope ignored = LogContexts.openScope()) {
+        String route = resolveRoute(request);
+        try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.HTTP)) {
             LogContexts.sessionId(requestId);
             LogContexts.traceId(traceId);
-            LogContexts.route(resolveRoute(request));
+            LogContexts.route(route);
             filterChain.doFilter(request, response);
         }
     }
@@ -75,6 +77,11 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter implements Ordere
         return traceId == null || traceId.isBlank() ? requestId : traceId;
     }
 
+    /**
+     * 解析请求的路径
+     * @param request HTTP 请求
+     * @return 请求url
+     * */
     private String resolveRoute(HttpServletRequest request) {
         return request.getRequestURI();
     }

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service.session;
 
+import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -18,6 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.Auth
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
@@ -77,51 +79,63 @@ public class AuthSessionDomainApi implements AuthTokenApi {
 
     @Override
     public AuthTokenResult loginByPWD(String username,String password) {
-        // 通过配置开关账号密码登录接口
-        if (!passwordLoginPolicy.enabled()) {
-            throw ProblemException.of(AuthProblem.PASSWORD_LOGIN_DISABLED);
+        try {
+            // 通过配置开关账号密码登录接口
+            if (!passwordLoginPolicy.enabled()) {
+                throw ProblemException.of(AuthProblem.PASSWORD_LOGIN_DISABLED);
+            }
+            // 拿取用户信息
+            AuthAccount account = authAccountRepository.findByUsername(username)
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
+
+            if (!passwordHasher.matches(password, account.passwordHash())) {
+                throw ProblemException.of(AuthProblem.INVALID_CREDENTIALS);
+            }
+
+            // 签发访问令牌和刷新令牌
+            AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
+
+            AuditLogs.success("auth.login", account.id(), "method", "password");
+            // 响应并返回
+            return new AuthTokenResult(
+                account.id(),
+                account.username(),
+                tokenPair.accessToken(),
+                tokenPair.accessTokenExpiresAt(),
+                authTokenSettings.accessTokenTtl().toSeconds(),
+                tokenPair.refreshToken(),
+                tokenPair.refreshTokenExpiresAt()
+            );
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.login", null, exception.reason(), "method", "password");
+            throw exception;
         }
-        // 拿取用户信息
-        AuthAccount account = authAccountRepository.findByUsername(username)
-                .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
-
-        if (!passwordHasher.matches(password, account.passwordHash())) {
-            throw ProblemException.of(AuthProblem.INVALID_CREDENTIALS);
-        }
-
-        // 签发访问令牌和刷新令牌
-        AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
-
-        // 响应并返回
-        return new AuthTokenResult(
-            account.id(),
-            account.username(),
-            tokenPair.accessToken(),
-            tokenPair.accessTokenExpiresAt(),
-            authTokenSettings.accessTokenTtl().toSeconds(),
-            tokenPair.refreshToken(),
-            tokenPair.refreshTokenExpiresAt()
-        );
     }
 
     @Override
     public AuthTokenResult loginByEmail(String email, String password) {
-        // 拿取用户信息
-        AuthAccount account = authAccountRepository.findByEmail(email)
-            .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
-        emailVerificationApi.verifyCode(email, password);
-        // 签发访问令牌和刷新令牌
-        AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
-        // 响应并返回
-        return new AuthTokenResult(
-            account.id(),
-            account.username(),
-            tokenPair.accessToken(),
-            tokenPair.accessTokenExpiresAt(),
-            authTokenSettings.accessTokenTtl().toSeconds(),
-            tokenPair.refreshToken(),
-            tokenPair.refreshTokenExpiresAt()
-        );
+        try {
+            // 拿取用户信息
+            AuthAccount account = authAccountRepository.findByEmail(email)
+                .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
+            emailVerificationApi.verifyCode(email, password);
+            // 签发访问令牌和刷新令牌
+            AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
+            AuditLogs.success("auth.login", account.id(), "method", "email");
+            // 响应并返回
+            return new AuthTokenResult(
+                account.id(),
+                account.username(),
+                tokenPair.accessToken(),
+                tokenPair.accessTokenExpiresAt(),
+                authTokenSettings.accessTokenTtl().toSeconds(),
+                tokenPair.refreshToken(),
+                tokenPair.refreshTokenExpiresAt()
+            );
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.login", null, exception.reason(), "method", "email");
+            throw exception;
+        }
     }
 
     @Override
@@ -134,61 +148,77 @@ public class AuthSessionDomainApi implements AuthTokenApi {
     }
     @Override
     public AuthTokenResult refreshToken(String refreshToken) {
-        return transactionRunner.runInTransaction(() -> {
-            // 解析refresh令牌
-            AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
-            // 获取用户id
-            long accountId = Long.parseLong(claims.subject());
-            // 查询会话是否真实存在
-            AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
-                .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
-            // 判断session是否可用
-            if (session.revoked()
-                || !session.expiresAt().isAfter(timeProvider.nowInstant())
-                || session.accountId() != accountId
-                || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
-                throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
-            }
-            // 撤销会话
-            authRefreshSessionRepository.revoke(session.id());
-            // 查询用户
-            AuthAccount account = authAccountRepository.findById(accountId)
-                .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
-            // 创建新会话
-            AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
-            // 返回最新的一组token
-            return new AuthTokenResult(
-                account.id(),
-                account.username(),
-                tokenPair.accessToken(),
-                tokenPair.accessTokenExpiresAt(),
-                authTokenSettings.accessTokenTtl().toSeconds(),
-                tokenPair.refreshToken(),
-                tokenPair.refreshTokenExpiresAt()
-            );
-        });
+        try {
+            AuthTokenResult result = transactionRunner.runInTransaction(() -> {
+                // 解析refresh令牌
+                AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
+                // 获取用户id
+                long accountId = Long.parseLong(claims.subject());
+                // 查询会话是否真实存在
+                AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
+                // 判断session是否可用
+                if (session.revoked()
+                    || !session.expiresAt().isAfter(timeProvider.nowInstant())
+                    || session.accountId() != accountId
+                    || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
+                    throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
+                }
+                // 撤销会话
+                authRefreshSessionRepository.revoke(session.id());
+                // 查询用户
+                AuthAccount account = authAccountRepository.findById(accountId)
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
+                // 创建新会话
+                AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
+                // 返回最新的一组token
+                return new AuthTokenResult(
+                    account.id(),
+                    account.username(),
+                    tokenPair.accessToken(),
+                    tokenPair.accessTokenExpiresAt(),
+                    authTokenSettings.accessTokenTtl().toSeconds(),
+                    tokenPair.refreshToken(),
+                    tokenPair.refreshTokenExpiresAt()
+                );
+            });
+            AuditLogs.success("auth.refresh", result.accountId());
+            return result;
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.refresh", null, exception.reason());
+            throw exception;
+        }
     }
 
     @Override
     public void logout(String refreshToken) {
-        transactionRunner.runInTransaction(() -> {
-            // 解析refresh令牌
-            AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
-            // 获取用户id
-            long accountId = Long.parseLong(claims.subject());
-            // 查询会话是否真实存在
-            AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
-                .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
-            // 判断session是否可用
-            if (session.revoked()
-                || !session.expiresAt().isAfter(timeProvider.nowInstant())
-                || session.accountId() != accountId
-                || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
-                throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
-            }
-            if (!authRefreshSessionRepository.revokeIfActive(session.id())) {
-                throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
-            }
-        });
+        try {
+            AtomicLong revokedAccountId = new AtomicLong();
+            transactionRunner.runInTransaction(() -> {
+                // 解析refresh令牌
+                AuthTokenClaims claims = authTokenCodec.parseRefreshToken(refreshToken);
+                // 获取用户id
+                long accountId = Long.parseLong(claims.subject());
+                // 查询会话是否真实存在
+                AuthRefreshSession session = authRefreshSessionRepository.findById(claims.sessionId())
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));
+                // 判断session是否可用
+                if (session.revoked()
+                    || !session.expiresAt().isAfter(timeProvider.nowInstant())
+                    || session.accountId() != accountId
+                    || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
+                    throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
+                }
+                if (!authRefreshSessionRepository.revokeIfActive(session.id())) {
+                    throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
+                }
+                revokedAccountId.set(accountId);
+            });
+            long accountId = revokedAccountId.get();
+            AuditLogs.success("auth.revoke", accountId == 0 ? null : accountId);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.revoke", null, exception.reason());
+            throw exception;
+        }
     }
 }

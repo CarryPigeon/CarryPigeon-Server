@@ -71,24 +71,25 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
             String checkName,
             String message,
             long elapsedMillis,
-        RuntimeException cause
+            RuntimeException cause
     ) {
         if (initializationChecker.required()) {
-            if (cause != null) {
-                log.error("Required initialization check threw [{}] after {} ms: {}", checkName, elapsedMillis, message);
+            if (cause == null) {
+                log.error("Required initialization check failed [{}] after {} ms: {}",
+                        checkName, elapsedMillis, message);
+            } else {
+                log.error("Required initialization check threw [{}] after {} ms: {}",
+                        checkName, elapsedMillis, message, cause);
             }
-            throw new InitializationCheckFailureException(checkName, message);
+            throw new InitializationCheckFailureException(checkName, message, cause);
         }
         if (cause == null) {
-            log.warn("Initialization check failed but marked optional [{}] after {} ms: {}", checkName, elapsedMillis, message);
-        } else {
-            log.warn(
-                    "Initialization check threw but is marked optional [{}] after {} ms: {}",
-                    checkName,
-                    elapsedMillis,
-                    message
-            );
+            log.warn("Initialization check failed but marked optional [{}] after {} ms: {}",
+                    checkName, elapsedMillis, message);
+            return;
         }
+        log.warn("Initialization check threw but is marked optional [{}] after {} ms: {}",
+                checkName, elapsedMillis, message, cause);
     }
 
     private String safeCheckName(InitializationChecker initializationChecker) {

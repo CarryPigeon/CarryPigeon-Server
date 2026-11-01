@@ -5,6 +5,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 
 /**
  * 邮箱验证领域 API 实现。
@@ -22,7 +23,13 @@ public class EmailVerificationDomainApi implements EmailVerificationApi {
 
     @Override
     public void issueCode(String email) {
-        emailVerificationCapability.issueCode(email);
+        try {
+            emailVerificationCapability.issueCode(email);
+            AuditLogs.success("auth.code_issue", null);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.code_issue", null, exception.reason());
+            throw exception;
+        }
     }
 
     @Override

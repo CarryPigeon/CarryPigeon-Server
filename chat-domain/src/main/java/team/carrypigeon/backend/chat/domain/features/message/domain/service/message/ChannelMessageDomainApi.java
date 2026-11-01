@@ -16,6 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.M
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageDispatcher;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
@@ -125,6 +126,10 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
             savedMentions.forEach(mention -> messageEventNotifier.mentionCreated(afterCommit, mention));
             return saved.messageId();
         });
+        AuditLogs.success("message.send", accountId,
+                "channel_id", channelId,
+                "message_id", messageId,
+                "domain", domain);
         return new ChannelMessageResult(messageId);
     }
 
@@ -173,5 +178,8 @@ public class ChannelMessageDomainApi implements ChannelMessageApi {
             // 通知所有人
             messageEventNotifier.messageRecalled(afterCommit, recalledMessage, recipients);
         });
+        AuditLogs.success("message.recall", accountId,
+                "channel_id", channelId,
+                "message_id", messageId);
     }
 }

@@ -1,11 +1,8 @@
 package team.carrypigeon.backend.chat.domain.config.http.advice;
 
-import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -16,8 +13,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -26,20 +23,22 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiError;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /**
  * 全局异常映射入口。
  * 职责：把业务问题异常和常见请求异常收敛为稳定的 HTTP 错误响应。
  * 边界：这里只负责协议层映射，不承载业务决策逻辑。
  */
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * 处理业务问题异常。
@@ -59,6 +58,13 @@ public class GlobalExceptionHandler {
             // 5xx 必须带堆栈与根因，便于定位内部失败
             log.error("Problem exception mapped to {}, mapping={}, reason={}",
                     status.value(), exception.mapping(), exception.reason(), exception);
+        } else if (status == HttpStatus.UNAUTHORIZED
+                || status == HttpStatus.FORBIDDEN
+                || status == HttpStatus.CONFLICT
+                || status == HttpStatus.PRECONDITION_FAILED) {
+            // 认证、权限和状态冲突属于需要默认可见的业务失败
+            log.info("Problem exception mapped to {}, mapping={}, reason={}",
+                    status.value(), exception.mapping(), exception.reason());
         } else {
             log.debug("Problem exception mapped to {}, mapping={}, reason={}",
                     status.value(), exception.mapping(), exception.reason());
@@ -288,7 +294,7 @@ public class GlobalExceptionHandler {
                         && Character.isUpperCase(value.charAt(index - 1))
                         && Character.isLowerCase(value.charAt(index + 1));
                 if ((followsLowerOrDigit || startsWordBeforeLower)
-                        && result.length() > 0
+                        && !result.isEmpty()
                         && result.charAt(result.length() - 1) != '_') {
                     result.append('_');
                 }
@@ -316,7 +322,7 @@ public class GlobalExceptionHandler {
                 descriptor.status().value(),
                 descriptor.reason(),
                 descriptor.message(),
-                MDC.get(LogKeys.SESSION_ID),
+                LogContexts.currentSessionId(),
                 descriptor.details()
         ));
         if (descriptor.status() == HttpStatus.UNAUTHORIZED) {

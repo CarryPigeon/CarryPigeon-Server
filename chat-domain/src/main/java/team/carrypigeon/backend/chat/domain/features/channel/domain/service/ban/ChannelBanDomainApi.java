@@ -25,6 +25,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
@@ -81,7 +82,7 @@ public class ChannelBanDomainApi implements ChannelBanApi {
 
     @Override
     public ChannelBanResult banChannelMember(BanChannelMemberCommand command) {
-        return transactionRunner.runInTransaction(afterCommit -> {
+        ChannelBanResult result = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findById(command.channelId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
@@ -138,6 +139,10 @@ public class ChannelBanDomainApi implements ChannelBanApi {
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS, recipients);
             return ChannelBanResult.from(ban);
         });
+        AuditLogs.success("channel.ban", command.operatorAccountId(),
+                "channel_id", command.channelId(),
+                "target_uid", command.targetAccountId());
+        return result;
     }
 
     @Override
@@ -191,6 +196,8 @@ public class ChannelBanDomainApi implements ChannelBanApi {
                 ChannelChangeScope.BANS,
                 channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList());
         });
+        AuditLogs.success("channel.unban", operatorAccountId,
+                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
 }
