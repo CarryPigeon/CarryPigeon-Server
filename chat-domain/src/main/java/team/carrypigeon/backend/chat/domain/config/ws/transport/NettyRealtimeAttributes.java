@@ -3,6 +3,8 @@ package team.carrypigeon.backend.chat.domain.config.ws.transport;
 import io.netty.channel.Channel;
 import io.netty.util.AttributeKey;
 import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeAttributes;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnection;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeScheduler;
 
 public class NettyRealtimeAttributes implements RealtimeAttributes {
     /** 会话 ID。 */

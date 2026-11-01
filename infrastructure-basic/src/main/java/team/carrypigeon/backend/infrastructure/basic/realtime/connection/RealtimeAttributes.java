@@ -27,4 +27,5 @@ public interface RealtimeAttributes {
      * @return 用户id
      */
     Long getAccountId();
+
 }

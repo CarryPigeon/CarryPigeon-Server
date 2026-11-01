@@ -12,6 +12,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.config.ws.transport.*;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
@@ -36,6 +37,20 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
  */
 @Slf4j
 public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
+
+    // 连接的存储
+    /** 连接。 */
+    private static final AttributeKey<RealtimeConnection> CONNECTION_KEY =
+        AttributeKey.valueOf("cp.realtime.connection");
+
+    /** 规划器。 */
+    private static final AttributeKey<RealtimeScheduler> SCHEDULER_KEY =
+        AttributeKey.valueOf("cp.realtime.scheduler");
+
+    /** 存储器 */
+    private static final AttributeKey<RealtimeAttributes> ATTRIBUTES_KEY =
+        AttributeKey.valueOf("cp.realtime.attributes");
+
     private final RealtimeFrameCodec frameCodec;
     private final RealtimeAuthState realtimeAuthState;
     private final RealtimeCommandRegistry commandRegistry;
@@ -62,7 +77,12 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             if (event instanceof WebSocketServerProtocolHandler.HandshakeComplete handshakeComplete) {
                 log.info("Realtime handshake completed, channelId={}, uri={}",
                         context.channel().id().asShortText(), handshakeComplete.requestUri());
-                new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider).scheduleAuthenticationTimeout(authenticationTimeoutSeconds);
+                RealtimeScheduler realtimeScheduler = context.channel().attr(SCHEDULER_KEY).get();
+                if (realtimeScheduler == null) {
+                    realtimeScheduler = new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider);
+                    context.channel().attr(SCHEDULER_KEY).set(realtimeScheduler);
+                }
+                realtimeScheduler.scheduleAuthenticationTimeout(authenticationTimeoutSeconds);
                 return;
             }
             if (event instanceof IdleStateEvent) {
@@ -81,11 +101,26 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
 
     @Override
     protected void channelRead0(ChannelHandlerContext context, TextWebSocketFrame frame) {
+        // 解码数据
         RealtimeClientMessage request = frameCodec.decode(frame.text());
+
         // 创建上下文
-        RealtimeConnection connection = new NettyRealtimeConnection(context);
-        RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
-        RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes,timeProvider);
+        RealtimeConnection connection = context.channel().attr(CONNECTION_KEY).get();
+        if (connection == null){
+            connection = new NettyRealtimeConnection(context);
+            context.channel().attr(CONNECTION_KEY).set(connection);
+        }
+        RealtimeScheduler scheduler = context.channel().attr(SCHEDULER_KEY).get();
+        if (scheduler == null){
+            scheduler = new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider);
+            context.channel().attr(SCHEDULER_KEY).set(scheduler);
+        }
+        RealtimeAttributes attributes = context.channel().attr(ATTRIBUTES_KEY).get();
+        if (attributes == null){
+            attributes = new NettyRealtimeAttributes(context.channel());
+            context.channel().attr(ATTRIBUTES_KEY).set(attributes);
+        }
+
         try {
             if (request == null) {
                 throw new RealtimeProtocolException("frame_invalid", "frame must be an object");
@@ -122,9 +157,21 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
     @Override
     public void channelInactive(ChannelHandlerContext context) throws Exception {
         try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.WS)) {
-            RealtimeConnection connection = new NettyRealtimeConnection(context);
-            RealtimeAttributes attributes = new NettyRealtimeAttributes(context.channel());
-            RealtimeScheduler scheduler = new NettyRealtimeScheduler(context, frameCodec, attributes, timeProvider);
+            RealtimeConnection connection = context.channel().attr(CONNECTION_KEY).get();
+            if (connection == null){
+                connection = new NettyRealtimeConnection(context);
+                context.channel().attr(CONNECTION_KEY).set(connection);
+            }
+            RealtimeScheduler scheduler = context.channel().attr(SCHEDULER_KEY).get();
+            if (scheduler == null){
+                scheduler = new NettyRealtimeScheduler(context, frameCodec, new NettyRealtimeAttributes(context.channel()), timeProvider);
+                context.channel().attr(SCHEDULER_KEY).set(scheduler);
+            }
+            RealtimeAttributes attributes = context.channel().attr(ATTRIBUTES_KEY).get();
+            if (attributes == null){
+                attributes = new NettyRealtimeAttributes(context.channel());
+                context.channel().attr(ATTRIBUTES_KEY).set(attributes);
+            }
             Long accountId = attributes.getAccountId();
             realtimeAuthState.onChannelInactive(connection,attributes,scheduler);
             log.info("Realtime connection closed, channelId={}, uid={}",

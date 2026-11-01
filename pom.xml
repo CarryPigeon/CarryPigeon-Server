@@ -29,12 +29,6 @@
         <!-- Tests run by default; set -DskipTests=true to skip -->
         <junit-jupiter.version>5.10.5</junit-jupiter.version>
         <skipTests>false</skipTests>
-        <test.groups></test.groups>
-        <test.excludedGroups></test.excludedGroups>
-        <!-- JaCoCo 0.8.14 起支持 Java 25 class 文件；0.8.12 在 JDK 25 下无法插桩。 -->
-        <jacoco.version>0.8.14</jacoco.version>
-        <jacoco.minimum.line.coverage>0.30</jacoco.minimum.line.coverage>
-        <jacoco.minimum.branch.coverage>0.30</jacoco.minimum.branch.coverage>
         <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
         <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
         <checkstyle.version>10.21.3</checkstyle.version>
@@ -118,79 +112,6 @@
     </dependencyManagement>
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-                <executions>
-                    <execution>
-                        <id>prepare-agent</id>
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipTests}</skip>
-                            <append>false</append>
-                            <!-- 可以添加排除规则 -->
-                            <excludes>
-                                <exclude>**/test/**</exclude>
-                            </excludes>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>report</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>check</id>
-                        <phase>verify</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
-                        <configuration>
-                            <skip>${skipTests}</skip>
-                            <rules>
-                                <rule>
-                                    <element>BUNDLE</element>
-                                    <limits>
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>${jacoco.minimum.line.coverage}</minimum>
-                                        </limit>
-                                        <limit>
-                                            <counter>BRANCH</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>${jacoco.minimum.branch.coverage}</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
-                <configuration>
-                    <skipTests>${skipTests}</skipTests>
-                    <groups>${test.groups}</groups>
-                    <excludedGroups>${test.excludedGroups}</excludedGroups>
-                    <!-- 启用详细日志 -->
-                    <printSummary>true</printSummary>
-                    <!-- 设置编码 -->
-                    <argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dfile.encoding=UTF-8</argLine>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

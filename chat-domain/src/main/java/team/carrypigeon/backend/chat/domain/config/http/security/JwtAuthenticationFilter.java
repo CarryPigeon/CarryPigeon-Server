@@ -19,6 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /**
@@ -31,9 +32,11 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final AuthTokenApi authTokenApi;
+    private final JsonProvider jsonProvider;
 
-    public JwtAuthenticationFilter(AuthTokenApi authTokenApi) {
+    public JwtAuthenticationFilter(AuthTokenApi authTokenApi, JsonProvider jsonProvider) {
         this.authTokenApi = authTokenApi;
+        this.jsonProvider = jsonProvider;
     }
 
     @Override
@@ -52,18 +55,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         AccessTokenAuthenticationResult result;
         try {
              result = authTokenApi.authenticate(token);
-        }catch (Exception e) {
+        } catch (ProblemException exception) {
             SecurityContextHolder.clearContext();
-            if (e instanceof ProblemException problemException) {
-                log.info("HTTP authentication rejected, method={}, reason={}",
-                        request.getMethod(), problemException.reason());
+            if (exception.status() >= 500) {
+                log.error("HTTP authentication failed, method={}, reason={}",
+                        request.getMethod(), exception.reason(), exception);
             } else {
-                log.warn("HTTP authentication failed unexpectedly, method={}",
-                        request.getMethod(), e);
+                log.info("HTTP authentication rejected, method={}, reason={}",
+                        request.getMethod(), exception.reason());
             }
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"code\":401,\"message\":\"authentication is required\"}");
+            String message = exception.getMessage() == null || exception.getMessage().isBlank()
+                    ? "authentication is required"
+                    : exception.getMessage();
+            SecurityErrorResponses.write(
+                    jsonProvider,
+                    response,
+                    exception.status(),
+                    exception.reason(),
+                    message,
+                    exception.details()
+            );
+            return;
+        } catch (RuntimeException exception) {
+            SecurityContextHolder.clearContext();
+            log.error("HTTP authentication failed unexpectedly, method={}", request.getMethod(), exception);
+            SecurityErrorResponses.write(
+                    jsonProvider,
+                    response,
+                    500,
+                    "internal_error",
+                    "internal server error",
+                    null
+            );
             return;
         }
         // TODO 用户权限分流

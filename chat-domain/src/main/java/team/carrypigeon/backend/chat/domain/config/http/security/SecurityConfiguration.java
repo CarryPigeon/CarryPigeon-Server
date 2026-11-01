@@ -8,6 +8,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 
 /***
  * spring security配置，用于项目中的鉴权和认证功能
@@ -19,7 +20,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfiguration {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JsonProvider jsonProvider
+    ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -27,8 +32,8 @@ public class SecurityConfiguration {
                 .anyRequest().permitAll()
             )
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(new JsonAuthenticationEntryPoint())
-                .accessDeniedHandler(new JsonAccessDeniedHandler())
+                .authenticationEntryPoint(new JsonAuthenticationEntryPoint(jsonProvider))
+                .accessDeniedHandler(new JsonAccessDeniedHandler(jsonProvider))
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
