@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.verification.support.verif
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
@@ -24,11 +25,14 @@ public class CacheBackedEmailVerificationCapability implements EmailVerification
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
     private final CacheService cacheService;
-    private final MailSenderService mailSenderService;
+    private final ObjectProvider<MailSenderService> mailSenderServiceProvider;
 
-    public CacheBackedEmailVerificationCapability(CacheService cacheService, MailSenderService mailSenderService) {
+    public CacheBackedEmailVerificationCapability(
+            CacheService cacheService,
+            ObjectProvider<MailSenderService> mailSenderServiceProvider
+    ) {
         this.cacheService = cacheService;
-        this.mailSenderService = mailSenderService;
+        this.mailSenderServiceProvider = mailSenderServiceProvider;
     }
 
     @Override
@@ -52,6 +56,7 @@ public class CacheBackedEmailVerificationCapability implements EmailVerification
     }
 
     private void deliverCode(String email, String code) {
+        MailSenderService mailSenderService = mailSenderServiceProvider.getIfAvailable();
         if (mailSenderService == null) {
             throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
         }

@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 
 import java.util.Collection;
 
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
@@ -38,6 +39,14 @@ public interface MessageEventNotifier {
             CPChannelMessage message,
             Collection<Long> recipientAccountIds
     );
+
+    /**
+     * 通知新增提及，仅发给被提及账号。
+     *
+     * @param afterCommit 提交后动作注册器
+     * @param mention 已持久化的提及快照
+     */
+    void mentionCreated(AfterCommitExecutor afterCommit, Mention mention);
 
     /**
      * 通知已读位置更新，仅发给本人。
