@@ -1,7 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
-import java.util.List;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -18,88 +16,80 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageTimelineApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageSearchApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageSearchResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 
 /**
- * 频道消息查询的controller
- * 职责：提供频道消息的查询相关能力
- * */
+ * 频道消息搜索 HTTP 入口。
+ * 职责：提供频道内按关键字和过滤条件的消息搜索。
+ * 边界：不承载时间线方向或锚点上下文。
+ */
 @Validated
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Tag(name = "频道消息", description = "频道消息历史查询、搜索、发送与撤回能力。")
-public class ChannelMessageDiscoveryController {
+@Tag(name = "频道消息", description = "频道消息搜索能力。")
+public class ChannelMessageSearchController {
 
     private static final int MAX_KEYWORD_LENGTH = 100;
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
-    private final ChannelMessageTimelineApi channelMessageTimelineApi;
 
-    public ChannelMessageDiscoveryController(ChannelMessageTimelineApi channelMessageTimelineApi) {
-        this.channelMessageTimelineApi = channelMessageTimelineApi;
+    private final ChannelMessageSearchApi channelMessageSearchApi;
+
+    public ChannelMessageSearchController(ChannelMessageSearchApi channelMessageSearchApi) {
+        this.channelMessageSearchApi = channelMessageSearchApi;
     }
 
-
     /**
-     * TODO 待审核
+     * TODO 待迭代优化
      * 在频道内按关键字搜索消息。
      *
      * @param channelId 频道 ID
-     * @param q 搜索关键字
-     * @param keyword 兼容关键字
-     * @param cursor 游标
+     * @param query 搜索关键字
+     * @param cursor 搜索游标
      * @param senderUid 发送者账号 ID
-     * @param domain 消息 domain 过滤值
-     * @param beforeMid 前界消息 ID
-     * @param afterMid 后界消息 ID
+     * @param domain 消息 domain
      * @param limit 返回条数
      * @param cpPrincipal 当前认证用户
-     * @return 游标分页的搜索结果
+     * @return 搜索结果游标页
      */
     @GetMapping("/{channelId}/messages/search")
-    @Operation(summary = "按关键字搜索消息", description = "在指定频道内按关键字搜索消息。")
+    @Operation(summary = "搜索消息", description = "在指定频道内按关键字搜索消息，使用独立搜索游标分页。")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象；失败时返回标准 HTTP 错误响应")
+        @ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象")
     })
     public CursorPageResponse<ChannelMessageResponse> searchChannelMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
         @Parameter(description = "搜索关键字", example = "hello")
-        @RequestParam(name = "q", required = false) String q,
-        @RequestParam(name = "keyword", required = false) String keyword,
+        @RequestParam(name = "q") @NotBlank(message = "q must not be blank") String query,
+        @Parameter(description = "搜索排他游标")
         @RequestParam(required = false) String cursor,
+        @Parameter(description = "发送者账号 ID")
         @RequestParam(name = "sender_uid", required = false)
         @Positive(message = "sender_uid must be greater than 0") Long senderUid,
+        @Parameter(description = "消息 domain 过滤值")
         @RequestParam(required = false) String domain,
-        @RequestParam(name = "before_mid", required = false)
-        @Positive(message = "before_mid must be greater than 0") Long beforeMid,
-        @RequestParam(name = "after_mid", required = false)
-        @Positive(message = "after_mid must be greater than 0") Long afterMid,
         @Parameter(description = "返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
         @Min(value = 1, message = "limit must be between 1 and 50")
         @Max(value = 50, message = "limit must be between 1 and 50") int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        String effectiveKeyword = q != null && !q.isBlank() ? q : keyword;
-        if (effectiveKeyword == null || effectiveKeyword.isBlank()) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "q must not be blank");
-        }
-        String normalizedKeyword = effectiveKeyword.trim();
+        String normalizedKeyword = query.trim();
         if (normalizedKeyword.length() > MAX_KEYWORD_LENGTH) {
             throw ProblemException.of(MessageProblem.INVALID_INPUT, "q length must be between 1 and 100");
         }
-        ChannelMessageSearchResult result = channelMessageTimelineApi.searchChannelMessages(
+        ChannelMessagePage page = channelMessageSearchApi.searchMessages(
             new SearchChannelMessagesQuery(
                 cpPrincipal.accountId(),
                 channelId,
@@ -107,17 +97,13 @@ public class ChannelMessageDiscoveryController {
                 OpaqueCursorCodec.decode(SEARCH_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID),
                 senderUid,
                 domain == null || domain.isBlank() ? null : domain.trim(),
-                beforeMid,
-                afterMid,
                 limit
             )
         );
-        boolean hasMore = result.messages().size() > limit;
-        List<ChannelMessageResult> pageItems = hasMore ? result.messages().subList(0, limit) : result.messages();
-        String nextCursor = hasMore
-            ? OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE, pageItems.getLast().messageId())
-            : null;
-        return CursorPageResponse.of(pageItems.stream().map(ChannelMessageResponse::from).toList(), nextCursor, hasMore);
+        return CursorPageResponse.of(
+            page.items().stream().map(ChannelMessageResponse::from).toList(),
+            OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE, page.nextCursor()),
+            page.hasMore()
+        );
     }
-
 }

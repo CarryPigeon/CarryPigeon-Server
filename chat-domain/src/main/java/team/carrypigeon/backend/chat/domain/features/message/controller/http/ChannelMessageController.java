@@ -4,40 +4,29 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageTimelineApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessageHistoryQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageHistoryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /**
- * 频道消息 HTTP 入口。
- * 职责：提供频道消息发送与撤回基础能力。
+ * 频道消息命令 HTTP 入口。
+ * 职责：提供频道消息发送与撤回能力。
+ * 边界：不承载历史、锚点上下文或搜索查询。
  */
 @Validated
 @RestController
@@ -46,84 +35,11 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 @Tag(name = "频道消息", description = "频道消息发送与撤回能力。")
 public class ChannelMessageController {
 
-    private static final String HISTORY_CURSOR_SCOPE = "channel_messages";
-    private static final int DEFAULT_AROUND_WINDOW = 25;
-
     private final ChannelMessageApi channelMessageApi;
-    private final ChannelMessageTimelineApi channelMessageTimelineApi;
 
-    public ChannelMessageController(
-        ChannelMessageApi channelMessageApi,
-        ChannelMessageTimelineApi channelMessageTimelineApi
-    ) {
+    public ChannelMessageController(ChannelMessageApi channelMessageApi) {
         this.channelMessageApi = channelMessageApi;
-        this.channelMessageTimelineApi = channelMessageTimelineApi;
     }
-
-    /**
-     * TODO 待审核
-     * 查询频道历史消息。
-     * 两种模式：cursor 模式从游标向前查询；around 模式查询目标消息前后的消息。
-     * 约束：cursor 与 around_mid 不能同时使用；before/after 为空时使用默认窗口。
-     *
-     * @param channelId   频道 ID
-     * @param cursor      游标
-     * @param aroundMid   锚点消息 ID
-     * @param before      锚点之前的数量
-     * @param after       锚点之后的数量
-     * @param limit       查询条数
-     * @param cpPrincipal 当前认证用户
-     * @return 游标分页的历史消息结果
-     */
-    @GetMapping("/{channelId}/messages")
-    @Operation(summary = "读取历史消息", description = "按游标或锚点消息读取指定频道的历史消息。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象；失败时返回标准 HTTP 错误响应")
-    })
-    public CursorPageResponse<ChannelMessageResponse> getChannelMessages(
-        @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @Parameter(description = "历史消息排他游标；为空表示从最新消息开始", example = "Y2hhbm5lbF9tZXNzYWdlczo1MDAw")
-        @RequestParam(required = false) String cursor,
-        @RequestParam(name = "around_mid", required = false)
-        @Positive(message = "around_mid must be greater than 0") Long aroundMid,
-        @RequestParam(required = false)
-        @Min(value = 0, message = "before must be between 0 and 50")
-        @Max(value = 50, message = "before must be between 0 and 50") Integer before,
-        @RequestParam(required = false)
-        @Min(value = 0, message = "after must be between 0 and 50")
-        @Max(value = 50, message = "after must be between 0 and 50") Integer after,
-        @Parameter(description = "返回条数，范围 1..50", example = "20")
-        @RequestParam(defaultValue = "20")
-        @Min(value = 1, message = "limit must be between 1 and 50")
-        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
-    ) {
-        Long cursorMessageId = OpaqueCursorCodec.decode(
-            HISTORY_CURSOR_SCOPE,
-            cursor,
-            MessageProblem.CURSOR_INVALID
-        );
-        if (cursorMessageId != null && aroundMid != null) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "cursor and around_mid cannot be used together");
-        }
-        ChannelMessageHistoryResult result = channelMessageTimelineApi.getChannelMessageHistory(
-            new GetChannelMessageHistoryQuery(
-                cpPrincipal.accountId(),
-                channelId,
-                cursorMessageId,
-                aroundMid,
-                before == null ? DEFAULT_AROUND_WINDOW : before,
-                after == null ? DEFAULT_AROUND_WINDOW : after,
-                limit
-            )
-        );
-        return CursorPageResponse.of(
-            result.messages().stream().map(ChannelMessageResponse::from).toList(),
-            OpaqueCursorCodec.encode(HISTORY_CURSOR_SCOPE, result.nextCursor())
-        );
-    }
-
 
     /**
      * 发送消息。

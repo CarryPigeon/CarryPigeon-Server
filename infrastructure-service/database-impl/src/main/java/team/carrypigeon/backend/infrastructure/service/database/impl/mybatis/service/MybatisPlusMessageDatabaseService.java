@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MessageEntity;
@@ -120,26 +119,35 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     }
 
     /**
-     * 按通用条件查询消息记录。
+     * 查询频道最新消息。
      */
     @Override
-    public List<MessageRecord> find(MessageQuery query) {
-        LambdaQueryWrapper<MessageEntity> wrapper = new LambdaQueryWrapper<MessageEntity>()
-                .eq(MessageEntity::getChannelId, query.channelId())
-                .lt(query.beforeMessageId() != null, MessageEntity::getMessageId, query.beforeMessageId())
-                .gt(query.afterMessageId() != null, MessageEntity::getMessageId, query.afterMessageId())
-                .eq(query.senderAccountId() != null, MessageEntity::getSenderId, query.senderAccountId())
-                .eq(query.domain() != null && !query.domain().isBlank(), MessageEntity::getDomain, query.domain())
-                .eq(query.status() != null && !query.status().isBlank(), MessageEntity::getStatus, query.status());
-        if (query.ascending()) {
-            wrapper.orderByAsc(MessageEntity::getMessageId);
-        } else {
-            wrapper.orderByDesc(MessageEntity::getMessageId);
-        }
-        wrapper.last("LIMIT " + query.limit());
-        return messageMapper.selectList(wrapper).stream()
-                .map(MessageEntity::toRecord)
-                .toList();
+    public List<MessageRecord> findLatestByChannelId(long channelId, int limit) {
+        return selectLimited(new LambdaQueryWrapper<MessageEntity>()
+                .eq(MessageEntity::getChannelId, channelId)
+                .orderByDesc(MessageEntity::getMessageId), limit);
+    }
+
+    /**
+     * 查询频道内指定消息之前的更旧消息。
+     */
+    @Override
+    public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
+        return selectLimited(new LambdaQueryWrapper<MessageEntity>()
+                .eq(MessageEntity::getChannelId, channelId)
+                .lt(MessageEntity::getMessageId, cursorMessageId)
+                .orderByDesc(MessageEntity::getMessageId), limit);
+    }
+
+    /**
+     * 查询频道内指定消息之后的更新消息。
+     */
+    @Override
+    public List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
+        return selectLimited(new LambdaQueryWrapper<MessageEntity>()
+                .eq(MessageEntity::getChannelId, channelId)
+                .gt(MessageEntity::getMessageId, cursorMessageId)
+                .orderByAsc(MessageEntity::getMessageId), limit);
     }
 
     /**
@@ -153,26 +161,35 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
             Long cursorMessageId,
             Long senderAccountId,
             String domain,
-            Long beforeMessageId,
-            Long afterMessageId,
             String status,
             int limit
     ) {
-        return messageMapper.selectList(new LambdaQueryWrapper<MessageEntity>()
-                        .eq(MessageEntity::getChannelId, channelId)
-                        .eq(status != null && !status.isBlank(), MessageEntity::getStatus, status)
-                        .and(wrapper -> wrapper
-                                .like(MessageEntity::getPreview, keyword)
-                                .or()
-                                .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
-                        .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
-                        .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
-                        .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)
-                        .lt(beforeMessageId != null, MessageEntity::getMessageId, beforeMessageId)
-                        .gt(afterMessageId != null, MessageEntity::getMessageId, afterMessageId)
-                        .orderByDesc(MessageEntity::getMessageId)
-                        .last("LIMIT " + limit))
-                .stream()
+        return selectLimited(new LambdaQueryWrapper<MessageEntity>()
+                .eq(MessageEntity::getChannelId, channelId)
+                .eq(status != null && !status.isBlank(), MessageEntity::getStatus, status)
+                .and(wrapper -> wrapper
+                        .like(MessageEntity::getPreview, keyword)
+                        .or()
+                        .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
+                .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
+                .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
+                .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)
+                .orderByDesc(MessageEntity::getMessageId), limit);
+    }
+
+    /**
+     * 使用 MyBatis-Plus 分页能力执行固定上限查询。
+     * 说明：关闭 count 查询，仅使用分页拦截器生成 LIMIT。
+     */
+    private List<MessageRecord> selectLimited(
+            LambdaQueryWrapper<MessageEntity> wrapper,
+            int limit
+    ) {
+        IPage<MessageEntity> page = messageMapper.selectPage(
+                new Page<>(1, limit, false),
+                wrapper
+        );
+        return page.getRecords().stream()
                 .map(MessageEntity::toRecord)
                 .toList();
     }

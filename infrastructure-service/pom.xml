@@ -9,7 +9,6 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>infrastructure-service</artifactId>
-    <version>1.0.0</version>
     <name>infrastructure-service</name>
     <description>infrastructure-service</description>
     <packaging>pom</packaging>

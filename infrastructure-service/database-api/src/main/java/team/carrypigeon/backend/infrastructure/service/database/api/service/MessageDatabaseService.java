@@ -5,13 +5,12 @@ import java.util.Optional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 
 /**
  * 消息数据库服务抽象。
- * 职责：提供消息表级通用元能力、通用查询与搜索例外。
- * 边界：不承载消息业务规则；搜索条件由调用方传入，不在本层解释 status、时间线或权限语义。
+ * 职责：提供消息表级通用元能力、方向查询与搜索例外。
+ * 边界：不承载消息业务规则；查询方向由调用方法固定，搜索条件由调用方传入。
  */
 public interface MessageDatabaseService {
 
@@ -53,7 +52,7 @@ public interface MessageDatabaseService {
 
     /**
      * 分页查询消息记录。
-     * 说明：按消息 ID 升序返回，仅供离线维护与元能力完整性使用；业务查询使用 find 或专用搜索。
+     * 说明：按消息 ID 升序返回，仅供离线维护与元能力完整性使用；业务查询使用方向查询或专用搜索。
      *
      * @param page 分页参数
      * @return 分页消息记录
@@ -77,26 +76,46 @@ public interface MessageDatabaseService {
     List<MessageRecord> findByIds(List<Long> messageIds);
 
     /**
-     * 按通用消息查询条件读取消息。
-     * 输出：按消息 ID 排序，最多 query.limit 条。
-     * 边界：只应用数据谓词，不判断时间线或状态业务含义。
+     * 查询频道最新消息。
+     * 输出：按消息 ID 倒序返回，最多 limit 条。
      *
-     * @param query 消息查询条件
-     * @return 命中的消息记录列表
+     * @param channelId 频道 ID
+     * @param limit 最大返回条数
+     * @return 最新消息记录列表
      */
-    List<MessageRecord> find(MessageQuery query);
+    List<MessageRecord> findLatestByChannelId(long channelId, int limit);
 
     /**
-     * 在频道内按关键字搜索消息。
-     * 说明：搜索是专用查询例外；status、keyword 等条件均由 Repository 传入。
+     * 查询频道内指定消息之前的更旧消息。
+     * 输出：按消息 ID 倒序返回，最多 limit 条。
+     *
+     * @param channelId 频道 ID
+     * @param cursorMessageId 排他游标消息 ID
+     * @param limit 最大返回条数
+     * @return 更旧消息记录列表
+     */
+    List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit);
+
+    /**
+     * 查询频道内指定消息之后的更新消息。
+     * 输出：按消息 ID 升序返回，最多 limit 条。
+     *
+     * @param channelId 频道 ID
+     * @param cursorMessageId 排他游标消息 ID
+     * @param limit 最大返回条数
+     * @return 更新消息记录列表
+     */
+    List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit);
+
+    /**
+     * 在频道内按关键字和过滤条件搜索消息。
+     * 说明：status、keyword 等条件均由 Repository 传入。
      *
      * @param channelId 频道 ID
      * @param keyword 搜索关键字
-     * @param cursorMessageId 游标消息 ID，可为空
+     * @param cursorMessageId 搜索排他游标消息 ID，可为空
      * @param senderAccountId 发送者账户 ID，可为空
      * @param domain 消息 domain，可为空
-     * @param beforeMessageId 前界消息 ID，可为空
-     * @param afterMessageId 后界消息 ID，可为空
      * @param status 消息状态，可为空
      * @param limit 返回条数
      * @return 搜索命中消息记录列表
@@ -107,8 +126,6 @@ public interface MessageDatabaseService {
             Long cursorMessageId,
             Long senderAccountId,
             String domain,
-            Long beforeMessageId,
-            Long afterMessageId,
             String status,
             int limit
     );

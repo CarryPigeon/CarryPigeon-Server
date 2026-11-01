@@ -10,7 +10,6 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMes
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
@@ -53,31 +52,18 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public List<CPChannelMessage> findByChannelIdBefore(long channelId, Long cursorMessageId, int limit) {
-        return map(messageDatabaseService.find(new MessageQuery(
-                channelId,
-                cursorMessageId,
-                null,
-                null,
-                null,
-                null,
-                false,
-                limit
-        )));
+    public List<CPChannelMessage> findLatestByChannelId(long channelId, int limit) {
+        return map(messageDatabaseService.findLatestByChannelId(channelId, limit));
     }
 
     @Override
-    public List<CPChannelMessage> findByChannelIdAfter(long channelId, long afterMessageId, int limit) {
-        return map(messageDatabaseService.find(new MessageQuery(
-                channelId,
-                null,
-                afterMessageId,
-                null,
-                null,
-                null,
-                true,
-                limit
-        )));
+    public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
+        return map(messageDatabaseService.findBeforeByChannelId(channelId, cursorMessageId, limit));
+    }
+
+    @Override
+    public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
+        return map(messageDatabaseService.findAfterByChannelId(channelId, cursorMessageId, limit));
     }
 
     @Override
@@ -87,13 +73,10 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
             Long cursorMessageId,
             Long senderAccountId,
             String domain,
-            Long beforeMessageId,
-            Long afterMessageId,
             int limit
     ) {
         return map(messageDatabaseService.searchByChannelId(
-                channelId, keyword, cursorMessageId, senderAccountId, domain,
-                beforeMessageId, afterMessageId, STATUS_SENT, limit
+                channelId, keyword, cursorMessageId, senderAccountId, domain, STATUS_SENT, limit
         ));
     }
 
