@@ -22,7 +22,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：只负责数据库记录映射，不承载注册与登录业务规则。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabaseService {
 
     private final AuthAccountMapper authAccountMapper;

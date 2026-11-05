@@ -1,11 +1,9 @@
 package team.carrypigeon.backend.starter;
 
 import lombok.extern.slf4j.Slf4j;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -15,16 +13,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * <p>
  * 职责：启动 Spring 容器，并作为最终运行时的装配入口。
  */
+@Slf4j
 @SpringBootApplication
 @EnableScheduling
 @ComponentScan(basePackages = {"team.carrypigeon.backend"})
 @ConfigurationPropertiesScan(basePackages = {"team.carrypigeon.backend"})
-@MapperScan(
-        basePackages = "team.carrypigeon.backend.infrastructure.service.database.impl.mybatis",
-        annotationClass = org.apache.ibatis.annotations.Mapper.class
-)
-@EnableCaching
-@Slf4j
 public class ApplicationStarter {
     /**
      * Spring Boot 应用入口。

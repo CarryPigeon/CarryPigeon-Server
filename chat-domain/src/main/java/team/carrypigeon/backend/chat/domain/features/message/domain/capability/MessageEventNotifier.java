@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 import java.util.Collection;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 

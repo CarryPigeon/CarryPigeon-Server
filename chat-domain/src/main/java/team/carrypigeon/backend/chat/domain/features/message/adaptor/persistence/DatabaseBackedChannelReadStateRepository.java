@@ -19,7 +19,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 边界：不解释未读统计 SQL；该能力属于 database 读模型例外。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedChannelReadStateRepository implements ChannelReadStateRepository {
 
     private final ChannelReadStateDatabaseService channelReadStateDatabaseService;

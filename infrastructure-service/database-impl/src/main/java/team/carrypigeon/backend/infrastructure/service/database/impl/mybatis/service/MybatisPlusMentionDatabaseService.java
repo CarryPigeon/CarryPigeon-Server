@@ -23,7 +23,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：不承载已读状态流转；read 过滤值由 Repository 传入。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusMentionDatabaseService implements MentionDatabaseService {
 
     private final MentionMapper mentionMapper;

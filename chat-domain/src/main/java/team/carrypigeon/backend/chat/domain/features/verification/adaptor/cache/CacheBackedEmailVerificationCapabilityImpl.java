@@ -1,0 +1,74 @@
+package team.carrypigeon.backend.chat.domain.features.verification.adaptor.cache;
+
+import java.time.Duration;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
+import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
+import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
+
+/**
+ * 基于缓存的邮箱验证码 capability 实现。
+ * 职责：把邮箱验证码持久化到共享缓存，并完成验证码邮件投递编排。
+ * 边界：缓存与邮件客户端的具体实现细节停留在基础设施层。
+ */
+@Component
+public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability {
+
+    private static final Duration CODE_TTL = Duration.ofMinutes(10);
+    private static final String CACHE_KEY_PREFIX = "auth:email-code:";
+    private static final String MAIL_SUBJECT = "CarryPigeon verification code";
+
+    private final CacheService cacheService;
+    private final ObjectProvider<MailSenderService> mailSenderServiceProvider;
+
+    public CacheBackedEmailVerificationCapabilityImpl(
+            CacheService cacheService,
+            ObjectProvider<MailSenderService> mailSenderServiceProvider
+    ) {
+        this.cacheService = cacheService;
+        this.mailSenderServiceProvider = mailSenderServiceProvider;
+    }
+
+    @Override
+    public void issueCode(String email) {
+        String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+        String cacheKey = CACHE_KEY_PREFIX + email;
+        cacheService.set(cacheKey, code, CODE_TTL);
+        try {
+            deliverCode(email, code);
+        } catch (RuntimeException exception) {
+            cacheService.delete(cacheKey);
+            throw exception;
+        }
+    }
+
+    @Override
+    public void verifyCode(String email, String code) {
+        if (!cacheService.consumeIfEquals(CACHE_KEY_PREFIX + email, code)) {
+            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
+        }
+    }
+
+    private void deliverCode(String email, String code) {
+        MailSenderService mailSenderService = mailSenderServiceProvider.getIfAvailable();
+        if (mailSenderService == null) {
+            throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
+        }
+        try {
+            mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code)));
+        } catch (RuntimeException exception) {
+            throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
+        }
+    }
+
+    private String buildMailText(String code) {
+        // TODO 改进为通过配置文件配置
+        return "Your CarryPigeon verification code is: " + code + "\n\n"
+                + "This code will expire in 10 minutes.";
+    }
+}

@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
-import team.carrypigeon.backend.infrastructure.service.cache.impl.config.CacheServiceProperties;
+import team.carrypigeon.backend.infrastructure.service.cache.impl.config.RedisCacheProperties;
 
 /**
  * Redis 字符串缓存实现。
@@ -28,9 +28,9 @@ public class RedisCacheService implements CacheService {
     );
 
     private final StringRedisTemplate redisTemplate;
-    private final CacheServiceProperties properties;
+    private final RedisCacheProperties properties;
 
-    public RedisCacheService(StringRedisTemplate redisTemplate, CacheServiceProperties properties) {
+    public RedisCacheService(StringRedisTemplate redisTemplate, RedisCacheProperties properties) {
         this.redisTemplate = redisTemplate;
         this.properties = properties;
     }

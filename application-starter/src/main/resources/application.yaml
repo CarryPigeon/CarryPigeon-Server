@@ -3,55 +3,7 @@ spring:
     # 职责：定义当前运行时应用名称。
     # 边界：这里只保留当前启动骨架实际需要的最小应用配置。
     name: CarryPigeonBackend
-  datasource:
-    # 职责：定义数据库连接地址，供 database-impl 使用。
-    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
-    # 职责：定义数据库连接用户名。
-    username: carrypigeon
-    # 职责：定义数据库连接密码。
-    password: carrypigeon123
-    # 职责：显式指定 MySQL 驱动，避免启动阶段歧义。
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      # 职责：限制从连接池获取数据库连接的最长等待时间，单位毫秒。
-      connection-timeout: 10000
-      # 职责：限制连接有效性检查的最长等待时间，单位毫秒。
-      validation-timeout: 5000
-  data:
-    redis:
-      # 职责：定义 Redis 主机地址，供 cache-impl 使用。
-      host: 127.0.0.1
-      # 职责：定义 Redis 服务端口。
-      port: 6379
-      # 职责：定义 Redis 访问密码。
-      password: carrypigeon123
-      # 职责：限制 Redis 建连等待时间。
-      connect-timeout: 5s
-      # 职责：限制单条 Redis 命令等待时间。
-      timeout: 3s
-  mail:
-    # 职责：定义 SMTP 主机地址，供 mail-impl 使用。
-    host: ""
-    # 职责：定义 SMTP 服务端口。
-    port: 587
-    # 职责：定义 SMTP 认证用户名。
-    username: ""
-    # 职责：定义 SMTP 认证密码。
-    password: ""
-    properties:
-      mail:
-        smtp:
-          # 职责：控制 SMTP 是否启用账号认证。
-          auth: true
-          # 职责：限制 SMTP 建连等待时间，避免启动健康检查无限阻塞。
-          connectiontimeout: 5000
-          # 职责：限制 SMTP 读取等待时间。
-          timeout: 10000
-          # 职责：限制 SMTP 写入等待时间。
-          writetimeout: 10000
-          starttls:
-            # 职责：控制 SMTP 是否启用 STARTTLS。
-            enable: true
+  # 文件配置
   servlet:
     multipart:
       # 职责：阻止超过消息文件附件上限的 multipart 请求进入应用处理。
@@ -60,6 +12,13 @@ spring:
       max-request-size: 101MB
 
 cp:
+  # 服务器的相关配置，主要配置服务器的数据和功能等多开关，不负责服务器的启动和运行相关配置
+  server:
+    # 服务器的元数据配置
+    meta:
+      id: 550e8400-e29b-41d4-a716-446655440000
+      name: carrypigeon-local
+      description: a simple chat server
   local-dev:
     http:
       cors:
@@ -69,13 +28,6 @@ cp:
         allowed-origin-patterns: http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*,http://tauri.localhost,https://tauri.localhost,tauri://localhost
         # 职责：控制 CORS 预检缓存秒数；仅用于减少本地调试 OPTIONS 噪声。
         max-age: 3600
-      request-log:
-        # 职责：控制本地 HTTP 请求摘要日志；默认关闭，需要排查请求链路时再开启。
-        enabled: false
-  plugin:
-    # 职责：统一承载插件级启停与自定义选项。
-    # 边界：这里只保留实际读取的空入口；具体插件配置应在插件接入后按需添加。
-    configs: {}
   chat:
     file:
       share-key:
@@ -100,7 +52,6 @@ cp:
     server:
       # 职责：定义服务发现与 realtime 握手中使用的稳定 serverId。
       # 约束：多服务端部署时必须按实例明确区分，避免跨实例消息来源混淆。
-      id: 550e8400-e29b-41d4-a716-446655440000
       realtime:
         # 职责：控制 Netty 实时通道是否参与当前运行时装配。
         # 约束：默认开启，生产环境外放前仍应通过防火墙或网关限制监听边界。
@@ -118,51 +69,79 @@ cp:
         authentication-timeout-seconds: 10
         # 职责：定义服务端读空闲超时；客户端需在此时间内发送 ping 或其他入站帧。
         read-idle-timeout-seconds: 60
-        # 职责：限制单进程断线续传事件在内存中的保留时间。
-        event-retention: 1h
-        # 职责：限制单进程保留断线事件窗口的账号总数。
-        max-event-accounts: 10000
-        # 职责：限制单个账号事件窗口保留的事件条数。
-        max-events-per-account: 1000
-        # 职责：限制单条实时事件帧的 UTF-8 字节数，超限事件不落窗口也不推送。
-        max-payload-bytes: 262144
-  infrastructure:
-    id:
-      # 职责：配置当前节点的雪花 ID workerId。
-      # 约束：取值范围为 0..31，多节点部署时必须按节点区分。
-      worker-id: 1
-      # 职责：配置当前节点的雪花 ID datacenterId。
-      # 约束：取值范围为 0..31，多数据中心或多环境部署时应区分。
-      datacenter-id: 1
-    service:
-      database:
-        # 职责：控制数据库服务实现是否参与当前运行时装配。
-        enabled: true
-      cache:
-        # 职责：控制缓存服务实现是否参与当前运行时装配。
-        enabled: true
-        # 职责：定义字符串缓存默认 TTL。
-        default-ttl: 5m
-      storage:
-        # 职责：控制对象存储服务实现是否参与当前运行时装配。
-        enabled: true
-        # 职责：定义 MinIO 连接地址。
-        endpoint: http://127.0.0.1:9000
-        # 职责：定义 MinIO 访问身份。
-        access-key: carrypigeon
-        # 职责：定义 MinIO 访问密钥。
-        secret-key: carrypigeon123
-        # 职责：定义当前对象存储默认 bucket。
-        bucket: carrypigeon
-        # 职责：限制 MinIO 建连等待时间。
-        connect-timeout: 5s
-        # 职责：限制 MinIO 单次读取停顿时间。
-        read-timeout: 30s
-        # 职责：限制 MinIO 单次写入停顿时间。
-        write-timeout: 30s
-      mail:
-        # 职责：控制邮件服务实现是否参与当前运行时装配。
-        # 约束：默认关闭，只有在提供 SMTP 配置后才启用。
-        enabled: false
-        # 职责：定义邮件默认发件地址。
-        from-address: ""
+service:
+  database:
+    mysql:
+      # 职责：控制数据库服务实现是否参与当前运行时装配。
+      enabled: true
+      # 职责：定义数据库连接地址。
+      url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
+      # 职责：定义数据库连接用户名。
+      username: carrypigeon
+      # 职责：定义数据库连接密码。
+      password: carrypigeon123
+      # 职责：显式指定 MySQL 驱动。
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # 职责：限制从连接池获取数据库连接的最长等待时间。
+      connection-timeout: 10000
+      # 职责：限制连接有效性检查的最长等待时间。
+      validation-timeout: 5000
+  cache:
+    redis:
+      # 职责：控制缓存服务实现是否参与当前运行时装配。
+      enabled: true
+      # 职责：定义 Redis 主机地址。
+      host: 127.0.0.1
+      # 职责：定义 Redis 服务端口。
+      port: 6379
+      # 职责：定义 Redis 访问密码。
+      password: carrypigeon123
+      # 职责：限制 Redis 建连等待时间。
+      connect-timeout: 5s
+      # 职责：限制单条 Redis 命令等待时间。
+      timeout: 3s
+      # 职责：定义字符串缓存默认 TTL。
+      default-ttl: 5m
+  mail:
+    smtp:
+      # 职责：控制邮件服务实现是否参与当前运行时装配。
+      enabled: false
+      # 职责：定义 SMTP 主机地址。
+      host: ""
+      # 职责：定义 SMTP 服务端口。
+      port: 587
+      # 职责：定义 SMTP 认证用户名。
+      username: ""
+      # 职责：定义 SMTP 认证密码。
+      password: ""
+      # 职责：定义邮件默认发件地址。
+      from-address: ""
+      # 职责：控制 SMTP 是否启用账号认证。
+      auth: true
+      # 职责：限制 SMTP 建连等待时间。
+      connection-timeout: 5000
+      # 职责：限制 SMTP 读取等待时间。
+      timeout: 10000
+      # 职责：限制 SMTP 写入等待时间。
+      write-timeout: 10000
+      # 职责：控制 SMTP 是否启用 STARTTLS。
+      starttls-enable: true
+  # 存储配置
+  storage:
+    minio:
+      # 职责：控制对象存储服务实现是否参与当前运行时装配。
+      enabled: true
+      # 职责：定义 MinIO 连接地址。
+      endpoint: http://127.0.0.1:9000
+      # 职责：定义 MinIO 访问身份。
+      access-key: carrypigeon
+      # 职责：定义 MinIO 访问密钥。
+      secret-key: carrypigeon123
+      # 职责：定义当前对象存储默认 bucket。
+      bucket: carrypigeon
+      # 职责：限制 MinIO 建连等待时间。
+      connect-timeout: 5s
+      # 职责：限制 MinIO 单次读取停顿时间。
+      read-timeout: 30s
+      # 职责：限制 MinIO 单次写入停顿时间。
+      write-timeout: 30s

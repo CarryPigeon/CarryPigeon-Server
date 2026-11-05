@@ -14,7 +14,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.health.Datab
  * 边界：只负责契约转换，不承载 JDBC 检查细节。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseInitializationChecker implements InitializationChecker {
 
     private final DatabaseHealthService databaseHealthService;

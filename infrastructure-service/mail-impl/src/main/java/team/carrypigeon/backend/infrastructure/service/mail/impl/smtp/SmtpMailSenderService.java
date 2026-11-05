@@ -6,7 +6,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
-import team.carrypigeon.backend.infrastructure.service.mail.impl.config.MailServiceProperties;
+import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMailProperties;
 
 /**
  * SMTP 邮件发送服务。
@@ -16,9 +16,9 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.config.MailServ
 public class SmtpMailSenderService implements MailSenderService {
 
     private final JavaMailSender mailSender;
-    private final MailServiceProperties properties;
+    private final SmtpMailProperties properties;
 
-    public SmtpMailSenderService(JavaMailSender mailSender, MailServiceProperties properties) {
+    public SmtpMailSenderService(JavaMailSender mailSender, SmtpMailProperties properties) {
         this.mailSender = mailSender;
         this.properties = properties;
     }

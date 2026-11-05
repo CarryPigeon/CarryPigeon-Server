@@ -3,11 +3,11 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.List;
 import java.util.Map;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import org.springframework.stereotype.Component;
 
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPMessageStatus;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
@@ -19,7 +19,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Mess
  * 边界：不解释具体 domain 的 data，也不恢复任何旧消息字段。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedMessageRepository implements MessageRepository {
 
     private static final TypeReference<Map<String, Object>> DATA_TYPE = new TypeReference<>() { };

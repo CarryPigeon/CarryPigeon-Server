@@ -22,7 +22,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：只负责持久化映射和数据谓词，不承载消息业务规则。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusMessageDatabaseService implements MessageDatabaseService {
 
     private final MessageMapper messageMapper;

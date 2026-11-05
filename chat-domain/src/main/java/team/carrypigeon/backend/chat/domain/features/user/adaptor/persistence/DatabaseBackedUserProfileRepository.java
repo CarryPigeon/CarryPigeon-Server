@@ -17,7 +17,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.User
  * 边界：不包含 SQL 与数据库驱动细节，具体持久化由 database-impl 提供。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedUserProfileRepository implements UserProfileRepository {
 
     private final UserProfileDatabaseService userProfileDatabaseService;

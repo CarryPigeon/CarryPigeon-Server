@@ -24,7 +24,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：只负责数据库记录映射，不承载 token 轮换业务规则。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefreshSessionDatabaseService {
 
     private final AuthRefreshSessionMapper authRefreshSessionMapper;

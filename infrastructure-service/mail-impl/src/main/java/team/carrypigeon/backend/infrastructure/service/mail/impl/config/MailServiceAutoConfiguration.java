@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.config;
 
+import java.util.Properties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,41 +20,41 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.startup.MailIni
  * 边界：只创建具体实现 Bean，不在 API 模块中定义 Spring 装配逻辑。
  */
 @AutoConfiguration
-@EnableConfigurationProperties(MailServiceProperties.class)
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.mail", name = "enabled", havingValue = "true")
+@EnableConfigurationProperties(SmtpMailProperties.class)
+@ConditionalOnProperty(prefix = "cp.service.mail.smtp", name = "enabled", havingValue = "true")
 public class MailServiceAutoConfiguration {
 
-    /**
-     * 创建邮件发送服务。
-     *
-     * @param mailSender Spring Mail 发送器
-     * @param properties 邮件服务配置
-     * @return 邮件发送服务
-     */
     @Bean
     @ConditionalOnMissingBean
-    public MailSenderService mailSenderService(JavaMailSenderImpl mailSender, MailServiceProperties properties) {
+    public JavaMailSenderImpl javaMailSender(SmtpMailProperties properties) {
+        JavaMailSenderImpl sender = new JavaMailSenderImpl();
+        sender.setHost(properties.host());
+        sender.setPort(properties.port());
+        sender.setUsername(properties.username());
+        sender.setPassword(properties.password());
+
+        Properties props = sender.getJavaMailProperties();
+        props.put("mail.smtp.auth", String.valueOf(properties.auth()));
+        props.put("mail.smtp.connectiontimeout", String.valueOf(properties.connectionTimeout()));
+        props.put("mail.smtp.timeout", String.valueOf(properties.timeout()));
+        props.put("mail.smtp.writetimeout", String.valueOf(properties.writeTimeout()));
+        props.put("mail.smtp.starttls.enable", String.valueOf(properties.starttlsEnable()));
+
+        return sender;
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public MailSenderService mailSenderService(JavaMailSenderImpl mailSender, SmtpMailProperties properties) {
         return new SmtpMailSenderService(mailSender, properties);
     }
 
-    /**
-     * 创建邮件健康检查服务。
-     *
-     * @param mailSender Spring Mail 发送器
-     * @return 邮件健康检查服务
-     */
     @Bean
     @ConditionalOnMissingBean
     public MailHealthService mailHealthService(JavaMailSenderImpl mailSender) {
         return new SmtpMailHealthService(mailSender);
     }
 
-    /**
-     * 创建邮件初始化检查。
-     *
-     * @param mailHealthService 邮件健康检查服务
-     * @return 共享初始化检查契约下的邮件检查
-     */
     @Bean
     @ConditionalOnMissingBean(name = "mailInitializationCheck")
     public InitializationChecker mailInitializationCheck(MailHealthService mailHealthService) {

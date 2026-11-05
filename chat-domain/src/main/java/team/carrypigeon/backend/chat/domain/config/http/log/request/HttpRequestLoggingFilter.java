@@ -1,0 +1,65 @@
+package team.carrypigeon.backend.chat.domain.config.http.log.request;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.web.filter.OncePerRequestFilter;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
+
+/**
+ * 本地 HTTP 请求调试日志过滤器。
+ * 职责：在本地联调期开关开启后输出每个 HTTP 请求的最小诊断摘要。
+ * 边界：不读取请求体或响应体，不记录敏感认证头，只记录路由、来源、状态与耗时。
+ */
+@Slf4j
+public class HttpRequestLoggingFilter extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(
+        @NonNull HttpServletRequest request,
+        @NonNull HttpServletResponse response,
+        @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+        long startedAt = System.nanoTime();
+        Exception failure = null;
+        try {
+            filterChain.doFilter(request, response);
+        } catch (ServletException | IOException | RuntimeException exception) {
+            failure = exception;
+            throw exception;
+        } finally {
+            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt);
+            if (log.isInfoEnabled()) {
+                log.debug("{}", buildRequestSummary(request, response, durationMs, failure));
+            }
+        }
+    }
+
+    String buildRequestSummary(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            long durationMs,
+            Exception failure
+    ) {
+        return "Action: http_request_completed"
+                + " method=" + LogValueSanitizer.singleLine(request.getMethod())
+                + " uri=" + LogValueSanitizer.uri(request.getRequestURI())
+                + " query=" + LogValueSanitizer.query(request.getQueryString())
+                + " origin=" + safeHeader(request, "Origin")
+                + " accessControlRequestMethod=" + safeHeader(request, "Access-Control-Request-Method")
+                + " status=" + response.getStatus()
+                + " durationMs=" + durationMs
+                + " remoteAddr=" + LogValueSanitizer.singleLine(request.getRemoteAddr())
+                + " userAgent=" + safeHeader(request, "User-Agent")
+                + " failure=" + (failure == null ? "" : failure.getClass().getSimpleName());
+    }
+
+    private String safeHeader(HttpServletRequest request, String name) {
+        return LogValueSanitizer.singleLine(request.getHeader(name));
+    }
+}

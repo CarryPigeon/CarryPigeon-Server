@@ -19,7 +19,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 边界：不含 SQL 与数据库驱动细节，不承载申请状态流转、重复申请判定与审批权限规则；事务边界由调用方决定。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedChannelApplicationRepository implements ChannelApplicationRepository {
 
     private final ChannelApplicationDatabaseService channelApplicationDatabaseService;

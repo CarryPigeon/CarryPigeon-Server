@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.image;
 
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.MessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 
 /**
  * CarryPigeon 预定义的图片消息处理器

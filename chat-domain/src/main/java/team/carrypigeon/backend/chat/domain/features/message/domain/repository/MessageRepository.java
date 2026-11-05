@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 
 /**
  * 消息仓储抽象。

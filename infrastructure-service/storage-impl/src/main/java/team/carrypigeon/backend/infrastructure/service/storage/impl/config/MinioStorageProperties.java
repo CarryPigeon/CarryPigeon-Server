@@ -18,7 +18,7 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * @param readTimeout 读取停顿超时
  * @param writeTimeout 写入停顿超时
  */
-@ConfigurationProperties(prefix = "cp.infrastructure.service.storage")
+@ConfigurationProperties(prefix = "service.storage.minio")
 public record MinioStorageProperties(
         boolean enabled,
         String endpoint,
@@ -57,16 +57,6 @@ public record MinioStorageProperties(
         if (enabled && secretKey.isBlank()) {
             throw new IllegalArgumentException("cp.infrastructure.service.storage.secret-key must not be blank when storage is enabled");
         }
-    }
-
-    public MinioStorageProperties(
-            boolean enabled,
-            String endpoint,
-            String accessKey,
-            String secretKey,
-            String bucket
-    ) {
-        this(enabled, endpoint, accessKey, secretKey, bucket, null, null, null);
     }
 
     private static Duration positiveOrDefault(Duration value, Duration defaultValue, String propertyName) {

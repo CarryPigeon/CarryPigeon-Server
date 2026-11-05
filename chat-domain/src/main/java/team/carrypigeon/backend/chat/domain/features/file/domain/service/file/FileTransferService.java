@@ -1,0 +1,95 @@
+package team.carrypigeon.backend.chat.domain.features.file.domain.service.file;
+
+import java.io.InputStream;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Optional;
+import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
+import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
+
+/**
+ * 文件领域服务。
+ * 职责：为上传申请、上传写入和下载访问提供最小编排能力。
+ * 边界：不引入独立文件表，只依赖对象存储能力与稳定 share_key 规则。
+ */
+@Service
+public class FileTransferService implements FileTransferApi {
+
+    private static final Duration UPLOAD_URL_TTL = Duration.ofMinutes(10);
+
+    private final ObjectStorageService objectStorageService;
+    private final IdGenerator idGenerator;
+    private final TimeProvider timeProvider;
+    private final FileUploadShareKeyCodec uploadShareKeyCodec;
+
+    public FileTransferService(
+            ObjectStorageService objectStorageService,
+            IdGenerator idGenerator,
+            TimeProvider timeProvider,
+            FileUploadShareKeyCodec uploadShareKeyCodec
+    ) {
+        this.objectStorageService = objectStorageService;
+        this.idGenerator = idGenerator;
+        this.timeProvider = timeProvider;
+        this.uploadShareKeyCodec = uploadShareKeyCodec;
+    }
+
+    @Override
+    public FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes) {
+        long fileId = idGenerator.nextLongId();
+        Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
+        String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
+        AuditLogs.success("file.upload_grant", accountId,
+                "file_id", fileId, "size_bytes", sizeBytes);
+        return new FileUploadGrantResult(
+                fileId,
+                shareKey,
+                "/api/files/uploads/" + shareKey,
+                expiresAt
+        );
+    }
+
+    @Override
+    public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content) {
+        try {
+            FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
+            if (issuedShareKey.ownerAccountId() != accountId) {
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+            }
+            if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+            }
+            objectStorageService.put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
+            AuditLogs.success("file.upload", accountId,
+                    "file_id", issuedShareKey.fileId(), "size_bytes", sizeBytes);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("file.upload", accountId, exception.reason());
+            throw exception;
+        }
+    }
+
+
+    @Override
+    public Optional<FileDownloadResult> downloadFile(String shareKey) {
+        String objectKey = "/files/" + shareKey;
+        Optional<StorageObject> storageObject = objectStorageService.get(objectKey);
+        if (storageObject.isEmpty()) {
+            return Optional.empty();
+        }
+        StorageObject object = storageObject.get();
+        return Optional.of(new FileDownloadResult(
+                object.contentType(),
+                object.size(),
+                object.content().orElseThrow()
+        ));
+    }
+}

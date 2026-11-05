@@ -18,7 +18,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 边界：不含 SQL 与数据库驱动细节，不承载"禁言是否仍然生效"的判定规则；事务边界由调用方（领域服务）决定。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedChannelBanRepository implements ChannelBanRepository {
 
     private final ChannelBanDatabaseService channelBanDatabaseService;

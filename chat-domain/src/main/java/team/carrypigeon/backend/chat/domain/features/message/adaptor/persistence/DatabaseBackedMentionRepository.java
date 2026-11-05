@@ -17,7 +17,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Ment
  * 边界：不定义 mention 解析规则，只负责已生成提及结果的持久化与读取。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class DatabaseBackedMentionRepository implements MentionRepository {
 
     private static final int ALL_ROWS = Integer.MAX_VALUE;

@@ -2,13 +2,13 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import team.carrypigeon.backend.chat.domain.features.message.domain.capability.SenderProfileQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.capability.UserProfileQueryAdapter;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.MessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 
 /**
  * CarryPigeon 预定义的文本消息处理器<br/>
@@ -22,15 +22,15 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.MessageHandl
 public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
     private final ObjectMapper objectMapper;
     private final MessageRepository messageRepository;
-    private final SenderProfileQuery senderProfileQuery;
+    private final UserProfileQueryAdapter userProfileQueryAdapter;
 
     public CPChannelTextMessageHandler(
         ObjectMapper objectMapper,
-        MessageRepository messageRepository, SenderProfileQuery senderProfileQuery
+        MessageRepository messageRepository, UserProfileQueryAdapter userProfileQueryAdapter
     ) {
         this.objectMapper = objectMapper;
         this.messageRepository = messageRepository;
-        this.senderProfileQuery = senderProfileQuery;
+        this.userProfileQueryAdapter = userProfileQueryAdapter;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             CPChannelMessage cpChannelMessage = messageRepository.findById(Long.parseLong(originData.getReplyToMid()))
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             // 查询发送人名称
-            String senderName = senderProfileQuery.findSenderName(cpChannelMessage.senderId());
+            String senderName = userProfileQueryAdapter.findSenderName(cpChannelMessage.senderId());
             // 组装数据
             data.setReplyToUser(
                 new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(

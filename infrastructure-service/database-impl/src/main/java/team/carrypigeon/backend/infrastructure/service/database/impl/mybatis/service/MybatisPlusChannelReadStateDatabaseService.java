@@ -26,7 +26,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：不承载“只前进不后退”等业务规则，只暴露存储层读写能力。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadStateDatabaseService {
 
     private final ChannelReadStateMapper channelReadStateMapper;

@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.health;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
@@ -10,10 +9,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcCl
 /**
  * JDBC 数据库健康检查实现。
  * 职责：通过轻量 SQL 验证数据库连接与查询能力。
- * 边界：异常细节只用于健康消息，不向 API 泄露 JDBC 类型。
  */
 @Component
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.database", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class JdbcDatabaseHealthService implements DatabaseHealthService {
 
     private static final String HEALTH_QUERY = "SELECT 1";
