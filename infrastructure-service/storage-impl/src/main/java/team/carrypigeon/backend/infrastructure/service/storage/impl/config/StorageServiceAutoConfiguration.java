@@ -23,7 +23,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.impl.startup.Stor
  */
 @AutoConfiguration
 @EnableConfigurationProperties(MinioStorageProperties.class)
-@ConditionalOnProperty(prefix = "cp.infrastructure.service.storage", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "service.storage.minio", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class StorageServiceAutoConfiguration {
 
     /**

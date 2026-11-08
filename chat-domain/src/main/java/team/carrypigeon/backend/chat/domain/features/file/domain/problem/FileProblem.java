@@ -18,6 +18,9 @@ public enum FileProblem implements ProblemMapping {
     /** 目标文件不存在。 */
     FILE_NOT_FOUND(404, "not_found", "file does not exist"),
 
+    /** 对象存储服务未启用或不可用。 */
+    STORAGE_UNAVAILABLE(503, "storage_service_unavailable", "storage service is unavailable"),
+
     /** 上传内容读取失败。 */
     UPLOAD_READ_FAILED(500, "internal_error", "internal server error"),
 

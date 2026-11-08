@@ -23,14 +23,14 @@ public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypig
     private static final String CACHE_KEY_PREFIX = "auth:email-code:";
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
-    private final CacheService cacheService;
+    private final ObjectProvider<CacheService> cacheServiceProvider;
     private final ObjectProvider<MailSenderService> mailSenderServiceProvider;
 
     public CacheBackedEmailVerificationCapabilityImpl(
-            CacheService cacheService,
+            ObjectProvider<CacheService> cacheServiceProvider,
             ObjectProvider<MailSenderService> mailSenderServiceProvider
     ) {
-        this.cacheService = cacheService;
+        this.cacheServiceProvider = cacheServiceProvider;
         this.mailSenderServiceProvider = mailSenderServiceProvider;
     }
 
@@ -38,6 +38,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypig
     public void issueCode(String email) {
         String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
         String cacheKey = CACHE_KEY_PREFIX + email;
+        CacheService cacheService = requireCache();
         cacheService.set(cacheKey, code, CODE_TTL);
         try {
             deliverCode(email, code);
@@ -49,9 +50,21 @@ public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypig
 
     @Override
     public void verifyCode(String email, String code) {
-        if (!cacheService.consumeIfEquals(CACHE_KEY_PREFIX + email, code)) {
+        if (!requireCache().consumeIfEquals(CACHE_KEY_PREFIX + email, code)) {
             throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
         }
+    }
+
+    /**
+     * 获取验证码缓存能力。
+     * 说明：缓存模块允许在部署时关闭；关闭后应用仍可启动，仅验证码相关接口返回稳定错误。
+     */
+    private CacheService requireCache() {
+        CacheService cacheService = cacheServiceProvider.getIfAvailable();
+        if (cacheService == null) {
+            throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE);
+        }
+        return cacheService;
     }
 
     private void deliverCode(String email, String code) {

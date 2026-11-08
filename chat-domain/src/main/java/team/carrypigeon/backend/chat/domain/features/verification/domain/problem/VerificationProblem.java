@@ -13,6 +13,9 @@ public enum VerificationProblem implements ProblemMapping {
     INVALID_CODE(422, "validation_failed", "validation failed"),
     /**邮箱不合法*/
     INVALID_EMAIL(422, "invalid_email", "invalid email"),
+    /** 缓存服务未就绪，无法签发或校验验证码。 */
+    CACHE_UNAVAILABLE(503, "cache_service_unavailable", "cache service is unavailable"),
+
     /** 邮件服务未就绪。 */
     MAIL_UNAVAILABLE(503, "mail_service_unavailable", "mail service is unavailable"),
 

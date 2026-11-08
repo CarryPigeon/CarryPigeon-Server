@@ -21,7 +21,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.startup.MailIni
  */
 @AutoConfiguration
 @EnableConfigurationProperties(SmtpMailProperties.class)
-@ConditionalOnProperty(prefix = "cp.service.mail.smtp", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "service.mail.smtp", name = "enabled", havingValue = "true")
 public class MailServiceAutoConfiguration {
 
     @Bean

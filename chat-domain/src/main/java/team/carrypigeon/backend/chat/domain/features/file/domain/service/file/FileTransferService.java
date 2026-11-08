@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
@@ -26,18 +27,18 @@ public class FileTransferService implements FileTransferApi {
 
     private static final Duration UPLOAD_URL_TTL = Duration.ofMinutes(10);
 
-    private final ObjectStorageService objectStorageService;
+    private final ObjectProvider<ObjectStorageService> objectStorageServiceProvider;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
 
     public FileTransferService(
-            ObjectStorageService objectStorageService,
+            ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec
     ) {
-        this.objectStorageService = objectStorageService;
+        this.objectStorageServiceProvider = objectStorageServiceProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
@@ -68,7 +69,7 @@ public class FileTransferService implements FileTransferApi {
             if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
                 throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
             }
-            objectStorageService.put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
+            requireStorage().put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
             AuditLogs.success("file.upload", accountId,
                     "file_id", issuedShareKey.fileId(), "size_bytes", sizeBytes);
         } catch (ProblemException exception) {
@@ -78,10 +79,22 @@ public class FileTransferService implements FileTransferApi {
     }
 
 
+    /**
+     * 获取对象存储能力。
+     * 说明：存储模块允许在部署时关闭；关闭后应用仍可启动，仅文件相关接口返回稳定错误。
+     */
+    private ObjectStorageService requireStorage() {
+        ObjectStorageService storage = objectStorageServiceProvider.getIfAvailable();
+        if (storage == null) {
+            throw ProblemException.of(FileProblem.STORAGE_UNAVAILABLE);
+        }
+        return storage;
+    }
+
     @Override
     public Optional<FileDownloadResult> downloadFile(String shareKey) {
         String objectKey = "/files/" + shareKey;
-        Optional<StorageObject> storageObject = objectStorageService.get(objectKey);
+        Optional<StorageObject> storageObject = requireStorage().get(objectKey);
         if (storageObject.isEmpty()) {
             return Optional.empty();
         }
