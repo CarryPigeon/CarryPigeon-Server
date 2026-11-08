@@ -86,9 +86,16 @@ service:
       connection-timeout: 10000
       # 职责：限制连接有效性检查的最长等待时间。
       validation-timeout: 5000
+      # 职责：定义数据库查询缓存的实体负载 TTL。
+      cache-entity-ttl: 5m
+      # 职责：定义唯一键 lookup 指针（如 email 或 (频道, 账户) -> 主键）的 TTL。
+      cache-lookup-ttl: 10m
+      # 职责：限制单次批量缓存读取的最大主键数量，超过上限的批量查询直接读库。
+      cache-max-batch-size: 128
   cache:
     redis:
       # 职责：控制缓存服务实现是否参与当前运行时装配。
+      # 约束：邮箱验证码能力与数据库查询缓存都依赖缓存实现，生产环境应保持开启。
       enabled: true
       # 职责：定义 Redis 主机地址。
       host: 127.0.0.1

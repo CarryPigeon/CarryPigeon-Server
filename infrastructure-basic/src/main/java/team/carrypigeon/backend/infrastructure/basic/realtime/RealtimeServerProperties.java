@@ -4,7 +4,6 @@ import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -12,11 +11,12 @@ import lombok.NoArgsConstructor;
  * 实时通道配置。
  * 职责：收敛实时通道的地址、端口、路径、线程模型、连接超时与事件窗口参数，并给出可公开的 websocket 地址。
  * 边界：只承载稳定运行参数与地址拼装，不承载启动逻辑、连接状态或业务语义。
- * 约束：不可变记录只能构造器绑定，因此由 `@ConfigurationPropertiesScan` 启用，而不是标 `@Component`。
+ * 约束：通过 `@ConfigurationPropertiesScan` 注册为配置 Bean，采用无参构造 + setter 绑定；
+ * 字段初始值即默认值。不要恢复 Lombok `@AllArgsConstructor`：ECJ/jdtls 会对“带初始值的字段”报
+ * early construction context 误报（javac 构建不受影响）。
  */
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 @ConfigurationProperties(prefix = "cp.chat.server.realtime")
 public class RealtimeServerProperties{
 

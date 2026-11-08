@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.cache.api.service;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -19,6 +21,17 @@ public interface CacheService {
      * @return 命中时返回缓存值，未命中时返回空
      */
     Optional<String> get(String key);
+
+    /**
+     * 批量读取缓存键对应的字符串值。
+     * 语义：一次后端批量读取（如 Redis MGET）完成多个键的查找，未命中的键不出现在结果中。
+     * 约束：keys 为空时返回空 Map；集合内任意 key 为空白字符串时必须拒绝。
+     * 目的：用户资料、频道等按主键批量查询需要在缓存侧保持一次批量往返，避免逐键随机读放大。
+     *
+     * @param keys 缓存键集合
+     * @return 命中键到缓存值的映射；不包含未命中键
+     */
+    Map<String, String> getAll(Collection<String> keys);
 
     /**
      * 写入带过期时间的字符串缓存。

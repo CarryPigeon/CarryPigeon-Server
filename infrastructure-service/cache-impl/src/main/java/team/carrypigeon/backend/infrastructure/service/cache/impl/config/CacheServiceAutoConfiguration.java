@@ -4,14 +4,12 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
-import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
@@ -22,12 +20,13 @@ import team.carrypigeon.backend.infrastructure.service.cache.impl.startup.CacheI
 /**
  * 缓存服务自动配置。
  * 职责：在 cache-impl 内装配 Redis 字符串缓存实现。
- * 边界：只创建具体实现 Bean，不在 API 模块中声明 Spring 装配逻辑。
+ * 边界：只创建具体实现 Bean，不在 API 模块中声明 Spring 装配逻辑；数据库查询缓存由 database-impl 的
+ * 自定义 key-value 门面实现，不依赖 Spring Cache 注解或 CacheManager。
+ * 约束：邮箱验证码能力与数据库查询缓存都强依赖本实现，关闭前需确认相关业务组件具备替代实现。
  */
-@EnableCaching
 @AutoConfiguration
 @EnableConfigurationProperties(RedisCacheProperties.class)
-@ConditionalOnProperty(prefix = "cp.service.cache.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "service.cache.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CacheServiceAutoConfiguration {
 
     @Bean
@@ -66,10 +65,5 @@ public class CacheServiceAutoConfiguration {
     @ConditionalOnMissingBean(name = "cacheInitializationCheck")
     public InitializationChecker cacheInitializationCheck(CacheHealthService cacheHealthService) {
         return new CacheInitializationChecker(cacheHealthService);
-    }
-
-    @Bean
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        return RedisCacheManager.create(connectionFactory);
     }
 }

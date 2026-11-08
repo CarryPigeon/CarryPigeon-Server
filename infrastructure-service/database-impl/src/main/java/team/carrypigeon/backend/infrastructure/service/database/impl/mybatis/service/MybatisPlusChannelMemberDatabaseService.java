@@ -6,13 +6,13 @@ import java.util.Optional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cache.DatabaseCache;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelMemberEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
 
@@ -20,14 +20,30 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * MyBatis-Plus 频道成员数据库服务。
  * 职责：在 database-impl 中完成频道成员的最小查询与写入能力。
  * 边界：只负责数据库记录映射，不承载成员管理业务规则。
+ * 缓存：按 (频道, 账户) 唯一键缓存“关系 -&gt; 成员主键”lookup 指针，成员实体按主键缓存一份；
+ * 写路径精确失效实体键与新旧关系指针，成员列表/分页查询不缓存。
  */
 @Component
 public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDatabaseService {
 
-    private final ChannelMemberMapper channelMemberMapper;
+    private static final String DOMAIN = DatabaseCache.DOMAIN_CHANNEL_MEMBER;
+    private static final String LOOKUP_RELATION = "relation";
 
-    public MybatisPlusChannelMemberDatabaseService(ChannelMemberMapper channelMemberMapper) {
+    private final ChannelMemberMapper channelMemberMapper;
+    private final DatabaseCache databaseCache;
+
+    /**
+     * 创建频道成员数据库服务。
+     *
+     * @param channelMemberMapper 频道成员 Mapper
+     * @param databaseCache 数据库查询缓存门面
+     */
+    public MybatisPlusChannelMemberDatabaseService(
+            ChannelMemberMapper channelMemberMapper,
+            DatabaseCache databaseCache
+    ) {
         this.channelMemberMapper = channelMemberMapper;
+        this.databaseCache = databaseCache;
     }
 
     /**
@@ -36,6 +52,8 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     @Override
     public void insert(ChannelMemberRecord record) {
         channelMemberMapper.insert(ChannelMemberEntity.from(record));
+        evictRecord(record.memberId());
+        evictRelation(record.channelId(), record.accountId());
     }
 
     /**
@@ -47,21 +65,72 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
             return;
         }
         channelMemberMapper.insertAll(records.stream().map(ChannelMemberEntity::from).toList());
+        for (ChannelMemberRecord record : records) {
+            evictRecord(record.memberId());
+            evictRelation(record.channelId(), record.accountId());
+        }
+    }
+    /**
+     * 按成员关系 ID 查询。
+     */
+    @Override
+    public Optional<ChannelMemberRecord> findById(long memberId) {
+        return loadById(memberId);
     }
 
     /**
-     * 按成员关系 ID 批量删除。
+     * 按成员关系 ID 批量查询。
      */
     @Override
-    public void deleteAll(List<Long> memberIds) {
+    public List<ChannelMemberRecord> findByIds(List<Long> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
-            return;
+            return List.of();
         }
-        channelMemberMapper.deleteByIds(memberIds);
+        return loadByIds(memberIds);
+    }
+
+    /**
+     * 按频道与账户定位成员关系。
+     * 缓存：先查 relation lookup 指针，命中后按成员主键读实体缓存；未命中时一次数据库查询同时回填指针与实体。
+     * 权限判定在请求主链路上高频调用该方法，是成员关系唯一键缓存的目标查询。
+     */
+    @Override
+    public Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId) {
+        String lookupKey = relationKey(channelId, accountId);
+        Optional<ChannelMemberRecord> member = databaseCache.loadByLookup(
+                lookupKey,
+                DOMAIN,
+                ChannelMemberRecord.class,
+                ChannelMemberRecord::memberId,
+                () -> loadByRelation(channelId, accountId),
+                this::loadById);
+        // 指针指向的成员记录与请求关系不一致时，清理过期指针并回退数据库权威查询。
+        if (member.isPresent()
+                && (member.get().channelId() != channelId || member.get().accountId() != accountId)) {
+            databaseCache.evict(lookupKey);
+            return loadByRelation(channelId, accountId);
+        }
+        return member;
+    }
+
+    /**
+     * 更新既有频道成员关系。
+     * 缓存：更新前读取旧记录，写入成功后精确失效新实体、旧/新关系指针。
+     */
+    @Override
+    public void update(ChannelMemberRecord record) {
+        Optional<ChannelMemberRecord> previous = databaseCache.enabled()
+                ? loadById(record.memberId())
+                : Optional.empty();
+        channelMemberMapper.updateById(ChannelMemberEntity.from(record));
+        evictRecord(record.memberId());
+        evictRelation(record.channelId(), record.accountId());
+        previous.ifPresent(old -> evictRelation(old.channelId(), old.accountId()));
     }
 
     /**
      * 分页查询频道成员记录。
+     * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
      */
     @Override
     public PageResult<ChannelMemberRecord> list(PageQuery query) {
@@ -79,66 +148,58 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     }
 
     /**
-     * 按成员关系 ID 查询。
-     */
-    @Override
-    public Optional<ChannelMemberRecord> findById(long memberId) {
-        return Optional.ofNullable(channelMemberMapper.selectById(memberId))
-                .map(ChannelMemberEntity::toRecord);
-    }
-
-    /**
-     * 按成员关系 ID 批量查询。
-     */
-    @Override
-    public List<ChannelMemberRecord> findByIds(List<Long> memberIds) {
-        if (memberIds == null || memberIds.isEmpty()) {
-            return List.of();
-        }
-        return channelMemberMapper.selectByIds(memberIds).stream()
-                .map(ChannelMemberEntity::toRecord)
-                .toList();
-    }
-
-    /**
-     * 按频道与账户定位成员关系。
-     */
-    @Override
-    public Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId) {
-        return Optional.ofNullable(channelMemberMapper.selectOne(new LambdaQueryWrapper<ChannelMemberEntity>()
-                        .eq(ChannelMemberEntity::getChannelId, channelId)
-                        .eq(ChannelMemberEntity::getAccountId, accountId)))
-                .map(ChannelMemberEntity::toRecord);
-    }
-
-    /**
-     * 更新既有频道成员关系。
-     */
-    @Override
-    public void update(ChannelMemberRecord record) {
-        channelMemberMapper.updateById(ChannelMemberEntity.from(record));
-    }
-
-    /**
      * 按成员关系 ID 删除成员关系。
+     * 缓存：删除前读取旧记录，删除成功后精确失效实体与关系指针。
      */
     @Override
     public void delete(long memberId) {
+        Optional<ChannelMemberRecord> previous = databaseCache.enabled()
+                ? loadById(memberId)
+                : Optional.empty();
         channelMemberMapper.deleteById(memberId);
+        evictRecord(memberId);
+        previous.ifPresent(old -> evictRelation(old.channelId(), old.accountId()));
+    }
+
+    /**
+     * 按成员关系 ID 批量删除。
+     */
+    @Override
+    public void deleteAll(List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return;
+        }
+        // 删除前读取旧记录，删除成功后逐条精确失效实体与关系指针。
+        List<ChannelMemberRecord> previous = databaseCache.enabled() ? loadByIds(memberIds) : List.of();
+        channelMemberMapper.deleteByIds(memberIds);
+        for (Long memberId : memberIds) {
+            evictRecord(memberId);
+        }
+        for (ChannelMemberRecord record : previous) {
+            evictRelation(record.channelId(), record.accountId());
+        }
     }
 
     /**
      * 删除频道下的全部成员关系。
+     * 缓存：缓存启用时先读取该频道成员快照，删除成功后逐条精确失效实体与关系指针。
      */
     @Override
     public void deleteByChannelId(long channelId) {
+        List<ChannelMemberRecord> previous = databaseCache.enabled()
+                ? findMembersByChannelId(channelId)
+                : List.of();
         channelMemberMapper.delete(new LambdaQueryWrapper<ChannelMemberEntity>()
                 .eq(ChannelMemberEntity::getChannelId, channelId));
+        for (ChannelMemberRecord record : previous) {
+            evictRecord(record.memberId());
+            evictRelation(record.channelId(), record.accountId());
+        }
     }
 
     /**
      * 查询频道下的全部成员关系。
-     * 说明：显式全量快照，供通知接收人与治理快照使用。
+     * 说明：显式全量快照，供通知接收人与治理快照使用；结果集大且复用低，不属于当前缓存覆盖范围。
      */
     @Override
     public List<ChannelMemberRecord> findMembersByChannelId(long channelId) {
@@ -151,6 +212,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
 
     /**
      * 分页查询账户参与的全部频道成员关系。
+     * 边界：分页键空间无界且复用低，不属于当前缓存覆盖范围。
      */
     @Override
     public PageResult<ChannelMemberRecord> pageMembersByAccountId(long accountId, PageQuery query) {
@@ -170,6 +232,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
 
     /**
      * 分页查询频道下的成员关系。
+     * 边界：分页键空间无界且复用低，不属于当前缓存覆盖范围。
      */
     @Override
     public PageResult<ChannelMemberRecord> pageMembersByChannelId(long channelId, PageQuery query) {
@@ -185,5 +248,35 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
                 query.pageSize(),
                 result.getTotal()
         );
+    }
+
+    private Optional<ChannelMemberRecord> loadById(long memberId) {
+        return Optional.ofNullable(channelMemberMapper.selectById(memberId))
+                .map(ChannelMemberEntity::toRecord);
+    }
+
+    private List<ChannelMemberRecord> loadByIds(List<Long> memberIds) {
+        return channelMemberMapper.selectByIds(memberIds).stream()
+                .map(ChannelMemberEntity::toRecord)
+                .toList();
+    }
+
+    private Optional<ChannelMemberRecord> loadByRelation(long channelId, long accountId) {
+        return Optional.ofNullable(channelMemberMapper.selectOne(new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .eq(ChannelMemberEntity::getChannelId, channelId)
+                        .eq(ChannelMemberEntity::getAccountId, accountId)))
+                .map(ChannelMemberEntity::toRecord);
+    }
+
+    private String relationKey(long channelId, long accountId) {
+        return DatabaseCache.lookupKey(DOMAIN, LOOKUP_RELATION, Long.toString(channelId), Long.toString(accountId));
+    }
+
+    private void evictRecord(long memberId) {
+        databaseCache.evict(DatabaseCache.entityKey(DOMAIN, memberId));
+    }
+
+    private void evictRelation(long channelId, long accountId) {
+        databaseCache.evict(relationKey(channelId, accountId));
     }
 }

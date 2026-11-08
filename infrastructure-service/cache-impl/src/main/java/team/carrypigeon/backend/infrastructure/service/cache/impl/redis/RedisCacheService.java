@@ -1,7 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.redis;
 
 import java.time.Duration;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -52,6 +55,47 @@ public class RedisCacheService implements CacheService {
             return Optional.ofNullable(redisTemplate.opsForValue().get(key));
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to read cache entry", ex);
+        }
+    }
+
+    /**
+     * 批量读取缓存键对应的字符串值。
+     * 输入：一组业务层生成的完整缓存键。
+     * 输出：命中键到缓存值的映射，未命中键不进入结果；保持入参顺序。
+     * 实现：使用 Redis MGET 在一次往返中完成批量读取。
+     *
+     * @param keys 缓存键集合
+     * @return 命中键到缓存值的映射
+     * @throws IllegalArgumentException 任意缓存键为空白时抛出
+     * @throws CacheServiceException Redis 访问失败时抛出
+     */
+    @Override
+    public Map<String, String> getAll(Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return Map.of();
+        }
+        for (String key : keys) {
+            requireKey(key);
+        }
+        try {
+            List<String> values = redisTemplate.opsForValue().multiGet(keys);
+            if (values == null || values.isEmpty()) {
+                return Map.of();
+            }
+            Map<String, String> result = new LinkedHashMap<>();
+            int index = 0;
+            for (String key : keys) {
+                if (index < values.size()) {
+                    String value = values.get(index);
+                    if (value != null) {
+                        result.put(key, value);
+                    }
+                }
+                index++;
+            }
+            return result;
+        } catch (RuntimeException ex) {
+            throw new CacheServiceException("failed to read cache entries", ex);
         }
     }
 
