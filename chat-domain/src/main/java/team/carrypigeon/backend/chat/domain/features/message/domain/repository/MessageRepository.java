@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
+
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 
 /**
@@ -15,9 +16,8 @@ public interface MessageRepository {
      * 保存频道消息。
      *
      * @param message 待持久化消息
-     * @return 已持久化消息
      */
-    CPChannelMessage save(CPChannelMessage message);
+    void save(CPChannelMessage message);
 
     /**
      * 按消息 ID 查询消息。
@@ -31,9 +31,8 @@ public interface MessageRepository {
      * 更新已存在的频道消息。
      *
      * @param message 待更新消息
-     * @return 已更新消息
      */
-    CPChannelMessage update(CPChannelMessage message);
+    void update(CPChannelMessage message);
 
     /**
      * 查询频道最新消息。

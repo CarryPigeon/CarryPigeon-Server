@@ -3,7 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+
 import org.springframework.stereotype.Service;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageContextApi;

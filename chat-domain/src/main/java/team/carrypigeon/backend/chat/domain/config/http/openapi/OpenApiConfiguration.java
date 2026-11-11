@@ -1,15 +1,16 @@
 package team.carrypigeon.backend.chat.domain.config.http.openapi;
 
-import io.swagger.v3.oas.models.Components;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Info;
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import io.swagger.v3.oas.models.servers.Server;
 import java.util.Map;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 
 /**
  * OpenAPI 文档装配配置。
@@ -31,7 +32,6 @@ public class OpenApiConfiguration {
         OpenAPI openAPI = new OpenAPI()
                 .info(new Info()
                         .title("CarryPigeon Backend OpenAPI Portal")
-                        .version("v1")
                         .description("面向前端、测试与集成方的 CarryPigeon Backend HTTP API 门户。\n\n"
                                 + "使用说明：\n"
                                 + "1. 大多数受保护接口需要在 Swagger Authorize 中仅填写 access token，Bearer 前缀由 Swagger UI 添加。\n"

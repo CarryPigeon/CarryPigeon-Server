@@ -4,7 +4,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.springframework.stereotype.Service;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
@@ -99,7 +101,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 处理消息
             CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(domain);
             // 持久化消息
-            CPChannelMessage saved = messageRepository.save(handler.handle(message));
+            CPChannelMessage saved = handler.handle(message);
+            messageRepository.save(saved);
             // 生成提及记录；只保留当前频道成员，避免产生无法访问的提及
             List<Mention> savedMentions = saved.mentions().stream()
                     .map(targetAccountId -> new Mention(

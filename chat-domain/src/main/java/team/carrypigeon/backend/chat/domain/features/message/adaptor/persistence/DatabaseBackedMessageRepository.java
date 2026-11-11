@@ -1,15 +1,16 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistence;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
 import org.springframework.stereotype.Component;
 
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
@@ -34,9 +35,8 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public CPChannelMessage save(CPChannelMessage message) {
+    public void save(CPChannelMessage message) {
         messageDatabaseService.insert(toPersistenceRecord(message));
-        return message;
     }
 
     @Override
@@ -45,24 +45,33 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public CPChannelMessage update(CPChannelMessage message) {
+    public void update(CPChannelMessage message) {
         messageDatabaseService.update(toPersistenceRecord(message));
-        return message;
     }
 
     @Override
     public List<CPChannelMessage> findLatestByChannelId(long channelId, int limit) {
-        return map(messageDatabaseService.findLatestByChannelId(channelId, limit));
+        return messageDatabaseService
+            .findLatestByChannelId(channelId, limit)
+            .stream()
+            .map(this::toDomainMessage).toList();
     }
 
     @Override
     public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
-        return map(messageDatabaseService.findBeforeByChannelId(channelId, cursorMessageId, limit));
+        return messageDatabaseService
+            .findBeforeByChannelId(channelId, cursorMessageId, limit)
+            .stream()
+            .map(this::toDomainMessage).toList();
     }
 
     @Override
     public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
-        return map(messageDatabaseService.findAfterByChannelId(channelId, cursorMessageId, limit));
+        return messageDatabaseService
+            .findAfterByChannelId(channelId, cursorMessageId, limit)
+            .stream()
+            .map(this::toDomainMessage)
+            .toList();
     }
 
     @Override
@@ -74,13 +83,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
             String domain,
             int limit
     ) {
-        return map(messageDatabaseService.searchByChannelId(
-                channelId, keyword, cursorMessageId, senderAccountId, domain, STATUS_SENT, limit
-        ));
-    }
-
-    private List<CPChannelMessage> map(List<MessageRecord> records) {
-        return records.stream().map(this::toDomainMessage).toList();
+        return messageDatabaseService
+            .searchByChannelId(channelId, keyword, cursorMessageId, senderAccountId, domain, STATUS_SENT, limit)
+            .stream()
+            .map(this::toDomainMessage)
+            .toList();
     }
 
     private CPChannelMessage toDomainMessage(MessageRecord record) {

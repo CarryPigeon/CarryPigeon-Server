@@ -2,9 +2,11 @@ package team.carrypigeon.backend.infrastructure.basic.startup;
 
 import java.util.ArrayList;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.SmartInitializingSingleton;
-import org.springframework.core.annotation.AnnotationAwareOrderComparator;
+import org.springframework.stereotype.Component;
+
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**
@@ -13,13 +15,13 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
  * 边界：只消费 startup 共享契约，不关心具体数据库、缓存或对象存储实现细节。
  */
 @Slf4j
+@Component
 public class InitializationCheckRunner implements SmartInitializingSingleton {
 
     private final List<InitializationChecker> initializationCheckers;
 
     public InitializationCheckRunner(List<InitializationChecker> initializationCheckers) {
         this.initializationCheckers = new ArrayList<>(initializationCheckers);
-        AnnotationAwareOrderComparator.sort(this.initializationCheckers);
     }
 
     @Override

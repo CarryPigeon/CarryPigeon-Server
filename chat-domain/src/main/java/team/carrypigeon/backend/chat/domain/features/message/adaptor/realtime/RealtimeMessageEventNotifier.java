@@ -7,9 +7,9 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
@@ -44,8 +44,7 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
                 new ReadStateUpdatedPayload(
                         Long.toString(readState.channelId()),
                         Long.toString(readState.accountId()),
-                        Long.toString(readState.lastReadMessageId()),
-                        readState.lastReadTime().toEpochMilli()
+                        Long.toString(readState.lastReadMessageId())
                 ),
                 List.of(readState.accountId())
         )));

@@ -2,19 +2,22 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.rea
 
 import java.time.Instant;
 import java.util.List;
+
 import org.springframework.stereotype.Service;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelUnreadResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
@@ -30,23 +33,26 @@ public class MessageReadStateService implements MessageReadStateApi {
     private final ChannelContextApi channelContextApi;
     private final TransactionRunner transactionRunner;
     private final MessageEventNotifier messageEventNotifier;
+    private final TimeProvider timeProvider;
 
     public MessageReadStateService(
             MessageRepository messageRepository,
             ChannelReadStateRepository readStateRepository,
             ChannelContextApi channelContextApi,
             TransactionRunner transactionRunner,
-            MessageEventNotifier messageEventNotifier
+            MessageEventNotifier messageEventNotifier,
+            TimeProvider timeProvider
     ) {
         this.messageRepository = messageRepository;
         this.readStateRepository = readStateRepository;
         this.channelContextApi = channelContextApi;
         this.transactionRunner = transactionRunner;
         this.messageEventNotifier = messageEventNotifier;
+        this.timeProvider = timeProvider;
     }
 
     @Override
-    public ChannelReadStateResult updateChannelReadState(long accountId, long channelId, long lastReadMessageId, long lastReadTime) {
+    public ChannelReadStateResult updateChannelReadState(long accountId, long channelId, long lastReadMessageId) {
         return transactionRunner.runInTransaction(afterCommit -> {
             CPChannelMessage message = messageRepository.findById(lastReadMessageId)
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
@@ -60,14 +66,13 @@ public class MessageReadStateService implements MessageReadStateApi {
             if (current != null && current.lastReadMessageId() >= lastReadMessageId) {
                 return toResult(current);
             }
-            Instant readTime = Instant.ofEpochMilli(lastReadTime);
+            Instant now = this.timeProvider.nowInstant();
             ChannelReadState updated = new ChannelReadState(
                     channelId,
                     accountId,
                     lastReadMessageId,
-                    readTime,
-                    current == null ? readTime : current.createdAt(),
-                    readTime
+                    current == null ? now: current.createdAt(),
+                    now
             );
             if (readStateRepository.advanceIfNewer(updated)) {
                 messageEventNotifier.readStateUpdated(afterCommit, updated);
@@ -94,8 +99,7 @@ public class MessageReadStateService implements MessageReadStateApi {
         return new ChannelReadStateResult(
                 IdUtil.toString(readState.channelId()),
                 IdUtil.toString(readState.accountId()),
-                IdUtil.toString(readState.lastReadMessageId()),
-                readState.lastReadTime().toEpochMilli()
+                IdUtil.toString(readState.lastReadMessageId())
         );
     }
 }

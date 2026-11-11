@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import org.hibernate.validator.constraints.Range;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -14,8 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
@@ -65,11 +64,13 @@ public class ChannelMessageHistoryController {
     })
     public CursorPageResponse<ChannelMessageResponse> getLatestMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
-        @Min(value = 1, message = "limit must be between 1 and 50")
-        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
+        @Range(min = 1,max = 50,message = "limit must be between 1 and 50")
+        int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelMessagePage page = channelMessageHistoryApi.getLatestMessages(
@@ -94,13 +95,17 @@ public class ChannelMessageHistoryController {
     })
     public CursorPageResponse<ChannelMessageResponse> getMessagesBefore(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "上一页返回的排他游标", example = "Y2hhbm5lbF9tZXNzYWdlc19iZWZvcmU6NTAwMA")
-        @RequestParam @NotBlank(message = "cursor must not be blank") String cursor,
+        @RequestParam
+        @NotBlank(message = "cursor must not be blank")
+        String cursor,
         @Parameter(description = "返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
-        @Min(value = 1, message = "limit must be between 1 and 50")
-        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
+        @Range(min = 1,max = 50,message = "limit must be between 1 and 50")
+        int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelMessagePage page = channelMessageHistoryApi.getMessagesBefore(
@@ -130,13 +135,17 @@ public class ChannelMessageHistoryController {
     })
     public CursorPageResponse<ChannelMessageResponse> getMessagesAfter(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "上一页返回的排他游标", example = "Y2hhbm5lbF9tZXNzYWdlc19hZnRlcjo1MDAw")
-        @RequestParam @NotBlank(message = "cursor must not be blank") String cursor,
+        @RequestParam
+        @NotBlank(message = "cursor must not be blank")
+        String cursor,
         @Parameter(description = "返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
-        @Min(value = 1, message = "limit must be between 1 and 50")
-        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
+        @Range(min = 1,max = 50,message = "limit must be between 1 and 50")
+        int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelMessagePage page = channelMessageHistoryApi.getMessagesAfter(

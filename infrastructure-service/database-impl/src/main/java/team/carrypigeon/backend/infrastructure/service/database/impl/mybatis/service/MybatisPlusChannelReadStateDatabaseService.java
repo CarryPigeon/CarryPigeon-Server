@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
@@ -83,7 +83,6 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
                 .eq(ChannelReadStateEntity::getChannelId, record.channelId())
                 .eq(ChannelReadStateEntity::getAccountId, record.accountId())
                 .set(ChannelReadStateEntity::getLastReadMessageId, record.lastReadMessageId())
-                .set(ChannelReadStateEntity::getLastReadTime, record.lastReadTime())
                 .set(ChannelReadStateEntity::getCreatedAt, record.createdAt())
                 .set(ChannelReadStateEntity::getUpdatedAt, record.updatedAt()));
     }

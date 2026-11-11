@@ -10,7 +10,6 @@ import java.time.Instant;
  * @param channelId 频道 ID
  * @param accountId 账户 ID
  * @param lastReadMessageId 最后已读消息 ID；0 表示尚未产生已读锚点
- * @param lastReadTime 最后已读时间；未读时为 null
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
@@ -18,7 +17,6 @@ public record ChannelReadStateRecord(
         long channelId,
         long accountId,
         long lastReadMessageId,
-        Instant lastReadTime,
         Instant createdAt,
         Instant updatedAt
 ) {

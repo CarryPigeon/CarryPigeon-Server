@@ -9,9 +9,6 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.message
  * @param channelId 频道 ID
  * @param limit 查询条数
  */
-public record GetLatestChannelMessagesQuery(
-        long accountId,
-        long channelId,
-        int limit
+public record GetLatestChannelMessagesQuery(long accountId,long channelId,int limit
 ) {
 }

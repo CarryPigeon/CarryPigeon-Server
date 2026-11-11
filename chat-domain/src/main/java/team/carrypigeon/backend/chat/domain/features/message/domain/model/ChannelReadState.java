@@ -9,7 +9,6 @@ public record ChannelReadState(
         long channelId,
         long accountId,
         long lastReadMessageId,
-        Instant lastReadTime,
         Instant createdAt,
         Instant updatedAt
 ) {

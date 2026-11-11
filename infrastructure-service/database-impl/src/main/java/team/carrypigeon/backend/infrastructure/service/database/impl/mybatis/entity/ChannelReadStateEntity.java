@@ -1,9 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
+import java.time.Instant;
+
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.time.Instant;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +26,6 @@ public class ChannelReadStateEntity {
     private Long channelId;
     private Long accountId;
     private Long lastReadMessageId;
-    private Instant lastReadTime;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -39,7 +39,6 @@ public class ChannelReadStateEntity {
                 channelId == null ? 0L : channelId,
                 accountId == null ? 0L : accountId,
                 lastReadMessageId == null ? 0L : lastReadMessageId,
-                lastReadTime,
                 createdAt,
                 updatedAt
         );
@@ -56,7 +55,6 @@ public class ChannelReadStateEntity {
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
-                record.lastReadTime(),
                 record.createdAt(),
                 record.updatedAt()
         );

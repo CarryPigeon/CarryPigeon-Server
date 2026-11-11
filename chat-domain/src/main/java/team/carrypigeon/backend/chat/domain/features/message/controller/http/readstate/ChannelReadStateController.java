@@ -1,15 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.security.access.prepost.PreAuthorize;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Positive;
-
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,13 +11,20 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.ChannelReadStateResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UnreadItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UnreadListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.UpdateChannelReadStateRequest;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
 
 /**
  * 频道读状态 HTTP 入口。
@@ -48,17 +48,19 @@ public class ChannelReadStateController {
     @Operation(summary = "更新频道已读状态", description = "只前进不后退。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回已读状态")})
     public ChannelReadStateResponse updateReadState(
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @Valid @RequestBody UpdateChannelReadStateRequest request,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @Valid @RequestBody
+        UpdateChannelReadStateRequest request,
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         ChannelReadStateResult result = messageReadStateApi.updateChannelReadState(
             principal.accountId(),
             channelId,
-            request.lastReadMid(),
-            request.lastReadTime()
+            request.lastReadMid()
         );
-        return new ChannelReadStateResponse(result.cid(), result.uid(), result.lastReadMid(), result.lastReadTime());
+        return new ChannelReadStateResponse(result.cid(), result.uid(), result.lastReadMid());
     }
 
     /**

@@ -18,6 +18,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
@@ -25,7 +26,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 
 /**
@@ -40,7 +40,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 @Tag(name = "频道消息", description = "频道消息搜索能力。")
 public class ChannelMessageSearchController {
 
-    private static final int MAX_KEYWORD_LENGTH = 100;
     private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
 
     private final ChannelMessageSearchApi channelMessageSearchApi;
@@ -50,8 +49,8 @@ public class ChannelMessageSearchController {
     }
 
     /**
-     * TODO 待迭代优化
      * 在频道内按关键字搜索消息。
+     * 搜索结果按照按照时间从当前向前查询，当前提供最简单的查询模型，复杂查询请自行引入ES进行实现
      *
      * @param channelId 频道 ID
      * @param query 搜索关键字
@@ -69,31 +68,35 @@ public class ChannelMessageSearchController {
     })
     public CursorPageResponse<ChannelMessageResponse> searchChannelMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "搜索关键字", example = "hello")
-        @RequestParam(name = "q") @NotBlank(message = "q must not be blank") String query,
+        @RequestParam(name = "q")
+        @NotBlank(message = "q must not be blank")
+        @Size(min = 1,max = 100,message = "q length must be between 1 and 100")
+        String query,
         @Parameter(description = "搜索排他游标")
-        @RequestParam(required = false) String cursor,
+        @RequestParam(required = false)
+        String cursor,
         @Parameter(description = "发送者账号 ID")
         @RequestParam(name = "sender_uid", required = false)
-        @Positive(message = "sender_uid must be greater than 0") Long senderUid,
+        @Positive(message = "sender_uid must be greater than 0")
+        Long senderUid,
         @Parameter(description = "消息 domain 过滤值")
-        @RequestParam(required = false) String domain,
+        @RequestParam(required = false)
+        String domain,
         @Parameter(description = "返回条数，范围 1..50", example = "20")
         @RequestParam(defaultValue = "20")
         @Min(value = 1, message = "limit must be between 1 and 50")
-        @Max(value = 50, message = "limit must be between 1 and 50") int limit,
+        @Max(value = 50, message = "limit must be between 1 and 50")
+        int limit,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
-        String normalizedKeyword = query.trim();
-        if (normalizedKeyword.length() > MAX_KEYWORD_LENGTH) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT, "q length must be between 1 and 100");
-        }
         ChannelMessagePage page = channelMessageSearchApi.searchMessages(
             new SearchChannelMessagesQuery(
                 cpPrincipal.accountId(),
                 channelId,
-                normalizedKeyword,
+                query,
                 OpaqueCursorCodec.decode(SEARCH_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID),
                 senderUid,
                 domain == null || domain.isBlank() ? null : domain.trim(),

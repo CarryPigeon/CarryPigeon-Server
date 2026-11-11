@@ -6,7 +6,6 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
  * @param cid 频道 ID
  * @param uid 账号 ID
  * @param lastReadMid 最后已读消息 ID
- * @param lastReadTime 最后已读时间，epoch 毫秒
  */
-public record ReadStateUpdatedPayload(String cid, String uid, String lastReadMid, long lastReadTime) {
+public record ReadStateUpdatedPayload(String cid, String uid, String lastReadMid) {
 }

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http;
 
+import org.hibernate.validator.constraints.Range;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -14,8 +15,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageContextResponse;
@@ -59,18 +58,21 @@ public class ChannelMessageContextController {
     })
     public ChannelMessageContextResponse getMessagesAround(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "锚点消息 ID", example = "5000")
         @RequestParam(name = "anchor_mid")
-        @Positive(message = "anchor_mid must be greater than 0") long anchorMid,
+        @Positive(message = "anchor_mid must be greater than 0")
+        long anchorMid,
         @Parameter(description = "锚点之前数量，范围 0..50", example = "25")
         @RequestParam(defaultValue = "25")
-        @Min(value = 0, message = "before must be between 0 and 50")
-        @Max(value = 50, message = "before must be between 0 and 50") int before,
+        @Range(min = 0,max = 50,message = "before must be between 0 and 50")
+        int before,
         @Parameter(description = "锚点之后数量，范围 0..50", example = "25")
         @RequestParam(defaultValue = "25")
-        @Min(value = 0, message = "after must be between 0 and 50")
-        @Max(value = 50, message = "after must be between 0 and 50") int after,
+        @Range(min = 0,max = 50,message = "before must be between 0 and 50")
+        int after,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelMessageContext context = channelMessageContextApi.getMessagesAround(

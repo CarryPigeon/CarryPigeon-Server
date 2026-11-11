@@ -6,7 +6,6 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.readsta
  * @param cid 频道 ID
  * @param uid 账户 ID
  * @param lastReadMid 最后已读消息 ID
- * @param lastReadTime 最后已读时间（epoch 毫秒）
  */
-public record ChannelReadStateResult(String cid, String uid, String lastReadMid, long lastReadTime) {
+public record ChannelReadStateResult(String cid, String uid, String lastReadMid) {
 }

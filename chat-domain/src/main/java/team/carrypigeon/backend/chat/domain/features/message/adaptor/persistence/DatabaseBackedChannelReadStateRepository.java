@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -72,7 +72,6 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
-                record.lastReadTime(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -83,7 +82,6 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 readState.channelId(),
                 readState.accountId(),
                 readState.lastReadMessageId(),
-                readState.lastReadTime(),
                 readState.createdAt(),
                 readState.updatedAt()
         );

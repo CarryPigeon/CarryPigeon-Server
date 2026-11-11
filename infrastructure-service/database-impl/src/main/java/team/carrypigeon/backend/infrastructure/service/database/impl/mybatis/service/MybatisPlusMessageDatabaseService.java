@@ -6,7 +6,7 @@ import java.util.Optional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
@@ -30,17 +30,11 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         this.messageMapper = messageMapper;
     }
 
-    /**
-     * 插入新消息记录。
-     */
     @Override
     public void insert(MessageRecord record) {
         messageMapper.insert(MessageEntity.from(record));
     }
 
-    /**
-     * 批量插入消息记录。
-     */
     @Override
     public void insertAll(List<MessageRecord> records) {
         if (records == null || records.isEmpty()) {
@@ -49,17 +43,11 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         messageMapper.insertAll(records.stream().map(MessageEntity::from).toList());
     }
 
-    /**
-     * 按消息 ID 删除记录。
-     */
     @Override
     public void delete(long messageId) {
         messageMapper.deleteById(messageId);
     }
 
-    /**
-     * 按消息 ID 批量删除记录。
-     */
     @Override
     public void deleteAll(List<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
@@ -68,9 +56,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         messageMapper.deleteByIds(messageIds);
     }
 
-    /**
-     * 分页查询消息记录。
-     */
     @Override
     public PageResult<MessageRecord> list(PageQuery query) {
         IPage<MessageEntity> result = messageMapper.selectPage(
@@ -86,9 +71,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         );
     }
 
-    /**
-     * 按消息 ID 批量查询记录。
-     */
     @Override
     public List<MessageRecord> findByIds(List<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
@@ -99,27 +81,17 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 .toList();
     }
 
-    /**
-     * 按消息 ID 查询记录。
-     */
     @Override
     public Optional<MessageRecord> findById(long messageId) {
         return Optional.ofNullable(messageMapper.selectById(messageId))
                 .map(MessageEntity::toRecord);
     }
 
-    /**
-     * 更新完整消息记录。
-     * 边界：字段变化由 Repository 决定，本层不筛选列。
-     */
     @Override
     public void update(MessageRecord record) {
         messageMapper.updateById(MessageEntity.from(record));
     }
 
-    /**
-     * 查询频道最新消息。
-     */
     @Override
     public List<MessageRecord> findLatestByChannelId(long channelId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
@@ -127,9 +99,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
-    /**
-     * 查询频道内指定消息之前的更旧消息。
-     */
     @Override
     public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
@@ -138,9 +107,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
-    /**
-     * 查询频道内指定消息之后的更新消息。
-     */
     @Override
     public List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
@@ -149,10 +115,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 .orderByAsc(MessageEntity::getMessageId), limit);
     }
 
-    /**
-     * 按复合过滤条件搜索频道消息。
-     * 说明：搜索是专用查询；status 由 Repository 传入，不在本层硬编码。
-     */
     @Override
     public List<MessageRecord> searchByChannelId(
             long channelId,
@@ -176,10 +138,6 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                 .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
-    /**
-     * 使用 MyBatis-Plus 分页能力执行固定上限查询。
-     * 说明：关闭 count 查询，仅使用分页拦截器生成 LIMIT。
-     */
     private List<MessageRecord> selectLimited(
             LambdaQueryWrapper<MessageEntity> wrapper,
             int limit
