@@ -6,7 +6,6 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.ChannelBanApi;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
@@ -30,7 +29,7 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 频道禁言领域 API 实现。
- * 职责：独立承接禁言、限时禁言和解除禁言，不依赖成员治理 API。
+ * 职责：独立承接限时禁言与解除禁言，不依赖成员治理 API。
  */
 @Service
 public class ChannelBanService implements ChannelBanApi {
@@ -81,8 +80,17 @@ public class ChannelBanService implements ChannelBanApi {
     }
 
     @Override
-    public ChannelBanResult banChannelMember(BanChannelMemberCommand command) {
+    public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
         ChannelBanResult result = transactionRunner.runInTransaction(afterCommit -> {
+            Long durationSeconds = null;
+            if (command.untilEpochMillis() != null) {
+                long nowMillis = timeProvider.nowMillis();
+                if (command.untilEpochMillis() <= nowMillis) {
+                    throw ProblemException.of(ChannelProblem.INVALID_INPUT, "until must be greater than current time");
+                }
+                // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
+                durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
+            }
             Channel channel = channelRepository.findById(command.channelId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
@@ -117,7 +125,7 @@ public class ChannelBanService implements ChannelBanApi {
                     target.accountId(),
                     operator.accountId(),
                     reason,
-                    command.durationSeconds() == null ? null : now.plusSeconds(command.durationSeconds()),
+                    durationSeconds == null ? null : now.plusSeconds(durationSeconds),
                     now, null
                 );
                 channelBanRepository.save(ban);
@@ -130,7 +138,7 @@ public class ChannelBanService implements ChannelBanApi {
                     target.accountId(),
                     operator.accountId(),
                     reason,
-                    command.durationSeconds() == null ? null : now.plusSeconds(command.durationSeconds()),
+                    durationSeconds == null ? null : now.plusSeconds(durationSeconds),
                     now, null
                 );
                 channelBanRepository.update(ban);
@@ -143,22 +151,6 @@ public class ChannelBanService implements ChannelBanApi {
                 "channel_id", command.channelId(),
                 "target_uid", command.targetAccountId());
         return result;
-    }
-
-    @Override
-    public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
-        Long durationSeconds = null;
-        if (command.untilEpochMillis() != null) {
-            long nowMillis = timeProvider.nowMillis();
-            if (command.untilEpochMillis() <= nowMillis) {
-                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "until must be greater than current time");
-            }
-            // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
-            durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
-        }
-        return banChannelMember(new BanChannelMemberCommand(
-            command.operatorAccountId(), command.channelId(), command.targetAccountId(),
-            command.reason(), durationSeconds));
     }
 
     @Override

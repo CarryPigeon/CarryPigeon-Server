@@ -64,18 +64,18 @@ public class ChannelBansController {
      *
      * @param channelId 目标频道 ID
      * @param targetAccountId 目标成员账户 ID
-     * @param body 禁言请求，until 为空表示不设置自动到期
+     * @param body 禁言请求，until 必填且必须大于当前时间
      * @param cpPrincipal 当前认证用户
      * @return 禁言结果
      */
     @PutMapping("/{channelId}/bans/{targetAccountId}")
     @Operation(
             summary = "禁言频道成员",
-            description = "对指定频道成员设置禁言。until 为空表示不设置自动到期；已有未解除且未到期的禁言时拒绝重复设置。",
+            description = "对指定频道成员设置禁言：until 必填且必须大于当前时间；已有未解除且未到期的禁言时拒绝重复设置。",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
-                    description = "请求体含 until 与 reason：until 为 epoch 毫秒且必须大于当前时间，"
-                            + "省略或为空表示不设置自动到期；reason 允许空字符串，最长 256 字符",
+                    description = "请求体含 until 与 reason：until 为必填 epoch 毫秒时间戳且必须大于当前时间；"
+                            + "reason 允许空字符串，最长 256 字符",
                     content = @Content(schema = @Schema(implementation = ChannelBanRequest.class))
             )
     )
@@ -88,16 +88,21 @@ public class ChannelBansController {
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法、until 不大于当前时间、目标成员当前角色不是 MEMBER，"
+            @ApiResponse(responseCode = "422", description = "请求体字段非法、until 缺失或为 null、until 不大于当前时间、目标成员当前角色不是 MEMBER，"
                     + "或该成员已有生效中的禁言，reason 为 validation_failed",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<ChannelBanResponse> banChannelMemberV1(
             @Parameter(description = "目标频道 ID", example = "2001")
-            @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+            @PathVariable
+            @Positive(message = "channelId must be greater than 0")
+            long channelId,
             @Parameter(description = "目标成员账户 ID", example = "1002")
-            @PathVariable @Positive(message = "targetAccountId must be greater than 0") long targetAccountId,
-            @Valid @RequestBody ChannelBanRequest body,
+            @PathVariable
+            @Positive(message = "targetAccountId must be greater than 0")
+            long targetAccountId,
+            @Valid @RequestBody
+            ChannelBanRequest body,
             @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelBanResult result = channelBanApi.banChannelMemberUntil(

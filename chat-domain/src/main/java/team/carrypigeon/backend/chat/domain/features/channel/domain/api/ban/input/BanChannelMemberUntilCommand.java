@@ -11,7 +11,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.inp
  * @param channelId 频道 ID
  * @param targetAccountId 目标成员账户 ID
  * @param reason 禁言原因
- * @param untilEpochMillis 禁言截止毫秒时间戳；为空表示不设置自动到期
+ * @param untilEpochMillis 禁言截止毫秒时间戳；对外入口必填且必须大于当前时间
  */
 public record BanChannelMemberUntilCommand(
         long operatorAccountId,

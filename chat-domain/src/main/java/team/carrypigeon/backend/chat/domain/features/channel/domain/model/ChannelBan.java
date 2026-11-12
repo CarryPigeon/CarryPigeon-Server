@@ -12,7 +12,7 @@ import java.time.Instant;
  * @param bannedAccountId 被禁言账户 ID
  * @param operatorAccountId 最近一次执行禁言或解除禁言的账户 ID
  * @param reason 禁言原因；允许空字符串，不允许为 {@code null}
- * @param expiresAt 禁言到期时间；为空表示不设置自动到期，须由解除动作显式结束
+ * @param expiresAt 禁言到期时间；新记录必须非空，历史数据可能为空（按未生效处理）；当前不支持永久禁言
  * @param createdAt 禁言记录创建时间
  * @param revokedAt 解除禁言时间；为空表示尚未解除
  */

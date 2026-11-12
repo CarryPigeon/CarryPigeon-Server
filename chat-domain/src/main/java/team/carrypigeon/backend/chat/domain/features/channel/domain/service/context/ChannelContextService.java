@@ -73,8 +73,8 @@ public class ChannelContextService implements ChannelContextApi {
 
     /**
      * 读取账号在当前时刻仍然生效的禁言到期时刻。
-     * 约束：已解除、已过期与不存在记录三种情况统一返回 {@code null}，表示当前未被禁言；
-     * 到期时间为空的记录视为不自动到期，因此也不参与"仍在生效"的判定。
+     * 约束：已解除、已过期、历史无到期时间与不存在记录四种情况统一返回 {@code null}，表示当前未被禁言；
+     * 历史数据中到期时间为空的记录按未生效处理，不再参与"仍在生效"的判定。
      *
      * @param channelId 目标频道 ID
      * @param accountId 待判定账号 ID
@@ -87,7 +87,7 @@ public class ChannelContextService implements ChannelContextApi {
             // 先剔除已解除的记录
             .filter(ban -> ban.revokedAt() == null)
             .map(ChannelBan::expiresAt)
-            // 再剔除未设置到期时间与已过期的记录
+            // 再剔除历史无到期时间与已过期的记录
             .filter(expiresAt -> expiresAt.isAfter(now))
             .orElse(null);
     }

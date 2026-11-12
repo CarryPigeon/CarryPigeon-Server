@@ -12,7 +12,7 @@ import java.time.Instant;
  * @param bannedAccountId 被封禁账户 ID
  * @param operatorAccountId 执行封禁的账户 ID
  * @param reason 封禁原因
- * @param expiresAt 封禁到期时间；为空表示未设置自动到期
+ * @param expiresAt 封禁到期时间；新写入必须非空，历史数据可能为空
  * @param createdAt 创建时间
  * @param revokedAt 解除封禁时间；为空表示尚未解除
  */

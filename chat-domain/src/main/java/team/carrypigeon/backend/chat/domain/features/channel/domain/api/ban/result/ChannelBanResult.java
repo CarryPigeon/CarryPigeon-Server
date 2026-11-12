@@ -14,7 +14,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
  * @param bannedAccountId 被禁言账户 ID
  * @param operatorAccountId 操作人账户 ID
  * @param reason 禁言原因
- * @param expiresAt 禁言到期时间；为空表示不自动到期
+ * @param expiresAt 禁言到期时间；新记录必非空，历史数据可能为空（按未生效处理）
  * @param createdAt 禁言创建时间
  * @param revokedAt 解除禁言时间；为空表示尚未解除
  */
