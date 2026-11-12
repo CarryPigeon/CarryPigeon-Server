@@ -1,14 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http.mention;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Positive;
 import java.util.List;
+
+import org.hibernate.validator.constraints.Range;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,13 +14,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import team.carrypigeon.backend.chat.domain.features.message.domain.capability.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.MentionApi;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionListResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.UpdateMentionReadStateRequest;
-import team.carrypigeon.backend.chat.domain.config.http.OpaqueCursorCodec;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.MentionApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
@@ -54,7 +55,6 @@ public class MentionController {
     }
 
     /**
-     * TODO 待审核
      * 查询当前账号的提及收件箱。
      * 输入：游标、数量、未读筛选和可选频道筛选。
      * 输出：提及列表分页响应。
@@ -71,11 +71,13 @@ public class MentionController {
     public MentionListResponse listMentions(
         @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "20")
-            @Min(value = 1, message = "limit must be between 1 and 50")
-            @Max(value = 50, message = "limit must be between 1 and 50") int limit,
-        @RequestParam(name = "unread_only", defaultValue = "false") boolean unreadOnly,
+        @Range(min = 1,max = 50,message = "limit must be between 1 and 50")
+        int limit,
+        @RequestParam(name = "unread_only", defaultValue = "false")
+        boolean unreadOnly,
         @RequestParam(name = "cid", required = false)
-            @Positive(message = "cid must be greater than 0") Long channelId,
+        @Positive(message = "cid must be greater than 0")
+        Long channelId,
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         List<MentionItemResponse> queriedItems = mentionDomainApi.listMentions(new ListMentionsQuery(

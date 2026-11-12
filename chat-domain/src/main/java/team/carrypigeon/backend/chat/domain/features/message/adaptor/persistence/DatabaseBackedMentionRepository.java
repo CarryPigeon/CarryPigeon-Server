@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
@@ -27,10 +27,6 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
         this.mentionDatabaseService = mentionDatabaseService;
     }
 
-    /**
-     * 批量写入消息产生的提及记录。
-     * 副作用：一次适配调用持久化提及的来源消息、目标账户和已读状态。
-     */
     @Override
     public void saveAll(List<Mention> mentions) {
         mentionDatabaseService.insertAll(mentions.stream()
@@ -47,31 +43,20 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
                 .toList());
     }
 
-    /**
-     * 删除指定消息产生的提及记录。
-     */
     @Override
     public void deleteByMessageId(long messageId) {
         mentionDatabaseService.deleteByMessageId(messageId);
     }
 
-    /**
-     * 查询账户的提及流。
-     * 输入：账户、游标、未读过滤和可选频道范围。
-     * 输出：已转换为领域模型的提及列表。
-     */
     @Override
     public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
+        // 如果是false则为查询所有mention,需要用readFilter标记为null取消查询条件
         Boolean readFilter = unreadOnly ? Boolean.FALSE : null;
         return mentionDatabaseService.find(new MentionQuery(accountId, cursorMentionId, readFilter, channelId, limit)).stream()
                 .map(this::toDomain)
                 .toList();
     }
 
-    /**
-     * 将单条提及标记为已读。
-     * 输出：返回目标提及是否存在且归属于当前账户。
-     */
     @Override
     public boolean markAsRead(long accountId, long mentionId) {
         Optional<MentionRecord> existing = mentionDatabaseService.findById(mentionId);
@@ -95,11 +80,6 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
         return true;
     }
 
-    /**
-     * 批量标记账户提及为已读。
-     * 输入：账户、可选上界游标和可选频道范围。
-     * 输出：返回实际更新的提及数量。
-     */
     @Override
     public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
         List<MentionRecord> records = mentionDatabaseService.find(

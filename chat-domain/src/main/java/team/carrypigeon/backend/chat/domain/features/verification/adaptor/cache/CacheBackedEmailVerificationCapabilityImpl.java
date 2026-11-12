@@ -5,6 +5,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
@@ -17,10 +18,11 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
  * 边界：缓存与邮件客户端的具体实现细节停留在基础设施层。
  */
 @Component
-public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability {
+public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEmailVerificationCapability {
 
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
     private static final String CACHE_KEY_PREFIX = "auth:email-code:";
+    private static final String ATTEMPTS_KEY_PREFIX = "auth:email-code:attempts:";
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
     private final ObjectProvider<CacheService> cacheServiceProvider;
@@ -50,9 +52,18 @@ public class CacheBackedEmailVerificationCapabilityImpl implements team.carrypig
 
     @Override
     public void verifyCode(String email, String code) {
-        if (!requireCache().consumeIfEquals(CACHE_KEY_PREFIX + email, code)) {
-            throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
+        CacheService cache = requireCache();
+        String codeKey = CACHE_KEY_PREFIX + email;
+        if (cache.consumeIfEquals(codeKey, code)) {
+            return;
         }
+        // 只在失败时自增；窗口 TTL 与验证码 TTL 对齐
+        long attempts = cache.increment(ATTEMPTS_KEY_PREFIX + email, CODE_TTL);
+        if (attempts >= 5) {
+            cache.delete(codeKey); // 达到阈值直接作废验证码，防止继续猜
+            throw ProblemException.of(VerificationProblem.TOO_MANY_REQUESTS);
+        }
+        throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
     }
 
     /**

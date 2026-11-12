@@ -16,13 +16,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cac
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelBanEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 
-/**
- * MyBatis-Plus 频道封禁数据库服务。
- * 职责：在 database-impl 中完成频道封禁的最小查询与写入能力。
- * 边界：只负责数据库记录映射，不承载封禁业务规则。
- * 缓存：按 (频道, 被封禁账户) 唯一键缓存“关系 -&gt; 封禁主键”lookup 指针，封禁实体按主键缓存一份；
- * 写路径精确失效实体键与关系指针，封禁列表/分页查询不缓存。
- */
 @Component
 public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseService {
 
@@ -32,22 +25,11 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     private final ChannelBanMapper channelBanMapper;
     private final DatabaseCache databaseCache;
 
-    /**
-     * 创建频道封禁数据库服务。
-     *
-     * @param channelBanMapper 频道封禁 Mapper
-     * @param databaseCache 数据库查询缓存门面
-     */
     public MybatisPlusChannelBanDatabaseService(ChannelBanMapper channelBanMapper, DatabaseCache databaseCache) {
         this.channelBanMapper = channelBanMapper;
         this.databaseCache = databaseCache;
     }
 
-    /**
-     * 查询频道对目标账户的封禁记录。
-     * 缓存：先查 relation lookup 指针，命中后按封禁主键读实体缓存；未命中时一次数据库查询同时回填指针与实体。
-     * 频道上下文校验会在请求主链路上高频读取封禁关系，这是本次新增缓存的目标查询。
-     */
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
         String lookupKey = relationKey(channelId, bannedAccountId);
@@ -66,10 +48,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         return ban;
     }
 
-    /**
-     * 分页查询频道下的封禁记录。
-     * 边界：分页键空间无界且复用低，不属于当前缓存覆盖范围。
-     */
     @Override
     public PageResult<ChannelBanRecord> pageBansByChannelId(long channelId, PageQuery query) {
         IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
@@ -86,9 +64,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         );
     }
 
-    /**
-     * 插入新的封禁记录。
-     */
     @Override
     public void insert(ChannelBanRecord record) {
         channelBanMapper.insert(ChannelBanEntity.from(record));
@@ -96,9 +71,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         evictRelation(record.channelId(), record.bannedAccountId());
     }
 
-    /**
-     * 批量插入封禁记录。
-     */
     @Override
     public void insertAll(List<ChannelBanRecord> records) {
         if (records == null || records.isEmpty()) {
@@ -111,10 +83,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         }
     }
 
-    /**
-     * 按封禁 ID 删除记录。
-     * 缓存：删除前读取旧记录，删除成功后精确失效实体键与关系指针。
-     */
     @Override
     public void delete(long banId) {
         Optional<ChannelBanRecord> previous = databaseCache.enabled() ? loadById(banId) : Optional.empty();
@@ -123,9 +91,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         previous.ifPresent(old -> evictRelation(old.channelId(), old.bannedAccountId()));
     }
 
-    /**
-     * 按封禁 ID 批量删除记录。
-     */
     @Override
     public void deleteAll(List<Long> banIds) {
         if (banIds == null || banIds.isEmpty()) {
@@ -142,17 +107,11 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         }
     }
 
-    /**
-     * 按封禁 ID 查询记录。
-     */
     @Override
     public Optional<ChannelBanRecord> findById(long banId) {
         return loadById(banId);
     }
 
-    /**
-     * 按封禁 ID 批量查询记录。
-     */
     @Override
     public List<ChannelBanRecord> findByIds(List<Long> banIds) {
         if (banIds == null || banIds.isEmpty()) {
@@ -161,10 +120,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         return loadByIds(banIds);
     }
 
-    /**
-     * 更新既有封禁记录。
-     * 缓存：更新前读取旧记录，写入成功后精确失效新实体、旧/新关系指针。
-     */
     @Override
     public void update(ChannelBanRecord record) {
         Optional<ChannelBanRecord> previous = databaseCache.enabled()
@@ -176,10 +131,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         previous.ifPresent(old -> evictRelation(old.channelId(), old.bannedAccountId()));
     }
 
-    /**
-     * 分页查询封禁记录。
-     * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
-     */
     @Override
     public PageResult<ChannelBanRecord> list(PageQuery query) {
         IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
@@ -195,10 +146,6 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         );
     }
 
-    /**
-     * 删除频道下的全部封禁记录。
-     * 缓存：缓存启用时先读取该频道封禁快照，删除成功后逐条精确失效实体与关系指针。
-     */
     @Override
     public void deleteByChannelId(long channelId) {
         List<ChannelBanRecord> previous = databaseCache.enabled()

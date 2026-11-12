@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config.http;
+package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

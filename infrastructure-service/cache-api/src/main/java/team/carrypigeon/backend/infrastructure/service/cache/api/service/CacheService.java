@@ -43,6 +43,32 @@ public interface CacheService {
     void set(String key, String value, Duration ttl);
 
     /**
+     * 只有当缓存键不存在时写入带过期时间的字符串缓存。
+     * 语义：返回 true 表示写入成功；返回 false 表示写入失败，因为键已存在。
+     *
+     * @param key 缓存键
+     * @param value 缓存值
+     * @param ttl 缓存存活时间
+     * @return 是否写入成功
+     */
+    boolean setIfAbsent(String key, String value, Duration ttl);
+
+    /**
+     * 原子自增计数，并保证计数键带有过期时间。
+     * 语义：
+     * 1. 键不存在时从 1 开始；键存在时在原值上 +1；
+     * 2. TTL 只在计数键首次创建（或发现无 TTL）时设置，后续自增不重置 TTL；
+     * 3. 返回自增后的计数。
+     * 约束：实现必须使用缓存后端的原子原语（如 Redis Lua/INCR），
+     *      不得退化为“读取-加一-写回”，否则并发下配额会失真。
+     *
+     * @param key 计数键，建议使用独立命名空间，避免与普通字符串键混用
+     * @param ttl 计数窗口存活时间
+     * @return 自增后的计数
+     */
+    long increment(String key, Duration ttl);
+
+    /**
      * 删除指定缓存键。
      *
      * @param key 缓存键

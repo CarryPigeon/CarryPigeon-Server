@@ -18,7 +18,8 @@ public enum VerificationProblem implements ProblemMapping {
 
     /** 邮件服务未就绪。 */
     MAIL_UNAVAILABLE(503, "mail_service_unavailable", "mail service is unavailable"),
-
+    /**验证码尝试次数过多*/
+    TOO_MANY_REQUESTS(429, "too_many_requests", "too many requests, please retry later"),
     /** 验证码邮件投递失败。 */
     EMAIL_DELIVERY_FAILED(503, "email_delivery_failed", "failed to deliver verification email");
 

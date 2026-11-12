@@ -30,6 +30,18 @@ public class RedisCacheService implements CacheService {
             Boolean.class
     );
 
+    private static final DefaultRedisScript<Long> INCREMENT_WITH_TTL_SCRIPT = new DefaultRedisScript<>(
+        """
+        local current = redis.call('INCR', KEYS[1])
+        -- PTTL < 0 表示键没有 TTL（-1）或不存在（-2）：两种情况都应该补上过期时间
+        if redis.call('PTTL', KEYS[1]) < 0 then
+            redis.call('PEXPIRE', KEYS[1], tonumber(ARGV[1]))
+        end
+        return current
+        """,
+        Long.class
+    );
+
     private final StringRedisTemplate redisTemplate;
     private final RedisCacheProperties properties;
 
@@ -120,6 +132,36 @@ public class RedisCacheService implements CacheService {
             redisTemplate.opsForValue().set(key, value, effectiveTtl);
         } catch (RuntimeException ex) {
             throw new CacheServiceException("failed to write cache entry", ex);
+        }
+    }
+
+    @Override
+    public boolean setIfAbsent(String key, String value, Duration ttl) {
+        requireKey(key);
+        requireValue(value);
+        Duration effectiveTtl = ttl == null ? properties.defaultTtl() : ttl;
+        requireTtl(effectiveTtl);
+        try {
+            return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, effectiveTtl));
+        } catch (RuntimeException ex) {
+            throw new CacheServiceException("failed to write cache entry", ex);
+        }
+    }
+
+    @Override
+    public long increment(String key, Duration ttl) {
+        requireKey(key);
+        requireTtl(ttl);
+        try {
+            return redisTemplate.execute(
+                INCREMENT_WITH_TTL_SCRIPT,
+                List.of(key),
+                String.valueOf(ttl.toMillis())
+            );
+        } catch (CacheServiceException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw new CacheServiceException("failed to increment cache counter", ex);
         }
     }
 

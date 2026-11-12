@@ -67,13 +67,6 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         channelBanDatabaseService.deleteByChannelId(channelId);
     }
 
-    /**
-     * 把禁言记录持久化契约转换为领域模型。
-     * 说明：两侧字段一一对应；expiresAt 为空表示不设置自动到期，revokedAt 为空表示尚未解除，两者共同决定记录是否生效。
-     *
-     * @param record 频道禁言持久化投影
-     * @return 频道禁言领域模型
-     */
     private ChannelBan toDomain(ChannelBanRecord record) {
         return new ChannelBan(
                 record.banId(),
@@ -87,13 +80,6 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
         );
     }
 
-    /**
-     * 把禁言记录领域模型转换为持久化契约。
-     * 说明：更新既有记录时必须保留原 banId，否则会被当成新记录插入或更新不到目标行。
-     *
-     * @param channelBan 频道禁言领域模型
-     * @return 频道禁言持久化投影
-     */
     private ChannelBanRecord toRecord(ChannelBan channelBan) {
         return new ChannelBanRecord(
                 channelBan.banId(),
