@@ -1,15 +1,17 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service.account;
 
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.PasswordHasher;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
@@ -55,6 +57,8 @@ public class AuthAccountService implements AuthAccountApi {
     public RegisterResult register(String username, String password,String email,String code) {
         try {
             RegisterResult result = transactionRunner.runInTransaction(() -> {
+                // 邮箱验证码校验
+                emailVerificationApi.verifyCode(email, code);
                 // 存在性校验，确保username和邮箱的唯一性
                 authAccountRepository.findByUsername(username)
                         .ifPresent(existing -> {
@@ -64,8 +68,6 @@ public class AuthAccountService implements AuthAccountApi {
                         .ifPresent(existing -> {
                             throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
                         });
-                // 邮箱验证码校验
-                emailVerificationApi.verifyCode(email, code);
                 // 用户信息创建
                 AuthAccount account = new AuthAccount(
                         idGenerator.nextLongId(),
@@ -106,10 +108,9 @@ public class AuthAccountService implements AuthAccountApi {
     @Override
     public void updateEmail(long accountId, String email, String code) {
         try {
-            // 验证邮箱验证码
-            emailVerificationApi.verifyCode(email, code);
-
             transactionRunner.runInTransaction(() -> {
+                // 验证邮箱验证码
+                emailVerificationApi.verifyCode(email, code);
                 // 获取当前用户
                 AuthAccount existingAccount = authAccountRepository.findById(accountId)
                         .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));

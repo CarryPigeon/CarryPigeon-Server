@@ -75,7 +75,7 @@ public class ChannelReadStateController {
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
-            .map(result -> new UnreadItemResponse(result.cid(), result.unreadCount(), result.lastReadTime()))
+            .map(result -> new UnreadItemResponse(result.cid(), result.unreadCount()))
             .toList();
         return new UnreadListResponse(items);
     }

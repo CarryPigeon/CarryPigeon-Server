@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
+
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -31,6 +33,7 @@ public class SmtpMailSenderService implements MailSenderService {
      * @param command 邮件发送命令
      */
     @Override
+    @Async("mailExecutor")
     public void send(MailSendCommand command) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(properties.fromAddress());

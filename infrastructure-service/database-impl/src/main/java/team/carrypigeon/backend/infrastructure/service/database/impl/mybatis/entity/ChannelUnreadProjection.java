@@ -1,7 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity;
 
-import java.time.Instant;
-
 import lombok.Data;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
 
@@ -15,7 +13,6 @@ public class ChannelUnreadProjection {
 
     private Long channelId;
     private Long unreadCount;
-    private Instant lastReadTime;
 
     /**
      * 将查询投影转换为数据库记录契约。
@@ -26,8 +23,7 @@ public class ChannelUnreadProjection {
     public ChannelUnreadRecord toRecord() {
         return new ChannelUnreadRecord(
                 channelId == null ? 0L : channelId,
-                unreadCount == null ? 0L : unreadCount,
-                lastReadTime
+                unreadCount == null ? 0L : unreadCount
         );
     }
 }

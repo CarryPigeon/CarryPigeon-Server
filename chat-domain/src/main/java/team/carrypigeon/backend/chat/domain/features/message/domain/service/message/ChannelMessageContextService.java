@@ -65,7 +65,7 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
                         after
                 )
                 .sorted(Comparator.comparingLong(CPChannelMessage::messageId).reversed())
-                .map(message -> new ChannelMessageResult(message.messageId()))
+                .map(message -> ChannelMessageResult.of(message))
                 .toList();
         return new ChannelMessageContext(items);
     }

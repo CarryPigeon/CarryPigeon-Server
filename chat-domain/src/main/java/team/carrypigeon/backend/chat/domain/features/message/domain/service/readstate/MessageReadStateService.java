@@ -89,8 +89,7 @@ public class MessageReadStateService implements MessageReadStateApi {
         return readStateRepository.listUnreadsByAccountId(accountId).stream()
                 .map(item -> new ChannelUnreadResult(
                         IdUtil.toString(item.channelId()),
-                        item.unreadCount(),
-                        item.lastReadTime() == null ? 0L : item.lastReadTime().toEpochMilli()
+                        item.unreadCount()
                 ))
                 .toList();
     }

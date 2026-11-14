@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;

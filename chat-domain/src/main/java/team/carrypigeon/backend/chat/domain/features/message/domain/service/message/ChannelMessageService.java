@@ -67,7 +67,7 @@ public class ChannelMessageService implements ChannelMessageApi {
 
     @Override
     public ChannelMessageResult sendChannelMessage(long accountId, long channelId, String domain, Map<String, Object> data, List<Long> mentions) {
-        long messageId = transactionRunner.runInTransaction(afterCommit -> {
+        CPChannelMessage message = transactionRunner.runInTransaction(afterCommit -> {
             // 拉取上下文
             ChannelContext channelContext = channelContextApi.requireMemberContext(channelId, accountId);
             // 检查权限
@@ -87,7 +87,7 @@ public class ChannelMessageService implements ChannelMessageApi {
                             .filter(memberAccountIdSet::contains)
                             .toList();
             // 组装消息
-            CPChannelMessage message = new CPChannelMessage(
+            CPChannelMessage originalMessage = new CPChannelMessage(
                     idGenerator.nextLongId(),
                     accountId,
                     channelId,
@@ -101,18 +101,18 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 处理消息
             CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(domain);
             // 持久化消息
-            CPChannelMessage saved = handler.handle(message);
-            messageRepository.save(saved);
+            CPChannelMessage finalMessage = handler.handle(originalMessage);
+            messageRepository.save(finalMessage);
             // 生成提及记录；只保留当前频道成员，避免产生无法访问的提及
-            List<Mention> savedMentions = saved.mentions().stream()
+            List<Mention> savedMentions = finalMessage.mentions().stream()
                     .map(targetAccountId -> new Mention(
                             idGenerator.nextLongId(),
                             channelId,
-                            saved.messageId(),
+                            finalMessage.messageId(),
                             accountId,
                             MENTION_TARGET_TYPE_USER,
                             targetAccountId,
-                            saved.sendTime(),
+                            finalMessage.sendTime(),
                             false
                     ))
                     .toList();
@@ -122,18 +122,18 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 通知所有人
             messageEventNotifier.messageCreated(
                     afterCommit,
-                    saved,
+                    finalMessage,
                     memberAccountIds
             );
             // 提及事件只广播给被提及账号
             savedMentions.forEach(mention -> messageEventNotifier.mentionCreated(afterCommit, mention));
-            return saved.messageId();
+            return finalMessage;
         });
         AuditLogs.success("message.send", accountId,
                 "channel_id", channelId,
-                "message_id", messageId,
+                "message_id", message.messageId(),
                 "domain", domain);
-        return new ChannelMessageResult(messageId);
+        return ChannelMessageResult.of(message);
     }
 
     @Override

@@ -34,8 +34,6 @@ public class RealtimeServerProperties{
     int authenticationTimeoutSeconds = 10;
     int readIdleTimeoutSeconds = 60;
     Duration eventRetention = Duration.ofHours(1);
-    int maxEventAccounts = 10000;
-    int maxEventsPerAccount = 1000;
     int maxPayloadByte = 262144;
 
     /**

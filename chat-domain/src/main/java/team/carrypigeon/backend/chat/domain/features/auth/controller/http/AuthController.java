@@ -18,7 +18,14 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.*;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.EmailLoginRequestBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.PWDLoginRequestBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RefreshAccessTokenRequestBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterRequestBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterResponseBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RevokeRefreshTokenRequestBody;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.UpdateCurrentAccountEmailRequest;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -122,7 +129,7 @@ public class AuthController {
     public ResponseEntity<AuthSessionTokenResponse> loginByEmail(
         @Valid @RequestBody EmailLoginRequestBody request
     ) {
-        AuthTokenResult result = authTokenApi.loginByEmail(request.email(),request.code());
+        AuthTokenResult result = authTokenApi.loginByEmail(request.email().trim().toLowerCase(Locale.ROOT),request.code());
         return ResponseEntity.ok().body(new AuthSessionTokenResponse(
             "Bearer",
             result.accessToken(),

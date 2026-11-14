@@ -1,11 +1,12 @@
 package team.carrypigeon.backend.chat.domain.config.http.openapi;
 
+import java.util.Map;
+
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.parameters.RequestBody;
-import java.util.Map;
 
 /**
  * OpenAPI 请求示例目录。
@@ -137,8 +138,7 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("PUT /api/channels/{channelId}/read_state", jsonExample("更新频道已读状态", """
                     {
-                      "last_read_mid": "{{messageId}}",
-                      "last_read_time": 1700000000000
+                      "last_read_mid": "{{messageId}}"
                     }
                     """)),
             Map.entry("PUT /api/mentions/read_state", jsonExample("批量标记提及已读", """

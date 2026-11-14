@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message;
 
 import java.util.List;
+
 import org.springframework.stereotype.Service;
+
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageHistoryApi;
@@ -72,7 +74,7 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
         boolean hasMore = messages.size() > limit;
         List<CPChannelMessage> pageMessages = hasMore ? messages.subList(0, limit) : messages;
         List<ChannelMessageResult> items = pageMessages.stream()
-                .map(message -> new ChannelMessageResult(message.messageId()))
+                .map(message -> ChannelMessageResult.of(message))
                 .toList();
         Long nextCursor = hasMore ? items.getLast().messageId() : null;
         return new ChannelMessagePage(items, nextCursor, hasMore);

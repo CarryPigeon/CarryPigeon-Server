@@ -88,6 +88,6 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
     }
 
     private ChannelUnread toDomain(ChannelUnreadRecord record) {
-        return new ChannelUnread(record.channelId(), record.unreadCount(), record.lastReadTime());
+        return new ChannelUnread(record.channelId(), record.unreadCount());
     }
 }
