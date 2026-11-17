@@ -24,7 +24,7 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
     @Insert("""
             <script>
             INSERT INTO chat_channel (
-                channel_id, name, brief, avatar, is_system, created_at, updated_at
+                channel_id, name, brief, is_system, created_at, updated_at
             )
             VALUES
             <foreach collection="records" item="record" separator=",">
@@ -32,7 +32,6 @@ public interface ChannelMapper extends BaseMapper<ChannelEntity> {
                 #{record.channelId},
                 #{record.name},
                 #{record.brief},
-                #{record.avatar},
                 #{record.systemChannel},
                 #{record.createdAt},
                 #{record.updatedAt}
