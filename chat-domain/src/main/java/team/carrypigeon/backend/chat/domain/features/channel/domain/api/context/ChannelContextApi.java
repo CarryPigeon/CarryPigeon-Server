@@ -19,6 +19,9 @@ public interface ChannelContextApi {
      */
     ChannelContext requireMemberContext(long channelId, long accountId);
 
+    /** 消息等频道写入先锁频道再校验成员，锁持有到外层事务结束，避免删除后创建新的关联数据。 */
+    ChannelContext requireMemberContextForUpdate(long channelId, long accountId);
+
     /**
      * 返回频道内全部成员的账号快照。
      *

@@ -15,6 +15,19 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelDatabaseService {
 
+    /** 登记删除任务，与移除频道主记录同事务执行。 */
+    void scheduleDeletion(long channelId, long operatorAccountId);
+
+    /** 事务内当前读取得删除发起者，用于原所有者幂等重试。 */
+    Optional<Long> findDeletionOperator(long channelId);
+
+    /** 锁定一个未完成删除任务，必须在事务中调用，跳过其它工作者持有的任务。 */
+    Optional<Long> findPendingDeletionForUpdate();
+
+    /** 在最后一批数据清理成功的事务中登记完成，不删除幂等重试依据。 */
+    void completeDeletion(long channelId);
+
+
     /** 授权专用直读；不读取或回填缓存，缺失时返回空。可见性遵守调用方事务隔离级别。 */
     Optional<ChannelRecord> findByIdForAuthorization(long channelId);
 

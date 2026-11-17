@@ -14,6 +14,10 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelApplicationDatabaseService {
 
+    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
+    List<ChannelApplicationRecord> deleteBatchByChannelId(long channelId, int limit);
+
+
     /**
      * 写入新的申请记录。
      *

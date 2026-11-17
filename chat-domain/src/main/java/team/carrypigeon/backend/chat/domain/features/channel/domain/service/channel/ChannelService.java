@@ -20,8 +20,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.Chan
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
@@ -39,8 +37,6 @@ public class ChannelService implements ChannelApi {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
-    private final ChannelApplicationRepository channelApplicationRepository;
-    private final ChannelBanRepository channelBanRepository;
     private final ChannelEventNotifier channelEventNotifier;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
@@ -49,8 +45,6 @@ public class ChannelService implements ChannelApi {
     public ChannelService(
         ChannelRepository channelRepository,
         ChannelMemberRepository channelMemberRepository,
-        ChannelApplicationRepository channelApplicationRepository,
-        ChannelBanRepository channelBanRepository,
         ChannelEventNotifier channelEventNotifier,
         IdGenerator idGenerator,
         TimeProvider timeProvider,
@@ -58,8 +52,6 @@ public class ChannelService implements ChannelApi {
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
-        this.channelApplicationRepository = channelApplicationRepository;
-        this.channelBanRepository = channelBanRepository;
         this.channelEventNotifier = channelEventNotifier;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
@@ -68,7 +60,7 @@ public class ChannelService implements ChannelApi {
 
     @Override
     public PageResult<ChannelResult> listChannels(long accountId, PageQuery page) {
-        // 可见性唯一标准：账号在当前频道存在成员映射，分页也落在成员关系表上
+        // 分页只计入仍存在的频道成员关系，删除后不等待后台清理即可从列表消失。
         PageResult<ChannelMember> memberships = channelMemberRepository.pageByAccountId(accountId, page);
         if (memberships.items().isEmpty()) {
             return new PageResult<>(List.of(), memberships.page(), memberships.pageSize(), memberships.total());
@@ -125,27 +117,26 @@ public class ChannelService implements ChannelApi {
     @Override
     public void deleteChannel(long operatorAccountId, long channelId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            // 在读取所有者和清理关联数据前锁频道，避免与转移、审批、禁言形成相反锁序。
-            Channel channel = channelRepository.findByIdForUpdate(channelId)
-                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
+            // 所有频道写入按频道、成员的顺序加锁；删除持锁期间不能新建关联数据。
+            Channel channel = channelRepository.findByIdForUpdate(channelId).orElse(null);
+            if (channel == null) {
+                // 只有原发起者可以幂等重试；不能以不存在的频道 ID 探测或触发其它账号的清理任务。
+                if (channelRepository.findDeletionOperator(channelId).filter(id -> id == operatorAccountId).isPresent()) {
+                    return;
+                }
+                throw ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND);
+            }
             // 操作者必须先是频道成员，再判断其角色，避免把"非成员"与"角色不足"混为一类拒绝
             ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
             }
-            // 获取成员关系
-            List<Long> members = channelMemberRepository.listByChannelId(channelId).stream()
-                .map(ChannelMember::accountId)
-                .toList();
-
-            // 删除依赖数据：集合级删除，避免先加载全量申请/禁言再逐条删除
-            channelApplicationRepository.deleteByChannelId(channelId);
-            channelBanRepository.deleteByChannelId(channelId);
-            channelMemberRepository.deleteByChannelId(channel.id());
+            // 先登记持久化任务再撤下主记录，同事务提交后所有频道访问立即失败。
+            // 大量成员、消息等由后台按批清理，不在 HTTP 事务中全量读取或删除。
+            channelRepository.scheduleDeletion(channelId, operatorAccountId);
             channelRepository.delete(channel.id());
-            // 通知成员
-            channelEventNotifier.accountChannelsChanged(afterCommit, members);
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(operatorAccountId));
         });
         AuditLogs.success("channel.delete", operatorAccountId, "channel_id", channelId);
     }

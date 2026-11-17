@@ -44,6 +44,30 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         this.databaseCache = databaseCache;
     }
 
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void scheduleDeletion(long channelId, long operatorAccountId) {
+        channelMapper.scheduleDeletion(channelId, operatorAccountId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Long> findDeletionOperator(long channelId) {
+        return Optional.ofNullable(channelMapper.selectDeletionOperator(channelId));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Long> findPendingDeletionForUpdate() {
+        return Optional.ofNullable(channelMapper.selectPendingDeletionForUpdate());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void completeDeletion(long channelId) {
+        channelMapper.completeDeletion(channelId);
+    }
+
     /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
     @Override
     public Optional<ChannelRecord> findByIdForAuthorization(long channelId) {

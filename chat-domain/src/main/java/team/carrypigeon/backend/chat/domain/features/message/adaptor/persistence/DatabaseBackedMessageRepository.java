@@ -48,6 +48,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
+    public boolean deleteChannelBatch(long channelId, int limit) {
+        return messageDatabaseService.deleteChannelBatch(channelId, limit);
+    }
+
+    @Override
     public MessageSendRequest reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
         var record = messageDatabaseService.reserveSend(accountId, channelId, requestId, payloadHash, proposedMessageId);
         return new MessageSendRequest(record.payloadHash(), record.messageId());

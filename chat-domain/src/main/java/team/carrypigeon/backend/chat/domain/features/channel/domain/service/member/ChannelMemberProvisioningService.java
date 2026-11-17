@@ -38,6 +38,10 @@ public class ChannelMemberProvisioningService implements ChannelMemberProvisioni
     public void initializeMemberships(long accountId, Instant joinedAt) {
         List<Channel> systemChannels = channelRepository.listSystemChannels();
         for (Channel systemChannel : systemChannels) {
+            // 系统频道快照与初始化写入之间也可能发生删除，取得频道锁后重新确认仍然存在。
+            if (channelRepository.findByIdForUpdate(systemChannel.id()).isEmpty()) {
+                continue;
+            }
             // 幂等保护：账号已在该频道存在成员关系时跳过，避免重复注册或多链路调用产生重复行
             if (channelMemberRepository.findByRelationForAuthorization(systemChannel.id(), accountId).isEmpty()) {
                 // 系统频道的成员统一以 MEMBER 角色加入，不分配 OWNER 或 ADMIN，因此不参与频道治理

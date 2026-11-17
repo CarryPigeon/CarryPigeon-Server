@@ -36,6 +36,20 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
+    public boolean deleteChannelBatch(long channelId, int limit) {
+        int affected = messageMapper.deleteMentionsBatch(channelId, limit)
+                + messageMapper.deleteReadStatesBatch(channelId, limit)
+                + messageMapper.deleteSendRequestsBatch(channelId, limit)
+                + messageMapper.deleteMessagesBatch(channelId, limit);
+        if (affected == 0) {
+            messageMapper.deleteSequence(channelId);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
     public MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
         messageMapper.reserveSend(accountId, channelId, requestId.toString(), payloadHash, proposedMessageId);
         return messageMapper.selectSendForUpdate(accountId, channelId, requestId.toString());

@@ -12,6 +12,10 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
  */
 public interface ChannelBanRepository {
 
+    /** 清理已撤下频道的一批关系；返回本批清理条数。 */
+    int deleteBatchByChannelId(long channelId, int limit);
+
+
     /**
      * 为授权判断直接读取数据库，绕过最终一致的展示缓存。
      * 返回当前事务可见的记录；不存在时为空，不提供检查与后续写入之间的并发保证。

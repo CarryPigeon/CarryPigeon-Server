@@ -14,6 +14,10 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelBanDatabaseService {
 
+    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
+    List<ChannelBanRecord> deleteBatchByChannelId(long channelId, int limit);
+
+
     /** 授权专用直读；不读取或回填缓存，缺失时返回空。可见性遵守调用方事务隔离级别。 */
     Optional<ChannelBanRecord> findByRelationForAuthorization(long channelId, long bannedAccountId);
 

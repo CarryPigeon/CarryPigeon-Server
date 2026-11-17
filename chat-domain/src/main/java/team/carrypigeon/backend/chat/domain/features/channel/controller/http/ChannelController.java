@@ -214,7 +214,7 @@ public class ChannelController {
     @DeleteMapping("/{channelId}")
     @Operation(
             summary = "删除频道",
-            description = "删除指定频道及其全部成员关系。成功返回 204，响应体为空。"
+            description = "提交后频道立即不可访问，关联数据由后台分批清理；原操作者重复删除仍成功。返回 204，响应体为空。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "删除成功，响应体为空"),
@@ -223,8 +223,6 @@ public class ChannelController {
             @ApiResponse(responseCode = "403", description = "非频道成员或不是所有者，reason 为 not_channel_member 或 channel_owner_required",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "频道不存在",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "频道仍存在申请或禁言等依赖数据，reason 为 channel_delete_blocked",
                     content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
     })
     public ResponseEntity<Void> deleteChannel(

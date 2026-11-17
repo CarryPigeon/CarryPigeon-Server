@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -16,6 +18,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cac
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.ChannelBanEntity;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 
+/** 频道禁言持久化适配；提供权威权限查询、展示缓存与限量清理，不决定禁言业务规则。 */
 @Component
 public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseService {
 
@@ -28,6 +31,19 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     public MybatisPlusChannelBanDatabaseService(ChannelBanMapper channelBanMapper, DatabaseCache databaseCache) {
         this.channelBanMapper = channelBanMapper;
         this.databaseCache = databaseCache;
+    }
+
+    /** 在外层清理事务中限量删除禁言记录，失败时随本批一起回滚。 */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<ChannelBanRecord> deleteBatchByChannelId(long channelId, int limit) {
+        List<ChannelBanRecord> records = channelBanMapper.selectList(new LambdaQueryWrapper<ChannelBanEntity>()
+                .eq(ChannelBanEntity::getChannelId, channelId)
+                .orderByAsc(ChannelBanEntity::getBanId)
+                .last("LIMIT " + limit))
+                .stream().map(ChannelBanEntity::toRecord).toList();
+        deleteAll(records.stream().map(ChannelBanRecord::banId).toList());
+        return records;
     }
 
     /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */

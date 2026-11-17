@@ -53,12 +53,13 @@ public class MessageReadStateService implements MessageReadStateApi {
     @Override
     public ChannelReadStateResult updateChannelReadState(long accountId, long channelId, long lastReadMessageId) {
         return transactionRunner.runInTransaction(afterCommit -> {
+            // 已读也是关联写入，必须在读取锚点前取得频道锁，防止清理后重新写入状态。
+            channelContextApi.requireMemberContextForUpdate(channelId, accountId);
             CPChannelMessage message = messageRepository.findById(lastReadMessageId)
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             if (message.channelId() != channelId) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
-            channelContextApi.requireMemberContext(channelId, accountId);
             ChannelReadState current = readStateRepository
                     .findByChannelIdAndAccountId(channelId, accountId)
                     .orElse(null);

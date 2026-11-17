@@ -90,7 +90,7 @@ public class ChannelMessageService implements ChannelMessageApi {
         String payloadHash = payloadHash(domain, data, requestedMentions);
         CPChannelMessage message = transactionRunner.runInTransaction(afterCommit -> {
             // 拉取上下文
-            ChannelContext channelContext = channelContextApi.requireMemberContext(channelId, accountId);
+            ChannelContext channelContext = channelContextApi.requireMemberContextForUpdate(channelId, accountId);
             long proposedMessageId = idGenerator.nextLongId();
             MessageSendRequest reserved = messageRepository.reserveSend(accountId, channelId, requestId, payloadHash, proposedMessageId);
             if (!reserved.payloadHash().equals(payloadHash)) {
@@ -187,6 +187,8 @@ public class ChannelMessageService implements ChannelMessageApi {
     @Override
     public void recallChannelMessage(long accountId, long channelId, long messageId) {
         transactionRunner.runInTransaction(afterCommit -> {
+            // 与发送、频道删除保持相同锁序；频道撤下后不能再更新消息或创建事件。
+            ChannelContext operatorContext = channelContextApi.requireMemberContextForUpdate(channelId, accountId);
             // 查询已有的消息
             CPChannelMessage existingMessage = messageRepository.findById(messageId)
                     .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
@@ -195,10 +197,6 @@ public class ChannelMessageService implements ChannelMessageApi {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             // 验证操作权限
-            ChannelContext operatorContext = channelContextApi.requireMemberContext(
-                    existingMessage.channelId(),
-                    accountId
-            );
             boolean senderRecallingOwnMessage = existingMessage.senderId() == accountId;
             boolean moderatorRecallingMemberMessage = operatorContext.isModerator()
                     && !channelContextApi.moderatorAccounts(existingMessage.channelId()).contains(existingMessage.senderId());

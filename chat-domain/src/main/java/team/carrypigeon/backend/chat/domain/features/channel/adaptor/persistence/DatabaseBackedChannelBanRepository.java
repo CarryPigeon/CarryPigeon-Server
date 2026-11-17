@@ -27,6 +27,11 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     @Override
+    public int deleteBatchByChannelId(long channelId, int limit) {
+        return channelBanDatabaseService.deleteBatchByChannelId(channelId, limit).size();
+    }
+
+    @Override
     public Optional<ChannelBan> findByRelationForAuthorization(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByRelationForAuthorization(channelId, bannedAccountId).map(this::toDomain);
     }

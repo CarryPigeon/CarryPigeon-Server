@@ -16,6 +16,10 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Messag
  */
 public interface MessageDatabaseService {
 
+    /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
+    boolean deleteChannelBatch(long channelId, int limit);
+
+
     /** 在消息事务中插入或锁定发送请求，返回持锁读取的原摘要与消息 ID；禁止独立提交占位。 */
     MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
 

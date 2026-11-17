@@ -14,6 +14,10 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
  */
 public interface MessageRepository {
 
+    /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
+    boolean deleteChannelBatch(long channelId, int limit);
+
+
     /**
      * 在发送事务中预占请求 ID；同一发送者和频道的并发重试等待首个事务结束。
      * 新记录使用 proposedMessageId；已有记录返回原摘要与消息 ID，回滚不能留下占位。

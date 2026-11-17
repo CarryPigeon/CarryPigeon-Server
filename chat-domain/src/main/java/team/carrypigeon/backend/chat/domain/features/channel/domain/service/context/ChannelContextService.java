@@ -54,6 +54,15 @@ public class ChannelContextService implements ChannelContextApi {
     }
 
     @Override
+    public ChannelContext requireMemberContextForUpdate(long channelId, long accountId) {
+        channelRepository.findByIdForUpdate(channelId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
+        ChannelMember member = channelMemberRepository.findByRelationForUpdate(channelId, accountId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
+        return new ChannelContext(channelId, member.role(), activeMutedUntil(channelId, accountId));
+    }
+
+    @Override
     public List<Long> memberAccountIds(long channelId) {
         // 只投影账号列，不装配完整成员模型，供广播与 mention 校验使用
         return channelMemberRepository.listByChannelId(channelId).stream()

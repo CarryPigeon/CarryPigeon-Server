@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
@@ -67,7 +66,9 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
      */
     @Override
     public Optional<MentionRecord> findById(long mentionId) {
-        return Optional.ofNullable(mentionMapper.selectById(mentionId))
+        return Optional.ofNullable(mentionMapper.selectOne(new LambdaQueryWrapper<MentionEntity>()
+                        .eq(MentionEntity::getMentionId, mentionId)
+                        .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_mention.channel_id")))
                 .map(MentionEntity::toRecord);
     }
 
@@ -156,6 +157,8 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
     public List<MentionRecord> find(MentionQuery query) {
         return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
                         .eq(MentionEntity::getTargetAccountId, query.accountId())
+                        // 删除提交后立即隐藏提及，不等待后台物理清理。
+                        .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_mention.channel_id")
                         .lt(query.beforeMentionId() != null, MentionEntity::getMentionId, query.beforeMentionId())
                         .eq(query.read() != null, MentionEntity::getRead, query.read())
                         .eq(query.channelId() != null, MentionEntity::getChannelId, query.channelId())

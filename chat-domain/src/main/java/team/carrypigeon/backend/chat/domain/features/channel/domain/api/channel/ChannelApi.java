@@ -41,7 +41,8 @@ public interface ChannelApi {
     ChannelResult createChannel(long accountId, String name, String brief);
 
     /**
-     * 删除频道及其全部成员关系。
+     * 撤下频道并登记持久化清理任务，提交后不可访问；关联数据由后台分批删除。
+     * 原操作者重复删除返回成功，其他账号访问已删除频道仍按不存在处理。
      *
      * @param operatorAccountId 操作者账号 ID
      * @param channelId 频道 ID

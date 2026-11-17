@@ -28,6 +28,11 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     }
 
     @Override
+    public int deleteBatchByChannelId(long channelId, int limit) {
+        return channelApplicationDatabaseService.deleteBatchByChannelId(channelId, limit).size();
+    }
+
+    @Override
     public Optional<ChannelApplication> findById(long applicationId) {
         return channelApplicationDatabaseService.findById(applicationId).map(this::toDomain);
     }

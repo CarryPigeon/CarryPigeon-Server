@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -31,9 +33,19 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
         this.channelApplicationMapper = channelApplicationMapper;
     }
 
-    /**
-     * 按频道与申请人定位申请记录。
-     */
+    /** 在外层清理事务中限量删除申请记录，失败时随本批一起回滚。 */
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<ChannelApplicationRecord> deleteBatchByChannelId(long channelId, int limit) {
+        List<ChannelApplicationRecord> records = channelApplicationMapper.selectList(new LambdaQueryWrapper<ChannelApplicationEntity>()
+                .eq(ChannelApplicationEntity::getChannelId, channelId)
+                .orderByAsc(ChannelApplicationEntity::getApplicationId)
+                .last("LIMIT " + limit))
+                .stream().map(ChannelApplicationEntity::toRecord).toList();
+        deleteAll(records.stream().map(ChannelApplicationRecord::applicationId).toList());
+        return records;
+    }
+
     @Override
     public Optional<ChannelApplicationRecord> findByChannelAndApplicant(long channelId, long applicantId) {
         return Optional.ofNullable(channelApplicationMapper.selectOne(
