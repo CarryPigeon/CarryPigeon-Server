@@ -1,7 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.verification.adaptor.cache;
 
 import java.time.Duration;
-import java.util.concurrent.ThreadLocalRandom;
+import java.security.SecureRandom;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -22,6 +23,8 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
 @Component
 public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEmailVerificationCapability {
 
+    // 认证凭证使用 JDK 安全随机源，不以时间戳或用户身份作为种子。
+    private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
     // 与旧字符串验证码使用不同的键，直接切换挑战格式，旧验证码不再参与校验。
     private static final String CACHE_KEY_PREFIX = "auth:email-challenge:";
@@ -40,7 +43,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
 
     @Override
     public void issueCode(String email) {
-        String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+        String code = String.format(Locale.ROOT, "%06d", CODE_RANDOM.nextInt(1_000_000));
         String cacheKey = CACHE_KEY_PREFIX + email;
         String challengeId = UUID.randomUUID().toString();
         CodeChallengeStore store = requireStore();
