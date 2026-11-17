@@ -1,0 +1,19 @@
+[Unit]
+Description=CarryPigeon Backend
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=carrypigeon
+Group=carrypigeon
+WorkingDirectory=/opt/carrypigeon
+ExecStart=/opt/carrypigeon/bin/start.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+KillSignal=SIGTERM
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

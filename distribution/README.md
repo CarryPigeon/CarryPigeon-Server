@@ -1,190 +1,76 @@
-# Distribution Module
+# 分发包
 
-This module assembles the runtime delivery package in **app + plugins + config + lib** thin-jar mode.
+执行 `mvn -pl distribution -am package`，得到
+`distribution/target/full-distribution.zip` 和目录
+`distribution/target/full-distribution/full-distribution/`。
 
-## Output layout
+当前包内脚本支持 Linux，需要 Bash、Java 25 或更新版本，以及 util-linux 的 `flock`。
+Windows 可自行使用 Java 类路径启动；当前不提供包内 Windows 生命周期脚本。
 
-After:
+## 目录与配置
 
-```bash
-mvn -pl distribution -am package
-```
+- `app/`：应用 thin JAR。
+- `lib/`：内部模块和运行依赖。
+- `config/`：外部 `application.yaml` 和 `log4j2-spring.xml`。
+- `bin/`：离线检查、前后台启动与停止脚本。
+- `service/systemd/carrypigeon.service`：Linux 服务单元模板。
 
-the package is created under:
+部署前填写 `config/application.yaml` 中的 `cp.chat.auth.jwt.secret`、
+`cp.chat.file.share-key.secret`，并核对 `cp.server.meta` 和全部 `service.*` 连接配置。
+两个密钥分别使用至少 32 字符的随机值。配置文件中未覆盖的值沿用 JAR 内默认配置。
 
-```text
-distribution/target/full-distribution/full-distribution/
-```
+脚本不加载 `.env`。Spring 支持环境变量、profile 和 `--property=value` 参数；
+例如启动时传入 `--server.port=8081`。JVM 参数通过标准 `JAVA_TOOL_OPTIONS` 设置。
+插件实现若需要配置，使用其实际读取的 YAML 命名空间。
 
-with the following structure:
+## 检查与启动
 
-- `app/` - application thin jar
-- `lib/` - internal module jars and third-party dependencies
-- `plugins/` - startup classpath plugin jars; `plugins/disabled/` is excluded by convention
-- `config/` - runtime configuration files
-- `bin/` - startup and shutdown scripts
-- `service/` - service-manager examples for non-containerized deployment
-
-Before first launch, edit `config/application.yaml` and fill at least:
-
-- `cp.chat.auth.jwt.secret`
-- `cp.chat.file.share-key.secret`
-- `cp.chat.server.id`
-- external dependency addresses or ports when they are not the local defaults, such as `service.database.mysql.*`, `service.cache.redis.*`, `service.storage.minio.*`, and `service.mail.smtp.*`
-
-Structured runtime switches are configured through `config/application.yaml`, including:
-
-```yaml
-cp:
-  chat:
-    auth:
-      password-login:
-        enabled: false
-```
-
-This disables `POST /api/auth/login` while keeping email-code token creation, refresh, revoke, and Bearer authentication available.
-
-Future plugin configuration should use the same external YAML file with an isolated namespace, for example:
-
-```yaml
-cp:
-  plugin:
-    configs:
-      plugin-id:
-        enabled: true
-        options:
-          api-key: ""
-```
-
-Only add plugin entries once the corresponding plugin implementation reads them. Secrets should be supplied by editing the deployment YAML or by a deployment secret manager that materializes YAML before startup.
-
-The distribution launchers no longer load application settings from `.env`; Spring reads `config/application.yaml` as the runtime configuration source.
-
-## Release artifacts
-
-To generate the release-side checksum and manifest after packaging:
+在解压目录中执行：
 
 ```bash
-bash bin/linux/dist-release-bundle.sh
+bin/verify.sh
+bin/verify.sh --strict-config
+bin/start.sh
 ```
 
-This generates:
+普通检查验证交付文件和 YAML 加载；严格检查额外复用应用自身关键配置的绑定约束。
+这两种检查均不创建 Spring 容器、不连接外部服务，也不代替真实启动或插件兼容性检查。
+启动入口会先执行严格检查。
 
-- `distribution/target/release/full-distribution.sha256`
-- `distribution/target/release/full-distribution-manifest.json`
+如需加载插件，自行建立 `plugins/`，仅其顶层 JAR 加入类路径。
+`bin/start.sh --safe-mode` 或 `bin/start-background.sh --safe-mode` 会从启动类路径移除插件。
+插件代码与应用具有同等进程权限；当前没有插件预检或隔离机制。
 
-The checksum file is intended for artifact integrity verification, and the manifest records version, commit, timestamp, packaged thin jar, and verification commands.
-
-## Verify before launch
-
-Unix-like:
+后台启动与停止：
 
 ```bash
-bash distribution/target/full-distribution/full-distribution/bin/verify.sh
+bin/start-background.sh
+bin/stop.sh
 ```
 
-Windows:
+脚本固定从分发目录启动，前后台入口使用同一进程锁。
+PID 保存在 `run/application.pid`，后台 stdout 写入
+`service-logs/application-stdout.log`；`CP_LOG_HOME` 可覆盖日志目录。
 
-```bat
-distribution\target\full-distribution\full-distribution\bin\verify.bat
-```
+后台启动等待主入口在 `SpringApplication.run` 返回后写出的
+`Application is running ...` 标记，并确认进程仍属于当前分发目录。
+该标记出现在初始化检查及监听启动之后，要求保留主入口 INFO 日志。
+当前没有 `/internal/readiness` HTTP 探针，也不持续监控外部依赖。
+启动失败或超过 `CP_START_TIMEOUT_SECONDS`（默认 60 秒）时，脚本清理本次子进程和 PID。
+停止入口在发送 SIGTERM 前核对主类和分发目录标记；超过
+`CP_STOP_TIMEOUT_SECONDS`（默认 30 秒）仍未退出时保留 PID 并报告失败。
+不要在同一安装目录并行启动多个实例；多实例使用独立目录及配置。
 
-To verify deployment readiness with required YAML values filled, run:
+## systemd
 
-```bash
-bash distribution/target/full-distribution/full-distribution/bin/verify.sh --strict-config
-```
+将单元模板中的安装目录、用户和组改为实际值，保证用户可读取配置并写入日志和 `run/`。
+将模板复制到 `/etc/systemd/system/carrypigeon.service` 后执行
+`systemctl daemon-reload` 和 `systemctl enable --now carrypigeon`。
+systemd 直接托管前台 JVM，停止服务使用 `systemctl stop carrypigeon`。
+`Type=simple` 表示进程已创建，完整启动结果仍需查看应用日志。
 
-The verifier requires Java; on Unix-like systems it also requires `curl` for the background readiness probe. It runs the same plugin classpath preflight used by normal startup. It validates plugin
-JAR ownership, Boot AutoConfiguration metadata, exact `required_host_artifacts`, duplicate plugin classes, forbidden
-bundled host/shared classes, and conflicting top-level Maven artifact versions. This phase does not create the Spring
-context and does not connect to MySQL, Redis, MinIO, mail, or other external services.
+## 发布产物
 
-## Launch commands
-
-### Foreground startup
-
-Unix-like:
-
-```bash
-bash distribution/target/full-distribution/full-distribution/bin/start.sh
-```
-
-To start without loading any plugin JAR, use the JVM-startup safe mode:
-
-```bash
-bash distribution/target/full-distribution/full-distribution/bin/start.sh --safe-mode
-```
-
-Safe mode omits `plugins/*` from the classpath before the JVM is created. It is not an in-process plugin sandbox.
-
-Windows:
-
-```bat
-distribution\target\full-distribution\full-distribution\bin\start.bat
-```
-
-### Background startup
-
-Unix-like:
-
-```bash
-bash distribution/target/full-distribution/full-distribution/bin/start-background.sh
-```
-
-Windows:
-
-```bat
-distribution\target\full-distribution\full-distribution\bin\start-background.bat
-```
-
-Background startup writes:
-
-- PID file: `run/application.pid`
-- stdout log: `service-logs/application-stdout.log` (unless `CP_LOG_HOME` overrides it)
-- Windows stderr log: `service-logs/application-stderr.log` (unless `CP_LOG_HOME` overrides it)
-
-The background launcher reports success only after `GET /internal/readiness` returns HTTP 204. The default probe URL is
-`http://127.0.0.1:${SERVER_PORT:-8080}/internal/readiness`; set `CP_READINESS_URL` to the complete URL when the HTTP
-address cannot be derived from `SERVER_PORT`. This endpoint represents completion of startup-time plugin and required
-initialization checks; it is not a continuous MySQL, Redis, MinIO, or SMTP monitor.
-
-When using the repository-level wrapper `bash bin/linux/dist-start-background.sh`, these files are located under:
-
-- `distribution/target/full-distribution/full-distribution/run/application.pid`
-- `distribution/target/full-distribution/full-distribution/service-logs/application-stdout.log`
-
-### Stop command
-
-Unix-like:
-
-```bash
-bash distribution/target/full-distribution/full-distribution/bin/stop.sh
-```
-
-Windows:
-
-```bat
-distribution\target\full-distribution\full-distribution\bin\stop.bat
-```
-
-## Service manager example
-
-For non-containerized Linux production-style deployment, the package includes:
-
-- `service/systemd/carrypigeon.service`
-- `service/systemd/README.md`
-
-The unit file is only a template. Adjust install paths, user, and group before enabling it on the target host.
-
-## Notes
-
-- The thin jar launch path is the primary distribution mode.
-- Application runtime configuration lives in `config/application.yaml`.
-- The application still requires valid runtime configuration and, in normal service mode, reachable external dependencies such as MySQL, Redis, and MinIO.
-- The package launchers now point Spring to `config/application.yaml` and `config/log4j2-spring.xml`, so the packaged `config/` directory is part of the real runtime path. The packaged `config/application.yaml` is an external override file; development defaults remain inside the application jar.
-- The packaged application configuration defines explicit MySQL, Redis, MinIO, and SMTP timeouts, multipart limits, and realtime event-retention/account limits. Keep these values aligned when producing environment-specific overrides.
-- Compressed `.log.gz` archives are retained for 30 days by default while active `.log` files are protected. Override the Log4j2 duration with `-Dcp.log.retention=7d` or `CP_LOG_RETENTION=7d`.
-- The package now includes a verification entrypoint, a `systemd` example, and a minimal release-artifact workflow, but it still does not replace public checksum publishing, artifact signing, or multi-node orchestration.
-- A plugin SHA-256 printed by preflight is a runtime fingerprint of the inspected JAR, not a publisher signature or an external trust proof.
-- GitHub Actions now includes a dedicated `Distribution Release` workflow that builds the package and uploads the zip, checksum, and manifest as workflow artifacts.
+仓库根目录执行 `bash bin/linux/dist-release-bundle.sh`，会先离线检查分发目录，
+再生成 `distribution/target/release/full-distribution.sha256` 和版本清单。
+校验和用于产物完整性检查，不能代替发布者签名。
