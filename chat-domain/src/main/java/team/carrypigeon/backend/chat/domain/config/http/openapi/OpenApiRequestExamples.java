@@ -131,7 +131,7 @@ final class OpenApiRequestExamples {
                       "domain": "Core:Text:V1",
                       "data": {
                         "content": "hello from Apifox",
-                        "reply_to_mid": ""
+                        "reply_to_mid": null
                       },
                       "mentions": ["{{accountId}}"]
                     }

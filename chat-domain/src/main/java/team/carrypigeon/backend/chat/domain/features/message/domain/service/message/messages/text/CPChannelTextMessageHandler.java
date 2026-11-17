@@ -1,14 +1,18 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.text;
 
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.UserProfileQueryAdapter;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 
 /**
  * CarryPigeon 预定义的文本消息处理器<br/>
@@ -18,8 +22,11 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.M
  * 预处理消息格式:{@link CPChannelTextMessageOriginData}<br/>
  * 入库格式：{@link CPChannelTextMessageData}
  * */
-@MessageHandler("Core:Text:V1")
+@MessageHandler(CPChannelTextMessageData.DOMAIN)
 public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
+    private static final int MAX_CONTENT_CODE_POINTS = 4096;
+    private static final int PREVIEW_CODE_POINTS = 20;
+
     private final ObjectMapper objectMapper;
     private final MessageRepository messageRepository;
     private final UserProfileQueryAdapter userProfileQueryAdapter;
@@ -35,30 +42,29 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
 
     @Override
     public CPChannelMessage handle(CPChannelMessage message) throws ProblemException {
-        // 获取消息
-        CPChannelTextMessageOriginData originData = objectMapper.convertValue(message.data(), CPChannelTextMessageOriginData.class);
-        CPChannelTextMessageData data = new CPChannelTextMessageData();
-        // 对消息进行校验
-        if (originData == null) {
-            throw ProblemException.of(MessageProblem.INVALID_INPUT);
-        }
-        // 数据输入
-        if(!originData.getReplyToMid().isBlank()){
-            // 查询
-            CPChannelMessage cpChannelMessage = messageRepository.findById(Long.parseLong(originData.getReplyToMid()))
+        CPChannelTextMessageOriginData originData = parseAndValidate(message.data());
+        String content = originData.content();
+        Long replyMessageId = originData.replyToMid();
+
+        // 解析reply信息
+        CPChannelTextMessageData.CPChannelTextMessageReplyToUser replyToUser = null;
+        if (replyMessageId != null) {
+            CPChannelMessage cpChannelMessage = messageRepository.findById(replyMessageId)
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-            // 查询发送人名称
             String senderName = userProfileQueryAdapter.findSenderName(cpChannelMessage.senderId());
-            // 组装数据
-            data.setReplyToUser(
-                new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(
-                    senderName,
-                    cpChannelMessage.preview(),
-                     cpChannelMessage.sendTime().toEpochMilli()
-                    )
+            replyToUser = new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(
+                senderName,
+                cpChannelMessage.preview(),
+                cpChannelMessage.sendTime().toEpochMilli()
             );
-            data.setReplyToMid(originData.getReplyToMid());
         }
+
+        CPChannelTextMessageData data = new CPChannelTextMessageData(
+            content, replyMessageId, replyToUser
+        );
+        int previewEnd = content.offsetByCodePoints(
+            0, Math.min(content.codePointCount(0, content.length()), PREVIEW_CODE_POINTS)
+        );
         return new CPChannelMessage(
             message.messageId(),
             message.senderId(),
@@ -67,8 +73,32 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             objectMapper.convertValue(data, new TypeReference<>() {}),
             message.sendTime(),
             message.mentions(),
-            originData.getContent().length()>=20?originData.getContent().substring(0, 20):originData.getContent(),
+            content.substring(0, previewEnd),
             message.status()
         );
+    }
+
+    private CPChannelTextMessageOriginData parseAndValidate(Map<String, Object> payload) {
+        // 直接检查原始 JSON 值，避免 Jackson 把数字或布尔值宽松转换成字符串。
+        if (!(payload.get("content") instanceof String content) || content.isBlank()) {
+            throw invalidField("data.content", "content must be a non-blank string");
+        }
+        if (content.codePointCount(0, content.length()) > MAX_CONTENT_CODE_POINTS) {
+            throw invalidField("data.content", "content must contain at most 4096 Unicode code points");
+        }
+        Object replyValue = payload.get("reply_to_mid");
+        if (replyValue == null) {
+            return new CPChannelTextMessageOriginData(content, null);
+        }
+        if (!(replyValue instanceof Long replyMessageId) || replyMessageId <= 0) {
+            throw invalidField("data.reply_to_mid", "reply_to_mid must be a positive message ID");
+        }
+        return new CPChannelTextMessageOriginData(content, replyMessageId);
+    }
+
+    private ProblemException invalidField(String field, String message) {
+        return ProblemException.of(MessageProblem.INVALID_INPUT, message, Map.of(
+            "field_errors", List.of(Map.of("field", field, "reason", "invalid", "message", message))
+        ));
     }
 }

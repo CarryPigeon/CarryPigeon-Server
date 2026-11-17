@@ -13,7 +13,7 @@ import java.time.Instant;
  * @param domain 消息 domain
  * @param data domain 专属数据 JSON object
  * @param sendTime 发送时间
- * @param mentions 提醒用户 ID JSON array
+ * @param mentions 提醒用户 ID 的数值 JSON array
  * @param preview 通用摘要
  * @param status 消息状态
  */

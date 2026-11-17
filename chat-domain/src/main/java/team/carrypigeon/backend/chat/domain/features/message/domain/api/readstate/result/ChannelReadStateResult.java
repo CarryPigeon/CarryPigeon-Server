@@ -3,9 +3,9 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.readsta
 /**
  * 频道已读状态结果。
  *
- * @param cid 频道 ID
- * @param uid 账户 ID
- * @param lastReadMid 最后已读消息 ID
+ * @param channelId 频道 ID
+ * @param accountId 账户 ID
+ * @param lastReadMessageId 最后已读消息 ID
  */
-public record ChannelReadStateResult(String cid, String uid, String lastReadMid) {
+public record ChannelReadStateResult(long channelId, long accountId, long lastReadMessageId) {
 }

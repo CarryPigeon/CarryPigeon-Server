@@ -5,25 +5,17 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 实际存储的消息格式：<br/>
- * ```json
- * {
- *     "content":"",
- *     "reply_to_mid":"",
- *     "reply_to_user":{
- *       "sender_name": "",
- *       "preview": "",
- *       "created_at":,
- *     }
- * }
- * ```
- * */
+ * 文本消息的业务数据与持久化投影。
+ * 边界：回复 ID 使用 Long，null 表示不回复；字符串表示仅由协议适配层生成。
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class CPChannelTextMessageData {
+    public static final String DOMAIN = "Core:Text:V1";
+
     private String content;
-    private String replyToMid;
+    private Long replyToMid;
     private CPChannelTextMessageReplyToUser replyToUser;
 
     @Data

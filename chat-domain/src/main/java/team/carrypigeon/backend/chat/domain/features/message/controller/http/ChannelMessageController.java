@@ -64,7 +64,7 @@ public class ChannelMessageController {
             cpPrincipal.accountId(),
             channelId,
             requestBody.domain().trim(),
-            requestBody.data(),
+            requestBody.toDomainData(),
             requestBody.mentions()
         );
         return ResponseEntity.status(201).body(ChannelMessageResponse.from(result));

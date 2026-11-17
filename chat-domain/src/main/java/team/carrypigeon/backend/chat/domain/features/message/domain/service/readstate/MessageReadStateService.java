@@ -15,7 +15,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.problem.Mess
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
@@ -88,7 +87,7 @@ public class MessageReadStateService implements MessageReadStateApi {
     public List<ChannelUnreadResult> listUnreads(long accountId) {
         return readStateRepository.listUnreadsByAccountId(accountId).stream()
                 .map(item -> new ChannelUnreadResult(
-                        IdUtil.toString(item.channelId()),
+                        item.channelId(),
                         item.unreadCount()
                 ))
                 .toList();
@@ -96,9 +95,9 @@ public class MessageReadStateService implements MessageReadStateApi {
 
     private ChannelReadStateResult toResult(ChannelReadState readState) {
         return new ChannelReadStateResult(
-                IdUtil.toString(readState.channelId()),
-                IdUtil.toString(readState.accountId()),
-                IdUtil.toString(readState.lastReadMessageId())
+                readState.channelId(),
+                readState.accountId(),
+                readState.lastReadMessageId()
         );
     }
 }

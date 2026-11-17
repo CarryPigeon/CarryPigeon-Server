@@ -17,7 +17,7 @@ public interface ChannelMessageApi {
      * @param accountId 操作账号
      * @param channelId 目标频道
      * @param domain 消息 domain
-     * @param data 消息数据
+     * @param data 消息数据，数值 ID 使用 Long；字符串 ID 由请求适配层解析
      * @param mentions 提及的账号列表
      * @return 创建后的频道消息投影
      */

@@ -15,7 +15,7 @@ import java.util.Map;
  * @param senderId 发送者账号 ID
  * @param channelId 所属频道 ID
  * @param domain 消息 domain
- * @param data domain 专属 canonical 数据
+ * @param data domain 专属 canonical 数据，数值 ID 使用 Long，协议字符串由适配层转换
  * @param sendTime 服务端发送时间
  * @param mentions 需要提醒的用户 ID 列表
  * @param preview 服务端派生摘要

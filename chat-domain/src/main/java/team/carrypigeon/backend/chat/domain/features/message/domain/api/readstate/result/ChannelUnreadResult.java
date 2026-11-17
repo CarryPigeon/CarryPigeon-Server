@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.readsta
 /**
  * 频道未读结果。
  *
- * @param cid 频道 ID
+ * @param channelId 频道 ID
  * @param unreadCount 未读数量
  */
-public record ChannelUnreadResult(String cid, long unreadCount) {
+public record ChannelUnreadResult(long channelId, long unreadCount) {
 }

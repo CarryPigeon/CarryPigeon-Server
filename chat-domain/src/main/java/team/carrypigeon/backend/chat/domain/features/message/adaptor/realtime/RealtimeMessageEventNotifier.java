@@ -19,7 +19,7 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 /**
  * 基于实时通道的消息事件通知适配器。
  * 职责：把域内的消息事件意图翻译为线上事件名与载荷，并在事务提交后交给实时通道发布。
- * 边界：线上事件名、字段类型与取值约正则全部收敛在本类与其载荷记录中；不读取仓储、不重建 domain data。
+ * 边界：不读取仓储，domain data 直接使用业务消息快照。
  */
 @Component
 public class RealtimeMessageEventNotifier implements MessageEventNotifier {
