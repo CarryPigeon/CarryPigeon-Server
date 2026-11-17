@@ -1,6 +1,11 @@
 package team.carrypigeon.backend.chat.domain.config.http.security;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,14 +29,28 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            JsonProvider jsonProvider
+            JsonProvider jsonProvider,
+            Environment environment
     ) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> {})
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()
-            )
+            .authorizeHttpRequests(auth -> {
+                // 错误分派保留原始响应；白名单精确到方法，新增业务入口默认需要认证。
+                auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                    .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/server", "/api/files/download/server/head").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login/pwd",
+                            "/api/auth/login/email", "/api/auth/email_codes", "/api/auth/refresh", "/api/auth/revoke").permitAll();
+                if (environment.acceptsProfiles(Profiles.of("dev"))) {
+                    auth.requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                } else {
+                    // 即使部署误开 springdoc，非开发环境也不通过安全链暴露文档。
+                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").denyAll();
+                }
+                auth.anyRequest().authenticated();
+            })
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(new JsonAuthenticationEntryPoint(jsonProvider))
                 .accessDeniedHandler(new JsonAccessDeniedHandler(jsonProvider))

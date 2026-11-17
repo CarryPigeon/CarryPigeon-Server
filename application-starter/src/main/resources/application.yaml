@@ -169,3 +169,10 @@ service:
       read-timeout: 30s
       # 职责：限制 MinIO 单次写入停顿时间。
       write-timeout: 30s
+
+# API 文档只在显式 dev profile 中启用。
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
