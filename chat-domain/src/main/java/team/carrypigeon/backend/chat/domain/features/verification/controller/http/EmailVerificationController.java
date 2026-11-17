@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.limit.RateLimitApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
@@ -27,10 +28,13 @@ public class EmailVerificationController {
 
     private final EmailVerificationApi emailVerificationApi;
     private final RateLimitApi rateLimitApi;
+    private final ClientAddressResolver clientAddressResolver;
 
-    public EmailVerificationController(EmailVerificationApi emailVerificationApi, RateLimitApi rateLimitApi) {
+    public EmailVerificationController(EmailVerificationApi emailVerificationApi, RateLimitApi rateLimitApi,
+            ClientAddressResolver clientAddressResolver) {
         this.emailVerificationApi = emailVerificationApi;
         this.rateLimitApi = rateLimitApi;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     /**
@@ -55,29 +59,11 @@ public class EmailVerificationController {
         if (!rateLimitApi.tryAcquire("email:code:" + email, 60)) {
             return ResponseEntity.status(429).build();
         }
-        // ip限制
-        if (!rateLimitApi.tryAcquire("email:code:ip:" + getClientIp(request), 60)) {
+        // 只按可信代理边界解析出的地址限流，不能让直连客户端自行指定 IP。
+        if (!rateLimitApi.tryAcquire("email:code:ip:" + clientAddressResolver.resolve(request), 60)) {
             return ResponseEntity.status(429).build();
         }
         emailVerificationApi.issueCode(email);
         return ResponseEntity.noContent().build();
     }
-    public String getClientIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        if (isValidIp(ip)) {
-            // X-Forwarded-For 可能包含多个 IP（客户端 + 各级代理），第一个通常是真实客户端
-            return ip.split(",")[0].trim();
-        }
-        ip = request.getHeader("X-Real-IP");
-        if (isValidIp(ip)) {
-            return ip;
-        }
-        // 兜底：返回直连 IP
-        return request.getRemoteAddr();
-    }
-
-    private boolean isValidIp(String ip) {
-        return ip != null && !ip.isBlank() && !"unknown".equalsIgnoreCase(ip);
-    }
-
 }

@@ -1,3 +1,7 @@
+server:
+  # 保留 socket 直连来源，转发头由可信代理解析器统一处理。
+  forward-headers-strategy: none
+
 # CarryPigeon external runtime configuration.
 # 职责：承载分发包部署时可编辑的结构化运行配置。
 # 边界：本文件承载应用运行配置；Docker Compose / Nginx 仍使用各自文件中的默认值或调用方环境变量。
@@ -10,6 +14,10 @@ spring:
       max-request-size: 101MB
 
 cp:
+  http:
+    client-address:
+      # 默认只使用直连 IP；仅显式填写受控代理的 IP/CIDR 后才采信转发头。
+      trusted-proxies: []
   local-dev:
     http:
       cors:

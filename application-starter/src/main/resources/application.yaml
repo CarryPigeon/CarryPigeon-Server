@@ -1,3 +1,7 @@
+server:
+  # 保留 socket 直连来源，转发头由可信代理解析器统一处理。
+  forward-headers-strategy: none
+
 spring:
   flyway:
     # 只迁移版本历史可追踪的数据库；未纳管的非空库需要显式核对后接管。
@@ -19,6 +23,10 @@ spring:
       max-request-size: 101MB
 
 cp:
+  http:
+    client-address:
+      # 默认只使用直连 IP；仅显式填写受控代理的 IP/CIDR 后才采信转发头。
+      trusted-proxies: []
   # 服务器的相关配置，主要配置服务器的数据和功能等多开关，不负责服务器的启动和运行相关配置
   server:
     # 服务器的元数据配置
