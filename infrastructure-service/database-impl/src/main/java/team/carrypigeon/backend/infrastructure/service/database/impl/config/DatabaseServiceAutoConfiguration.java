@@ -48,6 +48,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageEventDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcMessageEventDatabaseService;
 import org.springframework.transaction.PlatformTransactionManager;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cache.CacheInvalidationTasks;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -190,6 +192,12 @@ public class DatabaseServiceAutoConfiguration {
     @ConditionalOnMissingBean(MentionDatabaseService.class)
     public MentionDatabaseService mentionDatabaseService(MentionMapper mentionMapper) {
         return new MybatisPlusMentionDatabaseService(mentionMapper);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(MessageEventDatabaseService.class)
+    public MessageEventDatabaseService messageEventDatabaseService(JdbcClient jdbc) {
+        return new JdbcMessageEventDatabaseService(jdbc);
     }
 
     @Bean

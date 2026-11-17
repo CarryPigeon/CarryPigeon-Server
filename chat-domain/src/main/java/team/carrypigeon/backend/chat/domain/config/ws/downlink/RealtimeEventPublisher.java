@@ -49,9 +49,7 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
         }
         try {
             String frameText = encode(event.type(), event.payload());
-            if (frameText != null) {
-                cpNettyRealtimeConnectionManager.broadcast(event.recipientAccountIds(), frameText);
-            }
+            cpNettyRealtimeConnectionManager.broadcast(event.recipientAccountIds(), frameText);
         } catch (RuntimeException exception) {
             log.error("Failed to deliver realtime event, type={}", event.type().wireName(), exception);
         }
@@ -61,24 +59,29 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
     public void publishToChannel(long channelId, RealtimeEventType type, Object payload) {
         try {
             String frameText = encode(type, payload);
-            if (frameText != null) {
-                cpNettyRealtimeConnectionManager.broadcastToChannel(channelId, frameText);
-            }
+            cpNettyRealtimeConnectionManager.broadcastToChannel(channelId, frameText);
         } catch (RuntimeException exception) {
             // 业务事务已经提交；索引或授权查询失败时停止本次推送，客户端按频道序号补拉。
             log.error("Failed to deliver channel event, channelId={}, type={}", channelId, type.wireName(), exception);
         }
     }
 
+    @Override
+    public void publishToChannel(long channelId, RealtimeFrame.Event event) {
+        cpNettyRealtimeConnectionManager.broadcastToChannel(channelId, encode(event));
+    }
+
     /** 同一事件只编码一次，协议帧字节上限对账号与频道两种路由一致生效。 */
     private String encode(RealtimeEventType type, Object payload) {
-        String frameText = frameCodec.encode(new RealtimeFrame.Event(
-                idGenerator.nextStringId(), type, timeProvider.nowMillis(), payload));
+        return encode(new RealtimeFrame.Event(idGenerator.nextStringId(), type, timeProvider.nowMillis(), payload));
+    }
+
+    private String encode(RealtimeFrame.Event event) {
+        String frameText = frameCodec.encode(event);
         int payloadBytes = frameText.getBytes(StandardCharsets.UTF_8).length;
         if (payloadBytes > maxPayloadBytes) {
-            log.error("Realtime event exceeds payload limit, type={}, bytes={}, limit={}",
-                    type.wireName(), payloadBytes, maxPayloadBytes);
-            return null;
+            throw new IllegalStateException("Realtime event exceeds payload limit: type=" + event.type().wireName()
+                    + ", bytes=" + payloadBytes + ", limit=" + maxPayloadBytes);
         }
         return frameText;
     }

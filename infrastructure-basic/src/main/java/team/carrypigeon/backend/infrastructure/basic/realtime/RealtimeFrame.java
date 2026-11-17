@@ -11,7 +11,7 @@ public sealed interface RealtimeFrame {
     /**
      * 事件下发帧。
      *
-     * @param eventId 事件 ID，单调递增，用于断线续传定位
+     * @param eventId 事件 ID，只用于去重，不代表提交顺序；持久化消息事件使用频道游标恢复
      * @param type 事件类型
      * @param serverTime 服务端时间，epoch 毫秒
      * @param payload 事件载荷，由发射方定义

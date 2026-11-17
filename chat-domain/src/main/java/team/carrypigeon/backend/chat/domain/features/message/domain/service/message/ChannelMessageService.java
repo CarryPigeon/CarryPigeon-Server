@@ -150,8 +150,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             if (!savedMentions.isEmpty()) {
                 mentionRepository.saveAll(savedMentions);
             }
-            // 提交后按频道路由到本机在线连接。
-            messageEventNotifier.messageCreated(afterCommit, finalMessage);
+            // 创建事件与消息在同一事务登记，后台按状态派发，断线由持久化事件流恢复。
+            messageEventNotifier.messageCreated(finalMessage);
             // 提及事件只广播给被提及账号
             savedMentions.forEach(mention -> messageEventNotifier.mentionCreated(afterCommit, mention));
             return finalMessage;
@@ -177,7 +177,7 @@ public class ChannelMessageService implements ChannelMessageApi {
 
     @Override
     public void recallChannelMessage(long accountId, long channelId, long messageId) {
-        transactionRunner.runInTransaction(afterCommit -> {
+        transactionRunner.runInTransaction(() -> {
             // 与发送、频道删除保持相同锁序；频道撤下后不能再更新消息或创建事件。
             ChannelContext operatorContext = channelContextApi.requireMemberContextForUpdate(channelId, accountId);
             // 查询已有的消息
@@ -215,8 +215,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             messageRepository.update(recalledMessage);
             // 删除提及
             mentionRepository.deleteByMessageId(existingMessage.messageId());
-            // 通知所有人
-            messageEventNotifier.messageRecalled(afterCommit, recalledMessage);
+            // 撤回事件与正文清除在同一事务登记。
+            messageEventNotifier.messageRecalled(recalledMessage);
         });
         AuditLogs.success("message.recall", accountId,
                 "channel_id", channelId,

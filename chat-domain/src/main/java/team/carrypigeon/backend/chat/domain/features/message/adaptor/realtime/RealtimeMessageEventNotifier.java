@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Locale;
 
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageEventDatabaseService;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -17,7 +20,7 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 
 /**
  * 基于实时通道的消息事件通知适配器。
- * 职责：把域内的消息事件意图翻译为线上事件名与载荷，并在事务提交后交给实时通道发布。
+ * 职责：把域内的消息事件意图翻译为线上事件名与载荷，创建与撤回在消息事务中入库，其余事件仍在提交后实时发布。
  * 边界：不读取仓储，domain data 直接使用业务消息快照。
  */
 @Component
@@ -30,10 +33,17 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
 
     private final RealtimeEventApi realtimeEventApi;
     private final TimeProvider timeProvider;
+    private final MessageEventDatabaseService events;
+    private final IdGenerator ids;
+    private final JsonProvider json;
 
-    public RealtimeMessageEventNotifier(RealtimeEventApi realtimeEventApi, TimeProvider timeProvider) {
+    public RealtimeMessageEventNotifier(RealtimeEventApi realtimeEventApi, TimeProvider timeProvider,
+            MessageEventDatabaseService events, IdGenerator ids, JsonProvider json) {
         this.realtimeEventApi = realtimeEventApi;
         this.timeProvider = timeProvider;
+        this.events = events;
+        this.ids = ids;
+        this.json = json;
     }
 
     @Override
@@ -50,21 +60,20 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
     }
 
     @Override
-    public void messageCreated(
-            AfterCommitExecutor afterCommit,
-            CPChannelMessage message
-    ) {
-        afterCommit.execute(() -> realtimeEventApi.publishToChannel(
-                message.channelId(), MESSAGE_CREATED,
-                new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
+    public void messageCreated(CPChannelMessage message) {
+        // 事件与消息共用当前事务；不依赖提交后内存回调，进程中断后仍能恢复。
+        events.append(ids.nextLongId(), message.channelId(), message.messageId(), MESSAGE_CREATED.wireName(),
+                json.toJson(new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
     }
 
     @Override
-    public void messageRecalled(AfterCommitExecutor afterCommit, CPChannelMessage message) {
-        afterCommit.execute(() -> realtimeEventApi.publishToChannel(
-                message.channelId(), MESSAGE_RECALLED,
-                new MessageRecalledPayload(Long.toString(message.channelId()),
+    public void messageRecalled(CPChannelMessage message) {
+        events.append(ids.nextLongId(), message.channelId(), message.messageId(), MESSAGE_RECALLED.wireName(),
+                json.toJson(new MessageRecalledPayload(Long.toString(message.channelId()),
                         Long.toString(message.messageId()), timeProvider.nowMillis())));
+        // 已撤回正文不能从保留窗口内的创建事件重新读取；与撤回和事件追加一起提交。
+        events.redactCreated(message.channelId(), message.messageId(),
+                json.toJson(new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
     }
 
     @Override

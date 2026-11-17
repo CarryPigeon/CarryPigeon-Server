@@ -21,6 +21,9 @@ public enum MessageProblem implements ProblemMapping {
     /** 分页游标格式非法。 */
     CURSOR_INVALID(422, "cursor_invalid", "cursor is invalid"),
 
+    /** 恢复位置已超出保留窗口，客户端必须重新建立水位并读取消息快照。 */
+    EVENT_CURSOR_EXPIRED(410, "message_event_cursor_expired", "message snapshot must be refreshed"),
+
     /** 目标消息不存在。 */
     MESSAGE_NOT_FOUND(404, "not_found", "message does not exist"),
 

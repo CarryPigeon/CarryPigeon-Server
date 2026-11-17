@@ -81,10 +81,8 @@ cp:
         boss-threads: 1
         # 职责：定义 Netty worker 线程数，0 表示使用 Netty 默认值。
         worker-threads: 0
-        # 职责：限制单进程断线续传事件在内存中的保留时间。
+        # 消息创建与撤回事件的持久化恢复窗口，超期游标需重建快照。
         event-retention: 1h
-        # 职责：限制单进程保留断线事件窗口的账号总数。
-        max-event-accounts: 10000
   infrastructure:
     id:
       # 职责：配置当前节点的雪花 ID workerId。

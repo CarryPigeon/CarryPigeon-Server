@@ -59,6 +59,10 @@ public class RealtimeServerProperties implements InitializingBean {
      */
     @Override
     public void afterPropertiesSet() {
+        // HTTP 消息恢复在实时监听关闭时仍可用，因此窗口校验不能依赖 enabled。
+        if (eventRetention == null || eventRetention.isZero() || eventRetention.isNegative()) {
+            throw new IllegalArgumentException("cp.chat.server.realtime.event-retention must be positive");
+        }
         if (!enabled) {
             return;
         }

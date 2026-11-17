@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageChangePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
@@ -13,6 +14,9 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
  * 边界：不暴露数据库实现细节，不通过可选参数切换查询方向。
  */
 public interface MessageRepository {
+
+    /** 在调用方事务内读取频道变更流；afterSequence 为空时只取得用于建立消息快照的当前水位。 */
+    MessageChangePage findChanges(long channelId, Long afterSequence, int limit);
 
     /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
     boolean deleteChannelBatch(long channelId, int limit);
