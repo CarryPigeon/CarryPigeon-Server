@@ -21,6 +21,12 @@ public interface ChannelMemberRepository {
     Optional<ChannelMember> findByRelationForAuthorization(long channelId, long accountId);
 
     /**
+     * 锁定并读取最新成员关系，不使用缓存或事务旧快照；不存在时返回空。
+     * 必须在事务内先锁定所属频道，遵守频道在前、成员在后的治理锁顺序。
+     */
+    Optional<ChannelMember> findByRelationForUpdate(long channelId, long accountId);
+
+    /**
      * 按频道与账号查询单条活跃成员关系。
      * 用途：普通展示读取；授权判断必须使用 findByRelationForAuthorization。
      *
@@ -70,11 +76,12 @@ public interface ChannelMemberRepository {
     /**
      * 更新已存在的成员关系。
      * 约束：按成员关系主键更新，调用方必须传入保留原主键的成员模型；
-     * 重新生成主键会导致更新命中不到任何行，从而静默丢弃角色变更。
+     * 治理写入需持有频道锁，并检查更新结果；未命中时由调用方拒绝并回滚事务。
      *
      * @param channelMember 待更新成员关系
+     * @return 恰好更新一条成员关系时为 true；未命中时为 false
      */
-    void update(ChannelMember channelMember);
+    boolean update(ChannelMember channelMember);
 
     /**
      * 按成员关系主键删除单条成员关系。

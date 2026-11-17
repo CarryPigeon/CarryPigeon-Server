@@ -60,6 +60,9 @@ public enum ChannelProblem implements ProblemMapping {
     /** 频道仍存在申请或禁言等依赖数据，不能删除。 */
     DELETE_BLOCKED(409, "channel_delete_blocked", "channel contains dependent data and cannot be deleted"),
 
+    /** 治理写入未命中预期成员，整个事务必须回滚。 */
+    GOVERNANCE_CONFLICT(409, "concurrent_modification", "channel membership changed; retry the action"),
+
     /** 入群申请已被处理，不能重复审批。 */
     APPLICATION_ALREADY_PROCESSED(409, "application_already_processed", "channel application is already processed"),
 

@@ -19,6 +19,12 @@ public interface ChannelDatabaseService {
     Optional<ChannelRecord> findByIdForAuthorization(long channelId);
 
     /**
+     * 锁定频道并读取最新记录，不经过缓存；频道不存在时返回空。
+     * 必须在事务内调用，锁持续到事务结束；治理写入先锁频道，再读取成员角色和修改关联数据。
+     */
+    Optional<ChannelRecord> findByIdForUpdate(long channelId);
+
+    /**
      * 写入新的频道记录。
      *
      * @param record 待持久化频道记录

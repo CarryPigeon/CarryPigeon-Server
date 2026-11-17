@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.config.http.advice;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -182,6 +183,20 @@ public class GlobalExceptionHandler {
                 HttpStatus.NOT_FOUND,
                 "not_found",
                 "resource does not exist",
+                null
+        ));
+    }
+
+    /**
+     * 行锁等待超时或死锁受害事务已经失败，返回冲突让客户端重新发起完整操作。
+     */
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleLockConflict(PessimisticLockingFailureException exception) {
+        log.info("Database transaction failed to acquire a lock", exception);
+        return buildErrorResponse(new ErrorDescriptor(
+                HttpStatus.CONFLICT,
+                "concurrent_modification",
+                "concurrent modification; retry the action",
                 null
         ));
     }

@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -50,6 +52,17 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     @Override
     public Optional<ChannelMemberRecord> findByRelationForAuthorization(long channelId, long accountId) {
         return loadByRelation(channelId, accountId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<ChannelMemberRecord> findByRelationForUpdate(long channelId, long accountId) {
+        // 即使外层事务已建立可重复读快照，角色校验仍读取前一笔治理事务提交后的最新关系。
+        return Optional.ofNullable(channelMemberMapper.selectOne(new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .eq(ChannelMemberEntity::getChannelId, channelId)
+                        .eq(ChannelMemberEntity::getAccountId, accountId)
+                        .last("FOR UPDATE")))
+                .map(ChannelMemberEntity::toRecord);
     }
 
     /**
@@ -124,14 +137,15 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 缓存：更新前读取旧记录，写入成功后精确失效新实体、旧/新关系指针。
      */
     @Override
-    public void update(ChannelMemberRecord record) {
+    public boolean update(ChannelMemberRecord record) {
         Optional<ChannelMemberRecord> previous = databaseCache.enabled()
                 ? loadById(record.memberId())
                 : Optional.empty();
-        channelMemberMapper.updateById(ChannelMemberEntity.from(record));
+        int affectedRows = channelMemberMapper.updateById(ChannelMemberEntity.from(record));
         evictRecord(record.memberId());
         evictRelation(record.channelId(), record.accountId());
         previous.ifPresent(old -> evictRelation(old.channelId(), old.accountId()));
+        return affectedRows == 1;
     }
 
     /**

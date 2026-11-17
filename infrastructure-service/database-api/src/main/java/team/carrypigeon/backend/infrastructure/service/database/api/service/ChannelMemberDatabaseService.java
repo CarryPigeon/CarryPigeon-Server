@@ -18,6 +18,12 @@ public interface ChannelMemberDatabaseService {
     Optional<ChannelMemberRecord> findByRelationForAuthorization(long channelId, long accountId);
 
     /**
+     * 锁定并读取最新成员关系，不使用缓存或事务旧快照；不存在时返回空。
+     * 必须在事务内先锁定所属频道，遵守频道在前、成员在后的治理锁顺序。
+     */
+    Optional<ChannelMemberRecord> findByRelationForUpdate(long channelId, long accountId);
+
+    /**
      * 插入新的成员关系。
      *
      * @param record 待持久化成员关系
@@ -49,8 +55,9 @@ public interface ChannelMemberDatabaseService {
      * 更新既有成员关系。
      *
      * @param record 待更新成员关系
+     * @return 恰好更新一条记录时为 true；未命中时为 false
      */
-    void update(ChannelMemberRecord record);
+    boolean update(ChannelMemberRecord record);
 
     /**
      * 分页查询频道成员记录。

@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -46,6 +48,16 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
     @Override
     public Optional<ChannelRecord> findByIdForAuthorization(long channelId) {
         return loadById(channelId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<ChannelRecord> findByIdForUpdate(long channelId) {
+        // 使用当前读：等待前一笔治理事务提交后再返回频道，锁由外层业务事务释放。
+        return Optional.ofNullable(channelMapper.selectOne(new LambdaQueryWrapper<ChannelEntity>()
+                        .eq(ChannelEntity::getChannelId, channelId)
+                        .last("FOR UPDATE")))
+                .map(ChannelEntity::toRecord);
     }
 
     /**

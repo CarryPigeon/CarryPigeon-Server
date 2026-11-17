@@ -21,6 +21,12 @@ public interface ChannelRepository {
     Optional<Channel> findByIdForAuthorization(long channelId);
 
     /**
+     * 锁定频道并读取最新记录，不经过缓存；频道不存在时返回空。
+     * 必须在事务内调用，锁持续到事务结束；治理写入先锁频道，再读取成员角色和修改关联数据。
+     */
+    Optional<Channel> findByIdForUpdate(long channelId);
+
+    /**
      * 查询全部系统频道。
      * 用途：账号初始化时为其建立默认频道的成员关系。
      *

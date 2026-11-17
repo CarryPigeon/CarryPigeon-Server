@@ -75,12 +75,13 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public void promoteChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findByIdForAuthorization(channelId)
+            // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForUpdate(channelId, targetAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能自行扩张管理员数量
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -98,13 +99,14 @@ public class ChannelMemberService implements ChannelMemberApi {
                     ChannelMemberRole.ADMIN,
                     target.joinedAt()
             );
-            channelMemberRepository.update(promotedMember);
+            if (!channelMemberRepository.update(promotedMember)) {
+                throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
+            }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
             List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                     .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
                     afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
-            return ChannelMemberResult.from(promotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
         AuditLogs.success("channel.member.promote", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);
@@ -113,13 +115,13 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public void demoteChannelAdmin(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            // 获取频道信息
-            Channel channel = channelRepository.findByIdForAuthorization(channelId)
+            // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForUpdate(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能撤销其它管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -138,13 +140,14 @@ public class ChannelMemberService implements ChannelMemberApi {
                 ChannelMemberRole.MEMBER,
                 target.joinedAt()
             );
-            channelMemberRepository.update(demotedMember);
+            if (!channelMemberRepository.update(demotedMember)) {
+                throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
+            }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
             List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                 .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
                 afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
-            return ChannelMemberResult.from(demotedMember, memberProfileQuery.findProfile(targetAccountId));
         });
         AuditLogs.success("channel.member.demote", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);
@@ -153,12 +156,13 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
         ChannelOwnershipTransferResult result = transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findByIdForAuthorization(channelId)
+            // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 目标不是成员时按资源不存在处理，与操作者非成员的拒绝语义区分开
-            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForUpdate(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 只有现任 OWNER 才能发起转移，避免 ADMIN 自行接管频道
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -184,9 +188,11 @@ public class ChannelMemberService implements ChannelMemberApi {
                 ChannelMemberRole.OWNER,
                 target.joinedAt()
             );
-            channelMemberRepository.update(previousOwner);
-            channelMemberRepository.update(newOwner);
-            // 先降原 OWNER 再升新 OWNER，顺序保证任意中间点都只有一个 OWNER
+            // 任一成员更新未命中时整笔回滚，不能只完成所有权转移的一半。
+            if (!channelMemberRepository.update(previousOwner) || !channelMemberRepository.update(newOwner)) {
+                throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
+            }
+            // 两条角色变更在同一事务提交后才对其它事务可见。
             List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
                 .stream().map(ChannelMember::accountId).toList();
             channelEventNotifier.channelChanged(
@@ -201,11 +207,12 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public void kickChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findByIdForAuthorization(channelId)
+            // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForUpdate(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 治理动作要求 OWNER 或 ADMIN，普通成员不能移除他人
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {

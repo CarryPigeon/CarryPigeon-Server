@@ -34,6 +34,11 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
+    public Optional<ChannelMember> findByRelationForUpdate(long channelId, long accountId) {
+        return channelMemberDatabaseService.findByRelationForUpdate(channelId, accountId).map(this::toDomain);
+    }
+
+    @Override
     public void save(ChannelMember channelMember) {
         channelMemberDatabaseService.insert(toRecord(channelMember));
     }
@@ -44,9 +49,8 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
-    public void update(ChannelMember channelMember) {
-        // 底层按成员主键更新，调用方必须传入保留原主键的成员模型，否则不会命中任何行
-        channelMemberDatabaseService.update(toRecord(channelMember));
+    public boolean update(ChannelMember channelMember) {
+        return channelMemberDatabaseService.update(toRecord(channelMember));
     }
 
     @Override

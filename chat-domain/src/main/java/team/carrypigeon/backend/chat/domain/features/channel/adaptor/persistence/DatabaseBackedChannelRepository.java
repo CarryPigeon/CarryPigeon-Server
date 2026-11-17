@@ -33,6 +33,11 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
+    public Optional<Channel> findByIdForUpdate(long channelId) {
+        return channelDatabaseService.findByIdForUpdate(channelId).map(this::toDomainModel);
+    }
+
+    @Override
     public List<Channel> listSystemChannels() {
         return channelDatabaseService.findSystemChannels().stream()
                 .map(this::toDomainModel)

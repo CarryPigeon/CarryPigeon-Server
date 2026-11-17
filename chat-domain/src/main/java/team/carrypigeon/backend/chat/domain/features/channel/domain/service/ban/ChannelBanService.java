@@ -82,6 +82,9 @@ public class ChannelBanService implements ChannelBanApi {
     @Override
     public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
         ChannelBanResult result = transactionRunner.runInTransaction(afterCommit -> {
+            Channel channel = channelRepository.findByIdForUpdate(command.channelId())
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
+            // 可能等待其它治理事务，取得锁后再校验截止时间，避免等待期间已经过期。
             Long durationSeconds = null;
             if (command.untilEpochMillis() != null) {
                 long nowMillis = timeProvider.nowMillis();
@@ -91,11 +94,9 @@ public class ChannelBanService implements ChannelBanApi {
                 // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
                 durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
             }
-            Channel channel = channelRepository.findByIdForAuthorization(command.channelId())
-                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelationForUpdate(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
@@ -157,9 +158,9 @@ public class ChannelBanService implements ChannelBanApi {
     public void unbanChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 查询基础信息
-            Channel channel = channelRepository.findByIdForAuthorization(channelId)
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言解除同样属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
