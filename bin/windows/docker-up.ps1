@@ -39,8 +39,11 @@ function Wait-ContainerExitCode {
     while ((Get-Date) -lt $deadline) {
         $status = & docker inspect -f '{{.State.Status}}' $ContainerName 2>$null
         $exitCode = & docker inspect -f '{{.State.ExitCode}}' $ContainerName 2>$null
-        if ($status -eq 'exited' -and [int]$exitCode -eq $ExpectedExitCode) {
-            return
+        if ($status -eq 'exited') {
+            if ([int]$exitCode -eq $ExpectedExitCode) {
+                return
+            }
+            throw "$ContainerName failed with exit code $exitCode. Inspect docker logs $ContainerName."
         }
         Start-Sleep -Seconds 2
     }

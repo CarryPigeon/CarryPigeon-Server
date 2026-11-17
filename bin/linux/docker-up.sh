@@ -38,8 +38,12 @@ wait_for_exit_code() {
   while [ "$elapsed" -lt "$timeout_seconds" ]; do
     status=$(docker inspect -f '{{.State.Status}}' "$container_name" 2>/dev/null || true)
     exit_code=$(docker inspect -f '{{.State.ExitCode}}' "$container_name" 2>/dev/null || true)
-    if [ "$status" = "exited" ] && [ "$exit_code" = "$expected_exit_code" ]; then
-      return 0
+    if [ "$status" = "exited" ]; then
+      if [ "$exit_code" = "$expected_exit_code" ]; then
+        return 0
+      fi
+      echo "$container_name failed with exit code $exit_code. Inspect docker logs $container_name." >&2
+      return 1
     fi
     sleep 2
     elapsed=$((elapsed + 2))
