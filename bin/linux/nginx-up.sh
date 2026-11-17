@@ -3,11 +3,14 @@
 set -eu
 
 BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-DOMAIN="localhost"
+DOMAIN="${NGINX_SERVER_NAME:-localhost}"
 
 if [ ! -f "$BASE_DIR/deploy/nginx/certs/fullchain.pem" ] || [ ! -f "$BASE_DIR/deploy/nginx/certs/privkey.pem" ]; then
   sh "$BASE_DIR/bin/linux/nginx-dev-cert.sh" "$DOMAIN"
 fi
+
+# 同样经过镜像 entrypoint 渲染模板，语法或证书错误在启动前直接失败。
+COMPOSE_DISABLE_ENV_FILE=1 docker compose -f "$BASE_DIR/docker-compose.yaml" --profile edge run --rm --no-deps nginx nginx -t
 
 COMPOSE_DISABLE_ENV_FILE=1 docker compose -f "$BASE_DIR/docker-compose.yaml" --profile edge up -d --remove-orphans nginx
 

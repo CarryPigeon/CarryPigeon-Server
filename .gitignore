@@ -46,3 +46,6 @@ service-logs/
 # 忽略ai工作目录
 ai-agent-workplace/
 
+
+# 部署方提供或本地生成的 TLS 证书与私钥
+/deploy/nginx/certs/

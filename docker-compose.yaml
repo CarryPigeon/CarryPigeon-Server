@@ -115,9 +115,6 @@ services:
       NGINX_BACKEND_WS_PORT: ${NGINX_BACKEND_WS_PORT:-18080}
       # 职责：限制经反代上传到服务端的请求体大小。
       NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-100m}
-      # 职责：将服务发现中的内部 ws_url 替换为客户端可访问的 WSS 入口。
-      NGINX_BACKEND_WS_DISCOVERY_URL: ${NGINX_BACKEND_WS_DISCOVERY_URL:-ws://127.0.0.1:18080/api/ws}
-      NGINX_PUBLIC_WS_URL: ${NGINX_PUBLIC_WS_URL:-wss://localhost/api/ws}
       # 职责：限制官方 Nginx entrypoint 只替换本服务定义的变量，避免误替换 Nginx 内置变量。
       NGINX_ENVSUBST_FILTER: "^NGINX_"
     ports:

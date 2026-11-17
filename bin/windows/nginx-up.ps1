@@ -5,7 +5,7 @@ $ComposeFile = Join-Path $BaseDir 'docker-compose.yaml'
 $CertDir = Join-Path $BaseDir 'deploy/nginx/certs'
 $CertFile = Join-Path $CertDir 'fullchain.pem'
 $KeyFile = Join-Path $CertDir 'privkey.pem'
-$Domain = 'localhost'
+$Domain = if ($env:NGINX_SERVER_NAME) { $env:NGINX_SERVER_NAME } else { 'localhost' }
 $env:COMPOSE_DISABLE_ENV_FILE = '1'
 
 function New-NginxDevCertificateWithOpenSsl {
@@ -70,6 +70,12 @@ if (-not ((Test-Path -LiteralPath $CertFile) -and (Test-Path -LiteralPath $KeyFi
         throw "Failed to generate Nginx development certificate under $CertDir"
     }
     Write-Host "Generated Nginx development certificate: $CertFile"
+}
+
+# 使用同一镜像 entrypoint 渲染模板并检查证书及语法。
+& docker compose -f $ComposeFile --profile edge run --rm --no-deps nginx nginx -t
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
 }
 
 & docker compose -f $ComposeFile --profile edge up -d --remove-orphans nginx
