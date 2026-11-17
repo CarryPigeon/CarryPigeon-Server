@@ -1,4 +1,11 @@
 spring:
+  flyway:
+    # 只迁移版本历史可追踪的数据库；未纳管的非空库需要显式核对后接管。
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+    fail-on-missing-locations: true
+    validate-migration-naming: true
   application:
     # 职责：定义当前运行时应用名称。
     # 边界：这里只保留当前启动骨架实际需要的最小应用配置。
