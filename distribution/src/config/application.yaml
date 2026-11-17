@@ -9,9 +9,9 @@ server:
 spring:
   servlet:
     multipart:
-      # 文件大小的 HTTP 接入边界。
-      max-file-size: 100MB
-      max-request-size: 101MB
+      # multipart 单独限制；原始 PUT 由文件业务服务验证实际字节数。
+      max-file-size: 500MB
+      max-request-size: 501MB
 
 cp:
   http:
@@ -39,6 +39,8 @@ cp:
       upload:
         # 完成文件与有效上传授权共同占用账号空间；大小单位为字节。
         account-quota-bytes: 10737418240
+        # 500 MiB；修改时同时调整 NGINX_CLIENT_MAX_BODY_SIZE。
+        max-file-bytes: 524288000
         # 包括已签发但尚未使用的授权，不限制每日上传量。
         max-unfinished-uploads: 5
       share-key:

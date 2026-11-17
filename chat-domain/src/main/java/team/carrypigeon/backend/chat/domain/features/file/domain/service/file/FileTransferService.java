@@ -68,6 +68,9 @@ public class FileTransferService implements FileTransferApi {
 
     @Override
     public FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes) {
+        if (sizeBytes > properties.maxFileBytes()) {
+            throw ProblemException.of(FileProblem.FILE_TOO_LARGE);
+        }
         if (sizeBytes <= 0) {
             throw ProblemException.of(FileProblem.INVALID_INPUT);
         }
@@ -96,6 +99,13 @@ public class FileTransferService implements FileTransferApi {
      */
     @Override
     public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content) {
+        // 原始 PUT 不受 multipart 限制，业务入口也执行上限，避免绕过 HTTP 申请入口。
+        if (sizeBytes > properties.maxFileBytes()) {
+            throw ProblemException.of(FileProblem.FILE_TOO_LARGE);
+        }
+        if (sizeBytes <= 0) {
+            throw ProblemException.of(FileProblem.INVALID_INPUT);
+        }
         Path staged = null;
         try {
             var issued = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());

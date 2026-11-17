@@ -114,7 +114,7 @@ services:
       NGINX_BACKEND_WS_HOST: ${NGINX_BACKEND_WS_HOST:-host.docker.internal}
       NGINX_BACKEND_WS_PORT: ${NGINX_BACKEND_WS_PORT:-18080}
       # 职责：限制经反代上传到服务端的请求体大小。
-      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-100m}
+      NGINX_CLIENT_MAX_BODY_SIZE: ${NGINX_CLIENT_MAX_BODY_SIZE:-500m}
       # 职责：限制官方 Nginx entrypoint 只替换本服务定义的变量，避免误替换 Nginx 内置变量。
       NGINX_ENVSUBST_FILTER: "^NGINX_"
     ports:

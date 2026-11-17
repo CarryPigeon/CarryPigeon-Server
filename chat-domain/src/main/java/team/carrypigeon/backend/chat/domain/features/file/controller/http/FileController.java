@@ -90,7 +90,7 @@ public class FileController {
                 new FileUploadResponse.UploadResponse(
                         "PUT",
                         result.uploadUrl(),
-                        java.util.Map.of(),
+                        java.util.Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
                         result.expiresAt().toEpochMilli()
                 )
         );
@@ -114,6 +114,10 @@ public class FileController {
         @AuthenticationPrincipal CpPrincipal principal,
         HttpServletRequest request
     ) {
+        // 不接受未知长度的分块上传；实际读取仍按授权大小校验，不能只信任此头。
+        if (request.getContentLengthLong() < 0) {
+            throw ProblemException.of(FileProblem.LENGTH_REQUIRED);
+        }
         if (request.getContentType() == null) {
             throw ProblemException.of(FileProblem.INVALID_INPUT, "file content must not be null");
         }

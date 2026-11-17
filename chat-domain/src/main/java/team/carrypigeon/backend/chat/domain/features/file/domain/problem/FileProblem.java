@@ -12,6 +12,12 @@ public enum FileProblem implements ProblemMapping {
     /** 文件相关入参不合法。 */
     INVALID_INPUT(422, "validation_failed", "validation failed"),
 
+    /** 原始上传协议要求明确的 Content-Length。 */
+    LENGTH_REQUIRED(411, "length_required", "Content-Length is required"),
+
+    /** 申请大小或上传声明超过部署的单文件上限。 */
+    FILE_TOO_LARGE(413, "file_too_large", "file size exceeds the upload limit"),
+
     /** 文件分享密钥非法或已失效。 */
     INVALID_SHARE_KEY(422, "invalid_share_key", "share_key is invalid"),
 

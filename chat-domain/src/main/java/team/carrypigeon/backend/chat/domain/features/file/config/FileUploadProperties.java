@@ -10,5 +10,6 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "cp.chat.file.upload")
 public record FileUploadProperties(
         @DefaultValue("10737418240") @Min(1) long accountQuotaBytes,
-        @DefaultValue("5") @Min(1) int maxUnfinishedUploads
+        @DefaultValue("5") @Min(1) int maxUnfinishedUploads,
+        @DefaultValue("524288000") @Min(1) long maxFileBytes
 ) {}

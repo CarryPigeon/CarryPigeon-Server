@@ -17,10 +17,10 @@ spring:
   # 文件配置
   servlet:
     multipart:
-      # 职责：阻止超过消息文件附件上限的 multipart 请求进入应用处理。
-      max-file-size: 100MB
+      # multipart 单独限制；原始 PUT 由文件业务服务验证实际字节数。
+      max-file-size: 500MB
       # 职责：为单文件 multipart 请求保留协议头开销，同时保持明确的请求硬上限。
-      max-request-size: 101MB
+      max-request-size: 501MB
 
 cp:
   http:
