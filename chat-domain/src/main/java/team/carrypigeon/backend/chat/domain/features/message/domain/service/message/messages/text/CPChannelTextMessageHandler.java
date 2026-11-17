@@ -13,11 +13,12 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
 
 /**
  * CarryPigeon 预定义的文本消息处理器<br/>
- * 职责：处理文本消息，校验其格式正确<br/>
- * 边界：不关心消息的生命周期，只关注消息的格式<br/>
+ * 职责：校验文本载荷及回复目标，构造消息数据和预览<br/>
+ * 边界：仅允许回复当前频道内未撤回的消息，不负责持久化、提及或事件通知<br/>
  *
  * 预处理消息格式:{@link CPChannelTextMessageOriginData}<br/>
  * 入库格式：{@link CPChannelTextMessageData}
@@ -46,16 +47,20 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
         String content = originData.content();
         Long replyMessageId = originData.replyToMid();
 
-        // 解析reply信息
+        // 归属与状态校验通过后才读取发送者资料，避免从无权访问的消息派生快照。
         CPChannelTextMessageData.CPChannelTextMessageReplyToUser replyToUser = null;
         if (replyMessageId != null) {
-            CPChannelMessage cpChannelMessage = messageRepository.findById(replyMessageId)
+            CPChannelMessage repliedMessage = messageRepository.findById(replyMessageId)
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-            String senderName = userProfileQueryAdapter.findSenderName(cpChannelMessage.senderId());
+            // 跨频道和已撤回的回复目标统一按不存在处理，避免泄露目标消息信息。
+            if (repliedMessage.channelId() != message.channelId() || repliedMessage.status() != CPMessageStatus.SENT) {
+                throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
+            }
+            String senderName = userProfileQueryAdapter.findSenderName(repliedMessage.senderId());
             replyToUser = new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(
                 senderName,
-                cpChannelMessage.preview(),
-                cpChannelMessage.sendTime().toEpochMilli()
+                repliedMessage.preview(),
+                repliedMessage.sendTime().toEpochMilli()
             );
         }
 
