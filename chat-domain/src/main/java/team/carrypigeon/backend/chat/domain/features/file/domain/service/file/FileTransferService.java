@@ -196,6 +196,7 @@ public class FileTransferService implements FileTransferApi {
 
     @Override
     public Optional<FileDownloadResult> downloadFile(String shareKey) {
+        // 下载是登录后的持链分享；只检查发布状态，不复用上传签名的到期校验，也不绑定频道权限。
         FileUpload upload = uploads.findByShareKey(shareKey).orElse(null);
         if (upload == null || upload.status() != FileUpload.Status.COMPLETED) {
             return Optional.empty();

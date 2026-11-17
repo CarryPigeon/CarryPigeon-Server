@@ -34,7 +34,9 @@ public interface FileTransferApi {
     void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content);
 
     /**
-     * 根据 share key 创建文件下载结果。
+     * 根据 share key 创建文件下载结果；调用入口必须已认证。
+     * 任意已认证用户持有链接均可下载已完成文件，不要求上传者身份或频道成员身份。
+     * 上传授权到期仅禁止继续上传，不使已完成文件的下载链接失效；被回收文件不再提供下载。
      *
      * @param shareKey 下载 share key
      * @return 可下载时返回下载结果投影，不可下载时返回空

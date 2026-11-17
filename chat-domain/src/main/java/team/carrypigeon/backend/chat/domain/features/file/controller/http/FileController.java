@@ -132,7 +132,8 @@ public class FileController {
     }
 
     /**
-     * 按 `share_key` 下载文件。
+     * 按 `share_key` 下载已完成文件。
+     * 访问规则：登录且持有链接即可下载，不检查频道成员关系；上传授权到期不影响下载。
      * 输出：通过应用服务器转发文件内容流。
      *
      * @param shareKey 下载 share key
@@ -140,12 +141,13 @@ public class FileController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/download/{shareKey}")
-    @Operation(summary = "获取文件下载", description = "按 share_key 返回文件内容。")
+    @Operation(summary = "获取文件下载", description = "任意已认证用户持有 share_key 即可下载已完成文件，不要求频道成员身份；上传授权到期不影响下载。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "直接返回文件二进制内容",
                     content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
                             schema = @Schema(type = "string", format = "binary"))),
-            @ApiResponse(responseCode = "404", description = "文件不存在")
+            @ApiResponse(responseCode = "401", description = "尚未认证"),
+            @ApiResponse(responseCode = "404", description = "文件不存在、尚未完成或已回收")
     })
     public ResponseEntity<?> download(
         @PathVariable String shareKey
