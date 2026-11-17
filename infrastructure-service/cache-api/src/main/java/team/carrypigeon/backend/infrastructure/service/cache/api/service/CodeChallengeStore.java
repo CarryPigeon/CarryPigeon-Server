@@ -14,8 +14,8 @@ public interface CodeChallengeStore {
     /** 校验当前挑战并消费或扣减尝试；并发替换后不得修改先前读取的旧挑战以外的记录。 */
     Result verify(String key, String code);
 
-    /** 仅删除指定挑战，旧投递失败的清理不能删掉后来签发的新挑战。 */
-    void discard(String key, String challengeId);
+    /** 按批次记录 SMTP 受理或失败；失败同时作废验证码，状态保留到原 TTL，不改变重发的新挑战。 */
+    void completeDelivery(String key, String challengeId, boolean accepted);
 
     /** 不存在和已过期无法从已删除的缓存键中区分，统一为 UNAVAILABLE。 */
     enum Result {

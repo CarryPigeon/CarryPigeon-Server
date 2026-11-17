@@ -28,9 +28,9 @@ public class EmailVerificationService implements EmailVerificationApi {
         try {
             validateChallenge(email, purpose, accountId);
             cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
-            AuditLogs.success("auth.code_issue", null);
+            AuditLogs.success("auth.code_request_accepted", accountId, "purpose", purpose);
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.code_issue", null, exception.reason());
+            AuditLogs.failure("auth.code_request_accepted", accountId, exception.reason(), "purpose", purpose);
             throw exception;
         }
     }

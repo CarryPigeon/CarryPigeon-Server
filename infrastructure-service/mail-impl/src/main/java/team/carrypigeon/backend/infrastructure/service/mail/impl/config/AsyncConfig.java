@@ -4,10 +4,9 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-@EnableAsync
+/** 邮件专用有界执行器；饱和或关闭时明确拒绝，不允许请求线程接管 SMTP 工作。 */
 @Configuration
 public class AsyncConfig {
 
@@ -21,9 +20,10 @@ public class AsyncConfig {
         // 队列容量：缓冲突发邮件请求
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("Mail-Async-");
-        // 拒绝策略：由调用线程执行，防止邮件任务被静默丢弃
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        executor.initialize();
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
+        // 正常关闭最多等待 30 秒排空任务，匹配分发包停止窗口；未完成任务和异常退出不提供恢复保证。
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         return executor;
     }
 }

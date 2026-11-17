@@ -50,7 +50,7 @@ public class EmailVerificationController {
      */
     @PermitAll
     @PostMapping("/email_codes")
-    @Operation(summary = "发送邮箱验证码", description = "按 REGISTER、LOGIN 或 CHANGE_EMAIL 用途签发一次性验证码；CHANGE_EMAIL 必须登录并绑定当前账号。")
+    @Operation(summary = "发送邮箱验证码", description = "按 REGISTER、LOGIN 或 CHANGE_EMAIL 用途签发验证码并受理异步邮件任务；成功不保证收件箱收到，最终投递失败会作废对应批次。CHANGE_EMAIL 必须登录并绑定当前账号。")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "验证码请求受理成功")
     })

@@ -7,7 +7,7 @@ package team.carrypigeon.backend.chat.domain.features.verification.domain.api.ve
 public interface EmailVerificationApi {
 
     /**
-     * 签发并投递邮箱验证码。
+     * 签发验证码并受理异步邮件任务；正常返回不保证 SMTP 已受理或收件箱已收到。
      *
      * @param email 签发验证码的邮箱
      * @param purpose 验证码授权用途，不能为空

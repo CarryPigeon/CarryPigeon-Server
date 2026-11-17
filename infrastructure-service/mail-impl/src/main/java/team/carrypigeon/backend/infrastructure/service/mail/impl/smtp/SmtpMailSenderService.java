@@ -1,9 +1,12 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 
 import org.springframework.mail.MailException;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
 
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
@@ -19,31 +22,41 @@ public class SmtpMailSenderService implements MailSenderService {
 
     private final JavaMailSender mailSender;
     private final SmtpMailProperties properties;
+    private final Executor executor;
 
-    public SmtpMailSenderService(JavaMailSender mailSender, SmtpMailProperties properties) {
+    public SmtpMailSenderService(JavaMailSender mailSender, SmtpMailProperties properties, Executor executor) {
         this.mailSender = mailSender;
         this.properties = properties;
+        this.executor = executor;
     }
 
     /**
      * 发送纯文本邮件。
      * 输入：收件人、标题和正文。
-     * 失败：SMTP 发送失败时抛出稳定的 MailServiceException。
+     * 失败通过完成结果传播；队列拒绝同步抛出，不能切换到请求线程发送。
+     * 发送失败最多尝试三次，认证和消息准备错误不重试。SMTP 超时可能导致同一封邮件被重复接受。
+     * 任务仅保存在内存，正常关闭等待已受理任务；进程异常退出后不自动恢复。
      *
      * @param command 邮件发送命令
      */
     @Override
-    @Async("mailExecutor")
-    public void send(MailSendCommand command) {
+    public CompletionStage<Void> send(MailSendCommand command) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(properties.fromAddress());
         message.setTo(command.to().trim());
         message.setSubject(command.subject().trim());
         message.setText(command.text());
-        try {
-            mailSender.send(message);
-        } catch (MailException exception) {
-            throw new MailServiceException("failed to send email", exception);
-        }
+        return CompletableFuture.runAsync(() -> {
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    mailSender.send(message);
+                    return;
+                } catch (MailException exception) {
+                    if (!(exception instanceof MailSendException) || attempt == 3) {
+                        throw new MailServiceException("failed to send email", exception);
+                    }
+                }
+            }
+        }, executor);
     }
 }

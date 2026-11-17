@@ -15,7 +15,7 @@ public class RedisCodeChallengeStore implements CodeChallengeStore {
 
     private static final DefaultRedisScript<Long> REPLACE = new DefaultRedisScript<>("""
             redis.call('DEL', KEYS[1])
-            redis.call('HSET', KEYS[1], 'id', ARGV[1], 'code', ARGV[2], 'remaining', ARGV[3], 'state', 'active')
+            redis.call('HSET', KEYS[1], 'id', ARGV[1], 'code', ARGV[2], 'remaining', ARGV[3], 'state', 'active', 'delivery', 'pending')
             redis.call('PEXPIRE', KEYS[1], ARGV[4])
             return 1
             """, Long.class);
@@ -24,6 +24,7 @@ public class RedisCodeChallengeStore implements CodeChallengeStore {
             local state = redis.call('HGET', KEYS[1], 'state')
             if state == 'consumed' then return 3 end
             if state == 'exhausted' then return 2 end
+            if state ~= 'active' then return 4 end
             if redis.call('HGET', KEYS[1], 'code') == ARGV[2] then
                 redis.call('HSET', KEYS[1], 'state', 'consumed')
                 redis.call('HDEL', KEYS[1], 'code')
@@ -37,11 +38,14 @@ public class RedisCodeChallengeStore implements CodeChallengeStore {
             end
             return 1
             """, Long.class);
-    private static final DefaultRedisScript<Long> DISCARD = new DefaultRedisScript<>("""
-            if redis.call('HGET', KEYS[1], 'id') == ARGV[1] then
-                return redis.call('DEL', KEYS[1])
+    private static final DefaultRedisScript<Long> COMPLETE_DELIVERY = new DefaultRedisScript<>("""
+            if redis.call('HGET', KEYS[1], 'id') ~= ARGV[1] then return 0 end
+            redis.call('HSET', KEYS[1], 'delivery', ARGV[2])
+            if ARGV[2] == 'failed' and redis.call('HGET', KEYS[1], 'state') == 'active' then
+                redis.call('HSET', KEYS[1], 'state', 'delivery_failed')
+                redis.call('HDEL', KEYS[1], 'code')
             end
-            return 0
+            return 1
             """, Long.class);
 
     private final StringRedisTemplate redisTemplate;
@@ -97,15 +101,15 @@ public class RedisCodeChallengeStore implements CodeChallengeStore {
     }
 
     @Override
-    public void discard(String key, String challengeId) {
+    public void completeDelivery(String key, String challengeId, boolean accepted) {
         requireKey(key);
         if (challengeId == null || challengeId.isBlank()) {
             throw new IllegalArgumentException("challenge ID must not be blank");
         }
         try {
-            redisTemplate.execute(DISCARD, List.of(key), challengeId);
+            redisTemplate.execute(COMPLETE_DELIVERY, List.of(key), challengeId, accepted ? "accepted" : "failed");
         } catch (RuntimeException exception) {
-            throw new CacheServiceException("failed to discard code challenge", exception);
+            throw new CacheServiceException("failed to record code delivery result", exception);
         }
     }
 

@@ -1,11 +1,14 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.config;
 
 import java.util.Properties;
+import java.util.concurrent.Executor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
@@ -21,6 +24,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.startup.MailIni
  */
 @AutoConfiguration
 @EnableConfigurationProperties(SmtpMailProperties.class)
+@Import(AsyncConfig.class)
 @ConditionalOnProperty(prefix = "service.mail.smtp", name = "enabled", havingValue = "true")
 public class MailServiceAutoConfiguration {
 
@@ -45,8 +49,9 @@ public class MailServiceAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public MailSenderService mailSenderService(JavaMailSenderImpl mailSender, SmtpMailProperties properties) {
-        return new SmtpMailSenderService(mailSender, properties);
+    public MailSenderService mailSenderService(JavaMailSenderImpl mailSender, SmtpMailProperties properties,
+            @Qualifier("mailExecutor") Executor executor) {
+        return new SmtpMailSenderService(mailSender, properties, executor);
     }
 
     @Bean
