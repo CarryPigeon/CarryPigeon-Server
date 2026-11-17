@@ -21,6 +21,12 @@ public enum FileProblem implements ProblemMapping {
     /** 对象存储服务未启用或不可用。 */
     STORAGE_UNAVAILABLE(503, "storage_service_unavailable", "storage service is unavailable"),
 
+    /** 声明大小加上现有占用会突破账号总空间。 */
+    QUOTA_EXCEEDED(409, "file_quota_exceeded", "account file storage quota exceeded"),
+
+    /** 未完成上传（包括尚未使用的授权）达到账号上限。 */
+    UPLOAD_LIMIT_REACHED(429, "upload_limit_reached", "too many unfinished uploads"),
+
     /** 已有写入者，或者完成后重试的内容不同。 */
     UPLOAD_CONFLICT(409, "upload_conflict", "upload is in progress or completed with different content"),
 

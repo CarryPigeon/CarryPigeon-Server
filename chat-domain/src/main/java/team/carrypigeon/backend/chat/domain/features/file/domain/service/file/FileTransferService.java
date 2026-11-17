@@ -14,6 +14,7 @@ import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.file.config.FileUploadProperties;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
@@ -24,6 +25,7 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 
@@ -43,19 +45,25 @@ public class FileTransferService implements FileTransferApi {
     private final TimeProvider timeProvider;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
     private final FileUploadRepository uploads;
+    private final FileUploadProperties properties;
+    private final TransactionRunner transactions;
 
     public FileTransferService(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             FileUploadShareKeyCodec uploadShareKeyCodec,
-            FileUploadRepository uploads
+            FileUploadRepository uploads,
+            FileUploadProperties properties,
+            TransactionRunner transactions
     ) {
         this.objectStorageServiceProvider = objectStorageServiceProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
         this.uploads = uploads;
+        this.properties = properties;
+        this.transactions = transactions;
     }
 
     @Override
@@ -66,8 +74,12 @@ public class FileTransferService implements FileTransferApi {
         long fileId = idGenerator.nextLongId();
         Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
         String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
-        uploads.create(new FileUpload(fileId, accountId, shareKey, sizeBytes, FileUpload.Status.PENDING,
-                null, null, null, expiresAt, null));
+        transactions.runInTransaction(() -> {
+            uploads.lockAccountQuota(accountId);
+            requireQuota(accountId, sizeBytes, timeProvider.nowInstant());
+            uploads.create(new FileUpload(fileId, accountId, shareKey, sizeBytes, FileUpload.Status.PENDING,
+                    null, null, null, expiresAt, null));
+        });
         AuditLogs.success("file.upload_grant", accountId,
                 "file_id", fileId, "size_bytes", sizeBytes);
         return new FileUploadGrantResult(
@@ -104,7 +116,7 @@ public class FileTransferService implements FileTransferApi {
             }
 
             String objectKey = "/files/objects/" + UUID.randomUUID();
-            if (!uploads.claim(upload.fileId(), objectKey)) {
+            if (!claimUpload(upload, objectKey)) {
                 // 另一个写入者可能刚完成；重新读取后允许内容相同的幂等重试。
                 FileUpload current = uploads.findByShareKey(shareKey)
                         .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
@@ -141,6 +153,34 @@ public class FileTransferService implements FileTransferApi {
                     log.warn("Failed to remove local upload staging file: {}", staged, exception);
                 }
             }
+        }
+    }
+
+    /** 失败后的重试需要重新预留；同账号申请和重试共享配额行锁，避免并发突破上限。 */
+    private boolean claimUpload(FileUpload upload, String objectKey) {
+        return transactions.runInTransaction(() -> {
+            uploads.lockAccountQuota(upload.ownerAccountId());
+            FileUpload current = uploads.findByShareKey(upload.shareKey())
+                    .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
+            Instant now = timeProvider.nowInstant();
+            if (!current.expiresAt().isAfter(now)) {
+                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+            }
+            if (current.status() == FileUpload.Status.FAILED) {
+                requireQuota(upload.ownerAccountId(), upload.sizeBytes(), now);
+            }
+            return uploads.claim(upload.fileId(), objectKey, now);
+        });
+    }
+
+    /** 必须持有账号配额锁；通过状态表计算占用，不维护需要额外对账的加减计数器。 */
+    private void requireQuota(long accountId, long sizeBytes, Instant now) {
+        var usage = uploads.storageUsage(accountId, now);
+        if (sizeBytes > properties.accountQuotaBytes() - usage.allocatedBytes()) {
+            throw ProblemException.of(FileProblem.QUOTA_EXCEEDED);
+        }
+        if (usage.unfinishedUploads() >= properties.maxUnfinishedUploads()) {
+            throw ProblemException.of(FileProblem.UPLOAD_LIMIT_REACHED);
         }
     }
 

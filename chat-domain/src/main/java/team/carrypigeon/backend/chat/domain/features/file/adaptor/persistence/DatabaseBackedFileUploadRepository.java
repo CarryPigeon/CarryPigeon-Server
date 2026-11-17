@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.file.adaptor.persistence;
 
 import java.time.Instant;
+import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileStorageUsage;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileUpload;
@@ -18,6 +19,17 @@ public class DatabaseBackedFileUploadRepository implements FileUploadRepository 
     }
 
     @Override
+    public void lockAccountQuota(long accountId) {
+        database.lockAccountQuota(accountId);
+    }
+
+    @Override
+    public FileStorageUsage storageUsage(long accountId, Instant now) {
+        var usage = database.storageUsage(accountId, now);
+        return new FileStorageUsage(usage.allocatedBytes(), usage.unfinishedUploads());
+    }
+
+    @Override
     public void create(FileUpload upload) {
         database.create(new FileUploadRecord(upload.fileId(), upload.ownerAccountId(), upload.shareKey(),
                 upload.sizeBytes(), upload.status().name(), upload.objectKey(), upload.sha256(),
@@ -32,8 +44,8 @@ public class DatabaseBackedFileUploadRepository implements FileUploadRepository 
     }
 
     @Override
-    public boolean claim(long fileId, String objectKey) {
-        return database.claim(fileId, objectKey);
+    public boolean claim(long fileId, String objectKey, Instant now) {
+        return database.claim(fileId, objectKey, now);
     }
 
     @Override

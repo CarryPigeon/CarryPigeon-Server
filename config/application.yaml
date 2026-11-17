@@ -29,6 +29,10 @@ cp:
     # 边界：本地只保留实际读取的空入口；具体插件配置应在插件接入后按需添加。
     configs: {}
   chat:
+    file:
+      upload:
+        account-quota-bytes: 10737418240
+        max-unfinished-uploads: 5
     auth:
       password-login:
         # 职责：控制用户名密码登录入口是否允许签发 token。

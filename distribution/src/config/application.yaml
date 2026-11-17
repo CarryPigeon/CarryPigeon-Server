@@ -36,6 +36,11 @@ cp:
     configs: {}
   chat:
     file:
+      upload:
+        # 完成文件与有效上传授权共同占用账号空间；大小单位为字节。
+        account-quota-bytes: 10737418240
+        # 包括已签发但尚未使用的授权，不限制每日上传量。
+        max-unfinished-uploads: 5
       share-key:
         # 职责：定义文件上传 share_key 的 HMAC 签名密钥。
         # 约束：部署前必须填写长度至少 32 字符且不与 JWT 共用的强随机值。

@@ -3,7 +3,9 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 import java.time.Instant;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.FileStorageUsageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.FileUploadRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.FileUploadDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.FileUploadMapper;
@@ -18,6 +20,19 @@ public class MybatisFileUploadDatabaseService implements FileUploadDatabaseServi
     }
 
     @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void lockAccountQuota(long accountId) {
+        mapper.ensureQuotaAccount(accountId);
+        mapper.lockQuotaAccount(accountId);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public FileStorageUsageRecord storageUsage(long accountId, Instant now) {
+        return mapper.storageUsage(accountId, now);
+    }
+
+    @Override
     public void create(FileUploadRecord upload) {
         mapper.insert(upload);
     }
@@ -29,8 +44,8 @@ public class MybatisFileUploadDatabaseService implements FileUploadDatabaseServi
 
     @Override
     @Transactional
-    public boolean claim(long fileId, String objectKey) {
-        if (mapper.claim(fileId, objectKey) == 0) {
+    public boolean claim(long fileId, String objectKey, Instant now) {
+        if (mapper.claim(fileId, objectKey, now) == 0) {
             return false;
         }
         mapper.insertAttempt(fileId, objectKey);
