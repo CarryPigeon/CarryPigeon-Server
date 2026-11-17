@@ -26,6 +26,7 @@ public class ChannelReadStateEntity {
     private Long channelId;
     private Long accountId;
     private Long lastReadMessageId;
+    private Long lastReadSequence;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -39,6 +40,7 @@ public class ChannelReadStateEntity {
                 channelId == null ? 0L : channelId,
                 accountId == null ? 0L : accountId,
                 lastReadMessageId == null ? 0L : lastReadMessageId,
+                lastReadSequence == null ? 0L : lastReadSequence,
                 createdAt,
                 updatedAt
         );
@@ -55,6 +57,7 @@ public class ChannelReadStateEntity {
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
+                record.lastReadSequence(),
                 record.createdAt(),
                 record.updatedAt()
         );

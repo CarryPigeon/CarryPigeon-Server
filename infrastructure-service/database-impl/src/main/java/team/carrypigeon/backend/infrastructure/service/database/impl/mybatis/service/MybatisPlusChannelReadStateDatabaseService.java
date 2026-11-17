@@ -83,6 +83,7 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
                 .eq(ChannelReadStateEntity::getChannelId, record.channelId())
                 .eq(ChannelReadStateEntity::getAccountId, record.accountId())
                 .set(ChannelReadStateEntity::getLastReadMessageId, record.lastReadMessageId())
+                .set(ChannelReadStateEntity::getLastReadSequence, record.lastReadSequence())
                 .set(ChannelReadStateEntity::getCreatedAt, record.createdAt())
                 .set(ChannelReadStateEntity::getUpdatedAt, record.updatedAt()));
     }

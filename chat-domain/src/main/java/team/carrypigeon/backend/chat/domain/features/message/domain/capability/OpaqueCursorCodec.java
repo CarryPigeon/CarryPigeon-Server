@@ -5,11 +5,10 @@ import java.util.Base64;
 
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
  * 对外分页游标编解码器。
- * 职责：把内部雪花 ID 包装为端点级不透明 cursor，并在入站时做同端点校验。
+ * 职责：把内部数值位置包装为端点级不透明 cursor，并在入站时做同端点校验。
  * 边界：只处理 HTTP 协议层 cursor，不参与仓储层分页实现；不自行决定游标失败的错误码，由调用方注入。
  */
 public final class OpaqueCursorCodec {
@@ -18,30 +17,30 @@ public final class OpaqueCursorCodec {
     }
 
     /**
-     * 将内部雪花 ID 编码为带 scope 的不透明游标。
+     * 将内部数值位置编码为带 scope 的不透明游标。
      *
      * @param scope 游标作用域，用于限制端点间不可混用
-     * @param snowflakeId 内部雪花 ID
+     * @param position 内部数值位置
      * @return 对外游标字符串；输入为空时返回空
      */
-    public static String encode(String scope, Long snowflakeId) {
-        if (snowflakeId == null) {
+    public static String encode(String scope, Long position) {
+        if (position == null) {
             return null;
         }
-        String raw = scope + ":" + IdUtil.toString(snowflakeId);
+        String raw = scope + ":" + Long.toString(position);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
      * 校验并解码外部游标。
      * 输入：预期作用域、客户端提交的游标字符串与调用方所属 feature 的游标错误码。
-     * 输出：成功时返回内部雪花 ID，空白游标视为无游标。
-     * 失败语义：编码非法、作用域不匹配和 ID 非法都收敛为调用方注入的同一个错误码。
+     * 输出：成功时返回内部数值位置，空白游标视为无游标。
+     * 失败语义：编码非法、作用域不匹配和数值位置非法都收敛为调用方注入的同一个错误码。
      *
      * @param scope 预期游标作用域
      * @param cursor 客户端提交的游标
      * @param invalidCursorProblem 调用方所属 feature 的游标非法错误码
-     * @return 内部雪花 ID；空白游标返回空
+     * @return 内部数值位置；空白游标返回空
      */
     public static Long decode(String scope, String cursor, ProblemMapping invalidCursorProblem) {
         if (cursor == null || cursor.isBlank()) {

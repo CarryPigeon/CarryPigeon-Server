@@ -50,7 +50,7 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
         Optional<ChannelReadState> current = channelReadStateDatabaseService
                 .findByIdForUpdate(new ChannelReadStateKey(readState.channelId(), readState.accountId()))
                 .map(this::toDomain);
-        if (current.isPresent() && current.get().lastReadMessageId() >= readState.lastReadMessageId()) {
+        if (current.isPresent() && current.get().lastReadSequence() >= readState.lastReadSequence()) {
             return false;
         }
         channelReadStateDatabaseService.upsert(toRecord(readState));
@@ -72,6 +72,7 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
+                record.lastReadSequence(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -82,6 +83,7 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 readState.channelId(),
                 readState.accountId(),
                 readState.lastReadMessageId(),
+                readState.lastReadSequence(),
                 readState.createdAt(),
                 readState.updatedAt()
         );

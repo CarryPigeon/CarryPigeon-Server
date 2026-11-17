@@ -40,7 +40,7 @@ import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 @Tag(name = "频道消息", description = "频道消息搜索能力。")
 public class ChannelMessageSearchController {
 
-    private static final String SEARCH_CURSOR_SCOPE = "channel_message_search";
+    private static final String SEARCH_CURSOR_SCOPE = "channel_message_search_v2_";
 
     private final ChannelMessageSearchApi channelMessageSearchApi;
 
@@ -97,7 +97,7 @@ public class ChannelMessageSearchController {
                 cpPrincipal.accountId(),
                 channelId,
                 query,
-                OpaqueCursorCodec.decode(SEARCH_CURSOR_SCOPE, cursor, MessageProblem.CURSOR_INVALID),
+                OpaqueCursorCodec.decode(SEARCH_CURSOR_SCOPE + channelId, cursor, MessageProblem.CURSOR_INVALID),
                 senderUid,
                 domain == null || domain.isBlank() ? null : domain.trim(),
                 limit
@@ -105,7 +105,7 @@ public class ChannelMessageSearchController {
         );
         return CursorPageResponse.of(
             page.items().stream().map(ChannelMessageResponse::from).toList(),
-            OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE, page.nextCursor()),
+            OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE + channelId, page.nextCursor()),
             page.hasMore()
         );
     }

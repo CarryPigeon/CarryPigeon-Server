@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -28,6 +30,14 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
 
     public MybatisPlusMessageDatabaseService(MessageMapper messageMapper) {
         this.messageMapper = messageMapper;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public long nextSequence(long channelId) {
+        // INSERT/UPDATE 获得排他行锁；MANDATORY 防止脱离消息事务后提前释放锁。
+        messageMapper.advanceSequence(channelId);
+        return messageMapper.selectSequenceForUpdate(channelId);
     }
 
     @Override
@@ -96,30 +106,30 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     public List<MessageRecord> findLatestByChannelId(long channelId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .orderByDesc(MessageEntity::getMessageId), limit);
+                .orderByDesc(MessageEntity::getSequence), limit);
     }
 
     @Override
-    public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
+    public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorSequence, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .lt(MessageEntity::getMessageId, cursorMessageId)
-                .orderByDesc(MessageEntity::getMessageId), limit);
+                .lt(MessageEntity::getSequence, cursorSequence)
+                .orderByDesc(MessageEntity::getSequence), limit);
     }
 
     @Override
-    public List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
+    public List<MessageRecord> findAfterByChannelId(long channelId, long cursorSequence, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .gt(MessageEntity::getMessageId, cursorMessageId)
-                .orderByAsc(MessageEntity::getMessageId), limit);
+                .gt(MessageEntity::getSequence, cursorSequence)
+                .orderByAsc(MessageEntity::getSequence), limit);
     }
 
     @Override
     public List<MessageRecord> searchByChannelId(
             long channelId,
             String keyword,
-            Long cursorMessageId,
+            Long cursorSequence,
             Long senderAccountId,
             String domain,
             String status,
@@ -132,10 +142,10 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
                         .like(MessageEntity::getPreview, keyword)
                         .or()
                         .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
-                .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
+                .lt(cursorSequence != null, MessageEntity::getSequence, cursorSequence)
                 .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
                 .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)
-                .orderByDesc(MessageEntity::getMessageId), limit);
+                .orderByDesc(MessageEntity::getSequence), limit);
     }
 
     private List<MessageRecord> selectLimited(

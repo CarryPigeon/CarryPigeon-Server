@@ -38,7 +38,7 @@ public class ChannelMessageSearchService implements ChannelMessageSearchApi {
         List<CPChannelMessage> messages = messageRepository.searchByChannelId(
                 channel.channelId(),
                 query.keyword(),
-                query.cursorMessageId(),
+                query.cursorSequence(),
                 query.senderAccountId(),
                 query.domain(),
                 query.limit() + 1
@@ -48,7 +48,7 @@ public class ChannelMessageSearchService implements ChannelMessageSearchApi {
         List<ChannelMessageResult> items = pageMessages.stream()
                 .map(message -> ChannelMessageResult.of(message))
                 .toList();
-        Long nextCursor = hasMore ? items.getLast().messageId() : null;
+        Long nextCursor = hasMore ? items.getLast().sequence() : null;
         return new ChannelMessagePage(items, nextCursor, hasMore);
     }
 }

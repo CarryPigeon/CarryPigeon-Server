@@ -49,7 +49,7 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
         List<CPChannelMessage> messages = messageRepository.findBeforeByChannelId(
                 channel.channelId(),
-                query.cursorMessageId(),
+                query.cursorSequence(),
                 query.limit() + 1
         );
         return toPage(messages, query.limit());
@@ -60,7 +60,7 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
         List<CPChannelMessage> messages = messageRepository.findAfterByChannelId(
                 channel.channelId(),
-                query.cursorMessageId(),
+                query.cursorSequence(),
                 query.limit() + 1
         );
         return toPage(messages, query.limit());
@@ -68,7 +68,7 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
 
     /**
      * 把仓储返回的探测结果裁剪为固定页大小。
-     * 约束：after 查询的仓储结果按消息 ID 升序，latest/before 按降序；本方法只做数量裁剪，不改变方向。
+     * 约束：after 查询的仓储结果按频道序号升序，latest/before 按降序；本方法只做数量裁剪，不改变方向。
      */
     private ChannelMessagePage toPage(List<CPChannelMessage> messages, int limit) {
         boolean hasMore = messages.size() > limit;
@@ -76,7 +76,7 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
         List<ChannelMessageResult> items = pageMessages.stream()
                 .map(message -> ChannelMessageResult.of(message))
                 .toList();
-        Long nextCursor = hasMore ? items.getLast().messageId() : null;
+        Long nextCursor = hasMore ? items.getLast().sequence() : null;
         return new ChannelMessagePage(items, nextCursor, hasMore);
     }
 }

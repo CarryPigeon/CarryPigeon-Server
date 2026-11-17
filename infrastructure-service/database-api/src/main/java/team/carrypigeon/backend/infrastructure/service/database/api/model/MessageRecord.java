@@ -10,6 +10,7 @@ import java.time.Instant;
  * @param messageId 消息 ID
  * @param senderId 发送者账户 ID
  * @param channelId 频道 ID
+ * @param sequence 频道内事务序号
  * @param domain 消息 domain
  * @param data domain 专属数据 JSON object
  * @param sendTime 发送时间
@@ -21,6 +22,7 @@ public record MessageRecord(
         long messageId,
         long senderId,
         long channelId,
+        long sequence,
         String domain,
         String data,
         Instant sendTime,

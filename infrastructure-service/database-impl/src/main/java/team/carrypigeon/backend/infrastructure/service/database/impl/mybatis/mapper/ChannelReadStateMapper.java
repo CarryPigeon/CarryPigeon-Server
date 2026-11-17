@@ -34,6 +34,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 channel_id,
                 account_id,
                 last_read_message_id,
+                last_read_sequence,
                 created_at,
                 updated_at
             )
@@ -43,6 +44,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 #{record.channelId},
                 #{record.accountId},
                 #{record.lastReadMessageId},
+                #{record.lastReadSequence},
                 #{record.createdAt},
                 #{record.updatedAt}
               )
@@ -62,17 +64,20 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 channel_id,
                 account_id,
                 last_read_message_id,
+                last_read_sequence,
                 created_at,
                 updated_at
             ) VALUES (
                 #{channelId},
                 #{accountId},
                 #{lastReadMessageId},
+                #{lastReadSequence},
                 #{createdAt},
                 #{updatedAt}
             )
             ON DUPLICATE KEY UPDATE
                 last_read_message_id = VALUES(last_read_message_id),
+                last_read_sequence = VALUES(last_read_sequence),
                 updated_at = VALUES(updated_at)
             """)
     int upsertState(ChannelReadStateEntity entity);
@@ -86,7 +91,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
      * @return 命中时返回实体，未命中时返回 null
      */
     @Select("""
-            SELECT channel_id, account_id, last_read_message_id, created_at, updated_at
+            SELECT channel_id, account_id, last_read_message_id, last_read_sequence, created_at, updated_at
             FROM chat_channel_read_state
             WHERE channel_id = #{channelId} AND account_id = #{accountId}
             FOR UPDATE
@@ -104,7 +109,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
      */
     @Select("""
             <script>
-            SELECT channel_id, account_id, last_read_message_id, created_at, updated_at
+            SELECT channel_id, account_id, last_read_message_id, last_read_sequence, created_at, updated_at
             FROM chat_channel_read_state
             WHERE (channel_id, account_id) IN
             <foreach collection="keys" item="key" open="(" separator="," close=")">
@@ -148,7 +153,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                    ON r.channel_id = cm.channel_id AND r.account_id = cm.account_id
             LEFT JOIN chat_message m
                   ON m.channel_id = cm.channel_id
-                  AND m.message_id &gt; COALESCE(r.last_read_message_id, 0)
+                  AND m.sequence &gt; COALESCE(r.last_read_sequence, 0)
                   AND m.sender_id != cm.account_id
                   AND m.status != 'recalled'
             WHERE cm.account_id = #{accountId}

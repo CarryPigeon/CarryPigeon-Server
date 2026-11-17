@@ -86,11 +86,13 @@ public class ChannelMessageService implements ChannelMessageApi {
                     : mentions.stream()
                             .filter(memberAccountIdSet::contains)
                             .toList();
+            // 分配序号后持锁到消息、提及一并提交，后续序号不能先提交可见。
             // 组装消息
             CPChannelMessage originalMessage = new CPChannelMessage(
                     idGenerator.nextLongId(),
                     accountId,
                     channelId,
+                    messageRepository.nextSequence(channelId),
                     domain,
                     data,
                     timeProvider.nowInstant(),
@@ -167,6 +169,7 @@ public class ChannelMessageService implements ChannelMessageApi {
                     existingMessage.messageId(),
                     existingMessage.senderId(),
                     existingMessage.channelId(),
+                    existingMessage.sequence(),
                     existingMessage.domain(),
                     Map.of(),
                     existingMessage.sendTime(),

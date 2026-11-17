@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MessageEntity;
 
 /**
@@ -14,6 +15,17 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
  */
 @Mapper
 public interface MessageMapper extends BaseMapper<MessageEntity> {
+
+    /** 惰性创建序号行或递增；排他行锁由消息事务持有到提交或回滚。 */
+    @Insert("""
+            INSERT INTO chat_message_sequence (channel_id, last_sequence) VALUES (#{channelId}, 1)
+            ON DUPLICATE KEY UPDATE last_sequence = last_sequence + 1
+            """)
+    int advanceSequence(@Param("channelId") long channelId);
+
+    /** 使用当前读，避免 MySQL REPEATABLE READ 快照看不到刚等待提交的序号。 */
+    @Select("SELECT last_sequence FROM chat_message_sequence WHERE channel_id = #{channelId} FOR UPDATE")
+    long selectSequenceForUpdate(@Param("channelId") long channelId);
 
     /**
      * 单条 SQL 批量插入消息记录。
@@ -27,6 +39,7 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
                 message_id,
                 sender_id,
                 channel_id,
+                sequence,
                 domain,
                 data,
                 send_time,
@@ -40,6 +53,7 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
                 #{message.messageId},
                 #{message.senderId},
                 #{message.channelId},
+                #{message.sequence},
                 #{message.domain},
                 #{message.data},
                 #{message.sendTime},

@@ -13,6 +13,7 @@ import java.util.Map;
  * @param mid 消息 ID
  * @param uid 发送者账号 ID
  * @param cid 频道 ID
+ * @param sequence 频道内提交序号；推送可能乱序，发现间隙时通过 HTTP 补拉
  * @param domain 消息域
  * @param data 消息域数据
  * @param sendTime 发送时间，epoch 毫秒
@@ -24,6 +25,7 @@ public record MessageBody(
         String mid,
         String uid,
         String cid,
+        long sequence,
         String domain,
         Map<String, Object> data,
         long sendTime,

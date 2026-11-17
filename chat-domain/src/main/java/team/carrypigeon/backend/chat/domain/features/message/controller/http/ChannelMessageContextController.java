@@ -52,7 +52,7 @@ public class ChannelMessageContextController {
      * @return 锚点上下文响应
      */
     @GetMapping("/{channelId}/messages/around")
-    @Operation(summary = "读取锚点上下文", description = "返回锚点消息前后的固定窗口消息，结果按消息 ID 倒序排列。")
+    @Operation(summary = "读取锚点上下文", description = "返回锚点消息前后的固定窗口消息，结果按频道序号倒序排列。")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "返回 items 上下文消息数组")
     })

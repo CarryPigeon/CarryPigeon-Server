@@ -12,7 +12,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Messag
 
 /**
  * 消息 canonical 持久化实体。
- * 职责：承接 chat_message 的九个统一字段与 MyBatis-Plus 映射。
+ * 职责：承接 chat_message 的统一消息字段及频道序号与 MyBatis-Plus 映射。
  * 边界：data 与 mentions 保持 JSON 文本，不解释 domain 业务语义。
  */
 @Data
@@ -25,6 +25,7 @@ public class MessageEntity {
     private Long messageId;
     private Long senderId;
     private Long channelId;
+    private Long sequence;
     private String domain;
     private String data;
     private Instant sendTime;
@@ -42,6 +43,7 @@ public class MessageEntity {
                 messageId == null ? 0L : messageId,
                 senderId == null ? 0L : senderId,
                 channelId == null ? 0L : channelId,
+                sequence == null ? 0L : sequence,
                 domain,
                 data,
                 sendTime,
@@ -62,6 +64,7 @@ public class MessageEntity {
                 record.messageId(),
                 record.senderId(),
                 record.channelId(),
+                record.sequence(),
                 record.domain(),
                 record.data(),
                 record.sendTime(),

@@ -62,7 +62,8 @@ public class MessageReadStateService implements MessageReadStateApi {
             ChannelReadState current = readStateRepository
                     .findByChannelIdAndAccountId(channelId, accountId)
                     .orElse(null);
-            if (current != null && current.lastReadMessageId() >= lastReadMessageId) {
+            // 消息 ID 仅定位锚点；晚分配的雪花 ID 不代表晚提交，已读边界按频道序号推进。
+            if (current != null && current.lastReadSequence() >= message.sequence()) {
                 return toResult(current);
             }
             Instant now = this.timeProvider.nowInstant();
@@ -70,6 +71,7 @@ public class MessageReadStateService implements MessageReadStateApi {
                     channelId,
                     accountId,
                     lastReadMessageId,
+                    message.sequence(),
                     current == null ? now: current.createdAt(),
                     now
             );

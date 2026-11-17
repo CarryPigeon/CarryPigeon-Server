@@ -109,6 +109,7 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
                 Long.toString(message.messageId()),
                 Long.toString(message.senderId()),
                 Long.toString(message.channelId()),
+                message.sequence(),
                 message.domain(),
                 message.data(),
                 message.sendTime().toEpochMilli(),

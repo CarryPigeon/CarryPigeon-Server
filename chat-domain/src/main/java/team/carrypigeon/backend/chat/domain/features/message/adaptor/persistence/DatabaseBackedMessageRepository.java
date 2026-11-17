@@ -46,6 +46,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
+    public long nextSequence(long channelId) {
+        return messageDatabaseService.nextSequence(channelId);
+    }
+
+    @Override
     public void save(CPChannelMessage message) {
         messageDatabaseService.insert(toPersistenceRecord(message));
     }
@@ -69,17 +74,17 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
+    public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorSequence, int limit) {
         return messageDatabaseService
-            .findBeforeByChannelId(channelId, cursorMessageId, limit)
+            .findBeforeByChannelId(channelId, cursorSequence, limit)
             .stream()
             .map(this::toDomainMessage).toList();
     }
 
     @Override
-    public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
+    public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorSequence, int limit) {
         return messageDatabaseService
-            .findAfterByChannelId(channelId, cursorMessageId, limit)
+            .findAfterByChannelId(channelId, cursorSequence, limit)
             .stream()
             .map(this::toDomainMessage)
             .toList();
@@ -89,13 +94,13 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     public List<CPChannelMessage> searchByChannelId(
             long channelId,
             String keyword,
-            Long cursorMessageId,
+            Long cursorSequence,
             Long senderAccountId,
             String domain,
             int limit
     ) {
         return messageDatabaseService
-            .searchByChannelId(channelId, keyword, cursorMessageId, senderAccountId, domain, STATUS_SENT, limit)
+            .searchByChannelId(channelId, keyword, cursorSequence, senderAccountId, domain, STATUS_SENT, limit)
             .stream()
             .map(this::toDomainMessage)
             .toList();
@@ -106,6 +111,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 record.messageId(),
                 record.senderId(),
                 record.channelId(),
+                record.sequence(),
                 record.domain(),
                 parseData(record.data()),
                 record.sendTime(),
@@ -120,6 +126,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 message.messageId(),
                 message.senderId(),
                 message.channelId(),
+                message.sequence(),
                 message.domain(),
                 jsonProvider.toJson(message.data()),
                 message.sendTime(),
