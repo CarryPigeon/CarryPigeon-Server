@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.config.ws.downlink;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -9,6 +8,7 @@ import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProp
 import team.carrypigeon.backend.chat.domain.config.ws.transport.NettyRealtimeConnectionManager;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
+import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrame;
 import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrameCodec;
@@ -44,31 +44,42 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
 
     @Override
     public void publish(RealtimeEvent event) {
-        if (event == null) {
-            return;
-        }
-        List<Long> recipients = event.recipientAccountIds();
-        if (recipients.isEmpty()) {
+        if (event == null || event.recipientAccountIds().isEmpty()) {
             return;
         }
         try {
-            RealtimeFrame.Event frame = new RealtimeFrame.Event(
-                idGenerator.nextStringId(),
-                event.type(),
-                timeProvider.nowMillis(),
-                event.payload()
-            );
-            String frameText = frameCodec.encode(frame);
-            int payloadBytes = frameText.getBytes(StandardCharsets.UTF_8).length;
-            if (payloadBytes > maxPayloadBytes) {
-                log.error("Realtime event exceeds payload limit, type={}, bytes={}, limit={}",
-                    event.type().wireName(), payloadBytes, maxPayloadBytes);
-                return;
+            String frameText = encode(event.type(), event.payload());
+            if (frameText != null) {
+                cpNettyRealtimeConnectionManager.broadcast(event.recipientAccountIds(), frameText);
             }
-            cpNettyRealtimeConnectionManager.broadcast(recipients, frameText);
         } catch (RuntimeException exception) {
-            // 事务已提交，推送失败不得回传为业务失败；丢失的事件由客户端通过 HTTP 全量同步补齐
             log.error("Failed to deliver realtime event, type={}", event.type().wireName(), exception);
         }
+    }
+
+    @Override
+    public void publishToChannel(long channelId, RealtimeEventType type, Object payload) {
+        try {
+            String frameText = encode(type, payload);
+            if (frameText != null) {
+                cpNettyRealtimeConnectionManager.broadcastToChannel(channelId, frameText);
+            }
+        } catch (RuntimeException exception) {
+            // 业务事务已经提交；索引或授权查询失败时停止本次推送，客户端按频道序号补拉。
+            log.error("Failed to deliver channel event, channelId={}, type={}", channelId, type.wireName(), exception);
+        }
+    }
+
+    /** 同一事件只编码一次，协议帧字节上限对账号与频道两种路由一致生效。 */
+    private String encode(RealtimeEventType type, Object payload) {
+        String frameText = frameCodec.encode(new RealtimeFrame.Event(
+                idGenerator.nextStringId(), type, timeProvider.nowMillis(), payload));
+        int payloadBytes = frameText.getBytes(StandardCharsets.UTF_8).length;
+        if (payloadBytes > maxPayloadBytes) {
+            log.error("Realtime event exceeds payload limit, type={}, bytes={}, limit={}",
+                    type.wireName(), payloadBytes, maxPayloadBytes);
+            return null;
+        }
+        return frameText;
     }
 }

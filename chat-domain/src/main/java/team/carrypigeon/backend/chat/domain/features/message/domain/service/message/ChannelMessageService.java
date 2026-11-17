@@ -2,12 +2,10 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -109,12 +107,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             if (!channelMessageDispatcher.supports(domain)) {
                 throw ProblemException.of(MessageProblem.UNSUPPORTED_DOMAIN);
             }
-            // 成员快照同时用于提及目标过滤和消息广播接收人，避免重复读取
-            List<Long> memberAccountIds = channelContextApi.memberAccountIds(channelId);
-            Set<Long> memberAccountIdSet = new HashSet<>(memberAccountIds);
-            List<Long> normalizedMentions = requestedMentions.stream()
-                    .filter(memberAccountIdSet::contains)
-                    .toList();
+            // 只校验请求中的有限提及集合；广播由在线索引路由，不再加载全频道成员。
+            List<Long> normalizedMentions = channelContextApi.filterMemberAccountIds(channelId, requestedMentions);
             // 分配序号后持锁到消息、提及一并提交，后续序号不能先提交可见。
             // 组装消息
             CPChannelMessage originalMessage = new CPChannelMessage(
@@ -155,12 +149,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             if (!savedMentions.isEmpty()) {
                 mentionRepository.saveAll(savedMentions);
             }
-            // 通知所有人
-            messageEventNotifier.messageCreated(
-                    afterCommit,
-                    finalMessage,
-                    memberAccountIds
-            );
+            // 提交后按频道路由到本机在线连接。
+            messageEventNotifier.messageCreated(afterCommit, finalMessage);
             // 提及事件只广播给被提及账号
             savedMentions.forEach(mention -> messageEventNotifier.mentionCreated(afterCommit, mention));
             return finalMessage;
@@ -199,7 +189,7 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 验证操作权限
             boolean senderRecallingOwnMessage = existingMessage.senderId() == accountId;
             boolean moderatorRecallingMemberMessage = operatorContext.isModerator()
-                    && !channelContextApi.moderatorAccounts(existingMessage.channelId()).contains(existingMessage.senderId());
+                    && !channelContextApi.isModerator(existingMessage.channelId(), existingMessage.senderId());
             if (operatorContext.isMuted() || (!senderRecallingOwnMessage && !moderatorRecallingMemberMessage)) {
                 throw ProblemException.of(MessageProblem.RECALL_FORBIDDEN);
             }
@@ -207,8 +197,6 @@ public class ChannelMessageService implements ChannelMessageApi {
             if (existingMessage.status() == CPMessageStatus.RECALLED) {
                 return;
             }
-            // 通知所有人
-            List<Long> recipients = channelContextApi.memberAccountIds(existingMessage.channelId());
             CPChannelMessage recalledMessage = new CPChannelMessage(
                     existingMessage.messageId(),
                     existingMessage.senderId(),
@@ -226,7 +214,7 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 删除提及
             mentionRepository.deleteByMessageId(existingMessage.messageId());
             // 通知所有人
-            messageEventNotifier.messageRecalled(afterCommit, recalledMessage, recipients);
+            messageEventNotifier.messageRecalled(afterCommit, recalledMessage);
         });
         AuditLogs.success("message.recall", accountId,
                 "channel_id", channelId,

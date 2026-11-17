@@ -9,6 +9,9 @@ import java.util.Set;
  * */
 public interface RealtimeConnectionManager {
 
+    /** 提交后刷新这些账号的频道订阅；只处理本机在线账号，不读取全频道成员。 */
+    void refreshAccountChannels(Collection<Long> accountIds);
+
     /**
      * 注册账户实时通道。
      *

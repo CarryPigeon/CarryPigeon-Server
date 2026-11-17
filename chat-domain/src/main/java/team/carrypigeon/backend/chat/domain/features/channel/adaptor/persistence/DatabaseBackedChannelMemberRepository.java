@@ -29,6 +29,16 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
+    public List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds) {
+        return channelMemberDatabaseService.filterMemberAccountIds(channelId, accountIds);
+    }
+
+    @Override
+    public List<Long> findChannelIdsByAccountId(long accountId) {
+        return channelMemberDatabaseService.findChannelIdsByAccountId(accountId);
+    }
+
+    @Override
     public List<Long> deleteBatchByChannelId(long channelId, int limit) {
         return channelMemberDatabaseService.deleteBatchByChannelId(channelId, limit).stream().map(record -> record.accountId()).toList();
     }

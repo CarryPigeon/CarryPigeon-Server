@@ -19,8 +19,8 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 频道上下文与成员查询领域 API 实现。
- * 职责：承接频道成员上下文读取、成员账号快照与治理账号快照查询，并把禁言生效判定收敛在内部完成。
- * 边界：只读取频道、成员与禁言记录，不承载内容治理动作，也不决定调用方如何使用治理账号快照；不抛业务失败以外的异常。
+ * 职责：提供频道成员上下文、候选成员过滤与账号已加入频道查询，并在内部判定禁言是否生效。
+ * 边界：只读取频道、成员与禁言记录，不承载内容治理动作；权限查询绕过展示缓存。
  */
 @Service
 public class ChannelContextService implements ChannelContextApi {
@@ -63,21 +63,20 @@ public class ChannelContextService implements ChannelContextApi {
     }
 
     @Override
-    public List<Long> memberAccountIds(long channelId) {
-        // 只投影账号列，不装配完整成员模型，供广播与 mention 校验使用
-        return channelMemberRepository.listByChannelId(channelId).stream()
-            .map(ChannelMember::accountId)
-            .toList();
+    public List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds) {
+        return channelMemberRepository.filterMemberAccountIds(channelId, accountIds);
     }
 
     @Override
-    public List<Long> moderatorAccounts(long channelId) {
-        // OWNER 与 ADMIN 同属治理者集合：调用方据此判定"某成员的内容能否被治理"
-        return channelMemberRepository.listByChannelId(channelId).stream()
-            .filter(member -> member.role() == ChannelMemberRole.OWNER
-                || member.role() == ChannelMemberRole.ADMIN)
-            .map(ChannelMember::accountId)
-            .toList();
+    public List<Long> joinedChannelIds(long accountId) {
+        return channelMemberRepository.findChannelIdsByAccountId(accountId);
+    }
+
+    @Override
+    public boolean isModerator(long channelId, long accountId) {
+        return channelMemberRepository.findByRelationForAuthorization(channelId, accountId)
+                .map(member -> member.role() == ChannelMemberRole.OWNER || member.role() == ChannelMemberRole.ADMIN)
+                .orElse(false);
     }
 
     /**

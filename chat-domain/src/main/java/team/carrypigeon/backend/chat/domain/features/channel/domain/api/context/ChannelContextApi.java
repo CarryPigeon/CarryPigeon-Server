@@ -6,7 +6,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.
 
 /**
  * 频道上下文与成员查询领域 API。
- * 职责：提供账号在频道中的上下文，以及频道成员与治理账号的账号快照。
+ * 职责：提供账号的频道上下文、有限候选成员过滤和在线订阅所需的频道关系。
  */
 public interface ChannelContextApi {
 
@@ -22,19 +22,12 @@ public interface ChannelContextApi {
     /** 消息等频道写入先锁频道再校验成员，锁持有到外层事务结束，避免删除后创建新的关联数据。 */
     ChannelContext requireMemberContextForUpdate(long channelId, long accountId);
 
-    /**
-     * 返回频道内全部成员的账号快照。
-     *
-     * @param channelId 目标频道 ID
-     * @return 频道内全部成员的账号 ID 快照
-     */
-    List<Long> memberAccountIds(long channelId);
+    /** 只保留候选集合中的当前频道成员，不使用展示缓存；空集合返回空。 */
+    List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds);
 
-    /**
-     * 返回频道内具备治理资格的账号快照。
-     *
-     * @param channelId 目标频道 ID
-     * @return 频道内 OWNER 与 ADMIN 的账号 ID 快照
-     */
-    List<Long> moderatorAccounts(long channelId);
+    /** 返回账号已加入且尚未删除的频道 ID，不使用展示缓存。 */
+    List<Long> joinedChannelIds(long accountId);
+
+    /** 查询目标当前是否为频道治理者，不要求目标仍是成员；非成员返回 false。 */
+    boolean isModerator(long channelId, long accountId);
 }

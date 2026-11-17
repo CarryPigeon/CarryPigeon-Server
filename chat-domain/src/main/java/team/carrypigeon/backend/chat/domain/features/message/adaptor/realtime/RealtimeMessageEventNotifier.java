@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -53,33 +52,19 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
     @Override
     public void messageCreated(
             AfterCommitExecutor afterCommit,
-            CPChannelMessage message,
-            Collection<Long> recipientAccountIds
+            CPChannelMessage message
     ) {
-        afterCommit.execute(() -> {
-            realtimeEventApi.publish(new RealtimeEvent(
-                    MESSAGE_CREATED,
-                    new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message)),
-                    List.copyOf(recipientAccountIds)
-            ));
-        });
+        afterCommit.execute(() -> realtimeEventApi.publishToChannel(
+                message.channelId(), MESSAGE_CREATED,
+                new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
     }
 
     @Override
-    public void messageRecalled(
-            AfterCommitExecutor afterCommit,
-            CPChannelMessage message,
-            Collection<Long> recipientAccountIds
-    ) {
-        afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
-                MESSAGE_RECALLED,
-                new MessageRecalledPayload(
-                        Long.toString(message.channelId()),
-                        Long.toString(message.messageId()),
-                        timeProvider.nowMillis()
-                ),
-                List.copyOf(recipientAccountIds)
-        )));
+    public void messageRecalled(AfterCommitExecutor afterCommit, CPChannelMessage message) {
+        afterCommit.execute(() -> realtimeEventApi.publishToChannel(
+                message.channelId(), MESSAGE_RECALLED,
+                new MessageRecalledPayload(Long.toString(message.channelId()),
+                        Long.toString(message.messageId()), timeProvider.nowMillis())));
     }
 
     @Override

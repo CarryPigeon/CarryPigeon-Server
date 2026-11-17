@@ -6,6 +6,9 @@ package team.carrypigeon.backend.infrastructure.basic.realtime.downlink;
  */
 public interface RealtimeEventApi {
 
+    /** 按频道发布，仅投递到本实例已认证且仍有成员权限的在线连接；不提供跨实例路由。 */
+    void publishToChannel(long channelId, RealtimeEventType type, Object payload);
+
     /**
      * 发布一次实时事件。
      *

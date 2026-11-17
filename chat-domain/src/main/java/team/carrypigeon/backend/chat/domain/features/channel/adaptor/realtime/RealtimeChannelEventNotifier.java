@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
+import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnectionManager;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
@@ -24,8 +25,10 @@ public class RealtimeChannelEventNotifier implements ChannelEventNotifier {
     private static final RealtimeEventType CHANNELS_CHANGED = new RealtimeEventType("channels.changed");
 
     private final RealtimeEventApi realtimeEventApi;
+    private final RealtimeConnectionManager connections;
 
-    public RealtimeChannelEventNotifier(RealtimeEventApi realtimeEventApi) {
+    public RealtimeChannelEventNotifier(RealtimeEventApi realtimeEventApi, RealtimeConnectionManager connections) {
+        this.connections = connections;
         this.realtimeEventApi = realtimeEventApi;
     }
 
@@ -45,11 +48,11 @@ public class RealtimeChannelEventNotifier implements ChannelEventNotifier {
 
     @Override
     public void accountChannelsChanged(AfterCommitExecutor afterCommit, List<Long> accountIds) {
-        afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
-                CHANNELS_CHANGED,
-                new ChannelsChangedPayload(REFRESH_HINT),
-                accountIds
-        )));
+        afterCommit.execute(() -> {
+            // 创建、批准、踢出和删除都会使账号的可见频道集合变化，提交后同步更新在线订阅。
+            connections.refreshAccountChannels(accountIds);
+            realtimeEventApi.publish(new RealtimeEvent(CHANNELS_CHANGED, new ChannelsChangedPayload(REFRESH_HINT), accountIds));
+        });
     }
 
     /**
