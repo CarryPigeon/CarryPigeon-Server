@@ -48,6 +48,8 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.transaction.PlatformTransactionManager;
+import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cache.CacheInvalidationTasks;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
@@ -115,9 +117,17 @@ public class DatabaseServiceAutoConfiguration {
     public DatabaseCache databaseCache(
             ObjectProvider<CacheService> cacheServiceProvider,
             ObjectMapper objectMapper,
-            DatabaseServiceProperties properties
+            DatabaseServiceProperties properties,
+            CacheInvalidationTasks invalidationTasks
     ) {
-        return new DatabaseCache(cacheServiceProvider.getIfAvailable(), objectMapper, properties);
+        return new DatabaseCache(cacheServiceProvider.getIfAvailable(), objectMapper, properties, invalidationTasks);
+    }
+
+    /** 失效任务属于数据库适配实现，业务模块无需知道缓存与重试的存储结构。 */
+    @Bean
+    public CacheInvalidationTasks cacheInvalidationTasks(JdbcClient jdbc, PlatformTransactionManager transactions,
+            ObjectProvider<CacheService> cache) {
+        return new CacheInvalidationTasks(jdbc, transactions, cache.getIfAvailable());
     }
 
     @Bean

@@ -97,6 +97,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 插入新的频道成员关系。
      */
     @Override
+    @Transactional
     public void insert(ChannelMemberRecord record) {
         channelMemberMapper.insert(ChannelMemberEntity.from(record));
         evictRecord(record.memberId());
@@ -107,6 +108,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 批量插入频道成员关系。
      */
     @Override
+    @Transactional
     public void insertAll(List<ChannelMemberRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -165,6 +167,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 缓存：更新前读取旧记录，写入成功后精确失效新实体、旧/新关系指针。
      */
     @Override
+    @Transactional
     public boolean update(ChannelMemberRecord record) {
         Optional<ChannelMemberRecord> previous = databaseCache.enabled()
                 ? loadById(record.memberId())
@@ -200,6 +203,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 缓存：删除前读取旧记录，删除成功后精确失效实体与关系指针。
      */
     @Override
+    @Transactional
     public void delete(long memberId) {
         Optional<ChannelMemberRecord> previous = databaseCache.enabled()
                 ? loadById(memberId)
@@ -213,6 +217,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 按成员关系 ID 批量删除。
      */
     @Override
+    @Transactional
     public void deleteAll(List<Long> memberIds) {
         if (memberIds == null || memberIds.isEmpty()) {
             return;
@@ -233,6 +238,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
      * 缓存：缓存启用时先读取该频道成员快照，删除成功后逐条精确失效实体与关系指针。
      */
     @Override
+    @Transactional
     public void deleteByChannelId(long channelId) {
         List<ChannelMemberRecord> previous = databaseCache.enabled()
                 ? findMembersByChannelId(channelId)

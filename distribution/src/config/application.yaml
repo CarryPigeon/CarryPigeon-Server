@@ -113,7 +113,7 @@ service:
       # 职责：定义数据库查询缓存的实体负载 TTL。
       cache-entity-ttl: 5m
       # 职责：定义唯一键 lookup 指针（如 email 或 (频道, 账户) -> 主键）的 TTL。
-      cache-lookup-ttl: 10m
+      cache-lookup-ttl: 5m
       # 职责：限制单次批量缓存读取的最大主键数量，超过上限的批量查询直接读库。
       cache-max-batch-size: 128
   cache:

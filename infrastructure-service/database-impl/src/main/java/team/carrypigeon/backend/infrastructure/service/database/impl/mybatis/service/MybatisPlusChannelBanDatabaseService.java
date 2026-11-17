@@ -85,6 +85,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void insert(ChannelBanRecord record) {
         channelBanMapper.insert(ChannelBanEntity.from(record));
         evictRecord(record.banId());
@@ -92,6 +93,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void insertAll(List<ChannelBanRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -104,6 +106,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void delete(long banId) {
         Optional<ChannelBanRecord> previous = databaseCache.enabled() ? loadById(banId) : Optional.empty();
         channelBanMapper.deleteById(banId);
@@ -112,6 +115,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void deleteAll(List<Long> banIds) {
         if (banIds == null || banIds.isEmpty()) {
             return;
@@ -141,6 +145,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void update(ChannelBanRecord record) {
         Optional<ChannelBanRecord> previous = databaseCache.enabled()
                 ? loadById(record.banId())
@@ -167,6 +172,7 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
     }
 
     @Override
+    @Transactional
     public void deleteByChannelId(long channelId) {
         List<ChannelBanRecord> previous = databaseCache.enabled()
                 ? loadByChannelId(channelId)

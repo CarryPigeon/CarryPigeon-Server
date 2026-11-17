@@ -17,6 +17,8 @@ import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceProperties;
 
@@ -28,7 +30,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.config.Data
  * <p>设计要点：</p>
  * <ol>
  *     <li><b>自定义键值</b>：键统一为 {@code cp:db:<domain>:<entity|lookup>:<part>...}，字符串分段做 URL 编码，
- *     每个业务对象只对应一个 entity 键；所有进入本类的查询默认走缓存，没有按查询配置的开关。</li>
+ *     每个业务对象只对应一个 entity 键；数据库事务中的查询绕过缓存，也禁止回填。</li>
  *     <li><b>lookup 指针</b>：唯一键查询只缓存“唯一键 -&gt; 主键”指针，实体负载只按主键缓存一份，
  *     写路径可同时精确失效指针与实体。</li>
  *     <li><b>精确失效</b>：写路径只删除已知主键/唯一键对应的键，不使用 SCAN 或通配删除。</li>
@@ -41,7 +43,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.config.Data
  * <p>空结果不写缓存：查询不到数据时直接返回空，下一次查询会再次回源数据库。这样缓存层只负责“缓存命中数据”，
  * 不引入负缓存状态和额外配置，复杂度更低。</p>
  *
- * <p>一致性边界：采用 cache-aside，先写数据库再删除缓存；多实例之间与并发回填窗口由 TTL 兜底，
+ * <p>一致性边界：采用 cache-aside，事务内直读、提交后删除缓存；多实例之间与并发回填窗口由 TTL 兜底，
  * 因此这里只应缓存允许短窗口最终一致的高频只读数据。</p>
  */
 @Slf4j
@@ -77,6 +79,7 @@ public final class DatabaseCache {
     private final CacheService cacheService;
     private final ObjectMapper objectMapper;
     private final DatabaseServiceProperties properties;
+    private final CacheInvalidationTasks invalidationTasks;
 
     /**
      * 创建数据库查询缓存门面。
@@ -84,13 +87,16 @@ public final class DatabaseCache {
      * @param cacheService 字符串缓存实现；为空表示缓存后端未装配，本类自动退化为直读数据库
      * @param objectMapper 项目统一 ObjectMapper，用于派生缓存专用序列化副本
      * @param properties 数据库服务配置，提供缓存 TTL 与批量上限
+     * @param invalidationTasks 与业务写入同事务登记、提交后重试的缓存失效任务
      */
     public DatabaseCache(
             CacheService cacheService,
             ObjectMapper objectMapper,
-            DatabaseServiceProperties properties
+            DatabaseServiceProperties properties,
+            CacheInvalidationTasks invalidationTasks
     ) {
         this.cacheService = cacheService;
+        this.invalidationTasks = invalidationTasks;
         // 复制全局 mapper 并关闭时间戳序列化：HTTP 出口使用毫秒时间戳，而进程内缓存需要可逆的 ISO-8601 字符串，
         // 两者混用会导致 Instant 序列化/反序列化口径不一致。
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null")
@@ -159,7 +165,8 @@ public final class DatabaseCache {
      */
     public <T> Optional<T> load(String key, Class<T> type, Supplier<Optional<T>> loader) {
         // 缓存后端缺失时退化为直读数据库，不影响数据库服务可用性。
-        if (!enabled()) {
+        if (!enabled() || TransactionSynchronizationManager.isActualTransactionActive()) {
+            // 事务可能读到本次未提交写入；读取与回填都不能经过进程外的共享缓存。
             return loader.get();
         }
         Optional<T> cached = read(key, type);
@@ -197,7 +204,7 @@ public final class DatabaseCache {
         }
         // 去重并保持入参顺序：返回顺序不依赖数据库 ORDER BY，调用方语义稳定。
         List<Long> orderedIds = ids.stream().distinct().toList();
-        if (!enabled() || orderedIds.size() > properties.cacheMaxBatchSize()) {
+        if (!enabled() || TransactionSynchronizationManager.isActualTransactionActive() || orderedIds.size() > properties.cacheMaxBatchSize()) {
             // 缓存不可用或批量过大：整批回源数据库，不做半缓存。
             return orderById(orderedIds, loader.apply(orderedIds), idExtractor);
         }
@@ -255,7 +262,7 @@ public final class DatabaseCache {
             Supplier<Optional<T>> lookupLoader,
             LongFunction<Optional<T>> idLoader
     ) {
-        if (!enabled()) {
+        if (!enabled() || TransactionSynchronizationManager.isActualTransactionActive()) {
             return lookupLoader.get();
         }
 
@@ -295,12 +302,22 @@ public final class DatabaseCache {
     }
 
     /**
-     * 精确删除一个缓存键；缓存未启用或后端异常时静默降级。
+     * 精确失效缓存键：事务内与业务写入一起登记任务，仅在成功提交后执行；读侧脏值立即删除。
      *
      * @param key 缓存键
      */
     public void evict(String key) {
         if (!enabled()) {
+            return;
+        }
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            long taskId = invalidationTasks.schedule(key);
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    invalidationTasks.deliver(taskId);
+                }
+            });
             return;
         }
         try {

@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
 import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -92,6 +93,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 插入新的鉴权账户记录。
      */
     @Override
+    @Transactional
     public void insert(AuthAccountRecord record) {
         authAccountMapper.insert(AuthAccountEntity.from(record));
         evictRecord(record.id());
@@ -102,6 +104,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 批量插入鉴权账户记录。
      */
     @Override
+    @Transactional
     public void insertAll(List<AuthAccountRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -118,6 +121,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 缓存：删除前读取旧记录，删除成功后精确失效实体键与旧唯一键指针。
      */
     @Override
+    @Transactional
     public void delete(long accountId) {
         Optional<AuthAccountRecord> previous = databaseCache.enabled() ? loadById(accountId) : Optional.empty();
         authAccountMapper.deleteById(accountId);
@@ -130,6 +134,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 缓存：逐账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void deleteAll(List<Long> accountIds) {
         if (accountIds == null || accountIds.isEmpty()) {
             return;
@@ -150,6 +155,7 @@ public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabas
      * 缓存：更新前读取旧记录，写入成功后精确失效新实体、旧/新 username 与 email 指针。
      */
     @Override
+    @Transactional
     public void update(AuthAccountRecord record) {
         Optional<AuthAccountRecord> previous = databaseCache.enabled() ? loadById(record.id()) : Optional.empty();
         authAccountMapper.updateById(AuthAccountEntity.from(record));

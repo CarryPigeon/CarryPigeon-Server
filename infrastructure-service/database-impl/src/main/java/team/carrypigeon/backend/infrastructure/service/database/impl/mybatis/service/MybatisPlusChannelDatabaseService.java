@@ -87,6 +87,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 缓存：逐频道 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void insertAll(List<ChannelRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -149,6 +150,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 缓存：写入成功后按频道 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void insert(ChannelRecord record) {
         channelMapper.insert(ChannelEntity.from(record));
         evictRecord(record.id());
@@ -159,6 +161,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 缓存：写入成功后按频道 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void update(ChannelRecord record) {
         channelMapper.updateById(ChannelEntity.from(record));
         evictRecord(record.id());
@@ -188,6 +191,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 缓存：删除成功后按频道 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void delete(long channelId) {
         channelMapper.deleteById(channelId);
         evictRecord(channelId);
@@ -197,6 +201,7 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      * 按频道 ID 批量删除记录。
      */
     @Override
+    @Transactional
     public void deleteAll(List<Long> channelIds) {
         if (channelIds == null || channelIds.isEmpty()) {
             return;

@@ -44,6 +44,7 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
      * 缓存：写入成功后按账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void insert(UserProfileRecord record) {
         userProfileMapper.insert(UserProfileEntity.from(record));
         evictRecord(record.accountId());
@@ -54,6 +55,7 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
      * 缓存：逐账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void insertAll(List<UserProfileRecord> records) {
         if (records == null || records.isEmpty()) {
             return;
@@ -69,6 +71,7 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
      * 缓存：删除成功后按账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void delete(long accountId) {
         userProfileMapper.deleteById(accountId);
         evictRecord(accountId);
@@ -79,6 +82,7 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
      * 缓存：逐账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void deleteAll(List<Long> accountIds) {
         if (accountIds == null || accountIds.isEmpty()) {
             return;
@@ -94,6 +98,7 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
      * 缓存：写入成功后按账户 ID 精确删除实体缓存。
      */
     @Override
+    @Transactional
     public void update(UserProfileRecord record) {
         userProfileMapper.updateById(UserProfileEntity.from(record));
         evictRecord(record.accountId());
