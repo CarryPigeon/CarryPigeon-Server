@@ -12,6 +12,12 @@ public enum MessageProblem implements ProblemMapping {
     /** 消息相关入参不合法。 */
     INVALID_INPUT(422, "validation_failed", "validation failed"),
 
+    /** 同一请求 ID 已经绑定其它发送载荷。 */
+    SEND_REQUEST_CONFLICT(409, "message_request_conflict", "request id is already used with a different payload"),
+
+    /** 已提交的请求对应消息已经被删除，不能将旧请求重新创建为新消息。 */
+    SEND_RESULT_GONE(410, "message_result_gone", "the original message is no longer available"),
+
     /** 分页游标格式非法。 */
     CURSOR_INVALID(422, "cursor_invalid", "cursor is invalid"),
 

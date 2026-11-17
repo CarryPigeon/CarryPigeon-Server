@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -46,6 +48,12 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
+    public MessageSendRequest reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
+        var record = messageDatabaseService.reserveSend(accountId, channelId, requestId, payloadHash, proposedMessageId);
+        return new MessageSendRequest(record.payloadHash(), record.messageId());
+    }
+
+    @Override
     public long nextSequence(long channelId) {
         return messageDatabaseService.nextSequence(channelId);
     }
@@ -58,6 +66,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     @Override
     public java.util.Optional<CPChannelMessage> findById(long messageId) {
         return messageDatabaseService.findById(messageId).map(this::toDomainMessage);
+    }
+
+    @Override
+    public java.util.Optional<CPChannelMessage> findByIdForUpdate(long messageId) {
+        return messageDatabaseService.findByIdForUpdate(messageId).map(this::toDomainMessage);
     }
 
     @Override

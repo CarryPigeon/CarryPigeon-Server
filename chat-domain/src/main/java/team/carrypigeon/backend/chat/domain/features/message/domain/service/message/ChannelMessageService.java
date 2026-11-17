@@ -1,9 +1,19 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
 import org.springframework.stereotype.Service;
 
@@ -13,6 +23,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MentionRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
@@ -44,6 +55,7 @@ public class ChannelMessageService implements ChannelMessageApi {
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final CPChannelMessageDispatcher channelMessageDispatcher;
+    private final ObjectWriter requestWriter;
 
     public ChannelMessageService(
             ChannelContextApi channelContextApi,
@@ -53,7 +65,8 @@ public class ChannelMessageService implements ChannelMessageApi {
             IdGenerator idGenerator,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
-            CPChannelMessageDispatcher channelMessageDispatcher
+            CPChannelMessageDispatcher channelMessageDispatcher,
+            ObjectMapper objectMapper
     ) {
         this.channelContextApi = channelContextApi;
         this.messageRepository = messageRepository;
@@ -63,13 +76,31 @@ public class ChannelMessageService implements ChannelMessageApi {
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
         this.channelMessageDispatcher = channelMessageDispatcher;
+        this.requestWriter = objectMapper.writer().with(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
     }
 
     @Override
-    public ChannelMessageResult sendChannelMessage(long accountId, long channelId, String domain, Map<String, Object> data, List<Long> mentions) {
+    public ChannelMessageResult sendChannelMessage(long accountId, long channelId, UUID requestId, String domain, Map<String, Object> data, List<Long> mentions) {
+        if (requestId == null) {
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "request_id is required");
+        }
+        // 提及在业务上是集合；缺省与空列表、元素顺序和重复项不形成不同的发送请求。
+        List<Long> requestedMentions = mentions == null ? List.of()
+                : mentions.stream().filter(Objects::nonNull).distinct().sorted().toList();
+        String payloadHash = payloadHash(domain, data, requestedMentions);
         CPChannelMessage message = transactionRunner.runInTransaction(afterCommit -> {
             // 拉取上下文
             ChannelContext channelContext = channelContextApi.requireMemberContext(channelId, accountId);
+            long proposedMessageId = idGenerator.nextLongId();
+            MessageSendRequest reserved = messageRepository.reserveSend(accountId, channelId, requestId, payloadHash, proposedMessageId);
+            if (!reserved.payloadHash().equals(payloadHash)) {
+                throw ProblemException.of(MessageProblem.SEND_REQUEST_CONFLICT);
+            }
+            if (reserved.messageId() != proposedMessageId) {
+                // 返回当前消息状态，已撤回的内容不能通过重试恢复；不再产生提及、序号和创建通知。
+                return messageRepository.findByIdForUpdate(reserved.messageId())
+                        .orElseThrow(() -> ProblemException.of(MessageProblem.SEND_RESULT_GONE));
+            }
             // 检查权限
             if (channelContext.isMuted()) {
                 throw ProblemException.of(MessageProblem.USER_MUTED);
@@ -81,15 +112,13 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 成员快照同时用于提及目标过滤和消息广播接收人，避免重复读取
             List<Long> memberAccountIds = channelContextApi.memberAccountIds(channelId);
             Set<Long> memberAccountIdSet = new HashSet<>(memberAccountIds);
-            List<Long> normalizedMentions = mentions == null
-                    ? List.of()
-                    : mentions.stream()
-                            .filter(memberAccountIdSet::contains)
-                            .toList();
+            List<Long> normalizedMentions = requestedMentions.stream()
+                    .filter(memberAccountIdSet::contains)
+                    .toList();
             // 分配序号后持锁到消息、提及一并提交，后续序号不能先提交可见。
             // 组装消息
             CPChannelMessage originalMessage = new CPChannelMessage(
-                    idGenerator.nextLongId(),
+                    proposedMessageId,
                     accountId,
                     channelId,
                     messageRepository.nextSequence(channelId),
@@ -136,6 +165,18 @@ public class ChannelMessageService implements ChannelMessageApi {
                 "message_id", message.messageId(),
                 "domain", domain);
         return ChannelMessageResult.of(message);
+    }
+
+    /** 按键排序覆盖嵌套 JSON 对象，摘要只包含原请求，不包含会随成员资料变化的派生快照。 */
+    private String payloadHash(String domain, Map<String, Object> data, List<Long> mentions) {
+        try {
+            byte[] payload = requestWriter.writeValueAsBytes(Map.of("domain", domain, "data", data, "mentions", mentions));
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload));
+        } catch (JsonProcessingException exception) {
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, exception);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("JDK SHA-256 is unavailable", exception);
+        }
     }
 
     @Override

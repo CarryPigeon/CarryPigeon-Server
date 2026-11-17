@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 
@@ -11,6 +13,13 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
  * 边界：不暴露数据库实现细节，不通过可选参数切换查询方向。
  */
 public interface MessageRepository {
+
+    /**
+     * 在发送事务中预占请求 ID；同一发送者和频道的并发重试等待首个事务结束。
+     * 新记录使用 proposedMessageId；已有记录返回原摘要与消息 ID，回滚不能留下占位。
+     * 幂等记录不按时间自动过期，不能因原消息缺失而重建发送请求。
+     */
+    MessageSendRequest reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
 
     /**
      * 分配频道内下一消息序号，调用方必须在同一事务中保存消息。
@@ -32,6 +41,9 @@ public interface MessageRepository {
      * @return 命中时返回消息
      */
     Optional<CPChannelMessage> findById(long messageId);
+
+    /** 在事务内以当前读查询重试结果，避免先前授权查询建立的快照遗漏刚提交的原消息。 */
+    Optional<CPChannelMessage> findByIdForUpdate(long messageId);
 
     /**
      * 更新已存在的频道消息。

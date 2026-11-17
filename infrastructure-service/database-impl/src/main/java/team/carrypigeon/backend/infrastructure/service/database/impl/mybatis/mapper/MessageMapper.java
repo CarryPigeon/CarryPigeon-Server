@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.MessageEntity;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageSendRequestRecord;
 
 /**
  * 消息 Mapper。
@@ -15,6 +16,24 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
  */
 @Mapper
 public interface MessageMapper extends BaseMapper<MessageEntity> {
+
+    /** 唯一键把同一发送者、频道和请求 ID 的并发调用串行化；重复请求不得覆盖原摘要。 */
+    @Insert("""
+            INSERT INTO chat_message_send_request (account_id, channel_id, request_id, payload_hash, message_id)
+            VALUES (#{accountId}, #{channelId}, #{requestId}, #{payloadHash}, #{messageId})
+            ON DUPLICATE KEY UPDATE request_id = request_id
+            """)
+    int reserveSend(@Param("accountId") long accountId, @Param("channelId") long channelId,
+            @Param("requestId") String requestId, @Param("payloadHash") String payloadHash, @Param("messageId") long messageId);
+
+    /** 当前读取得首个已提交事务的结果，不受调用方此前建立的快照影响。 */
+    @Select("""
+            SELECT payload_hash, message_id FROM chat_message_send_request
+            WHERE account_id = #{accountId} AND channel_id = #{channelId} AND request_id = #{requestId}
+            FOR UPDATE
+            """)
+    MessageSendRequestRecord selectSendForUpdate(@Param("accountId") long accountId, @Param("channelId") long channelId,
+            @Param("requestId") String requestId);
 
     /** 惰性创建序号行或递增；排他行锁由消息事务持有到提交或回滚。 */
     @Insert("""

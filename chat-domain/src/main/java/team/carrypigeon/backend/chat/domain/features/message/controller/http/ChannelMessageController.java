@@ -52,7 +52,7 @@ public class ChannelMessageController {
     @PostMapping("/{channelId}/messages")
     @Operation(
         summary = "发送消息",
-        description = "按 canonical envelope 发送频道消息；domain 格式为主分类:子分类:版本号，data 由对应消息处理器校验。"
+        description = "按 canonical envelope 发送频道消息；request_id 必填，同一发送者和频道内重试保持 UUID 不变。同键同载荷返回原消息当前状态，不同载荷返回 409；幂等记录不自动过期。domain 格式为主分类:子分类:版本号，data 由对应消息处理器校验。"
     )
     @ApiResponses({@ApiResponse(responseCode = "201", description = "消息发送成功")})
     public ResponseEntity<ChannelMessageResponse> sendChannelMessage(
@@ -63,6 +63,7 @@ public class ChannelMessageController {
         ChannelMessageResult result = channelMessageApi.sendChannelMessage(
             cpPrincipal.accountId(),
             channelId,
+            requestBody.requestId(),
             requestBody.domain().trim(),
             requestBody.toDomainData(),
             requestBody.mentions()

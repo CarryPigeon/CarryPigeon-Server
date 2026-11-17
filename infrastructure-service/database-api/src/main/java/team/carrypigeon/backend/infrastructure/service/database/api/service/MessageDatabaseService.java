@@ -2,6 +2,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageSendRequestRecord;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -13,6 +15,9 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Messag
  * 边界：不承载消息业务规则；查询方向由调用方法固定，搜索条件由调用方传入。
  */
 public interface MessageDatabaseService {
+
+    /** 在消息事务中插入或锁定发送请求，返回持锁读取的原摘要与消息 ID；禁止独立提交占位。 */
+    MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
 
     /**
      * 分配频道内下一消息序号，必须加入消息写入所在事务，不能独立提交。
@@ -72,6 +77,9 @@ public interface MessageDatabaseService {
      * @return 命中时返回消息记录，未命中时返回空
      */
     Optional<MessageRecord> findById(long messageId);
+
+    /** 在事务内以行锁当前读查询消息，不使用此前建立的 REPEATABLE READ 快照。 */
+    Optional<MessageRecord> findByIdForUpdate(long messageId);
 
     /**
      * 按消息 ID 批量查询消息记录。

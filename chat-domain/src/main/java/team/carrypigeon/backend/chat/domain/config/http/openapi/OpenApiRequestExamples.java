@@ -129,6 +129,7 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("POST /api/channels/{channelId}/messages", jsonExample("发送文本消息", """
                     {
+                      "request_id": "d5224614-e2db-4fde-b22a-410337f3c85a",
                       "domain": "Core:Text:V1",
                       "data": {
                         "content": "hello from Apifox",

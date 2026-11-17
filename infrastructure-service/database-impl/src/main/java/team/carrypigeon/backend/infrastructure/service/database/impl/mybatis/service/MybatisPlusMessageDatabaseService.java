@@ -2,6 +2,8 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageSendRequestRecord;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -30,6 +32,13 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
 
     public MybatisPlusMessageDatabaseService(MessageMapper messageMapper) {
         this.messageMapper = messageMapper;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
+        messageMapper.reserveSend(accountId, channelId, requestId.toString(), payloadHash, proposedMessageId);
+        return messageMapper.selectSendForUpdate(accountId, channelId, requestId.toString());
     }
 
     @Override
@@ -95,6 +104,13 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
     public Optional<MessageRecord> findById(long messageId) {
         return Optional.ofNullable(messageMapper.selectById(messageId))
                 .map(MessageEntity::toRecord);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<MessageRecord> findByIdForUpdate(long messageId) {
+        return Optional.ofNullable(messageMapper.selectOne(new LambdaQueryWrapper<MessageEntity>()
+                .eq(MessageEntity::getMessageId, messageId).last("FOR UPDATE"))).map(MessageEntity::toRecord);
     }
 
     @Override
