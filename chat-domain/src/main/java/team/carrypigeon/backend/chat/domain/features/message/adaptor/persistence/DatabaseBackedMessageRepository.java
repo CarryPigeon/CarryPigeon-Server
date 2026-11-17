@@ -135,6 +135,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 record.sendTime(),
                 parseMentions(record.mentions()),
                 record.preview(),
+                record.searchText(),
                 CPMessageStatus.valueOf(record.status().toUpperCase(java.util.Locale.ROOT))
         );
     }
@@ -150,6 +151,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 message.sendTime(),
                 jsonProvider.toJson(message.mentions()),
                 message.preview(),
+                message.searchText(),
                 message.status().name().toLowerCase(java.util.Locale.ROOT)
         );
     }

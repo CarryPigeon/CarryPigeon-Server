@@ -62,7 +62,7 @@ public class ChannelMessageSearchController {
      * @return 搜索结果游标页
      */
     @GetMapping("/{channelId}/messages/search")
-    @Operation(summary = "搜索消息", description = "在指定频道内按关键字搜索消息，使用独立搜索游标分页。")
+    @Operation(summary = "搜索消息", description = "在指定频道内按 MySQL ngram 自然语言全文匹配搜索正文，按频道序号倒序分页，不按相关度排序。默认双字分词，单字及纯符号可能无结果；不搜索回复元数据。")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象")
     })
@@ -70,7 +70,7 @@ public class ChannelMessageSearchController {
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable @Positive(message = "channelId must be greater than 0")
         long channelId,
-        @Parameter(description = "搜索关键字", example = "hello")
+        @Parameter(description = "正文全文检索关键字，遵循 MySQL ngram 分词语义", example = "hello")
         @RequestParam(name = "q")
         @NotBlank(message = "q must not be blank")
         @Size(min = 1,max = 100,message = "q length must be between 1 and 100")

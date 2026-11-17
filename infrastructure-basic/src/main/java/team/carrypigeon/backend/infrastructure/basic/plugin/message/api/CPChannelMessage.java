@@ -20,6 +20,7 @@ import java.util.Map;
  * @param sendTime 服务端发送时间
  * @param mentions 需要提醒的用户 ID 列表
  * @param preview 服务端派生摘要
+ * @param searchText 处理器派生的完整可检索正文，不包含回复快照等元数据；不经 HTTP 或 WebSocket 输出
  * @param status 消息状态
  */
 public record CPChannelMessage(
@@ -32,6 +33,7 @@ public record CPChannelMessage(
         Instant sendTime,
         List<Long> mentions,
         String preview,
+        String searchText,
         CPMessageStatus status
 ) {
 
@@ -41,5 +43,6 @@ public record CPChannelMessage(
                 : Collections.unmodifiableMap(new LinkedHashMap<>(data));
         mentions = mentions == null ? List.of() : List.copyOf(mentions);
         preview = preview == null ? "" : preview;
+        searchText = searchText == null ? "" : searchText;
     }
 }

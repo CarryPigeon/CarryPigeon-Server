@@ -80,6 +80,8 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             message.sendTime(),
             message.mentions(),
             content.substring(0, previewEnd),
+            // 搜索正文单独派生，避免把回复对象的姓名、预览等元数据混入检索。
+            content,
             message.status()
         );
     }

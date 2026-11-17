@@ -168,10 +168,8 @@ public class MybatisPlusMessageDatabaseService implements MessageDatabaseService
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
                 .eq(status != null && !status.isBlank(), MessageEntity::getStatus, status)
-                .and(wrapper -> wrapper
-                        .like(MessageEntity::getPreview, keyword)
-                        .or()
-                        .apply("CAST(data AS CHAR) LIKE CONCAT('%', {0}, '%')", keyword))
+                // ngram 自然语言全文匹配，仅搜索处理器提供的正文；参数绑定不解释用户输入为 SQL。
+                .apply("MATCH(search_text) AGAINST({0} IN NATURAL LANGUAGE MODE)", keyword)
                 .lt(cursorSequence != null, MessageEntity::getSequence, cursorSequence)
                 .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
                 .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)

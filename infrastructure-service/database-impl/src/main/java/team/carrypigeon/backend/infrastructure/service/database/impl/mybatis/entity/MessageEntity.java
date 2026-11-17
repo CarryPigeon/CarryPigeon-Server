@@ -31,6 +31,7 @@ public class MessageEntity {
     private Instant sendTime;
     private String mentions;
     private String preview;
+    private String searchText;
     private String status;
 
     /**
@@ -49,6 +50,7 @@ public class MessageEntity {
                 sendTime,
                 mentions,
                 preview,
+                searchText,
                 status
         );
     }
@@ -70,6 +72,7 @@ public class MessageEntity {
                 record.sendTime(),
                 record.mentions(),
                 record.preview(),
+                record.searchText(),
                 record.status()
         );
     }

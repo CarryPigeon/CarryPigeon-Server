@@ -80,6 +80,7 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
                 send_time,
                 mentions,
                 preview,
+                search_text,
                 status
             )
             VALUES
@@ -94,6 +95,7 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
                 #{message.sendTime},
                 #{message.mentions},
                 #{message.preview},
+                #{message.searchText},
                 #{message.status}
               )
             </foreach>

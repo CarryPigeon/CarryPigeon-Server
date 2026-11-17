@@ -16,6 +16,7 @@ import java.time.Instant;
  * @param sendTime 发送时间
  * @param mentions 提醒用户 ID 的数值 JSON array
  * @param preview 通用摘要
+ * @param searchText 由消息处理器派生的完整可检索正文，空字符串表示无可检索内容
  * @param status 消息状态
  */
 public record MessageRecord(
@@ -28,6 +29,7 @@ public record MessageRecord(
         Instant sendTime,
         String mentions,
         String preview,
+        String searchText,
         String status
 ) {
 }

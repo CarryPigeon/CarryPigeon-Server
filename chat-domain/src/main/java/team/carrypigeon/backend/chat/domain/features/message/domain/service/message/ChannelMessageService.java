@@ -121,6 +121,7 @@ public class ChannelMessageService implements ChannelMessageApi {
                     timeProvider.nowInstant(),
                     normalizedMentions,
                     "",
+                    "",
                     CPMessageStatus.SENT
             );
             // 处理消息
@@ -207,6 +208,7 @@ public class ChannelMessageService implements ChannelMessageApi {
                     existingMessage.sendTime(),
                     List.of(),
                     "消息已撤回",
+                    "",
                     CPMessageStatus.RECALLED
             );
             // 更新消息
