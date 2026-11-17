@@ -12,6 +12,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccou
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthAccountRepository;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
@@ -58,7 +59,7 @@ public class AuthAccountService implements AuthAccountApi {
         try {
             RegisterResult result = transactionRunner.runInTransaction(() -> {
                 // 邮箱验证码校验
-                emailVerificationApi.verifyCode(email, code);
+                emailVerificationApi.verifyCode(email, code, EmailCodePurpose.REGISTER, null);
                 // 存在性校验，确保username和邮箱的唯一性
                 authAccountRepository.findByUsername(username)
                         .ifPresent(existing -> {
@@ -110,7 +111,7 @@ public class AuthAccountService implements AuthAccountApi {
         try {
             transactionRunner.runInTransaction(() -> {
                 // 验证邮箱验证码
-                emailVerificationApi.verifyCode(email, code);
+                emailVerificationApi.verifyCode(email, code, EmailCodePurpose.CHANGE_EMAIL, accountId);
                 // 获取当前用户
                 AuthAccount existingAccount = authAccountRepository.findById(accountId)
                         .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));

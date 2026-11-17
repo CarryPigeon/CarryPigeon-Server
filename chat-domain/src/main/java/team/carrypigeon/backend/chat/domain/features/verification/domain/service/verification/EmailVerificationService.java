@@ -1,8 +1,11 @@
 package team.carrypigeon.backend.chat.domain.features.verification.domain.service.verification;
 
+import java.util.Locale;
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 
@@ -21,9 +24,10 @@ public class EmailVerificationService implements EmailVerificationApi {
     }
 
     @Override
-    public void issueCode(String email) {
+    public void issueCode(String email, EmailCodePurpose purpose, Long accountId) {
         try {
-            cacheBackedEmailVerificationCapability.issueCode(email);
+            validateChallenge(email, purpose, accountId);
+            cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
             AuditLogs.success("auth.code_issue", null);
         } catch (ProblemException exception) {
             AuditLogs.failure("auth.code_issue", null, exception.reason());
@@ -32,7 +36,21 @@ public class EmailVerificationService implements EmailVerificationApi {
     }
 
     @Override
-    public void verifyCode(String email,String code) {
-        cacheBackedEmailVerificationCapability.verifyCode(email, code);
+    public void verifyCode(String email, String code, EmailCodePurpose purpose, Long accountId) {
+        validateChallenge(email, purpose, accountId);
+        cacheBackedEmailVerificationCapability.verifyCode(email.trim().toLowerCase(Locale.ROOT), code, purpose, accountId);
+    }
+
+    /** 签发与消费使用相同的身份约束，防止缺少账号绑定的修改邮箱挑战进入缓存。 */
+    private void validateChallenge(String email, EmailCodePurpose purpose, Long accountId) {
+        if (email == null || email.isBlank()) {
+            throw ProblemException.of(VerificationProblem.INVALID_EMAIL);
+        }
+        if (purpose == null || (purpose != EmailCodePurpose.CHANGE_EMAIL && accountId != null)) {
+            throw ProblemException.of(VerificationProblem.INVALID_PURPOSE);
+        }
+        if (purpose == EmailCodePurpose.CHANGE_EMAIL && accountId == null) {
+            throw ProblemException.of(VerificationProblem.AUTHENTICATION_REQUIRED);
+        }
     }
 }

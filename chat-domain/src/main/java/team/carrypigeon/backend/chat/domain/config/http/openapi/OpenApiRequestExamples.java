@@ -33,7 +33,8 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("POST /api/auth/email_codes", jsonExample("发送邮箱验证码", """
                     {
-                      "email": "carry-user@example.test"
+                      "email": "carry-user@example.test",
+                      "purpose": "LOGIN"
                     }
                     """)),
             Map.entry("POST /api/auth/tokens", jsonExample("邮箱验证码登录", """

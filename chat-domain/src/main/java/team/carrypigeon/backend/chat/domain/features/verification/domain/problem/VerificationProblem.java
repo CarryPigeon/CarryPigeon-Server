@@ -13,6 +13,10 @@ public enum VerificationProblem implements ProblemMapping {
     INVALID_CODE(422, "validation_failed", "validation failed"),
     /**邮箱不合法*/
     INVALID_EMAIL(422, "invalid_email", "invalid email"),
+    /** 验证码用途与账号绑定不符合签发或消费契约。 */
+    INVALID_PURPOSE(422, "validation_failed", "invalid email code purpose or account binding"),
+    /** 修改邮箱挑战只能由已认证账号签发和消费。 */
+    AUTHENTICATION_REQUIRED(401, "authentication_required", "authentication is required to change email"),
     /** 缓存服务未就绪，无法签发或校验验证码。 */
     CACHE_UNAVAILABLE(503, "cache_service_unavailable", "cache service is unavailable"),
 

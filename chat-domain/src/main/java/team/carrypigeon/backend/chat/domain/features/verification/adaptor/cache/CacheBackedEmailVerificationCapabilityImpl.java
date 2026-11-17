@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
@@ -26,7 +27,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     // 认证凭证使用 JDK 安全随机源，不以时间戳或用户身份作为种子。
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
-    // 与旧字符串验证码使用不同的键，直接切换挑战格式，旧验证码不再参与校验。
+    // 键包含用途和账号绑定，旧的通用邮箱挑战不再参与校验。
     private static final String CACHE_KEY_PREFIX = "auth:email-challenge:";
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
@@ -42,9 +43,9 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     }
 
     @Override
-    public void issueCode(String email) {
+    public void issueCode(String email, EmailCodePurpose purpose, Long accountId) {
         String code = String.format(Locale.ROOT, "%06d", CODE_RANDOM.nextInt(1_000_000));
-        String cacheKey = CACHE_KEY_PREFIX + email;
+        String cacheKey = challengeKey(email, purpose, accountId);
         String challengeId = UUID.randomUUID().toString();
         CodeChallengeStore store = requireStore();
         try {
@@ -53,7 +54,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
         }
         try {
-            deliverCode(email, code);
+            deliverCode(email, code, purpose);
         } catch (RuntimeException exception) {
             // 旧批次投递失败时只能撤销自己，不能误删已签发的新挑战。
             try {
@@ -66,10 +67,10 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     }
 
     @Override
-    public void verifyCode(String email, String code) {
+    public void verifyCode(String email, String code, EmailCodePurpose purpose, Long accountId) {
         CodeChallengeStore.Result result;
         try {
-            result = requireStore().verify(CACHE_KEY_PREFIX + email, code);
+            result = requireStore().verify(challengeKey(email, purpose, accountId), code);
         } catch (CacheServiceException exception) {
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
         }
@@ -94,21 +95,30 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         return store;
     }
 
-    private void deliverCode(String email, String code) {
+    /** 签发与消费必须构造同一身份，修改邮箱的挑战不能被其它账号消费。 */
+    private String challengeKey(String email, EmailCodePurpose purpose, Long accountId) {
+        return CACHE_KEY_PREFIX + purpose.name() + ":" + (accountId == null ? "" : accountId) + ":" + email;
+    }
+
+    private void deliverCode(String email, String code, EmailCodePurpose purpose) {
         MailSenderService mailSenderService = mailSenderServiceProvider.getIfAvailable();
         if (mailSenderService == null) {
             throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
         }
         try {
-            mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code)));
+            mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code, purpose)));
         } catch (RuntimeException exception) {
             throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
         }
     }
 
-    private String buildMailText(String code) {
-        // TODO 改进为通过配置文件配置
-        return "Your CarryPigeon verification code is: " + code + "\n\n"
+    private String buildMailText(String code, EmailCodePurpose purpose) {
+        String action = switch (purpose) {
+            case REGISTER -> "register a CarryPigeon account";
+            case LOGIN -> "sign in to CarryPigeon";
+            case CHANGE_EMAIL -> "change your CarryPigeon account email";
+        };
+        return "Your verification code to " + action + " is: " + code + "\n\n"
                 + "This code will expire in 10 minutes.";
     }
 }

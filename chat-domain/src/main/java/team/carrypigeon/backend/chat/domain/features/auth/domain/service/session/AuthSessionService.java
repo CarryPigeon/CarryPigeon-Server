@@ -19,6 +19,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthPro
 import team.carrypigeon.backend.chat.domain.features.auth.domain.repository.AuthRefreshSessionRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
@@ -117,7 +118,7 @@ public class AuthSessionService implements AuthTokenApi {
             // 拿取用户信息
             AuthAccount account = authAccountRepository.findByEmail(email)
                 .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
-            emailVerificationApi.verifyCode(email, password);
+            emailVerificationApi.verifyCode(email, password, EmailCodePurpose.LOGIN, null);
             // 签发访问令牌和刷新令牌
             AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);
             AuditLogs.success("auth.login", account.id(), "method", "email");
