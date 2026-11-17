@@ -58,13 +58,13 @@ public class UserProfileController {
     }
 
     /**
-     * 按账户 ID 查询用户详细资料
+     * 按账户 ID 查询用户详细资料；登录邮箱属于公开资料，任意已认证用户均可读取。
      *
      * @param accountId 账户 ID
      * @return 统一响应包装的用户资料
      */
     @GetMapping("/{accountId}/detail")
-    @Operation(summary = "按账户 ID 读取资料", description = "按账户 ID 读取用户公开资料。")
+    @Operation(summary = "按账户 ID 读取资料", description = "任意已认证用户可读取公开资料，包含目标用户的登录邮箱。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回用户公开资料"),
             @ApiResponse(responseCode = "401", description = "未认证"),
