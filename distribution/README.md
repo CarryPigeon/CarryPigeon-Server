@@ -78,3 +78,7 @@ systemd 直接托管前台 JVM，停止服务使用 `systemctl stop carrypigeon`
 仓库根目录执行 `bash bin/linux/dist-release-bundle.sh`，会先离线检查分发目录，
 再生成 `distribution/target/release/full-distribution.sha256` 和版本清单。
 校验和用于产物完整性检查，不能代替发布者签名。
+
+日志采集路径：普通日志位于 `service-logs/application/`，审计日志位于
+`service-logs/audit/`；归档默认分别保留 30 天和 180 天。进程标准输出仍写入
+`service-logs/application-stdout.log`。历史归档保留原位，不由启动脚本搬移或删除。

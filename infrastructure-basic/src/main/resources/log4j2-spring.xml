@@ -27,16 +27,16 @@
 
         <!-- 全量文件日志用于完整追溯，属于固定基础设施能力。 -->
         <RollingFile name="allFileAppender"
-                     fileName="${LOG_HOME}/all.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/all-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/all.log"
+                     filePattern="${LOG_HOME}/application/$${date:yyyy-MM}/all-%d{yyyy-MM-dd}-%i.log.gz">
             <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <DefaultRolloverStrategy max="100">
-                <!-- 统一清理所有 appender 的过期压缩归档，不触碰当前活动日志。 -->
-                <Delete basePath="${LOG_HOME}" maxDepth="2">
+                <!-- 只清理普通日志目录的过期压缩归档，不触碰当前活动日志。 -->
+                <Delete basePath="${LOG_HOME}/application" maxDepth="2">
                     <IfFileName regex=".*\.log\.gz"/>
                     <IfLastModified age="${LOG_RETENTION}"/>
                 </Delete>
@@ -45,8 +45,8 @@
 
         <!-- debug 日志单独分流，避免在问题排查时与其它级别混杂。 -->
         <RollingFile name="debugFileAppender"
-                     fileName="${LOG_HOME}/debug.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/debug-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/debug.log"
+                     filePattern="${LOG_HOME}/application/$${date:yyyy-MM}/debug-%d{yyyy-MM-dd}-%i.log.gz">
             <Filters>
                 <ThresholdFilter level="info" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
@@ -60,8 +60,8 @@
 
         <!-- info 日志作为默认业务运行观察面。 -->
         <RollingFile name="infoFileAppender"
-                     fileName="${LOG_HOME}/info.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/info-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/info.log"
+                     filePattern="${LOG_HOME}/application/$${date:yyyy-MM}/info-%d{yyyy-MM-dd}-%i.log.gz">
             <Filters>
                 <ThresholdFilter level="warn" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
@@ -75,8 +75,8 @@
 
         <!-- warn 日志单独分流，用于保留需要关注但未失败的运行信号。 -->
         <RollingFile name="warnFileAppender"
-                     fileName="${LOG_HOME}/warn.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/warn-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/warn.log"
+                     filePattern="${LOG_HOME}/application/$${date:yyyy-MM}/warn-%d{yyyy-MM-dd}-%i.log.gz">
             <Filters>
                 <ThresholdFilter level="error" onMatch="DENY" onMismatch="NEUTRAL"/>
             </Filters>
@@ -90,8 +90,8 @@
 
         <!-- error 日志用于失败问题排查，是长期保留的核心诊断面。 -->
         <RollingFile name="errorFileAppender"
-                     fileName="${LOG_HOME}/error.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/error-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/error.log"
+                     filePattern="${LOG_HOME}/application/$${date:yyyy-MM}/error-%d{yyyy-MM-dd}-%i.log.gz">
             <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="100 MB"/>
@@ -102,8 +102,8 @@
 
         <!-- JSON error 日志便于后续对接日志采集与结构化分析工具。 -->
         <RollingFile name="errorJsonAppender"
-                     fileName="${LOG_HOME}/error-json.log"
-                     filePattern="${LOG_HOME}/error-json-%d{yyyy-MM-dd}-%i.log.gz">
+                     fileName="${LOG_HOME}/application/error-json.log"
+                     filePattern="${LOG_HOME}/application/error-json-%d{yyyy-MM-dd}-%i.log.gz">
             <JSONLayout compact="true" eventEol="true" properties="true"
                         locationInfo="false" charset="UTF-8"/>
             <Policies>
@@ -115,8 +115,8 @@
 
         <!-- 审计日志独立落盘，避免业务运行日志与安全审计共用保留策略。 -->
         <RollingFile name="auditFileAppender"
-                     fileName="${LOG_HOME}/audit.log"
-                     filePattern="${LOG_HOME}/$${date:yyyy-MM}/audit-%d{yyyy-MM-dd}-%i.log.gz"
+                     fileName="${LOG_HOME}/audit/audit.log"
+                     filePattern="${LOG_HOME}/audit/$${date:yyyy-MM}/audit-%d{yyyy-MM-dd}-%i.log.gz"
                      filePermissions="rw-r-----">
             <PatternLayout pattern="${TEXT_LOG_PATTERN}" charset="UTF-8"/>
             <Policies>
@@ -124,8 +124,8 @@
                 <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
             </Policies>
             <DefaultRolloverStrategy max="30">
-                <Delete basePath="${LOG_HOME}" maxDepth="2">
-                    <IfFileName glob="audit-*.log.gz"/>
+                <Delete basePath="${LOG_HOME}/audit" maxDepth="2">
+                    <IfFileName regex="(?:[^/\\]+[/\\])?audit-[^/\\]+\.log\.gz"/>
                     <IfLastModified age="${AUDIT_RETENTION}"/>
                 </Delete>
             </DefaultRolloverStrategy>
