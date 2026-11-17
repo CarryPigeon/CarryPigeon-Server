@@ -44,6 +44,8 @@ cp:
         enabled: true
         # 职责：定义 Netty 实时通道监听地址。
         host: 127.0.0.1
+        # 客户端访问的公开入口；经 TLS 代理部署时填写实际 wss 地址，与监听地址独立。
+        public-url: ws://127.0.0.1:18080/api/ws
         # 职责：定义 Netty WebSocket 服务监听端口。
         port: 18080
         # 职责：定义 Netty boss 线程数。

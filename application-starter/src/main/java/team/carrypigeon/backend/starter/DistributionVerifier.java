@@ -9,6 +9,7 @@ import org.springframework.core.env.SimpleCommandLinePropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.file.config.FileShareKeyProperties;
+import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProperties;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.config.RedisCacheProperties;
 import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceProperties;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMailProperties;
@@ -50,6 +51,7 @@ public final class DistributionVerifier {
                 Binder binder = Binder.get(environment);
                 binder.bind("cp.chat.auth.jwt", AuthJwtProperties.class).get();
                 binder.bind("cp.chat.file.share-key", FileShareKeyProperties.class).get();
+                binder.bind("cp.chat.server.realtime", RealtimeServerProperties.class).get().afterPropertiesSet();
                 binder.bind("service.database.mysql", DatabaseServiceProperties.class).get();
                 binder.bind("service.cache.redis", RedisCacheProperties.class).get();
                 binder.bind("service.storage.minio", MinioStorageProperties.class).get();
