@@ -49,8 +49,9 @@ public final class DistributionVerifier {
             ConfigDataEnvironmentPostProcessor.applyTo(environment);
             if (strict) {
                 Binder binder = Binder.get(environment);
-                binder.bind("cp.chat.auth.jwt", AuthJwtProperties.class).get();
-                binder.bind("cp.chat.file.share-key", FileShareKeyProperties.class).get();
+                var jwt = binder.bind("cp.chat.auth.jwt", AuthJwtProperties.class).get();
+                var file = binder.bind("cp.chat.file.share-key", FileShareKeyProperties.class).get();
+                new SigningKeyValidation(environment, jwt, file);
                 binder.bind("cp.chat.server.realtime", RealtimeServerProperties.class).get().afterPropertiesSet();
                 binder.bind("service.database.mysql", DatabaseServiceProperties.class).get();
                 binder.bind("service.cache.redis", RedisCacheProperties.class).get();

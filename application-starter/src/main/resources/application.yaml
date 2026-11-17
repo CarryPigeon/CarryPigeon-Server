@@ -46,9 +46,8 @@ cp:
   chat:
     file:
       share-key:
-        # 职责：定义本地开发文件上传 share_key 的 HMAC 签名密钥。
-        # 约束：生产环境必须独立覆盖，不能与 JWT 或其他用途共用密钥。
-        secret: carrypigeon-local-file-share-key-secret-32
+        # 从部署环境提供独立签名密钥；缺失时启动失败，示例值仅存在于 dev 配置。
+        secret: ${CP_FILE_SHARE_KEY_SECRET:}
     auth:
       password-login:
         # 职责：控制用户名密码登录入口是否允许签发 token。
@@ -57,9 +56,8 @@ cp:
       jwt:
         # 职责：定义本服务端 JWT issuer，用于校验 token 来源。
         issuer: carrypigeon-local
-        # 职责：定义本地开发默认 HS256 签名密钥。
-        # 约束：生产环境必须通过外部配置覆盖，避免多环境共享默认密钥。
-        secret: carrypigeon-local-dev-jwt-secret-change-me-32
+        # 从部署环境提供 HS256 签名密钥，禁止与文件签名用途共用。
+        secret: ${CP_JWT_SECRET:}
         # 职责：定义 access token 的有效期。
         access-token-ttl: 30m
         # 职责：定义 refresh token 的有效期。

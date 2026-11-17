@@ -17,7 +17,11 @@ Windows 可自行使用 Java 类路径启动；当前不提供包内 Windows 生
 
 部署前填写 `config/application.yaml` 中的 `cp.chat.auth.jwt.secret`、
 `cp.chat.file.share-key.secret`，并核对 `cp.server.meta` 和全部 `service.*` 连接配置。
-两个密钥分别使用至少 32 字符的随机值。启用实时通道时必须填写
+两个密钥必须不同，分别使用至少 32 字符的随机值，也可通过 `CP_JWT_SECRET` 和 `CP_FILE_SHARE_KEY_SECRET` 提供。
+公开示例密钥仅允许在显式选择 `dev` 时使用；直接运行 starter 的本地开发命令需传入
+`--spring.profiles.active=dev`。分发包应使用部署密钥，不启用 `dev`。
+更换 JWT 密钥会使既有令牌失效；更换文件签名密钥会使尚未过期的上传凭证失效，已上传对象及下载地址不依赖该密钥。
+启用实时通道时必须填写
 `cp.chat.server.realtime.public-url`，例如经 TLS 代理部署使用
 `wss://chat.example.com/api/ws`，本机直连使用 `ws://127.0.0.1:18080/api/ws`。
 `host`、`port` 只控制本机监听，不能用来推断公开地址。

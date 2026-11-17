@@ -3,3 +3,13 @@ springdoc:
     enabled: true
   swagger-ui:
     enabled: true
+
+# 仅显式选择 dev 时提供公开示例；部署时必须配置独立密钥。
+cp:
+  chat:
+    auth:
+      jwt:
+        secret: ${CP_JWT_SECRET:carrypigeon-local-dev-jwt-secret-change-me-32}
+    file:
+      share-key:
+        secret: ${CP_FILE_SHARE_KEY_SECRET:carrypigeon-local-file-share-key-secret-32}
