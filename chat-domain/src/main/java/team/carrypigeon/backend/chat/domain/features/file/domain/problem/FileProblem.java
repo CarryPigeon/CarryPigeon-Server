@@ -21,6 +21,12 @@ public enum FileProblem implements ProblemMapping {
     /** 对象存储服务未启用或不可用。 */
     STORAGE_UNAVAILABLE(503, "storage_service_unavailable", "storage service is unavailable"),
 
+    /** 已有写入者，或者完成后重试的内容不同。 */
+    UPLOAD_CONFLICT(409, "upload_conflict", "upload is in progress or completed with different content"),
+
+    /** 请求体实际字节数与授权声明不一致。 */
+    UPLOAD_SIZE_MISMATCH(422, "upload_size_mismatch", "upload size does not match the declared size"),
+
     /** 上传内容读取失败。 */
     UPLOAD_READ_FAILED(500, "internal_error", "internal server error"),
 

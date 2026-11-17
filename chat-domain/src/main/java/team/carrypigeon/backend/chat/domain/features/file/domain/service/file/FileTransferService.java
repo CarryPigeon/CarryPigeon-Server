@@ -1,15 +1,25 @@
 package team.carrypigeon.backend.chat.domain.features.file.domain.service.file;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.Optional;
+import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileUpload;
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
+import team.carrypigeon.backend.chat.domain.features.file.domain.repository.FileUploadRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
@@ -19,9 +29,10 @@ import team.carrypigeon.backend.infrastructure.service.storage.api.service.Objec
 
 /**
  * 文件领域服务。
- * 职责：为上传申请、上传写入和下载访问提供最小编排能力。
- * 边界：不引入独立文件表，只依赖对象存储能力与稳定 share_key 规则。
+ * 职责：持久化授权、竞争上传权并发布不可变的完成结果。
+ * 边界：对象上传不占用数据库事务；仅 COMPLETED 的元数据可以提供下载。
  */
+@Slf4j
 @Service
 public class FileTransferService implements FileTransferApi {
 
@@ -31,24 +42,32 @@ public class FileTransferService implements FileTransferApi {
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final FileUploadShareKeyCodec uploadShareKeyCodec;
+    private final FileUploadRepository uploads;
 
     public FileTransferService(
             ObjectProvider<ObjectStorageService> objectStorageServiceProvider,
             IdGenerator idGenerator,
             TimeProvider timeProvider,
-            FileUploadShareKeyCodec uploadShareKeyCodec
+            FileUploadShareKeyCodec uploadShareKeyCodec,
+            FileUploadRepository uploads
     ) {
         this.objectStorageServiceProvider = objectStorageServiceProvider;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.uploadShareKeyCodec = uploadShareKeyCodec;
+        this.uploads = uploads;
     }
 
     @Override
     public FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes) {
+        if (sizeBytes <= 0) {
+            throw ProblemException.of(FileProblem.INVALID_INPUT);
+        }
         long fileId = idGenerator.nextLongId();
         Instant expiresAt = timeProvider.nowInstant().plus(UPLOAD_URL_TTL);
         String shareKey = uploadShareKeyCodec.issue(accountId, fileId, sizeBytes, expiresAt);
+        uploads.create(new FileUpload(fileId, accountId, shareKey, sizeBytes, FileUpload.Status.PENDING,
+                null, null, null, expiresAt, null));
         AuditLogs.success("file.upload_grant", accountId,
                 "file_id", fileId, "size_bytes", sizeBytes);
         return new FileUploadGrantResult(
@@ -59,25 +78,109 @@ public class FileTransferService implements FileTransferApi {
         );
     }
 
+    /**
+     * 先在本地验证完整内容，再竞争写入权；重复完成请求只比较摘要，不再写对象。
+     * 对象已写而数据库发布失败时保留 UPLOADING 状态与尝试登记，不能把对象误认为已完成。
+     */
     @Override
     public void uploadFile(long accountId, String shareKey, String contentType, long sizeBytes, InputStream content) {
+        Path staged = null;
         try {
-            FileUploadShareKeyCodec.IssuedUploadShareKey issuedShareKey = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
-            if (issuedShareKey.ownerAccountId() != accountId) {
+            var issued = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
+            if (issued.ownerAccountId() != accountId || issued.declaredSizeBytes() != sizeBytes) {
                 throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
             }
-            if (issuedShareKey.declaredSizeBytes() != sizeBytes) {
+            FileUpload upload = uploads.findByShareKey(shareKey)
+                    .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
+            if (upload.ownerAccountId() != accountId || upload.sizeBytes() != sizeBytes) {
                 throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
             }
-            requireStorage().put("/files/" + shareKey, content, sizeBytes, contentType == null || contentType.isBlank() ? "application/octet-stream" : contentType.trim());
-            AuditLogs.success("file.upload", accountId,
-                    "file_id", issuedShareKey.fileId(), "size_bytes", sizeBytes);
+
+            staged = Files.createTempFile("cp-upload-", ".tmp");
+            String sha256 = stageContent(content, staged, sizeBytes);
+            if (upload.status() == FileUpload.Status.COMPLETED) {
+                requireSameContent(upload, sha256);
+                return;
+            }
+
+            String objectKey = "/files/objects/" + UUID.randomUUID();
+            if (!uploads.claim(upload.fileId(), objectKey)) {
+                // 另一个写入者可能刚完成；重新读取后允许内容相同的幂等重试。
+                FileUpload current = uploads.findByShareKey(shareKey)
+                        .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
+                requireSameContent(current, sha256);
+                return;
+            }
+            String storedType = contentType == null || contentType.isBlank()
+                    ? "application/octet-stream" : contentType.trim();
+            try (InputStream stagedContent = Files.newInputStream(staged)) {
+                requireStorage().put(objectKey, stagedContent, sizeBytes, storedType);
+            } catch (IOException | RuntimeException exception) {
+                try {
+                    uploads.fail(upload.fileId(), objectKey);
+                } catch (RuntimeException stateException) {
+                    exception.addSuppressed(stateException);
+                }
+                throw exception;
+            }
+            // 存储成功之后才发布数据库状态；这里失败时不回写 FAILED，避免掩盖不确定的提交结果。
+            if (!uploads.complete(upload.fileId(), objectKey, sha256, storedType, timeProvider.nowInstant())) {
+                throw ProblemException.of(FileProblem.UPLOAD_CONFLICT);
+            }
+            AuditLogs.success("file.upload", accountId, "file_id", upload.fileId(), "size_bytes", sizeBytes);
         } catch (ProblemException exception) {
             AuditLogs.failure("file.upload", accountId, exception.reason());
             throw exception;
+        } catch (IOException exception) {
+            throw ProblemException.of(FileProblem.UPLOAD_READ_FAILED, exception);
+        } finally {
+            if (staged != null) {
+                try {
+                    Files.deleteIfExists(staged);
+                } catch (IOException exception) {
+                    log.warn("Failed to remove local upload staging file: {}", staged, exception);
+                }
+            }
         }
     }
 
+    /** 验证实际字节数并生成服务端摘要；最多读取声明大小加一字节，不相信客户端提供的摘要。 */
+    private String stageContent(InputStream content, Path staged, long expectedSize) throws IOException {
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is required by the Java runtime", exception);
+        }
+        long received = 0;
+        byte[] buffer = new byte[8192];
+        try (var output = Files.newOutputStream(staged)) {
+            while (true) {
+                int limit = (int) Math.min(buffer.length, expectedSize - received + 1);
+                int read = content.read(buffer, 0, limit);
+                if (read == -1) {
+                    break;
+                }
+                received += read;
+                if (received > expectedSize) {
+                    throw ProblemException.of(FileProblem.UPLOAD_SIZE_MISMATCH);
+                }
+                output.write(buffer, 0, read);
+                digest.update(buffer, 0, read);
+            }
+        }
+        if (received != expectedSize) {
+            throw ProblemException.of(FileProblem.UPLOAD_SIZE_MISMATCH);
+        }
+        return HexFormat.of().formatHex(digest.digest());
+    }
+
+    /** 上传中或内容不同均返回冲突；相同摘要保留原始完成结果，包括原 MIME 类型。 */
+    private void requireSameContent(FileUpload upload, String sha256) {
+        if (upload.status() != FileUpload.Status.COMPLETED || !sha256.equals(upload.sha256())) {
+            throw ProblemException.of(FileProblem.UPLOAD_CONFLICT);
+        }
+    }
 
     /**
      * 获取对象存储能力。
@@ -93,8 +196,11 @@ public class FileTransferService implements FileTransferApi {
 
     @Override
     public Optional<FileDownloadResult> downloadFile(String shareKey) {
-        String objectKey = "/files/" + shareKey;
-        Optional<StorageObject> storageObject = requireStorage().get(objectKey);
+        FileUpload upload = uploads.findByShareKey(shareKey).orElse(null);
+        if (upload == null || upload.status() != FileUpload.Status.COMPLETED) {
+            return Optional.empty();
+        }
+        Optional<StorageObject> storageObject = requireStorage().get(upload.objectKey());
         if (storageObject.isEmpty()) {
             return Optional.empty();
         }

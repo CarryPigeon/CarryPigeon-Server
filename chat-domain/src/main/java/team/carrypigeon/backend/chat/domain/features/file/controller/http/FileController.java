@@ -40,7 +40,7 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 /**
  * 文件 HTTP 入口。
  * 职责：提供上传申请、同源上传和下载访问能力。
- * 边界：当前不引入独立文件表，仅依赖 share_key 到对象键的稳定映射规则。
+ * 边界：上传状态与文件发布由领域服务负责，本入口只处理 HTTP 内容流。
  */
 @RestController
 @RequestMapping("/api/files")
@@ -107,7 +107,7 @@ public class FileController {
      */
     @PreAuthorize("isAuthenticated()")
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
-    @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容。")
+    @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容；完成后相同内容重试返回成功，不同内容返回 409。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "文件内容写入成功")})
     public ResponseEntity<Void> uploadFile(
         @PathVariable String shareKey,

@@ -22,7 +22,8 @@ public interface FileTransferApi {
     FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes);
 
     /**
-     * 使用已签发 share key 上传文件内容。
+     * 使用已签发 share key 上传文件内容。完成后相同内容重试成功，不同内容或已有写入者返回冲突。
+     * 实际内容长度必须与授权一致；对象写入后但数据库发布前的失败不会产生可下载结果。
      *
      * @param accountId 上传账号 ID
      * @param shareKey 上传授权 share key
