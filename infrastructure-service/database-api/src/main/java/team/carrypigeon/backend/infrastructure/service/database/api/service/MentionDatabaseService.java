@@ -16,6 +16,13 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Mentio
 public interface MentionDatabaseService {
 
     /**
+     * 将指定账号当前匹配的未读提及集合更新为已读，不读取完整记录或插入数据。
+     * beforeMentionId 是排他上界，channelId 是可选频道；为空时不施加对应条件。
+     * 无上界时以这条 UPDATE 实际匹配的集合为准，返回从未读变为已读的行数。
+     */
+    int markAllAsRead(long accountId, Long beforeMentionId, Long channelId);
+
+    /**
      * 写入单条提及记录。
      *
      * @param record 待写入记录

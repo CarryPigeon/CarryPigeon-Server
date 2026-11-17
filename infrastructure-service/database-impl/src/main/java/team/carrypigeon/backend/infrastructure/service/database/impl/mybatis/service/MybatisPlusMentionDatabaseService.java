@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -29,6 +30,17 @@ public class MybatisPlusMentionDatabaseService implements MentionDatabaseService
 
     public MybatisPlusMentionDatabaseService(MentionMapper mentionMapper) {
         this.mentionMapper = mentionMapper;
+    }
+
+    @Override
+    public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
+        // 账号与未读谓词始终存在；撤回删除先完成时不会重建记录，更新先完成时仍允许之后删除。
+        return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getRead, false)
+                .lt(beforeMentionId != null, MentionEntity::getMentionId, beforeMentionId)
+                .eq(channelId != null, MentionEntity::getChannelId, channelId)
+                .set(MentionEntity::getRead, true));
     }
 
     /**

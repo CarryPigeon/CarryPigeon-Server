@@ -19,8 +19,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Ment
 @Component
 public class DatabaseBackedMentionRepository implements MentionRepository {
 
-    private static final int ALL_ROWS = Integer.MAX_VALUE;
-
     private final MentionDatabaseService mentionDatabaseService;
 
     public DatabaseBackedMentionRepository(MentionDatabaseService mentionDatabaseService) {
@@ -82,25 +80,7 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
 
     @Override
     public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
-        List<MentionRecord> records = mentionDatabaseService.find(
-                new MentionQuery(accountId, beforeMentionId, Boolean.FALSE, channelId, ALL_ROWS)
-        );
-        if (records.isEmpty()) {
-            return 0;
-        }
-        mentionDatabaseService.updateAll(records.stream()
-                .map(record -> new MentionRecord(
-                        record.mentionId(),
-                        record.channelId(),
-                        record.messageId(),
-                        record.fromAccountId(),
-                        record.targetType(),
-                        record.targetAccountId(),
-                        record.createdAt(),
-                        true
-                ))
-                .toList());
-        return records.size();
+        return mentionDatabaseService.markAllAsRead(accountId, beforeMentionId, channelId);
     }
 
     private Mention toDomain(MentionRecord record) {
