@@ -21,6 +21,11 @@
 
     <fileSets>
         <fileSet>
+            <directory>${project.basedir}/..</directory>
+            <outputDirectory>.</outputDirectory>
+            <includes><include>LICENSE</include></includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/../application-starter/target</directory>
             <outputDirectory>app</outputDirectory>
             <includes>
