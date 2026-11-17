@@ -1,6 +1,6 @@
 # CarryPigeon Backend
 
-CarryPigeon Backend 是一个基于 **Java 21 + Spring Boot** 的开源聊天后端脚手架。
+CarryPigeon Backend 是一个基于 **Java 25 + Spring Boot** 的开源聊天后端脚手架。
 
 ## 当前状态
 

@@ -11,9 +11,6 @@
     <version>1.0.0</version>
     <name>infrastructure-basic</name>
     <description>infrastructure-basic</description>
-    <properties>
-        <java.version>25</java.version>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

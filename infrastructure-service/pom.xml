@@ -22,7 +22,4 @@
         <module>mail-api</module>
         <module>mail-impl</module>
     </modules>
-    <properties>
-        <java.version>25</java.version>
-    </properties>
 </project>
