@@ -2,13 +2,15 @@ package team.carrypigeon.backend.chat.domain.features.verification.adaptor.cache
 
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.UUID;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
+import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeChallengeStore;
+import team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 
@@ -21,18 +23,18 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
 public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEmailVerificationCapability {
 
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
-    private static final String CACHE_KEY_PREFIX = "auth:email-code:";
-    private static final String ATTEMPTS_KEY_PREFIX = "auth:email-code:attempts:";
+    // 与旧字符串验证码使用不同的键，直接切换挑战格式，旧验证码不再参与校验。
+    private static final String CACHE_KEY_PREFIX = "auth:email-challenge:";
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
-    private final ObjectProvider<CacheService> cacheServiceProvider;
+    private final ObjectProvider<CodeChallengeStore> challengeStoreProvider;
     private final ObjectProvider<MailSenderService> mailSenderServiceProvider;
 
     public CacheBackedEmailVerificationCapabilityImpl(
-            ObjectProvider<CacheService> cacheServiceProvider,
+            ObjectProvider<CodeChallengeStore> challengeStoreProvider,
             ObjectProvider<MailSenderService> mailSenderServiceProvider
     ) {
-        this.cacheServiceProvider = cacheServiceProvider;
+        this.challengeStoreProvider = challengeStoreProvider;
         this.mailSenderServiceProvider = mailSenderServiceProvider;
     }
 
@@ -40,27 +42,38 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     public void issueCode(String email) {
         String code = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
         String cacheKey = CACHE_KEY_PREFIX + email;
-        CacheService cacheService = requireCache();
-        cacheService.set(cacheKey, code, CODE_TTL);
+        String challengeId = UUID.randomUUID().toString();
+        CodeChallengeStore store = requireStore();
+        try {
+            store.replace(cacheKey, challengeId, code, 5, CODE_TTL);
+        } catch (CacheServiceException exception) {
+            throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
+        }
         try {
             deliverCode(email, code);
         } catch (RuntimeException exception) {
-            cacheService.delete(cacheKey);
+            // 旧批次投递失败时只能撤销自己，不能误删已签发的新挑战。
+            try {
+                store.discard(cacheKey, challengeId);
+            } catch (CacheServiceException cleanupFailure) {
+                exception.addSuppressed(cleanupFailure);
+            }
             throw exception;
         }
     }
 
     @Override
     public void verifyCode(String email, String code) {
-        CacheService cache = requireCache();
-        String codeKey = CACHE_KEY_PREFIX + email;
-        if (cache.consumeIfEquals(codeKey, code)) {
+        CodeChallengeStore.Result result;
+        try {
+            result = requireStore().verify(CACHE_KEY_PREFIX + email, code);
+        } catch (CacheServiceException exception) {
+            throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
+        }
+        if (result == CodeChallengeStore.Result.VERIFIED) {
             return;
         }
-        // 只在失败时自增；窗口 TTL 与验证码 TTL 对齐
-        long attempts = cache.increment(ATTEMPTS_KEY_PREFIX + email, CODE_TTL);
-        if (attempts >= 5) {
-            cache.delete(codeKey); // 达到阈值直接作废验证码，防止继续猜
+        if (result == CodeChallengeStore.Result.EXHAUSTED) {
             throw ProblemException.of(VerificationProblem.TOO_MANY_REQUESTS);
         }
         throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
@@ -68,14 +81,14 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
 
     /**
      * 获取验证码缓存能力。
-     * 说明：缓存模块允许在部署时关闭；关闭后应用仍可启动，仅验证码相关接口返回稳定错误。
+     * 缺少挑战存储时返回稳定错误；不对其它依赖缓存的功能作启动保证。
      */
-    private CacheService requireCache() {
-        CacheService cacheService = cacheServiceProvider.getIfAvailable();
-        if (cacheService == null) {
+    private CodeChallengeStore requireStore() {
+        CodeChallengeStore store = challengeStoreProvider.getIfAvailable();
+        if (store == null) {
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE);
         }
-        return cacheService;
+        return store;
     }
 
     private void deliverCode(String email, String code) {

@@ -19,6 +19,8 @@ import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHea
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.health.RedisCacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCacheService;
+import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCodeChallengeStore;
+import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeChallengeStore;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.startup.CacheInitializationChecker;
 
 /**
@@ -62,6 +64,12 @@ public class CacheServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public CacheService cacheService(StringRedisTemplate redisTemplate, RedisCacheProperties properties) {
         return new RedisCacheService(redisTemplate, properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CodeChallengeStore codeChallengeStore(StringRedisTemplate redisTemplate) {
+        return new RedisCodeChallengeStore(redisTemplate);
     }
 
     @Bean
