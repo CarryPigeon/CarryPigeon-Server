@@ -133,6 +133,11 @@ public class ChannelMessageService implements ChannelMessageApi {
             CPChannelMessageHandler handler = channelMessageDispatcher.dispatch(domain);
             // 持久化消息
             CPChannelMessage finalMessage = handler.handle(originalMessage);
+            // 空返回是已注册处理器违反契约，不能落入仓储并产生无关空指针；整个发送事务必须回滚。
+            if (finalMessage == null) {
+                throw new IllegalStateException("Message handler returned null: domain=" + domain
+                        + ", handler=" + handler.getClass().getName());
+            }
             messageRepository.save(finalMessage);
             // 生成提及记录；只保留当前频道成员，避免产生无法访问的提及
             List<Mention> savedMentions = finalMessage.mentions().stream()

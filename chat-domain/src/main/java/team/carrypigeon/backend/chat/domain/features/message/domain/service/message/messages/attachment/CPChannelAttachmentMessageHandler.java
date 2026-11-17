@@ -1,20 +1,17 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.attachment;
 
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 
 /**
- * CarryPigeon 预定义的附件消息处理器
- * 职责：处理附件消息，校验其格式正确
- * 边界：不关心消息的生命周期，只关注消息的格式
- * */
-@MessageHandler("Core:Attachment:V1")
+ * 附件消息处理器占位，尚未实现载荷校验与转换，不参与消息能力注册。
+ * 实现完整发送契约后才能添加 MessageHandler 注解。
+ */
 public class CPChannelAttachmentMessageHandler implements CPChannelMessageHandler {
     @Override
     public CPChannelMessage handle(CPChannelMessage message) throws ProblemException {
-        // TODO 完善handler
-        return null;
+        throw ProblemException.of(MessageProblem.UNSUPPORTED_DOMAIN);
     }
 }

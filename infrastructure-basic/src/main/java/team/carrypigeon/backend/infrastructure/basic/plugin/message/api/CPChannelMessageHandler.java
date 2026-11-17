@@ -11,7 +11,7 @@ public interface CPChannelMessageHandler {
     /**
      * 处理的具体逻辑
      * @param message 待处理的消息
-     * @return 处理后的消息
+     * @return 校验和转换完成的有效消息，不能返回 null；消息身份、频道及事务序号必须保持不变
      * @throws ProblemException 消息校验失败抛出的异常
      * */
     CPChannelMessage handle(CPChannelMessage message) throws ProblemException;
