@@ -30,7 +30,7 @@ Before first launch, edit `config/application.yaml` and fill at least:
 - `cp.chat.auth.jwt.secret`
 - `cp.chat.file.share-key.secret`
 - `cp.chat.server.id`
-- external dependency addresses or ports when they are not the local defaults, such as `spring.datasource.url`, `spring.data.redis.*`, and `cp.infrastructure.service.storage.*`
+- external dependency addresses or ports when they are not the local defaults, such as `service.database.mysql.*`, `service.cache.redis.*`, `service.storage.minio.*`, and `service.mail.smtp.*`
 
 Structured runtime switches are configured through `config/application.yaml`, including:
 

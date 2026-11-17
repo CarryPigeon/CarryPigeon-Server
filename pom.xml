@@ -129,6 +129,11 @@
                             <artifactId>lombok</artifactId>
                             <version>1.18.48</version> <!-- 与上方依赖版本保持一致 -->
                         </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                            <version>3.5.3</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>

@@ -49,7 +49,7 @@ public record SmtpMailProperties(
             writeTimeout = DEFAULT_WRITE_TIMEOUT;
         }
         if (enabled && fromAddress.isBlank()) {
-            throw new IllegalArgumentException("cp.service.mail.smtp.from-address must not be blank when mail is enabled");
+            throw new IllegalArgumentException("service.mail.smtp.from-address must not be blank when mail is enabled");
         }
     }
 

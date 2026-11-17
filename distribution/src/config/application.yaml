@@ -3,58 +3,10 @@
 # 边界：本文件承载应用运行配置；Docker Compose / Nginx 仍使用各自文件中的默认值或调用方环境变量。
 
 spring:
-  datasource:
-    # 职责：定义 MySQL JDBC 连接地址。
-    url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
-    # 职责：定义 MySQL 连接用户名。
-    username: carrypigeon
-    # 职责：定义 MySQL 连接密码。
-    password: carrypigeon123
-    hikari:
-      # 职责：限制从连接池获取连接的等待时间，单位毫秒。
-      connection-timeout: 10000
-      # 职责：限制数据库连接校验时间，单位毫秒。
-      validation-timeout: 5000
-  data:
-    redis:
-      # 职责：定义 Redis 主机地址。
-      host: 127.0.0.1
-      # 职责：定义 Redis 服务端口。
-      port: 6379
-      # 职责：定义 Redis 访问密码。
-      password: carrypigeon123
-      # 职责：限制 Redis 建连等待时间。
-      connect-timeout: 5s
-      # 职责：限制单条 Redis 命令等待时间。
-      timeout: 3s
-  mail:
-    # 职责：定义 SMTP 主机地址；默认不启用邮件服务，保持为空。
-    host: ""
-    # 职责：定义 SMTP 服务端口。
-    port: 587
-    # 职责：定义 SMTP 认证用户名。
-    username: ""
-    # 职责：定义 SMTP 认证密码。
-    password: ""
-    properties:
-      mail:
-        smtp:
-          # 职责：控制 SMTP 是否启用账号认证。
-          auth: true
-          # 职责：限制 SMTP 建连等待时间，单位毫秒。
-          connectiontimeout: 5000
-          # 职责：限制 SMTP 读取等待时间，单位毫秒。
-          timeout: 10000
-          # 职责：限制 SMTP 写入等待时间，单位毫秒。
-          writetimeout: 10000
-          starttls:
-            # 职责：控制 SMTP 是否启用 STARTTLS。
-            enable: true
   servlet:
     multipart:
-      # 职责：限制背景图与消息附件 multipart 单文件大小。
+      # 文件大小的 HTTP 接入边界。
       max-file-size: 100MB
-      # 职责：为单文件 multipart 请求保留协议头开销。
       max-request-size: 101MB
 
 cp:
@@ -119,34 +71,88 @@ cp:
       worker-id: 1
       # 职责：配置当前节点的雪花 ID datacenterId。
       datacenter-id: 1
-    service:
-      database:
-        # 职责：控制数据库服务实现是否参与当前运行时装配。
-        enabled: true
-      cache:
-        # 职责：控制缓存服务实现是否参与当前运行时装配。
-        enabled: true
-        # 职责：定义字符串缓存默认 TTL。
-        default-ttl: 5m
-      storage:
-        # 职责：控制对象存储服务实现是否参与当前运行时装配。
-        enabled: true
-        # 职责：定义 MinIO 连接地址。
-        endpoint: http://127.0.0.1:9000
-        # 职责：定义 MinIO 访问身份。
-        access-key: carrypigeon
-        # 职责：定义 MinIO 访问密钥。
-        secret-key: carrypigeon123
-        # 职责：定义当前对象存储默认 bucket。
-        bucket: carrypigeon
-        # 职责：限制 MinIO 建连等待时间。
-        connect-timeout: 5s
-        # 职责：限制 MinIO 单次读取停顿时间。
-        read-timeout: 30s
-        # 职责：限制 MinIO 单次写入停顿时间。
-        write-timeout: 30s
-      mail:
-        # 职责：控制邮件服务实现是否参与当前运行时装配。
-        enabled: false
-        # 职责：定义邮件默认发件地址。
-        from-address: ""
+
+# 外部服务仅使用 service.<能力>.<实现>，不读取旧前缀或 Spring 标准连接配置。
+service:
+  database:
+    mysql:
+      # 职责：控制数据库服务实现是否参与当前运行时装配。
+      enabled: true
+      # 职责：定义数据库连接地址。
+      url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
+      # 职责：定义数据库连接用户名。
+      username: carrypigeon
+      # 职责：定义数据库连接密码。
+      password: carrypigeon123
+      # 职责：显式指定 MySQL 驱动。
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      # 职责：限制从连接池获取数据库连接的最长等待时间。
+      connection-timeout: 10s
+      # 职责：限制连接有效性检查的最长等待时间。
+      validation-timeout: 5s
+      # 职责：定义数据库查询缓存的实体负载 TTL。
+      cache-entity-ttl: 5m
+      # 职责：定义唯一键 lookup 指针（如 email 或 (频道, 账户) -> 主键）的 TTL。
+      cache-lookup-ttl: 10m
+      # 职责：限制单次批量缓存读取的最大主键数量，超过上限的批量查询直接读库。
+      cache-max-batch-size: 128
+  cache:
+    redis:
+      # 职责：控制缓存服务实现是否参与当前运行时装配。
+      # 约束：邮箱验证码能力与数据库查询缓存都依赖缓存实现，生产环境应保持开启。
+      enabled: true
+      # 职责：定义 Redis 主机地址。
+      host: 127.0.0.1
+      # 职责：定义 Redis 服务端口。
+      port: 6379
+      # 职责：定义 Redis 访问密码。
+      password: carrypigeon123
+      # 职责：限制 Redis 建连等待时间。
+      connect-timeout: 5s
+      # 职责：限制单条 Redis 命令等待时间。
+      timeout: 3s
+      # 职责：定义字符串缓存默认 TTL。
+      default-ttl: 5m
+  mail:
+    smtp:
+      # 职责：控制邮件服务实现是否参与当前运行时装配。
+      enabled: false
+      # 职责：定义 SMTP 主机地址。
+      host: ""
+      # 职责：定义 SMTP 服务端口。
+      port: 587
+      # 职责：定义 SMTP 认证用户名。
+      username: ""
+      # 职责：定义 SMTP 认证密码。
+      password: ""
+      # 职责：定义邮件默认发件地址。
+      from-address: ""
+      # 职责：控制 SMTP 是否启用账号认证。
+      auth: true
+      # 职责：限制 SMTP 建连等待时间。
+      connection-timeout: 5000
+      # 职责：限制 SMTP 读取等待时间。
+      timeout: 10000
+      # 职责：限制 SMTP 写入等待时间。
+      write-timeout: 10000
+      # 职责：控制 SMTP 是否启用 STARTTLS。
+      starttls-enable: true
+  # 存储配置
+  storage:
+    minio:
+      # 职责：控制对象存储服务实现是否参与当前运行时装配。
+      enabled: true
+      # 职责：定义 MinIO 连接地址。
+      endpoint: http://127.0.0.1:9000
+      # 职责：定义 MinIO 访问身份。
+      access-key: carrypigeon
+      # 职责：定义 MinIO 访问密钥。
+      secret-key: carrypigeon123
+      # 职责：定义当前对象存储默认 bucket。
+      bucket: carrypigeon
+      # 职责：限制 MinIO 建连等待时间。
+      connect-timeout: 5s
+      # 职责：限制 MinIO 单次读取停顿时间。
+      read-timeout: 30s
+      # 职责：限制 MinIO 单次写入停顿时间。
+      write-timeout: 30s

@@ -52,17 +52,17 @@ public record MinioStorageProperties(
         readTimeout = positiveOrDefault(readTimeout, DEFAULT_READ_TIMEOUT, "read-timeout");
         writeTimeout = positiveOrDefault(writeTimeout, DEFAULT_WRITE_TIMEOUT, "write-timeout");
         if (enabled && accessKey.isBlank()) {
-            throw new IllegalArgumentException("cp.infrastructure.service.storage.access-key must not be blank when storage is enabled");
+            throw new IllegalArgumentException("service.storage.minio.access-key must not be blank when storage is enabled");
         }
         if (enabled && secretKey.isBlank()) {
-            throw new IllegalArgumentException("cp.infrastructure.service.storage.secret-key must not be blank when storage is enabled");
+            throw new IllegalArgumentException("service.storage.minio.secret-key must not be blank when storage is enabled");
         }
     }
 
     private static Duration positiveOrDefault(Duration value, Duration defaultValue, String propertyName) {
         Duration resolved = value == null ? defaultValue : value;
         if (resolved.isZero() || resolved.isNegative()) {
-            throw new IllegalArgumentException("cp.infrastructure.service.storage." + propertyName + " must be positive");
+            throw new IllegalArgumentException("service.storage.minio." + propertyName + " must be positive");
         }
         return resolved;
     }

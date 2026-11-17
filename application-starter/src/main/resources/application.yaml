@@ -83,9 +83,9 @@ service:
       # 职责：显式指定 MySQL 驱动。
       driver-class-name: com.mysql.cj.jdbc.Driver
       # 职责：限制从连接池获取数据库连接的最长等待时间。
-      connection-timeout: 10000
+      connection-timeout: 10s
       # 职责：限制连接有效性检查的最长等待时间。
-      validation-timeout: 5000
+      validation-timeout: 5s
       # 职责：定义数据库查询缓存的实体负载 TTL。
       cache-entity-ttl: 5m
       # 职责：定义唯一键 lookup 指针（如 email 或 (频道, 账户) -> 主键）的 TTL。
