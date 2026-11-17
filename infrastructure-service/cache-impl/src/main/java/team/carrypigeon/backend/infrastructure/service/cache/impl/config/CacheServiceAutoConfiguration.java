@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.config;
 
+import io.lettuce.core.ClientOptions;
+import io.lettuce.core.SocketOptions;
+
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -7,6 +10,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -38,9 +42,14 @@ public class CacheServiceAutoConfiguration {
         if (properties.password() != null && !properties.password().isBlank()) {
             config.setPassword(properties.password());
         }
-        LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
-        factory.setTimeout(properties.timeout().toSeconds());
-        return factory;
+        // 使用 Duration 保留毫秒精度；连接建立和 Redis 命令执行分别采用各自的超时预算。
+        LettuceClientConfiguration clientConfiguration = LettuceClientConfiguration.builder()
+                .commandTimeout(properties.timeout())
+                .clientOptions(ClientOptions.builder()
+                        .socketOptions(SocketOptions.builder().connectTimeout(properties.connectTimeout()).build())
+                        .build())
+                .build();
+        return new LettuceConnectionFactory(config, clientConfiguration);
     }
 
     @Bean
