@@ -8,7 +8,6 @@ import java.util.function.Supplier;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -26,7 +25,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 写路径在数据库写入后同时精确失效实体键与新旧唯一键指针，不使用模式删除。
  * 安全边界：账户记录含密码摘要，Redis 必须按敏感存储保护；多实例部署时跨实例失效窗口由 TTL 兜底。
  */
-@Component
 public class MybatisPlusAuthAccountDatabaseService implements AuthAccountDatabaseService {
 
     private static final String DOMAIN = DatabaseCache.DOMAIN_AUTH_ACCOUNT;

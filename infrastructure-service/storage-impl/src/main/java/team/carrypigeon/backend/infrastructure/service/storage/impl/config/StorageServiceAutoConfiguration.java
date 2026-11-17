@@ -8,13 +8,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.beans.factory.annotation.Qualifier;
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioStorageHealthService;
-import team.carrypigeon.backend.infrastructure.service.storage.impl.startup.StorageInitializationChecker;
 
 /**
  * 对象存储自动配置。
@@ -75,7 +73,7 @@ public class StorageServiceAutoConfiguration {
     public ObjectStorageService objectStorageService(
             MinioClient minioClient,
             MinioStorageProperties properties,
-            TimeProviderImpl timeProvider
+            TimeProvider timeProvider
     ) {
         return new MinioObjectStorageService(minioClient, properties, timeProvider);
     }
@@ -93,15 +91,4 @@ public class StorageServiceAutoConfiguration {
         return new MinioStorageHealthService(minioClient, properties);
     }
 
-    /**
-     * 创建对象存储初始化检查。
-     *
-     * @param storageHealthService 对象存储健康检查服务
-     * @return 共享初始化检查契约下的对象存储检查
-     */
-    @Bean
-    @ConditionalOnMissingBean(name = "storageInitializationCheck")
-    public InitializationChecker storageInitializationCheck(StorageHealthService storageHealthService) {
-        return new StorageInitializationChecker(storageHealthService);
-    }
 }

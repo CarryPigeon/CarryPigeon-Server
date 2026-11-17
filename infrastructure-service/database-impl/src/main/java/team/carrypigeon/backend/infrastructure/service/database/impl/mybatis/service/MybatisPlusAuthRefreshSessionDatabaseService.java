@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
@@ -24,7 +23,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 职责：在 database-impl 中完成刷新会话的最小查询、写入与撤销能力。
  * 边界：只负责数据库记录映射，不承载 token 轮换业务规则。
  */
-@Component
 public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefreshSessionDatabaseService {
 
     private final AuthRefreshSessionMapper authRefreshSessionMapper;

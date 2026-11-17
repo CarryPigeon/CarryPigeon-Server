@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.service.mail.impl.config;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -11,6 +12,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 public class AsyncConfig {
 
     @Bean("mailExecutor")
+    @ConditionalOnMissingBean(name = "mailExecutor")
     public ThreadPoolTaskExecutor mailExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数：根据邮件发送频率调整

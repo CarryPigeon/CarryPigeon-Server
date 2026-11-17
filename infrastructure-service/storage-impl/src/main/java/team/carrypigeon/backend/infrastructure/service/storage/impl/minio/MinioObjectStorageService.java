@@ -7,7 +7,7 @@ import io.minio.http.Method;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Optional;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProviderImpl;
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.exception.StorageServiceException;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
@@ -23,12 +23,12 @@ public class MinioObjectStorageService implements ObjectStorageService {
 
     private final MinioClient minioClient;
     private final MinioStorageProperties properties;
-    private final TimeProviderImpl timeProvider;
+    private final TimeProvider timeProvider;
 
     public MinioObjectStorageService(
             MinioClient minioClient,
             MinioStorageProperties properties,
-            TimeProviderImpl timeProvider
+            TimeProvider timeProvider
     ) {
         this.minioClient = minioClient;
         this.properties = properties;

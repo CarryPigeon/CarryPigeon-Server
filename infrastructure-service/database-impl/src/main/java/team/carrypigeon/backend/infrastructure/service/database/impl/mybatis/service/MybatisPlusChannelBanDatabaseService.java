@@ -6,7 +6,6 @@ import java.util.Optional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +18,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
 
 /** 频道禁言持久化适配；提供权威权限查询、展示缓存与限量清理，不决定禁言业务规则。 */
-@Component
 public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseService {
 
     private static final String DOMAIN = DatabaseCache.DOMAIN_CHANNEL_BAN;

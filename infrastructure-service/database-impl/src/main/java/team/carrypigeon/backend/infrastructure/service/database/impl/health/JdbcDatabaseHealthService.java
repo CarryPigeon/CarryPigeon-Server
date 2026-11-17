@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.health;
 
-import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
@@ -10,7 +9,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcCl
  * JDBC 数据库健康检查实现。
  * 职责：通过轻量 SQL 验证数据库连接与查询能力。
  */
-@Component
 public class JdbcDatabaseHealthService implements DatabaseHealthService {
 
     private static final String HEALTH_QUERY = "SELECT 1";

@@ -6,7 +6,6 @@ import java.util.Optional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +24,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：只负责数据库记录映射，不承载频道业务规则。
  * 缓存：按频道 ID 缓存单条与批量频道主数据；写路径按频道 ID 精确失效，不缓存分页/发现页查询。
  */
-@Component
 public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService {
 
     private static final String DOMAIN = DatabaseCache.DOMAIN_CHANNEL;

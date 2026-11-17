@@ -7,7 +7,6 @@ import java.util.Optional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +25,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 缓存：按 (频道, 账户) 唯一键缓存“关系 -&gt; 成员主键”lookup 指针，成员实体按主键缓存一份；
  * 写路径精确失效实体键与新旧关系指针，成员列表/分页查询不缓存。
  */
-@Component
 public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDatabaseService {
 
     private static final String DOMAIN = DatabaseCache.DOMAIN_CHANNEL_MEMBER;

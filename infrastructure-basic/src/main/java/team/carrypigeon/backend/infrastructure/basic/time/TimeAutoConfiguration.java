@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.basic.time;
 import java.time.Clock;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
 /**
  * 全局时间基础设施自动配置。
@@ -18,7 +19,13 @@ public class TimeAutoConfiguration {
      * @return 项目默认 Clock Bean
      */
     @Bean
+    @ConditionalOnMissingBean
     public Clock systemClock() {
         return Clock.systemDefaultZone();
+    }
+    @Bean
+    @ConditionalOnMissingBean(TimeProvider.class)
+    public TimeProvider timeProvider(Clock clock) {
+        return new TimeProviderImpl(clock);
     }
 }

@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.time.Instant;
 import java.util.Optional;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.FileStorageUsageRecord;
@@ -11,7 +10,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.File
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.FileUploadMapper;
 
 /** 文件上传状态持久化；取得写入权和登记对象键原子提交，网络上传不占用数据库事务。 */
-@Component
 public class MybatisFileUploadDatabaseService implements FileUploadDatabaseService {
     private final FileUploadMapper mapper;
 

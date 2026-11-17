@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -26,7 +25,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 职责：在 database-impl 中持久化频道已读锚点与未读统计查询。
  * 边界：不承载“只前进不后退”等业务规则，只暴露存储层读写能力。
  */
-@Component
 public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadStateDatabaseService {
 
     private final ChannelReadStateMapper channelReadStateMapper;

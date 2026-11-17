@@ -14,14 +14,12 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.health.RedisCacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCodeChallengeStore;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeChallengeStore;
-import team.carrypigeon.backend.infrastructure.service.cache.impl.startup.CacheInitializationChecker;
 
 /**
  * 缓存服务自动配置。
@@ -30,7 +28,7 @@ import team.carrypigeon.backend.infrastructure.service.cache.impl.startup.CacheI
  * 自定义 key-value 门面实现，不依赖 Spring Cache 注解或 CacheManager。
  * 约束：邮箱验证码能力与数据库查询缓存都强依赖本实现，关闭前需确认相关业务组件具备替代实现。
  */
-@AutoConfiguration
+@AutoConfiguration(beforeName = "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration")
 @EnableConfigurationProperties(RedisCacheProperties.class)
 @ConditionalOnProperty(prefix = "service.cache.redis", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class CacheServiceAutoConfiguration {
@@ -78,9 +76,4 @@ public class CacheServiceAutoConfiguration {
         return new RedisCacheHealthService(redisTemplate);
     }
 
-    @Bean
-    @ConditionalOnMissingBean(name = "cacheInitializationCheck")
-    public InitializationChecker cacheInitializationCheck(CacheHealthService cacheHealthService) {
-        return new CacheInitializationChecker(cacheHealthService);
-    }
 }

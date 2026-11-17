@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.List;
 import java.util.Optional;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -22,7 +21,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 边界：只负责数据库记录映射，不承载资料校验与展示业务规则。
  * 缓存：按账户 ID 缓存单条与批量资料读取；写路径按账户 ID 精确失效，不缓存分页查询。
  */
-@Component
 public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabaseService {
 
     private static final String DOMAIN = DatabaseCache.DOMAIN_USER_PROFILE;

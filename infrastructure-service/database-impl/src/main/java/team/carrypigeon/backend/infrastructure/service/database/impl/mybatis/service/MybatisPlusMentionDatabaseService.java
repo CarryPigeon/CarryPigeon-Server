@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -22,7 +21,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 职责：在 database-impl 中提供提及表级读写与通用查询。
  * 边界：不承载已读状态流转；read 过滤值由 Repository 传入。
  */
-@Component
 public class MybatisPlusMentionDatabaseService implements MentionDatabaseService {
 
     private final MentionMapper mentionMapper;

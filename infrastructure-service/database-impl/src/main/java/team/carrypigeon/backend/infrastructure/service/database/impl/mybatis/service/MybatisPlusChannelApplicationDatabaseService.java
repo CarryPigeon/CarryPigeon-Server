@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +23,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.map
  * 职责：在 database-impl 中完成频道申请的最小查询与写入能力。
  * 边界：只负责数据库记录映射，不承载申请审批业务规则。
  */
-@Component
 public class MybatisPlusChannelApplicationDatabaseService implements ChannelApplicationDatabaseService {
 
     private final ChannelApplicationMapper channelApplicationMapper;

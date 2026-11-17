@@ -16,8 +16,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Slf4j
 @SpringBootApplication
 @EnableScheduling
-@ComponentScan(basePackages = {"team.carrypigeon.backend"})
-@ConfigurationPropertiesScan(basePackages = {"team.carrypigeon.backend"})
+@ComponentScan(basePackages = {"team.carrypigeon.backend.chat.domain", "team.carrypigeon.backend.starter"})
+@ConfigurationPropertiesScan(basePackages = {"team.carrypigeon.backend.chat.domain"})
 public class ApplicationStarter {
     /**
      * Spring Boot 应用入口。
