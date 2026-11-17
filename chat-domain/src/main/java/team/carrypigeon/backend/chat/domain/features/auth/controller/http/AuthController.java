@@ -17,6 +17,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.EmailLoginRequestBody;
@@ -44,13 +46,16 @@ public class AuthController {
 
     private final AuthTokenApi authTokenApi;
     private final AuthAccountApi authAccountApi;
+    private final ClientAddressResolver clientAddressResolver;
 
     public AuthController(
         AuthTokenApi authTokenApi,
-        AuthAccountApi authAccountApi
+        AuthAccountApi authAccountApi,
+        ClientAddressResolver clientAddressResolver
     ) {
         this.authTokenApi = authTokenApi;
         this.authAccountApi = authAccountApi;
+        this.clientAddressResolver = clientAddressResolver;
     }
 
     /**
@@ -98,8 +103,10 @@ public class AuthController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
     })
-    public ResponseEntity<AuthSessionTokenResponse> loginByPWD(@Valid @RequestBody PWDLoginRequestBody request) {
-        AuthTokenResult result = authTokenApi.loginByPWD(request.username().trim(), request.password());
+    public ResponseEntity<AuthSessionTokenResponse> loginByPWD(@Valid @RequestBody PWDLoginRequestBody request,
+            HttpServletRequest httpRequest) {
+        AuthTokenResult result = authTokenApi.loginByPWD(request.username().trim(), request.password(),
+                clientAddressResolver.resolve(httpRequest));
         return ResponseEntity.ok().body(new AuthSessionTokenResponse(
             "Bearer",
             result.accessToken(),

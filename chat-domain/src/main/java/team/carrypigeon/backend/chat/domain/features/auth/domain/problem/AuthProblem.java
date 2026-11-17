@@ -33,6 +33,12 @@ public enum AuthProblem implements ProblemMapping {
     /** 部署侧关闭了密码登录。 */
     PASSWORD_LOGIN_DISABLED(403, "password_login_disabled", "password login is disabled"),
 
+    /** 密码登录短时配额已耗尽，重试时间由异常明细提供。 */
+    LOGIN_RATE_LIMITED(429, "too_many_requests", "too many login attempts; retry later"),
+
+    /** 共享限流状态不可用时拒绝密码登录，不降级为无限尝试。 */
+    LOGIN_LIMIT_UNAVAILABLE(503, "cache_service_unavailable", "login rate limiter is unavailable"),
+
     /** 目标认证账号不存在。 */
     ACCOUNT_NOT_FOUND(404, "not_found", "auth account does not exist"),
 

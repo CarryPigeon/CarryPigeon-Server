@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service.session;
 
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ public class AuthSessionService implements AuthTokenApi {
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
     private final EmailVerificationApi emailVerificationApi;
+    private final PasswordLoginLimiter passwordLoginLimiter;
 
     @Autowired
     public AuthSessionService(
@@ -54,7 +56,8 @@ public class AuthSessionService implements AuthTokenApi {
             AuthPasswordLoginPolicy passwordLoginPolicy,
             TimeProvider timeProvider,
             TransactionRunner transactionRunner,
-            EmailVerificationApi emailVerificationApi
+            EmailVerificationApi emailVerificationApi,
+            PasswordLoginLimiter passwordLoginLimiter
     ) {
         this.authAccountRepository = authAccountRepository;
         this.authRefreshSessionRepository = authRefreshSessionRepository;
@@ -67,22 +70,26 @@ public class AuthSessionService implements AuthTokenApi {
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
         this.emailVerificationApi = emailVerificationApi;
+        this.passwordLoginLimiter = passwordLoginLimiter;
     }
 
     @Override
-    public AuthTokenResult loginByPWD(String username,String password) {
+    public AuthTokenResult loginByPWD(String username, String password, String clientIp) {
         try {
             // 通过配置开关账号密码登录接口
             if (!passwordLoginPolicy.enabled()) {
                 throw ProblemException.of(AuthProblem.PASSWORD_LOGIN_DISABLED);
             }
-            // 拿取用户信息
-            AuthAccount account = authAccountRepository.findByUsername(username)
-                    .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_CREDENTIALS));
-
-            if (!passwordHasher.matches(password, account.passwordHash())) {
+            passwordLoginLimiter.acquireIp(clientIp);
+            String normalizedUsername = username.trim().toLowerCase(Locale.ROOT);
+            AuthAccount account = authAccountRepository.findByUsername(username.trim()).orElse(null);
+            // 在计算昂贵的密码哈希前预占账号名额，未知账号也保留失败配额。
+            PasswordLoginLimiter.Attempt attempt = passwordLoginLimiter.reserveAccount(account == null
+                    ? "username:" + normalizedUsername : "account:" + account.id());
+            if (account == null || !passwordHasher.matches(password, account.passwordHash())) {
                 throw ProblemException.of(AuthProblem.INVALID_CREDENTIALS);
             }
+            passwordLoginLimiter.releaseSuccessful(attempt);
 
             // 签发访问令牌和刷新令牌
             AuthTokenPair tokenPair = authTokenIssuer.issueTokenPair(account);

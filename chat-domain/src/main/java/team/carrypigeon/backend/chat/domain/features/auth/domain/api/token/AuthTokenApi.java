@@ -11,12 +11,15 @@ public interface AuthTokenApi {
 
     /**
      * 使用账号凭证登录并创建认证会话。
+     * IP 每分钟最多 30 次尝试，账号五分钟内最多 5 次失败或在途校验；
+     * 配额耗尽返回 429，限流存储不可用返回 503，均不继续密码哈希。
      *
      * @param username 用户名
      * @param password 密码
+     * @param clientIp HTTP 边界按可信代理规则解析的规范化 IP
      * @return 登录成功后的认证令牌结果
      */
-    AuthTokenResult loginByPWD(String username,String password);
+    AuthTokenResult loginByPWD(String username, String password, String clientIp);
 
     /**
      * 使用邮箱验证吗登陆

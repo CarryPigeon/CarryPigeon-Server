@@ -70,12 +70,18 @@ public class GlobalExceptionHandler {
             log.debug("Problem exception mapped to {}, mapping={}, reason={}",
                     status.value(), exception.mapping(), exception.reason());
         }
+        HttpHeaders headers = new HttpHeaders();
+        // 429 明细采用秒数契约，同时通过标准响应头告知客户端保守的重试等待时间。
+        if (status == HttpStatus.TOO_MANY_REQUESTS && exception.details() != null
+                && exception.details().get("retry_after_seconds") instanceof Number retryAfter) {
+            headers.set(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter.longValue()));
+        }
         return buildErrorResponse(new ErrorDescriptor(
                 status,
                 exception.reason(),
                 exception.getMessage(),
                 exception.details()
-        ));
+        ), headers);
     }
 
     /**
