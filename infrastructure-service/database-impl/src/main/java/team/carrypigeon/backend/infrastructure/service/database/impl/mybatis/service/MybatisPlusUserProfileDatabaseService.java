@@ -2,12 +2,12 @@ package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.se
 
 import java.util.List;
 import java.util.Optional;
-
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.springframework.stereotype.Component;
-
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
@@ -141,6 +141,12 @@ public class MybatisPlusUserProfileDatabaseService implements UserProfileDatabas
             return List.of();
         }
         return databaseCache.loadAll(DOMAIN, accountIds, UserProfileRecord.class, UserProfileRecord::accountId, this::loadByIds);
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<UserProfileRecord> findByIdForUpdate(long accountId) {
+        return Optional.ofNullable(userProfileMapper.selectByAccountForUpdate(accountId)).map(UserProfileEntity::toRecord);
     }
 
     private Optional<UserProfileRecord> loadById(long accountId) {

@@ -9,5 +9,5 @@ import java.time.Instant;
 public record FileUpload(long fileId, long ownerAccountId, String shareKey, long sizeBytes,
         Status status, String objectKey, String sha256, String contentType, Instant expiresAt, Instant completedAt) {
     /** PENDING/FAILED 可重新申请写入权；UPLOADING 只允许持有当前对象键的写入者完成。 */
-    public enum Status { PENDING, UPLOADING, COMPLETED, FAILED }
+    public enum Status { PENDING, UPLOADING, COMPLETED, FAILED, DELETING, DELETED }
 }

@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.file.adaptor.persistence;
 
 import java.time.Instant;
-import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileStorageUsage;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
+import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileStorageUsage;
 import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileUpload;
 import team.carrypigeon.backend.chat.domain.features.file.domain.repository.FileUploadRepository;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.FileUploadRecord;
@@ -38,9 +38,63 @@ public class DatabaseBackedFileUploadRepository implements FileUploadRepository 
 
     @Override
     public Optional<FileUpload> findByShareKey(String shareKey) {
-        return database.findByShareKey(shareKey).map(row -> new FileUpload(row.fileId(), row.ownerAccountId(),
-                row.shareKey(), row.sizeBytes(), FileUpload.Status.valueOf(row.status()), row.objectKey(),
-                row.sha256(), row.contentType(), row.expiresAt(), row.completedAt()));
+        return database.findByShareKey(shareKey).map(this::toDomain);
+    }
+
+    private FileUpload toDomain(FileUploadRecord row) {
+        return new FileUpload(row.fileId(), row.ownerAccountId(), row.shareKey(), row.sizeBytes(),
+                FileUpload.Status.valueOf(row.status()), row.objectKey(), row.sha256(), row.contentType(),
+                row.expiresAt(), row.completedAt());
+    }
+
+    @Override
+    public Optional<FileUpload> findByIdForUpdate(long fileId) {
+        return database.findByIdForUpdate(fileId).map(this::toDomain);
+    }
+
+    @Override
+    public Optional<Long> avatarFileId(long accountId) {
+        return database.avatarFileId(accountId);
+    }
+
+    @Override
+    public void replaceAvatarReference(long accountId, Long fileId) {
+        database.replaceAvatarReference(accountId, fileId);
+    }
+
+    @Override
+    public void reclaimIfUnreferenced(long fileId, Instant now) {
+        database.reclaimIfUnreferenced(fileId, now);
+    }
+
+    @Override
+    public Optional<Long> findReclaimCandidateForUpdate(Instant now, Instant unusedBefore, Instant interruptedBefore) {
+        return database.findReclaimCandidateForUpdate(now, unusedBefore, interruptedBefore);
+    }
+
+    @Override
+    public void beginReclaim(long fileId, Instant now) {
+        database.beginReclaim(fileId, now);
+    }
+
+    @Override
+    public java.util.List<String> findObjectCleanupKeys(Instant now, int limit) {
+        return database.findObjectCleanupKeys(now, limit);
+    }
+
+    @Override
+    public void objectCleaned(String objectKey, Instant now, Instant nextCheck) {
+        database.objectCleaned(objectKey, now, nextCheck);
+    }
+
+    @Override
+    public void retryObjectCleanup(String objectKey, Instant retryAt) {
+        database.retryObjectCleanup(objectKey, retryAt);
+    }
+
+    @Override
+    public void finishReclaimedFiles(int limit) {
+        database.finishReclaimedFiles(limit);
     }
 
     @Override
@@ -54,7 +108,7 @@ public class DatabaseBackedFileUploadRepository implements FileUploadRepository 
     }
 
     @Override
-    public void fail(long fileId, String objectKey) {
-        database.fail(fileId, objectKey);
+    public void fail(long fileId, String objectKey, Instant now) {
+        database.fail(fileId, objectKey, now);
     }
 }

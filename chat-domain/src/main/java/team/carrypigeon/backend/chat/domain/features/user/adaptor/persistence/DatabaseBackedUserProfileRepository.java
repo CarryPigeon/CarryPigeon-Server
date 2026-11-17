@@ -61,6 +61,11 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
         userProfileDatabaseService.update(toWriteRecord(userProfile));
     }
 
+    @Override
+    public Optional<UserProfile> findByAccountIdForUpdate(long accountId) {
+        return userProfileDatabaseService.findByIdForUpdate(accountId).map(this::toDomainModel);
+    }
+
     private UserProfile toDomainModel(UserProfileRecord record) {
         return new UserProfile(
                 record.accountId(),

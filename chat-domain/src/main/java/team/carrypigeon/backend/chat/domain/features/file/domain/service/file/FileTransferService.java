@@ -129,7 +129,7 @@ public class FileTransferService implements FileTransferApi {
                 requireStorage().put(objectKey, stagedContent, sizeBytes, storedType);
             } catch (IOException | RuntimeException exception) {
                 try {
-                    uploads.fail(upload.fileId(), objectKey);
+                    uploads.fail(upload.fileId(), objectKey, timeProvider.nowInstant());
                 } catch (RuntimeException stateException) {
                     exception.addSuppressed(stateException);
                 }

@@ -66,6 +66,9 @@ public interface UserProfileDatabaseService {
      */
     Optional<UserProfileRecord> findById(long accountId);
 
+    /** 事务内以行锁读取资料，不使用展示缓存。 */
+    Optional<UserProfileRecord> findByIdForUpdate(long accountId);
+
     /**
      * 按账户 ID 批量读取用户资料。
      *

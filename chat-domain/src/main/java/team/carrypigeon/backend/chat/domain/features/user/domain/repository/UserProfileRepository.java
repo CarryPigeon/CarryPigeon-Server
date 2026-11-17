@@ -19,6 +19,9 @@ public interface UserProfileRepository {
      */
     Optional<UserProfile> findByAccountId(long accountId);
 
+    /** 以行锁读取权威资料；必须在事务中调用，用于串行化资料及头像引用的共同更新。 */
+    Optional<UserProfile> findByAccountIdForUpdate(long accountId);
+
     /**
      * 按账户 ID 集合查询用户资料。
      *

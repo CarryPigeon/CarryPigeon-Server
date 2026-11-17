@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.user.domain.service.profil
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.reference.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
@@ -30,17 +30,20 @@ public class UserProfileService implements UserProfileApi {
     private final AuthAccountAdaptor authAccountAdaptor;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
+    private final FileReferenceApi fileReferences;
 
     public UserProfileService(
         UserProfileRepository userProfileRepository,
         AuthAccountAdaptor authAccountAdaptor,
         TimeProvider timeProvider,
-        TransactionRunner transactionRunner
+        TransactionRunner transactionRunner,
+        FileReferenceApi fileReferences
     ) {
         this.userProfileRepository = userProfileRepository;
         this.authAccountAdaptor = authAccountAdaptor;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
+        this.fileReferences = fileReferences;
     }
 
 
@@ -85,7 +88,7 @@ public class UserProfileService implements UserProfileApi {
     public void updateUserProfile(UpdateCurrentUserProfileCommand command) {
         try {
             transactionRunner.runInTransaction(() -> {
-                UserProfile existingProfile = userProfileRepository.findByAccountId(command.accountId())
+                UserProfile existingProfile = userProfileRepository.findByAccountIdForUpdate(command.accountId())
                     .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
 
                 UserProfile updatedProfile = existingProfile.updateProfile(
@@ -95,6 +98,8 @@ public class UserProfileService implements UserProfileApi {
                     command.birthday(),
                     timeProvider.nowInstant()
                 );
+                // 资料行锁串行化同账号更新；文件引用与资料必须一起提交，不能在提交后补记。
+                fileReferences.replaceAvatarReference(command.accountId(), command.avatarUrl());
                 userProfileRepository.update(updatedProfile);
                 return new UserProfileResult(
                     updatedProfile.accountId(),

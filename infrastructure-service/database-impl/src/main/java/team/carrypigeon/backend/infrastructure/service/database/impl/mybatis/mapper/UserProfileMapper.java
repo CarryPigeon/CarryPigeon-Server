@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.entity.UserProfileEntity;
 
 /**
@@ -14,6 +15,10 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.ent
  */
 @Mapper
 public interface UserProfileMapper extends BaseMapper<UserProfileEntity> {
+
+    /** 与文件引用更新共享用户资料行锁。 */
+    @Select("SELECT * FROM user_profile WHERE account_id = #{accountId} FOR UPDATE")
+    UserProfileEntity selectByAccountForUpdate(@Param("accountId") long accountId);
 
     /**
      * 单条 SQL 批量插入用户资料。

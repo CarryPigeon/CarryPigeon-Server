@@ -43,12 +43,12 @@ public class MybatisFileUploadDatabaseService implements FileUploadDatabaseServi
     }
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     public boolean claim(long fileId, String objectKey, Instant now) {
         if (mapper.claim(fileId, objectKey, now) == 0) {
             return false;
         }
-        mapper.insertAttempt(fileId, objectKey);
+        mapper.insertAttempt(fileId, objectKey, now);
         return true;
     }
 
@@ -58,7 +58,72 @@ public class MybatisFileUploadDatabaseService implements FileUploadDatabaseServi
     }
 
     @Override
-    public void fail(long fileId, String objectKey) {
-        mapper.fail(fileId, objectKey);
+    @Transactional
+    public void fail(long fileId, String objectKey, Instant now) {
+        if (mapper.fail(fileId, objectKey) > 0) {
+            mapper.retryObjectCleanup(objectKey, now);
+        }
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<FileUploadRecord> findByIdForUpdate(long fileId) {
+        return Optional.ofNullable(mapper.selectByIdForUpdate(fileId));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Long> avatarFileId(long accountId) {
+        return Optional.ofNullable(mapper.avatarFileId(accountId));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void replaceAvatarReference(long accountId, Long fileId) {
+        mapper.deleteAvatarReference(accountId);
+        if (fileId != null) {
+            mapper.insertAvatarReference(accountId, fileId);
+        }
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void reclaimIfUnreferenced(long fileId, Instant now) {
+        if (mapper.reclaimIfUnreferenced(fileId, now) > 0) {
+            mapper.scheduleObjects(fileId, now);
+        }
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Long> findReclaimCandidateForUpdate(Instant now, Instant unusedBefore, Instant interruptedBefore) {
+        return Optional.ofNullable(mapper.reclaimCandidate(now, unusedBefore, interruptedBefore));
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void beginReclaim(long fileId, Instant now) {
+        mapper.beginReclaim(fileId, now);
+        mapper.scheduleObjects(fileId, now);
+    }
+
+    @Override
+    public java.util.List<String> findObjectCleanupKeys(Instant now, int limit) {
+        return mapper.objectCleanupKeys(now, limit);
+    }
+
+    @Override
+    public void objectCleaned(String objectKey, Instant now, Instant nextCheck) {
+        mapper.objectCleaned(objectKey, now, nextCheck);
+    }
+
+    @Override
+    public void retryObjectCleanup(String objectKey, Instant retryAt) {
+        mapper.retryObjectCleanup(objectKey, retryAt);
+    }
+
+    @Override
+    public void finishReclaimedFiles(int limit) {
+        mapper.finishReclaimedFiles(limit);
     }
 }
