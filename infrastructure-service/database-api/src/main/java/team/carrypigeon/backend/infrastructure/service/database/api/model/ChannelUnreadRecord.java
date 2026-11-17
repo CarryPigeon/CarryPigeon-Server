@@ -6,7 +6,7 @@ package team.carrypigeon.backend.infrastructure.service.database.api.model;
  * 边界：不是表行，只服务未读统计读链路，不承载未读计算规则。
  *
  * @param channelId 频道 ID
- * @param unreadCount 该频道未读消息数，只返回大于 0 的频道
+ * @param unreadCount 该频道未读消息数，范围 1..10000；10000 表示已达统计上限
  */
 public record ChannelUnreadRecord(
         long channelId,

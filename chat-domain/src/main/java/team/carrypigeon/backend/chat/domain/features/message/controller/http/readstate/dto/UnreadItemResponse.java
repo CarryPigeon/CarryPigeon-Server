@@ -7,6 +7,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 public record UnreadItemResponse(
         @Schema(description = "频道 ID", example = "1") String cid,
-        @Schema(description = "未读数量", example = "3") long unreadCount
+        @Schema(description = "未读数量；不足 10000 为精确值，达到上限返回 10000+", example = "10000+") String unreadCount
 ) {
 }

@@ -73,13 +73,14 @@ public class ChannelReadStateController {
      * @return 未读列表响应
      */
     @GetMapping("/unreads")
-    @Operation(summary = "获取未读频道列表", description = "返回当前用户的频道未读聚合。")
+    @Operation(summary = "获取未读频道列表", description = "返回当前用户的频道未读聚合；不足 10000 精确统计，达到上限显示 10000+。排除本人及已撤回消息。")
     @ApiResponses({@ApiResponse(responseCode = "200", description = "返回未读列表")})
     public UnreadListResponse listUnreads(
         @AuthenticationPrincipal CpPrincipal principal
     ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
-            .map(result -> new UnreadItemResponse(Long.toString(result.channelId()), result.unreadCount()))
+            .map(result -> new UnreadItemResponse(Long.toString(result.channelId()),
+                    result.unreadCount() >= 10000 ? "10000+" : Long.toString(result.unreadCount())))
             .toList();
         return new UnreadListResponse(items);
     }

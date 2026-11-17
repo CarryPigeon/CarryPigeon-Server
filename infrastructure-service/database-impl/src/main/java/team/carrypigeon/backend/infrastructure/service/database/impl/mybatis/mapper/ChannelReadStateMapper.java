@@ -136,31 +136,48 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     int deleteByKeys(@Param("keys") List<ChannelReadStateKey> keys);
 
-    /**
-     * 聚合账户在各频道的未读消息数，排除本人发送和已撤回的消息。
-     *
-     * @param accountId 账户 ID
-     * @return 未读投影列表
-     */
+    /** 账户当前可见频道及其已读边界；无已读记录时从序号 0 开始。 */
+    record UnreadBoundary(long channelId, long lastReadSequence) {}
+
+    /** 先读取各频道的边界，使后续计数可以使用常量范围索引，而非逐行过滤已读历史。 */
     @Select("""
-            <script>
-            SELECT
-                cm.channel_id AS channelId,
-                COUNT(m.message_id) AS unreadCount
+            SELECT cm.channel_id, COALESCE(r.last_read_sequence, 0) AS last_read_sequence
             FROM chat_channel_member cm
             JOIN chat_channel c ON c.channel_id = cm.channel_id
             LEFT JOIN chat_channel_read_state r
-                   ON r.channel_id = cm.channel_id AND r.account_id = cm.account_id
-            LEFT JOIN chat_message m
-                  ON m.channel_id = cm.channel_id
-                  AND m.sequence &gt; COALESCE(r.last_read_sequence, 0)
-                  AND m.sender_id != cm.account_id
-                  AND m.status != 'recalled'
+                ON r.channel_id = cm.channel_id AND r.account_id = cm.account_id
             WHERE cm.account_id = #{accountId}
-            GROUP BY cm.channel_id, c.created_at
-            HAVING COUNT(m.message_id) &gt; 0
             ORDER BY cm.channel_id ASC
+            """)
+    List<UnreadBoundary> findUnreadBoundaries(@Param("accountId") long accountId);
+
+    /**
+     * 对一批频道分别以常量边界做索引范围查询，各自最多计数 10000 条有效未读。
+     * 两次查询之间成员关系可能已删除，因此统计时再次校验频道与成员关系。
+     */
+    @Select("""
+            <script>
+            <foreach collection="boundaries" item="boundary" separator=" UNION ALL ">
+                SELECT #{boundary.channelId} AS channelId, (
+                    SELECT COUNT(*) FROM (
+                        SELECT 1 FROM chat_message m FORCE INDEX (idx_message_unread)
+                        WHERE m.channel_id = #{boundary.channelId}
+                          AND m.status = 'sent'
+                          AND m.sequence &gt; #{boundary.lastReadSequence}
+                          AND m.sender_id != #{accountId}
+                        LIMIT 10000
+                    ) limited_unreads
+                ) AS unreadCount
+                WHERE EXISTS (
+                    SELECT 1 FROM chat_channel_member cm
+                    JOIN chat_channel c ON c.channel_id = cm.channel_id
+                    WHERE cm.account_id = #{accountId} AND cm.channel_id = #{boundary.channelId}
+                )
+            </foreach>
             </script>
             """)
-    List<ChannelUnreadProjection> findUnreadsByAccountId(@Param("accountId") long accountId);
+    List<ChannelUnreadProjection> countUnreads(
+            @Param("accountId") long accountId,
+            @Param("boundaries") List<UnreadBoundary> boundaries
+    );
 }

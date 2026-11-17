@@ -5,7 +5,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 
 /**
  * 频道未读查询投影。
- * 职责：承接未读聚合 SQL 返回的频道、未读数和已读时间字段。
+ * 职责：承接未读聚合 SQL 返回的频道与未读数。
  * 边界：仅供 database-impl 内部未读读链路使用。
  */
 @Data
@@ -16,7 +16,7 @@ public class ChannelUnreadProjection {
 
     /**
      * 将查询投影转换为数据库记录契约。
-     * 约束：聚合列为空时按 0 与 null 输出，不伪造已读时间。
+     * 约束：未读数达到 10000 后不再精确统计超出部分。
      *
      * @return 对应数据库记录契约
      */

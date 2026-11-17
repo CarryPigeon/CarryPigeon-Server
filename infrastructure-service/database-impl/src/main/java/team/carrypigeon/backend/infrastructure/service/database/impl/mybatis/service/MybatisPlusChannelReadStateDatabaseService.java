@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -154,8 +155,16 @@ public class MybatisPlusChannelReadStateDatabaseService implements ChannelReadSt
      */
     @Override
     public List<ChannelUnreadRecord> findUnreadsByAccountId(long accountId) {
-        return channelReadStateMapper.findUnreadsByAccountId(accountId).stream()
-                .map(ChannelUnreadProjection::toRecord)
-                .toList();
+        List<ChannelReadStateMapper.UnreadBoundary> boundaries = channelReadStateMapper.findUnreadBoundaries(accountId);
+        List<ChannelUnreadRecord> result = new ArrayList<>();
+        // 分批合并为 UNION ALL，避免逐频道网络往返，也限制单条 SQL 的长度。
+        for (int start = 0; start < boundaries.size(); start += 100) {
+            List<ChannelReadStateMapper.UnreadBoundary> batch = boundaries.subList(start, Math.min(start + 100, boundaries.size()));
+            channelReadStateMapper.countUnreads(accountId, batch).stream()
+                    .filter(row -> row.getUnreadCount() > 0)
+                    .map(ChannelUnreadProjection::toRecord)
+                    .forEach(result::add);
+        }
+        return List.copyOf(result);
     }
 }
