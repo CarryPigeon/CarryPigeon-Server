@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -205,6 +207,15 @@ public class GlobalExceptionHandler {
                 "concurrent modification; retry the action",
                 null
         ));
+    }
+
+    /**
+     * 将方法安全异常交还 Spring Security 过滤链，统一使用已有的 401/403 输出器。
+     * MVC 的兜底处理不能把认证失败或权限不足转成 500，也不暴露安全表达式。
+     */
+    @ExceptionHandler({AuthenticationException.class, AccessDeniedException.class})
+    public void handleSecurityException(RuntimeException exception) {
+        throw exception;
     }
 
     /**
