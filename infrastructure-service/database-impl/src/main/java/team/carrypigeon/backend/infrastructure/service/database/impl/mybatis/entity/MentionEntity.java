@@ -19,7 +19,8 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Mentio
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@TableName("chat_mention")
+// 使用结果映射读取 is_read，避免 MyBatis-Plus 生成 MySQL 保留字别名 `read`。
+@TableName(value = "chat_mention", autoResultMap = true)
 public class MentionEntity {
 
     @TableId(value = "mention_id", type = IdType.INPUT)
