@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
@@ -132,11 +133,16 @@ public class MybatisPlusChannelApplicationDatabaseService implements ChannelAppl
     }
 
     /**
-     * 更新既有申请记录。
+     * 由数据库条件更新取得唯一审批权，避免事务旧快照或并发请求覆盖已经提交的决定。
      */
     @Override
-    public void update(ChannelApplicationRecord record) {
-        channelApplicationMapper.updateById(ChannelApplicationEntity.from(record));
+    public boolean decideIfPending(ChannelApplicationRecord record) {
+        return channelApplicationMapper.update(new LambdaUpdateWrapper<ChannelApplicationEntity>()
+                .eq(ChannelApplicationEntity::getApplicationId, record.applicationId())
+                .eq(ChannelApplicationEntity::getChannelId, record.channelId())
+                .eq(ChannelApplicationEntity::getStatus, "PENDING")
+                .set(ChannelApplicationEntity::getStatus, record.status())
+                .set(ChannelApplicationEntity::getRespondedAt, record.respondedAt())) == 1;
     }
 
     /**

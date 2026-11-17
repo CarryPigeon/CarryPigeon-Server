@@ -139,7 +139,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             if (application.channelId() != channelId) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_NOT_FOUND);
             }
-            // 幂等保护：只有 PENDING 申请可被审批，重复审批按冲突拒绝
+            // 提前拒绝已处理的申请；最终审批权仍由下面的数据库条件更新决定。
             if (application.status() != ChannelApplicationStatus.PENDING) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_ALREADY_PROCESSED);
             }
@@ -169,7 +169,10 @@ public class ChannelApplicationService implements ChannelApplicationApi {
                 application.createdAt(),
                 timeProvider.nowInstant()
             );
-            channelApplicationRepository.update(updated);
+            // 未取得审批权不能创建成员或登记通知；后续成员写入失败时审批结果也一并回滚。
+            if (!channelApplicationRepository.decideIfPending(updated)) {
+                throw ProblemException.of(ChannelProblem.APPLICATION_ALREADY_PROCESSED);
+            }
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {
                 // 批准即建立成员关系，初始角色固定为 MEMBER；申请状态与成员写入必须同事务
                 channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), application.channelId(), application.applicantId(), ChannelMemberRole.MEMBER, timeProvider.nowInstant()));

@@ -50,8 +50,8 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     }
 
     @Override
-    public void update(ChannelApplication application) {
-        channelApplicationDatabaseService.update(toRecord(application));
+    public boolean decideIfPending(ChannelApplication application) {
+        return channelApplicationDatabaseService.decideIfPending(toRecord(application));
     }
 
     @Override

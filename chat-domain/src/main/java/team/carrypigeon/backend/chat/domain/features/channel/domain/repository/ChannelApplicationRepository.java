@@ -51,12 +51,13 @@ public interface ChannelApplicationRepository {
     void save(ChannelApplication application);
 
     /**
-     * 更新已存在的申请记录。
-     * 约束：按申请主键更新，调用方必须传入保留原主键的申请模型。
+     * 仅在指定频道的申请仍为 PENDING 时写入审批结果和响应时间。
+     * 调用方先持有频道治理锁；与批准后的成员写入必须处于同一事务。
      *
-     * @param application 待更新申请记录
+     * @param application 审批后的申请，状态为 ACCEPTED 或 DECLINED，响应时间非空
+     * @return 取得本次审批权时为 true；申请不存在、频道不符或已处理时为 false
      */
-    void update(ChannelApplication application);
+    boolean decideIfPending(ChannelApplication application);
 
     /**
      * 物理删除申请记录。

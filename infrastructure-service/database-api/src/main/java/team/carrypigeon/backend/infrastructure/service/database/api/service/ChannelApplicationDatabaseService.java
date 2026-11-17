@@ -43,11 +43,12 @@ public interface ChannelApplicationDatabaseService {
     void deleteAll(List<Long> applicationIds);
 
     /**
-     * 更新既有申请记录。
+     * 按申请 ID、频道 ID 和 PENDING 状态条件更新，仅修改状态及响应时间。
      *
-     * @param record 待更新申请记录
+     * @param record 审批结果，status 为 ACCEPTED 或 DECLINED，respondedAt 非空
+     * @return 恰好更新一条待处理申请时为 true；条件未命中时为 false
      */
-    void update(ChannelApplicationRecord record);
+    boolean decideIfPending(ChannelApplicationRecord record);
 
     /**
      * 分页查询申请记录。
