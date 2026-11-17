@@ -15,13 +15,13 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 public interface ChannelQueryApi {
 
     /**
-     * 发现可加入或可浏览的频道。
+     * 发现全部普通频道摘要，系统频道隐藏；结果不授予消息或频道详情的读取权限。
      *
      * @param accountId 账号标识
-     * @param keyword 关键字
-     * @param cursorChannelId 分页标识
+     * @param keyword 名称或简介的普通文本关键词，null 或空白表示不过滤
+     * @param cursorChannelId 排他下界频道 ID，null 从头开始
      * @param limit 分页大小
-     * @return 频道发现结果投影列表
+     * @return 按频道 ID 升序排列，最多 limit + 1 条；末条为调用方判断下一页的探测数据
      */
     List<DiscoverChannelResult> discoverChannels(long accountId, String keyword, Long cursorChannelId, int limit);
 

@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,15 +26,19 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBody;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.DiscoverChannelResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.CreateChannelRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.UpdateChannelProfileRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
+import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -59,6 +64,26 @@ public class ChannelController {
     ) {
         this.channelApi = channelApi;
         this.channelQueryApi = channelQueryApi;
+    }
+
+    /** 查询所有普通频道的公开摘要，系统频道隐藏；发现结果不授予资料或消息读取权限。 */
+    @GetMapping("/discover")
+    @Operation(summary = "发现频道", description = "按频道 ID 升序发现普通频道，系统频道隐藏。关键词按名称或简介包含匹配；加入频道仍需申请审批，消息仅成员可读。")
+    public CursorPageResponse<DiscoverChannelResponse> discoverChannels(
+        @Parameter(description = "名称或简介关键词，省略或空白时不过滤")
+        @RequestParam(name = "q", required = false) @Size(max = 128) String keyword,
+        @Parameter(description = "上一页返回的 next_cursor，十进制频道 ID，作为排他下界")
+        @RequestParam(required = false) @Positive Long cursor,
+        @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
+        @AuthenticationPrincipal CpPrincipal principal
+    ) {
+        List<DiscoverChannelResult> found = channelQueryApi.discoverChannels(principal.accountId(), keyword, cursor, limit);
+        boolean hasMore = found.size() > limit;
+        List<DiscoverChannelResult> items = hasMore ? found.subList(0, limit) : found;
+        return CursorPageResponse.of(items.stream().map(item -> new DiscoverChannelResponse(
+                Long.toString(item.cid()), item.name(), item.brief(), item.avatar(),
+                item.memberCount(), item.requiresApplication())).toList(),
+                hasMore ? Long.toString(items.getLast().cid()) : null, hasMore);
     }
 
     /**

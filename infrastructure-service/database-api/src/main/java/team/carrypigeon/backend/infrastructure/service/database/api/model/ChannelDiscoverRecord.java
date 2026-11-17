@@ -8,7 +8,7 @@ package team.carrypigeon.backend.infrastructure.service.database.api.model;
  * @param id 频道 ID
  * @param name 频道名称
  * @param brief 频道简介
- * @param avatar 频道头像相对路径
+ * @param avatar 频道头像相对路径；当前无存储来源，为 null
  * @param memberCount 成员数
  * @param requiresApplication 是否需要申请加入
  */

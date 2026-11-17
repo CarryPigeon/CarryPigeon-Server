@@ -8,7 +8,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.model;
  * @param id 频道 ID
  * @param name 频道名称
  * @param brief 频道简介；允许空字符串
- * @param avatar 频道头像相对路径；允许空字符串
+ * @param avatar 频道头像相对路径；当前未提供头像能力，为 null
  * @param memberCount 频道当前成员数量
  * @param requiresApplication 加入该频道是否需要先提交申请
  */

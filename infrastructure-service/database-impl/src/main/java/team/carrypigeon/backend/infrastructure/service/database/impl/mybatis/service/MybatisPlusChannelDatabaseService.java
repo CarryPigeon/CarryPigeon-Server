@@ -116,8 +116,10 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
      */
     @Override
     public List<ChannelDiscoverRecord> discoverChannels(String keyword, Long cursorChannelId, int limit) {
-        // TODO 完善频道发现页查询
-        return List.of();
+        // 参数绑定保证 SQL 结构，额外转义保证用户输入的 %、_ 和 ! 只按字面量参与包含匹配。
+        String escapedKeyword = keyword == null ? null
+                : keyword.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+        return channelMapper.discoverChannels(escapedKeyword, cursorChannelId, limit);
     }
 
     /**
