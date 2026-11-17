@@ -132,7 +132,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
     int deleteByKeys(@Param("keys") List<ChannelReadStateKey> keys);
 
     /**
-     * 聚合账户在各频道的未读消息数与最后已读时间。
+     * 聚合账户在各频道的未读消息数，排除本人发送和已撤回的消息。
      *
      * @param accountId 账户 ID
      * @return 未读投影列表
@@ -141,7 +141,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             <script>
             SELECT
                 cm.channel_id AS channelId,
-                COUNT(m.message_id) AS unreadCount,
+                COUNT(m.message_id) AS unreadCount
             FROM chat_channel_member cm
             JOIN chat_channel c ON c.channel_id = cm.channel_id
             LEFT JOIN chat_channel_read_state r
