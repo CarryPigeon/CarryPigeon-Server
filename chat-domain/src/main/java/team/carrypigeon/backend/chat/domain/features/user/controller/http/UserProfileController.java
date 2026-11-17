@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
@@ -75,7 +75,7 @@ public class UserProfileController {
             @PathVariable @Positive(message = "accountId must be greater than 0") long accountId
     ) {
         UserProfileResult result = userProfileDomainApi.findById(accountId);
-        AuthAccount account = authAccountApi.getAccount(accountId);
+        PublicAccountResult account = authAccountApi.getAccount(accountId);
         return new UserDetailProfileResponse(
                 result.accountId() + "",
                 result.username(),

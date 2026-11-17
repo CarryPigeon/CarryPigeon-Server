@@ -3,7 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.auth.domain.api.account;
 import java.util.List;
 
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.model.AuthAccount;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 
 /**
  * 鉴权账号领域 API。
@@ -28,7 +28,7 @@ public interface AuthAccountApi {
      * @param accountId 账号 ID
      * @return 当前账户公开信息
      */
-    AuthAccount getAccount(long accountId);
+    PublicAccountResult getAccount(long accountId);
 
     /**
      * 批量获取账户公开信息。
@@ -36,7 +36,7 @@ public interface AuthAccountApi {
      * @param accountIds 目标账户 ID 列表
      * @return 命中的账户公开信息
      */
-    List<AuthAccount> getAccounts(List<Long> accountIds);
+    List<PublicAccountResult> getAccounts(List<Long> accountIds);
 
     /**
      * 使用邮箱验证码更新当前账号的邮箱登录标识。

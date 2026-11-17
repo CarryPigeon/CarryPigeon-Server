@@ -1,6 +1,7 @@
 package team.carrypigeon.backend.chat.domain.features.auth.domain.service.account;
 
 import java.util.List;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -93,17 +94,20 @@ public class AuthAccountService implements AuthAccountApi {
     }
 
     @Override
-    public AuthAccount getAccount(long accountId) {
+    public PublicAccountResult getAccount(long accountId) {
         return authAccountRepository.findById(accountId)
+            .map(account -> new PublicAccountResult(account.id(), account.username(), account.email(), account.createdAt()))
             .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
     }
 
     @Override
-    public List<AuthAccount> getAccounts(List<Long> accountIds) {
+    public List<PublicAccountResult> getAccounts(List<Long> accountIds) {
         if (accountIds == null || accountIds.isEmpty()) {
             return List.of();
         }
-        return authAccountRepository.findByIds(accountIds).stream().toList();
+        return authAccountRepository.findByIds(accountIds).stream()
+                .map(account -> new PublicAccountResult(account.id(), account.username(), account.email(), account.createdAt()))
+                .toList();
     }
 
     @Override
