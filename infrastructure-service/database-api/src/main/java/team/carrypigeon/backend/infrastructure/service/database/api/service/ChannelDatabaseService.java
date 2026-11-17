@@ -15,6 +15,9 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelDatabaseService {
 
+    /** 授权专用直读；不读取或回填缓存，缺失时返回空。可见性遵守调用方事务隔离级别。 */
+    Optional<ChannelRecord> findByIdForAuthorization(long channelId);
+
     /**
      * 写入新的频道记录。
      *

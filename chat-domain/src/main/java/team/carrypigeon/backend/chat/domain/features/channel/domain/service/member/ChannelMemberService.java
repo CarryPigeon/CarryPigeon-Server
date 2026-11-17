@@ -55,10 +55,10 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public PageResult<ChannelMemberResult> listChannelMembers(long accountId, long channelId, PageQuery page) {
         // 先确认频道存在，避免把"频道不存在"与"不是成员"混为一类拒绝
-        Channel channel = channelRepository.findById(channelId)
+        Channel channel = channelRepository.findByIdForAuthorization(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 读取权限下放到成员身份：只要请求者本人是成员，就允许查看完整成员列表
-        channelMemberRepository.findByRelation(channelId, accountId)
+        channelMemberRepository.findByRelationForAuthorization(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         PageResult<ChannelMember> members = channelMemberRepository.pageByChannelId(channel.id(), page);
         // 只对当前页成员批量取资料，避免为分页加载全频道成员资料
@@ -75,12 +75,12 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public void promoteChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能自行扩张管理员数量
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -114,12 +114,12 @@ public class ChannelMemberService implements ChannelMemberApi {
     public void demoteChannelAdmin(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 获取频道信息
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者与目标都必须先是频道成员，否则无法进入角色判定
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 角色调整统一只认 OWNER，ADMIN 不能撤销其它管理员
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -153,12 +153,12 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
         ChannelOwnershipTransferResult result = transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 目标不是成员时按资源不存在处理，与操作者非成员的拒绝语义区分开
-            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 只有现任 OWNER 才能发起转移，避免 ADMIN 自行接管频道
             if (operator.role() != ChannelMemberRole.OWNER) {
@@ -201,11 +201,11 @@ public class ChannelMemberService implements ChannelMemberApi {
     @Override
     public void kickChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(channelId, targetAccountId)
+            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(channelId, targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
             // 治理动作要求 OWNER 或 ADMIN，普通成员不能移除他人
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {

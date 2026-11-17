@@ -13,7 +13,13 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 public interface ChannelBanRepository {
 
     /**
-     * 按频道与账号查询禁言记录。
+     * 为授权判断直接读取数据库，绕过最终一致的展示缓存。
+     * 返回当前事务可见的记录；不存在时为空，不提供检查与后续写入之间的并发保证。
+     */
+    Optional<ChannelBan> findByRelationForAuthorization(long channelId, long bannedAccountId);
+
+    /**
+     * 按频道与账号查询禁言展示数据，允许命中缓存；权限判断使用 findByRelationForAuthorization。
      * 说明：返回的是该 (频道, 账号) 的唯一记录，可能已解除或已过期，是否生效由调用方按 revokedAt 与 expiresAt 判定。
      *
      * @param channelId 频道 ID

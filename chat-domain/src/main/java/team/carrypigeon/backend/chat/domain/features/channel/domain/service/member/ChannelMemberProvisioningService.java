@@ -39,7 +39,7 @@ public class ChannelMemberProvisioningService implements ChannelMemberProvisioni
         List<Channel> systemChannels = channelRepository.listSystemChannels();
         for (Channel systemChannel : systemChannels) {
             // 幂等保护：账号已在该频道存在成员关系时跳过，避免重复注册或多链路调用产生重复行
-            if (channelMemberRepository.findByRelation(systemChannel.id(), accountId).isEmpty()) {
+            if (channelMemberRepository.findByRelationForAuthorization(systemChannel.id(), accountId).isEmpty()) {
                 // 系统频道的成员统一以 MEMBER 角色加入，不分配 OWNER 或 ADMIN，因此不参与频道治理
                 channelMemberRepository.save(new ChannelMember(
                     idGenerator.nextLongId(),

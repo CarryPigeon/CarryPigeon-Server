@@ -62,9 +62,9 @@ public class ChannelBanService implements ChannelBanApi {
 
     @Override
     public PageResult<ChannelBanListItemResult> listChannelBans(long accountId, long channelId, PageQuery page) {
-        Channel channel = channelRepository.findById(channelId)
+        Channel channel = channelRepository.findByIdForAuthorization(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-        ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
+        ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 禁言台账属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER
@@ -91,11 +91,11 @@ public class ChannelBanService implements ChannelBanApi {
                 // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
                 durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
             }
-            Channel channel = channelRepository.findById(command.channelId())
+            Channel channel = channelRepository.findByIdForAuthorization(command.channelId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(command.channelId(), command.operatorAccountId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            ChannelMember target = channelMemberRepository.findByRelation(command.channelId(), command.targetAccountId())
+            ChannelMember target = channelMemberRepository.findByRelationForAuthorization(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
@@ -106,7 +106,7 @@ public class ChannelBanService implements ChannelBanApi {
             if (target.role() != ChannelMemberRole.MEMBER) {
                 throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member must have MEMBER role");
             }
-            ChannelBan existingBan = channelBanRepository.findByRelation(
+            ChannelBan existingBan = channelBanRepository.findByRelationForAuthorization(
                 channel.id(), target.accountId()).orElse(null);
             // 已有记录未解除且未到期时属于重复禁言，按参数错误拒绝
             if (existingBan != null
@@ -157,16 +157,16 @@ public class ChannelBanService implements ChannelBanApi {
     public void unbanChannelMember(long operatorAccountId, long channelId, long targetAccountId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 查询基础信息
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 禁言解除同样属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER
                 && operator.role() != ChannelMemberRole.ADMIN) {
                 throw ProblemException.of(ChannelProblem.BAN_FORBIDDEN);
             }
-            ChannelBan existingBan = channelBanRepository.findByRelation(
+            ChannelBan existingBan = channelBanRepository.findByRelationForAuthorization(
                     channel.id(), targetAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.BAN_NOT_FOUND));
             // 只有仍然生效的记录才可解除：已解除或已过期的记录重复解除按参数错误拒绝

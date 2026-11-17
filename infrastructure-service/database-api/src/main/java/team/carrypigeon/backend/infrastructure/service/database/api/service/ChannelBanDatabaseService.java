@@ -14,6 +14,9 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelBanDatabaseService {
 
+    /** 授权专用直读；不读取或回填缓存，缺失时返回空。可见性遵守调用方事务隔离级别。 */
+    Optional<ChannelBanRecord> findByRelationForAuthorization(long channelId, long bannedAccountId);
+
     /**
      * 写入新的封禁记录。
      *

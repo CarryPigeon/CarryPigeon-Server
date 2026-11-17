@@ -30,6 +30,12 @@ public class MybatisPlusChannelBanDatabaseService implements ChannelBanDatabaseS
         this.databaseCache = databaseCache;
     }
 
+    /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
+    @Override
+    public Optional<ChannelBanRecord> findByRelationForAuthorization(long channelId, long bannedAccountId) {
+        return loadByRelation(channelId, bannedAccountId);
+    }
+
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountId(long channelId, long bannedAccountId) {
         String lookupKey = relationKey(channelId, bannedAccountId);

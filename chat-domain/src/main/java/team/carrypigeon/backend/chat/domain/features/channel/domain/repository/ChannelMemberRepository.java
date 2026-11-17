@@ -15,8 +15,14 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 public interface ChannelMemberRepository {
 
     /**
+     * 为授权判断直接读取数据库，绕过最终一致的展示缓存。
+     * 返回当前事务可见的记录；不存在时为空，不提供检查与后续写入之间的并发保证。
+     */
+    Optional<ChannelMember> findByRelationForAuthorization(long channelId, long accountId);
+
+    /**
      * 按频道与账号查询单条活跃成员关系。
-     * 用途：可见性判定、成员身份校验与治理用例中的操作者/目标读取。
+     * 用途：普通展示读取；授权判断必须使用 findByRelationForAuthorization。
      *
      * @param channelId 频道 ID
      * @param accountId 账户 ID

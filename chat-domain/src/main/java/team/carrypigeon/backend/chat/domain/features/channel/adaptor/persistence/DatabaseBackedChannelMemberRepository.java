@@ -29,6 +29,11 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     }
 
     @Override
+    public Optional<ChannelMember> findByRelationForAuthorization(long channelId, long accountId) {
+        return channelMemberDatabaseService.findByRelationForAuthorization(channelId, accountId).map(this::toDomain);
+    }
+
+    @Override
     public void save(ChannelMember channelMember) {
         channelMemberDatabaseService.insert(toRecord(channelMember));
     }

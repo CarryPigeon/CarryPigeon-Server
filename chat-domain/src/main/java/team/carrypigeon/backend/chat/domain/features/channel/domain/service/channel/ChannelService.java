@@ -88,10 +88,10 @@ public class ChannelService implements ChannelApi {
 
     @Override
     public ChannelResult getChannelById(long accountId, long channelId) {
-        Channel channel = channelRepository.findById(channelId)
+        Channel channel = channelRepository.findByIdForAuthorization(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 可见性校验与列表保持同一标准：只要不存在成员关系就拒绝，不为系统频道放开
-        if (channelMemberRepository.findByRelation(channel.id(), accountId).isEmpty()) {
+        if (channelMemberRepository.findByRelationForAuthorization(channel.id(), accountId).isEmpty()) {
             throw ProblemException.of(ChannelProblem.READ_FORBIDDEN);
         }
         return ChannelResult.from(channel);
@@ -125,10 +125,10 @@ public class ChannelService implements ChannelApi {
     @Override
     public void deleteChannel(long operatorAccountId, long channelId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者必须先是频道成员，再判断其角色，避免把"非成员"与"角色不足"混为一类拒绝
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
@@ -152,9 +152,9 @@ public class ChannelService implements ChannelApi {
     @Override
     public void updateChannelProfile(long operatorAccountId, long channelId, String name, String brief) {
         transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelation(channelId, operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 资料修改按成员角色放行，不再按频道类型区分；系统频道的成员角色为 MEMBER，因此天然被这一层拦住
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {

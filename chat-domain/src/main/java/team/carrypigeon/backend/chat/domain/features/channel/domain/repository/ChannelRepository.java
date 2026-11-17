@@ -15,6 +15,12 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Discov
 public interface ChannelRepository {
 
     /**
+     * 为授权判断直接读取数据库，绕过最终一致的展示缓存。
+     * 返回当前事务可见的记录；不存在时为空，不提供检查与后续写入之间的并发保证。
+     */
+    Optional<Channel> findByIdForAuthorization(long channelId);
+
+    /**
      * 查询全部系统频道。
      * 用途：账号初始化时为其建立默认频道的成员关系。
      *
@@ -23,7 +29,7 @@ public interface ChannelRepository {
     List<Channel> listSystemChannels();
 
     /**
-     * 按频道 ID 查询频道。
+     * 按频道 ID 查询展示数据，允许命中缓存；授权存在性检查使用 findByIdForAuthorization。
      *
      * @param channelId 频道 ID
      * @return 命中时返回频道，未命中时返回空 Optional

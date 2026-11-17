@@ -27,6 +27,11 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     }
 
     @Override
+    public Optional<ChannelBan> findByRelationForAuthorization(long channelId, long bannedAccountId) {
+        return channelBanDatabaseService.findByRelationForAuthorization(channelId, bannedAccountId).map(this::toDomain);
+    }
+
+    @Override
     public Optional<ChannelBan> findByRelation(long channelId, long bannedAccountId) {
         return channelBanDatabaseService.findByChannelIdAndBannedAccountId(channelId, bannedAccountId)
                 .map(this::toDomain);

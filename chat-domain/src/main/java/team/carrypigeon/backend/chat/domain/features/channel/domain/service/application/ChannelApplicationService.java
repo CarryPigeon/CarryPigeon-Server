@@ -63,10 +63,10 @@ public class ChannelApplicationService implements ChannelApplicationApi {
     @Override
     public ChannelApplicationResult createChannelApplication(long accountId, long channelId, String reason) {
         ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
-            Channel channel = channelRepository.findById(channelId)
+            Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 已是成员时无需申请，直接按参数错误拒绝
-            if (channelMemberRepository.findByRelation(channel.id(), accountId).isPresent()) {
+            if (channelMemberRepository.findByRelationForAuthorization(channel.id(), accountId).isPresent()) {
                 throw ProblemException.of(ChannelProblem.INVALID_INPUT, "current account is already a channel member");
             }
             // 同一 (频道, 申请人) 至多保留一条申请：已审批的历史记录会被本次申请覆盖
@@ -108,9 +108,9 @@ public class ChannelApplicationService implements ChannelApplicationApi {
 
     @Override
     public PageResult<ChannelApplicationResult> listChannelApplications(long accountId, long channelId, PageQuery page) {
-        Channel channel = channelRepository.findById(channelId)
+        Channel channel = channelRepository.findByIdForAuthorization(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-        ChannelMember operator = channelMemberRepository.findByRelation(channelId, accountId)
+        ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(channelId, accountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         // 申请名单属于治理数据，普通成员不可读取
         if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
@@ -140,7 +140,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             if (application.status() != ChannelApplicationStatus.PENDING) {
                 throw ProblemException.of(ChannelProblem.APPLICATION_ALREADY_PROCESSED);
             }
-            ChannelMember operator = channelMemberRepository.findByRelation(application.channelId(), operatorAccountId)
+            ChannelMember operator = channelMemberRepository.findByRelationForAuthorization(application.channelId(), operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 审批属于治理动作，普通成员不可执行
             if (operator.role() != ChannelMemberRole.OWNER && operator.role() != ChannelMemberRole.ADMIN) {
@@ -153,7 +153,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
                 default -> throw ProblemException.of(ChannelProblem.INVALID_INPUT, "decision must be approve or reject");
             };
             // 申请人可能在申请期间已通过其它途径入群，此时审批失去意义
-            if (channelMemberRepository.findByRelation(application.channelId(), application.applicantId()).isPresent()) {
+            if (channelMemberRepository.findByRelationForAuthorization(application.channelId(), application.applicantId()).isPresent()) {
                 throw ProblemException.of(ChannelProblem.APPLICANT_ALREADY_MEMBER);
             }
             // 领域模型不可变：沿用原申请主键与创建时间，只替换状态并写入响应时间

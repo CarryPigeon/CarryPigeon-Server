@@ -42,6 +42,12 @@ public class MybatisPlusChannelDatabaseService implements ChannelDatabaseService
         this.databaseCache = databaseCache;
     }
 
+    /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
+    @Override
+    public Optional<ChannelRecord> findByIdForAuthorization(long channelId) {
+        return loadById(channelId);
+    }
+
     /**
      * 批量插入频道记录。
      * 缓存：逐频道 ID 精确删除实体缓存。

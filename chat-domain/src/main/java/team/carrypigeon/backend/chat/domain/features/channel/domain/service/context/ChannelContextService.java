@@ -45,10 +45,10 @@ public class ChannelContextService implements ChannelContextApi {
     @Override
     public ChannelContext requireMemberContext(long channelId, long accountId) {
         // 频道必须存在，避免把"频道不存在"与"无成员关系"混为一谈
-        channelRepository.findById(channelId)
+        channelRepository.findByIdForAuthorization(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
         // 账号必须是该频道成员，非成员一律拒绝；角色与禁言状态随上下文一并返回，调用方无需二次查询
-        ChannelMember member = channelMemberRepository.findByRelation(channelId, accountId)
+        ChannelMember member = channelMemberRepository.findByRelationForAuthorization(channelId, accountId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
         return new ChannelContext(member.channelId(), member.role(), activeMutedUntil(channelId, accountId));
     }
@@ -83,7 +83,7 @@ public class ChannelContextService implements ChannelContextApi {
     private Instant activeMutedUntil(long channelId, long accountId) {
         // 统一以时间源当前时刻为基准，避免调用方各自传入不同时间造成判定不一致
         Instant now = timeProvider.nowInstant();
-        return channelBanRepository.findByRelation(channelId, accountId)
+        return channelBanRepository.findByRelationForAuthorization(channelId, accountId)
             // 先剔除已解除的记录
             .filter(ban -> ban.revokedAt() == null)
             .map(ChannelBan::expiresAt)

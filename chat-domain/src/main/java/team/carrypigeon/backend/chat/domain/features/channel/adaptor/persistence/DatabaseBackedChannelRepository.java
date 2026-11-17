@@ -28,6 +28,11 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
+    public Optional<Channel> findByIdForAuthorization(long channelId) {
+        return channelDatabaseService.findByIdForAuthorization(channelId).map(this::toDomainModel);
+    }
+
+    @Override
     public List<Channel> listSystemChannels() {
         return channelDatabaseService.findSystemChannels().stream()
                 .map(this::toDomainModel)

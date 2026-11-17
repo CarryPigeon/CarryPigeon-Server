@@ -46,6 +46,12 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
         this.databaseCache = databaseCache;
     }
 
+    /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
+    @Override
+    public Optional<ChannelMemberRecord> findByRelationForAuthorization(long channelId, long accountId) {
+        return loadByRelation(channelId, accountId);
+    }
+
     /**
      * 插入新的频道成员关系。
      */
@@ -92,7 +98,7 @@ public class MybatisPlusChannelMemberDatabaseService implements ChannelMemberDat
     /**
      * 按频道与账户定位成员关系。
      * 缓存：先查 relation lookup 指针，命中后按成员主键读实体缓存；未命中时一次数据库查询同时回填指针与实体。
-     * 权限判定在请求主链路上高频调用该方法，是成员关系唯一键缓存的目标查询。
+     * 仅用于可接受最终一致性的展示查询；权限判断使用 findByRelationForAuthorization。
      */
     @Override
     public Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId) {
