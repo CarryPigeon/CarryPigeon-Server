@@ -4,9 +4,11 @@ source "$(dirname -- "$0")/runtime.sh"
 bash "$DIST_DIR/bin/verify.sh" --strict-config "${RUNTIME_ARGS[@]}"
 timeout_seconds=${CP_START_TIMEOUT_SECONDS:-60}
 [[ "$timeout_seconds" =~ ^[1-9][0-9]*$ ]] || { echo "CP_START_TIMEOUT_SECONDS must be positive." >&2; exit 1; }
+command -v curl >/dev/null || { echo "curl is required for startup readiness checks." >&2; exit 1; }
+readiness_url=${CP_READINESS_URL:-http://127.0.0.1:8080/internal/readiness}
 lock_application
 log_file="$LOG_DIR/application-stdout.log"
-# 每次启动清空本次 stdout，避免历史启动标记被误认为本次已就绪。
+# 每次启动独立记录 stdout，探针检查不依赖日志文本。
 nohup "${JAVA_COMMAND[@]}" "${RUNTIME_ARGS[@]}" > "$log_file" 2>&1 < /dev/null &
 application_pid=$!
 printf '%s\n' "$application_pid" > "$PID_FILE"
@@ -34,9 +36,9 @@ while ((SECONDS < deadline)); do
     echo "Application exited before startup completed. See $log_file" >&2
     exit 1
   fi
-  # main 在 SpringApplication.run 返回后写入此标记，包含初始化检查和监听启动。
-  # 就绪探针尚未实现，因此不把任意可连接端口或发现接口当作完整就绪。
-  if is_application_process "$application_pid" && grep -Fq 'Application is running ...' "$log_file"; then
+  # 只接受当前进程存活且探针返回 204，不把端口可连接或历史日志当作就绪。
+  status=$(curl --silent --noproxy '*' --max-time 1 --output /dev/null --write-out '%{http_code}' "$readiness_url" || true)
+  if is_application_process "$application_pid" && [[ "$status" == 204 ]]; then
     trap - EXIT INT TERM
     echo "Application started. PID=$application_pid; log=$log_file"
     exit 0

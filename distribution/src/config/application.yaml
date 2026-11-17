@@ -15,6 +15,9 @@ spring:
 
 cp:
   http:
+    readiness:
+      # 管理探针始终允许回环地址；容器探测需显式填写管理网段，不采信转发头。
+      trusted-networks: []
     client-address:
       # 默认只使用直连 IP；仅显式填写受控代理的 IP/CIDR 后才采信转发头。
       trusted-proxies: []

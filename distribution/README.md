@@ -4,7 +4,7 @@
 `distribution/target/full-distribution.zip` 和目录
 `distribution/target/full-distribution/full-distribution/`。
 
-当前包内脚本支持 Linux，需要 Bash、Java 25 或更新版本，以及 util-linux 的 `flock`。
+当前包内脚本支持 Linux，需要 Bash、curl、Java 25 或更新版本，以及 util-linux 的 `flock`。
 Windows 可自行使用 Java 类路径启动；当前不提供包内 Windows 生命周期脚本。
 
 ## 目录与配置
@@ -55,15 +55,10 @@ bin/stop.sh
 脚本固定从分发目录启动，前后台入口使用同一进程锁。
 PID 保存在 `run/application.pid`，后台 stdout 写入
 `service-logs/application-stdout.log`；`CP_LOG_HOME` 可覆盖日志目录。
-
-后台启动等待主入口在 `SpringApplication.run` 返回后写出的
-`Application is running ...` 标记，并确认进程仍属于当前分发目录。
-该标记出现在初始化检查及监听启动之后，要求保留主入口 INFO 日志。
-当前没有 `/internal/readiness` HTTP 探针，也不持续监控外部依赖。
-启动失败或超过 `CP_START_TIMEOUT_SECONDS`（默认 60 秒）时，脚本清理本次子进程和 PID。
-停止入口在发送 SIGTERM 前核对主类和分发目录标记；超过
-`CP_STOP_TIMEOUT_SECONDS`（默认 30 秒）仍未退出时保留 PID 并报告失败。
-不要在同一安装目录并行启动多个实例；多实例使用独立目录及配置。
+后台入口有界轮询 `GET /internal/readiness`，仅返回 204 时报告启动完成；进程提前退出或超时均失败。
+默认探测 `http://127.0.0.1:8080/internal/readiness`，修改端口或 HTTP 部署方式时通过 `CP_READINESS_URL` 同步设置。
+探针在启动未完成及开始关闭后返回 503。默认仅允许本机，可用 `cp.http.readiness.trusted-networks` 添加管理网段；不采信转发头。
+这是启动就绪检查，未实现持续外部依赖监控。
 
 ## systemd
 

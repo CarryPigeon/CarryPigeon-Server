@@ -40,7 +40,7 @@ public class SecurityConfiguration {
                 // 错误分派保留原始响应；白名单精确到方法，新增业务入口默认需要认证。
                 auth.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                     .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/server", "/api/files/download/server/head").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/server", "/api/files/download/server/head", "/internal/readiness").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login/pwd",
                             "/api/auth/login/email", "/api/auth/email_codes", "/api/auth/refresh", "/api/auth/revoke").permitAll();
                 if (environment.acceptsProfiles(Profiles.of("dev"))) {
