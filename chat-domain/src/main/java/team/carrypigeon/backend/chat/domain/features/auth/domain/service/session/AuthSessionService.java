@@ -156,8 +156,10 @@ public class AuthSessionService implements AuthTokenApi {
                     || !tokenHasher.hash(refreshToken).equals(session.refreshTokenHash())) {
                     throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
                 }
-                // 撤销会话
-                authRefreshSessionRepository.revoke(session.id());
+                // 条件更新抢占旧令牌的消费权；与新会话写入共用事务，签发失败时一并回滚。
+                if (!authRefreshSessionRepository.revokeIfActive(session.id())) {
+                    throw ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN);
+                }
                 // 查询用户
                 AuthAccount account = authAccountRepository.findById(accountId)
                     .orElseThrow(() -> ProblemException.of(AuthProblem.INVALID_REFRESH_TOKEN));

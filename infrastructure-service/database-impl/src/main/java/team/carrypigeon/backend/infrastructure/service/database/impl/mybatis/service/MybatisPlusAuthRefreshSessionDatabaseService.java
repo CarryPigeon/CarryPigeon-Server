@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import org.springframework.stereotype.Component;
 
+import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
@@ -28,8 +29,12 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
 
     private final AuthRefreshSessionMapper authRefreshSessionMapper;
 
-    public MybatisPlusAuthRefreshSessionDatabaseService(AuthRefreshSessionMapper authRefreshSessionMapper) {
+    private final TimeProvider timeProvider;
+
+    public MybatisPlusAuthRefreshSessionDatabaseService(
+            AuthRefreshSessionMapper authRefreshSessionMapper, TimeProvider timeProvider) {
         this.authRefreshSessionMapper = authRefreshSessionMapper;
+        this.timeProvider = timeProvider;
     }
 
     /**
@@ -123,7 +128,7 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
      */
     @Override
     public void revoke(long sessionId) {
-        Instant now = Instant.now();
+        Instant now = timeProvider.nowInstant();
         authRefreshSessionMapper.update(null, new LambdaUpdateWrapper<AuthRefreshSessionEntity>()
                 .eq(AuthRefreshSessionEntity::getId, sessionId)
                 .set(AuthRefreshSessionEntity::getRevoked, true)
@@ -136,7 +141,7 @@ public class MybatisPlusAuthRefreshSessionDatabaseService implements AuthRefresh
      */
     @Override
     public boolean revokeIfActive(long sessionId) {
-        Instant now = Instant.now();
+        Instant now = timeProvider.nowInstant();
         return authRefreshSessionMapper.update(null, new LambdaUpdateWrapper<AuthRefreshSessionEntity>()
                 .eq(AuthRefreshSessionEntity::getId, sessionId)
                 .eq(AuthRefreshSessionEntity::getRevoked, false)
