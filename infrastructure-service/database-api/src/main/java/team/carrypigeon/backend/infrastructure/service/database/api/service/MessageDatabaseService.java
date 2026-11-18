@@ -16,64 +16,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Messag
  */
 public interface MessageDatabaseService {
 
-    /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
-    boolean deleteChannelBatch(long channelId, int limit);
-
-
-    /** 在消息事务中插入或锁定发送请求，返回持锁读取的原摘要与消息 ID；禁止独立提交占位。 */
-    MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
-
-    /**
-     * 分配频道内下一消息序号，必须加入消息写入所在事务，不能独立提交。
-     * 同频道的后续分配等待当前事务结束，回滚不消耗序号。
-     */
-    long nextSequence(long channelId);
-
-    /**
-     * 写入新的消息记录。
-     *
-     * @param record 待持久化消息记录
-     */
-    void insert(MessageRecord record);
-
-    /**
-     * 批量写入消息记录。
-     *
-     * @param records 待持久化消息记录
-     */
-    void insertAll(List<MessageRecord> records);
-
-    /**
-     * 按消息 ID 删除消息记录。
-     *
-     * @param messageId 消息 ID
-     */
-    void delete(long messageId);
-
-    /**
-     * 按消息 ID 批量删除消息记录。
-     *
-     * @param messageIds 消息 ID 列表
-     */
-    void deleteAll(List<Long> messageIds);
-
-    /**
-     * 更新已有消息记录。
-     * 边界：更新完整行；哪些字段允许变化由 Repository 决定。
-     *
-     * @param record 待更新消息记录
-     */
-    void update(MessageRecord record);
-
-    /**
-     * 分页查询消息记录。
-     * 说明：按消息 ID 升序返回，仅供离线维护与元能力完整性使用；业务查询使用方向查询或专用搜索。
-     *
-     * @param page 分页参数
-     * @return 分页消息记录
-     */
-    PageResult<MessageRecord> list(PageQuery page);
-
     /**
      * 按消息 ID 查询消息记录。
      *
@@ -147,4 +89,66 @@ public interface MessageDatabaseService {
             String status,
             int limit
     );
+
+    /**
+     * 分页查询消息记录。
+     * 说明：按消息 ID 升序返回，仅供离线维护与元能力完整性使用；业务查询使用方向查询或专用搜索。
+     *
+     * @param page 分页参数
+     * @return 分页消息记录
+     */
+    PageResult<MessageRecord> page(PageQuery page);
+
+    /** 在消息事务中插入或锁定发送请求，返回持锁读取的原摘要与消息 ID；禁止独立提交占位。 */
+    MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
+
+    /**
+     * 分配频道内下一消息序号，必须加入消息写入所在事务，不能独立提交。
+     * 同频道的后续分配等待当前事务结束，回滚不消耗序号。
+     */
+    long nextSequence(long channelId);
+
+    /**
+     * 写入新的消息记录。
+     *
+     * @param record 待持久化消息记录
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(MessageRecord record);
+
+    /**
+     * 批量写入消息记录。
+     *
+     * @param records 待持久化消息记录
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<MessageRecord> records);
+
+    /**
+     * 更新已有消息记录。
+     * 边界：更新完整行；哪些字段允许变化由 Repository 决定。
+     *
+     * @param record 待更新消息记录
+     * @return 数据库报告恰好影响一条记录时为 true
+     */
+    boolean update(MessageRecord record);
+
+    /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
+    boolean deleteChannelBatch(long channelId, int limit);
+
+    /**
+     * 按消息 ID 删除消息记录。
+     *
+     * @param messageId 消息 ID
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(long messageId);
+
+    /**
+     * 按消息 ID 批量删除消息记录。
+     *
+     * @param messageIds 消息 ID 列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<Long> messageIds);
 }

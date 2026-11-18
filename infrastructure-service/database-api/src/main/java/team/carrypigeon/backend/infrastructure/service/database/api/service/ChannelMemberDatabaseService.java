@@ -20,63 +20,25 @@ public interface ChannelMemberDatabaseService {
     /** 直接查询账号已加入且仍存在的频道 ID，用于认证连接建立在线订阅。 */
     List<Long> findChannelIdsByAccountId(long accountId);
 
-    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
-    List<ChannelMemberRecord> deleteBatchByChannelId(long channelId, int limit);
-
+    /**
+     * 按频道与账户定位成员关系。
+     *
+     * @param channelId 频道 ID
+     * @param accountId 账户 ID
+     * @return 命中时返回成员关系，未命中时返回空
+     */
+    Optional<ChannelMemberRecord> findByChannelIdAndAccountId(long channelId, long accountId);
 
     /** 授权专用直读；不读取或回填缓存，缺失时返回空。可见性遵守调用方事务隔离级别。 */
-    Optional<ChannelMemberRecord> findByRelationForAuthorization(long channelId, long accountId);
+    Optional<ChannelMemberRecord> findByChannelIdAndAccountIdDirect(long channelId, long accountId);
 
     /**
      * 锁定并读取最新成员关系，不使用缓存或事务旧快照；不存在时返回空。
      * 必须在事务内先锁定所属频道，遵守频道在前、成员在后的治理锁顺序。
      */
-    Optional<ChannelMemberRecord> findByRelationForUpdate(long channelId, long accountId);
+    Optional<ChannelMemberRecord> findByChannelIdAndAccountIdForUpdate(long channelId, long accountId);
 
-    /**
-     * 插入新的成员关系。
-     *
-     * @param record 待持久化成员关系
-     */
-    void insert(ChannelMemberRecord record);
 
-    /**
-     * 批量插入成员关系。
-     *
-     * @param records 待持久化成员关系
-     */
-    void insertAll(List<ChannelMemberRecord> records);
-
-    /**
-     * 按成员关系 ID 删除成员关系。
-     *
-     * @param memberId 成员关系 ID
-     */
-    void delete(long memberId);
-
-    /**
-     * 按成员关系 ID 批量删除成员关系。
-     *
-     * @param memberIds 成员关系 ID 列表
-     */
-    void deleteAll(List<Long> memberIds);
-
-    /**
-     * 更新既有成员关系。
-     *
-     * @param record 待更新成员关系
-     * @return 恰好更新一条记录时为 true；未命中时为 false
-     */
-    boolean update(ChannelMemberRecord record);
-
-    /**
-     * 分页查询频道成员记录。
-     * 说明：按成员关系 ID 升序返回，供离线维护与元能力完整性使用。
-     *
-     * @param page 分页参数
-     * @return 分页成员关系记录
-     */
-    PageResult<ChannelMemberRecord> list(PageQuery page);
 
     /**
      * 按成员关系 ID 查询。
@@ -94,21 +56,7 @@ public interface ChannelMemberDatabaseService {
      */
     List<ChannelMemberRecord> findByIds(List<Long> memberIds);
 
-    /**
-     * 按频道与账户定位成员关系。
-     *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
-     * @return 命中时返回成员关系，未命中时返回空
-     */
-    Optional<ChannelMemberRecord> findByRelation(long channelId, long accountId);
 
-    /**
-     * 删除频道下的全部成员关系。
-     *
-     * @param channelId 频道 ID
-     */
-    void deleteByChannelId(long channelId);
 
     /**
      * 查询频道下的全部成员关系。
@@ -120,6 +68,15 @@ public interface ChannelMemberDatabaseService {
     List<ChannelMemberRecord> findMembersByChannelId(long channelId);
 
     /**
+     * 分页查询频道成员记录。
+     * 说明：按成员关系 ID 升序返回，供离线维护与元能力完整性使用。
+     *
+     * @param page 分页参数
+     * @return 分页成员关系记录
+     */
+    PageResult<ChannelMemberRecord> page(PageQuery page);
+
+    /**
      * 分页查询账户参与的全部成员关系。
      * 输出：按频道 ID 倒序返回，供频道列表分页使用。
      *
@@ -127,7 +84,7 @@ public interface ChannelMemberDatabaseService {
      * @param page 分页参数
      * @return 分页成员关系记录
      */
-    PageResult<ChannelMemberRecord> pageMembersByAccountId(long accountId, PageQuery page);
+    PageResult<ChannelMemberRecord> pageByAccountId(long accountId, PageQuery page);
 
     /**
      * 分页查询频道下的成员关系。
@@ -137,5 +94,55 @@ public interface ChannelMemberDatabaseService {
      * @param page 分页参数
      * @return 分页成员关系记录
      */
-    PageResult<ChannelMemberRecord> pageMembersByChannelId(long channelId, PageQuery page);
+    PageResult<ChannelMemberRecord> pageByChannelId(long channelId, PageQuery page);
+
+    /**
+     * 插入新的成员关系。
+     *
+     * @param record 待持久化成员关系
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(ChannelMemberRecord record);
+
+    /**
+     * 批量插入成员关系。
+     *
+     * @param records 待持久化成员关系
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<ChannelMemberRecord> records);
+
+    /**
+     * 更新既有成员关系。
+     *
+     * @param record 待更新成员关系
+     * @return 恰好更新一条记录时为 true；未命中时为 false
+     */
+    boolean update(ChannelMemberRecord record);
+
+    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
+    List<ChannelMemberRecord> deleteBatchByChannelId(long channelId, int limit);
+
+    /**
+     * 按成员关系 ID 删除成员关系。
+     *
+     * @param memberId 成员关系 ID
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(long memberId);
+
+    /**
+     * 按成员关系 ID 批量删除成员关系。
+     *
+     * @param memberIds 成员关系 ID 列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<Long> memberIds);
+
+    /**
+     * 删除频道下的全部成员关系。
+     *
+     * @param channelId 频道 ID
+     */
+    void deleteByChannelId(long channelId);
 }

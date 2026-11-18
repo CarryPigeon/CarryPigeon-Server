@@ -8,7 +8,6 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.
  * 边界：不暴露 controller 协议、服务内部运行时配置和具体业务资源能力。
  * 输入：服务发现无入参。
  * 输出：服务发现文档。
- * 失败语义：插件 ID 列表非法等问题由领域问题异常表达。
  * 调用方：启动页、网关或 controller 通过本接口读取服务入口能力，不直接读取配置对象。
  */
 public interface ServerEntranceApi {

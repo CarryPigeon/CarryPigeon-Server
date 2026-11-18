@@ -7,24 +7,24 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 
 /**
  * 消息事件通知能力。
- * 职责：把"消息已创建、消息已撤回、某账号已读位置更新"这些事实交给通知实现；创建与撤回必须与业务写入原子登记，其余通知在提交后执行。
+ * 职责：把"消息已创建、消息已撤回、某账号已读位置更新"这些事实交给通知实现；所有通知只在业务事务提交后执行。
  * 边界：只表达业务意图；不出现线上事件名、载荷字段、序列化方式或传输实现。
  */
 public interface MessageEventNotifier {
 
     /**
-     * 在消息事务内登记创建事件，回滚时不得留下通知。
+     * 在消息事务提交后发布创建事件。
      *
      * @param message 已持久化的消息快照
      */
-    void messageCreated(CPChannelMessage message);
+    void messageCreated(AfterCommitExecutor afterCommit, CPChannelMessage message);
 
     /**
-     * 在撤回事务内登记撤回事件，并清除恢复流中的已撤回正文。
+     * 在撤回事务提交后发布撤回事件。
      *
      * @param message 撤回后的消息快照
      */
-    void messageRecalled(CPChannelMessage message);
+    void messageRecalled(AfterCommitExecutor afterCommit, CPChannelMessage message);
 
     /**
      * 通知新增提及，仅发给被提及账号。

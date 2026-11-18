@@ -30,10 +30,11 @@ public interface ChannelBanApi {
      * 按绝对截止时间对频道成员执行禁言。
      * 约束：截止时间必填且必须晚于当前时间；已有生效禁言时拒绝重复设置。
      *
+     * @param operatorAccountId 操作者账号 ID
      * @param command 按绝对过期时间的禁言命令
      * @return 禁言结果投影
      */
-    ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command);
+    ChannelBanResult banChannelMemberUntil(long operatorAccountId, BanChannelMemberUntilCommand command);
 
     /**
      * 解除频道成员的禁言。

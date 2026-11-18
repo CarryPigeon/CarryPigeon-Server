@@ -49,7 +49,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
 
     @Override
     public Optional<Channel> findByIdForAuthorization(long channelId) {
-        return channelDatabaseService.findByIdForAuthorization(channelId).map(this::toDomainModel);
+        return channelDatabaseService.findByIdDirect(channelId).map(this::toDomainModel);
     }
 
     @Override
@@ -83,7 +83,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
      */
     @Override
     public List<DiscoveredChannel> discoverChannels(String keyword, Long cursorChannelId, int limit) {
-        return channelDatabaseService.discoverChannels(keyword, cursorChannelId, limit).stream()
+        return channelDatabaseService.findPublicAfterId(keyword, cursorChannelId, limit).stream()
                 .map(this::toDiscoveredChannel)
                 .toList();
     }
@@ -100,7 +100,7 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
 
     @Override
     public void delete(long channelId) {
-        channelDatabaseService.delete(channelId);
+        channelDatabaseService.deleteById(channelId);
     }
 
     /**

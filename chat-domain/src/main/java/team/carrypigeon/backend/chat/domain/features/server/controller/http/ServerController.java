@@ -13,11 +13,11 @@ import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.
 
 /**
  * 服务基础 HTTP 入口。
- * 职责：承接服务发现与认证后的节点 presence 查询入口。
+ * 职责：承接服务发现入口。
  */
 @RestController
 @RequestMapping("/api/server")
-@Tag(name = "服务基础", description = "服务发现与当前节点在线状态查询能力。")
+@Tag(name = "服务基础", description = "服务发现能力。")
 public class ServerController {
 
     private final ServerEntranceApi serverEntranceDomainApi;

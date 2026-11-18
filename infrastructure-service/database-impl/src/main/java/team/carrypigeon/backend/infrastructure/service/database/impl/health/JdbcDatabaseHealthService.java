@@ -1,22 +1,24 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.health;
 
 
+import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealth;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
  * JDBC 数据库健康检查实现。
  * 职责：通过轻量 SQL 验证数据库连接与查询能力。
  */
+@Service
 public class JdbcDatabaseHealthService implements DatabaseHealthService {
 
     private static final String HEALTH_QUERY = "SELECT 1";
 
-    private final JdbcClientSupport jdbcClientSupport;
+    private final JdbcClient jdbcClient;
 
-    public JdbcDatabaseHealthService(JdbcClientSupport jdbcClientSupport) {
-        this.jdbcClientSupport = jdbcClientSupport;
+    public JdbcDatabaseHealthService(JdbcClient jdbcClient) {
+        this.jdbcClient = jdbcClient;
     }
 
     /**
@@ -28,7 +30,7 @@ public class JdbcDatabaseHealthService implements DatabaseHealthService {
     @Override
     public DatabaseHealth check() {
         try {
-            Integer result = jdbcClientSupport.queryInteger(HEALTH_QUERY);
+            Integer result = jdbcClient.sql(HEALTH_QUERY).query(Integer.class).single();
             return new DatabaseHealth(result != null, "database health query completed");
         } catch (RuntimeException ex) {
             return new DatabaseHealth(false, "database health query failed: " + ex.getClass().getSimpleName());

@@ -11,7 +11,7 @@ import java.util.Optional;
  * @param objectKey 对象键
  * @param contentType 内容类型
  * @param size 对象字节数
- * @param content 对象内容流；仅元信息场景可为空
+ * @param content 对象内容流；上传结果可为空，读取结果必须存在，由调用方关闭
  */
 public record StorageObject(String objectKey, String contentType, long size, Optional<InputStream> content) {
 

@@ -80,7 +80,7 @@ public class ChannelBanService implements ChannelBanApi {
     }
 
     @Override
-    public ChannelBanResult banChannelMemberUntil(BanChannelMemberUntilCommand command) {
+    public ChannelBanResult banChannelMemberUntil(long operatorAccountId, BanChannelMemberUntilCommand command) {
         ChannelBanResult result = transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findByIdForUpdate(command.channelId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
@@ -94,7 +94,7 @@ public class ChannelBanService implements ChannelBanApi {
                 // 向下取整到秒并保底 1 秒，避免极短间隔被换算成 0 而产生立即到期的禁言
                 durationSeconds = Math.max(1L, (command.untilEpochMillis() - nowMillis) / 1000L);
             }
-            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(command.channelId(), command.operatorAccountId())
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(command.channelId(), operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember target = channelMemberRepository.findByRelationForUpdate(command.channelId(), command.targetAccountId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
@@ -148,7 +148,7 @@ public class ChannelBanService implements ChannelBanApi {
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS, recipients);
             return ChannelBanResult.from(ban);
         });
-        AuditLogs.success("channel.ban", command.operatorAccountId(),
+        AuditLogs.success("channel.ban", operatorAccountId,
                 "channel_id", command.channelId(),
                 "target_uid", command.targetAccountId());
         return result;

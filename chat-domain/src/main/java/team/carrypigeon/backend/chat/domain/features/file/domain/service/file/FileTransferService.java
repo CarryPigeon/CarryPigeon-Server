@@ -259,7 +259,7 @@ public class FileTransferService implements FileTransferApi {
         return Optional.of(new FileDownloadResult(
                 object.contentType(),
                 object.size(),
-                object.content().orElseThrow()
+                object.content().orElseThrow(() -> new IllegalStateException("Object storage returned no content stream"))
         ));
     }
 }

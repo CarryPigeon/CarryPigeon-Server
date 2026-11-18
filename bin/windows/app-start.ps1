@@ -36,11 +36,11 @@ Test-TcpPort -TargetHost '127.0.0.1' -Port $mysqlPort -ServiceName 'MySQL'
 Test-TcpPort -TargetHost '127.0.0.1' -Port $redisPort -ServiceName 'Redis'
 Test-TcpPort -TargetHost '127.0.0.1' -Port $minioPort -ServiceName 'MinIO'
 
-& mvn -f (Join-Path $BaseDir 'pom.xml') -pl application-starter -am -DskipTests install
+& mvn -f (Join-Path $BaseDir 'pom.xml') -pl distribution -am -DskipTests install
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
 $springRunArguments = '--spring.config.additional-location=file:{0}/' -f ($ConfigDir -replace '\\', '/')
-& mvn -f (Join-Path $BaseDir 'application-starter/pom.xml') -DskipTests "-Dspring-boot.run.arguments=$springRunArguments" spring-boot:run @args
+& mvn -f (Join-Path $BaseDir 'distribution/pom.xml') -DskipTests "-Dspring-boot.run.arguments=$springRunArguments" spring-boot:run @args
 exit $LASTEXITCODE

@@ -43,9 +43,9 @@ check_port "$MYSQL_HOST" "$MYSQL_PORT" "MySQL"
 check_port "$REDIS_HOST" "$REDIS_PORT" "Redis"
 check_port "$MINIO_HOST" "$MINIO_PORT" "MinIO"
 
-mvn -f "$BASE_DIR/pom.xml" -pl application-starter -am -DskipTests install
+mvn -f "$BASE_DIR/pom.xml" -pl distribution -am -DskipTests install
 
-exec mvn -f "$BASE_DIR/application-starter/pom.xml" \
+exec mvn -f "$BASE_DIR/distribution/pom.xml" \
   -DskipTests \
   "-Dspring-boot.run.arguments=--spring.config.additional-location=file:$CONFIG_DIR/" \
   spring-boot:run \

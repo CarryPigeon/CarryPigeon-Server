@@ -24,40 +24,36 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.File
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisFileUploadDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthAccountDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusAuthRefreshSessionDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelApplicationDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelBanDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelMemberDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusMentionDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusMessageDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.service.MybatisPlusUserProfileDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthAccountMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.AuthRefreshSessionMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelApplicationMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelBanMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelMemberMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.ChannelReadStateMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.FileUploadMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MentionMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.MessageMapper;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper.UserProfileMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file.FileUploadDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.account.AuthAccountDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.session.AuthRefreshSessionDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.application.ChannelApplicationDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ban.ChannelBanDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ChannelDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.member.ChannelMemberDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.readstate.ChannelReadStateDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.mention.MentionDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.MessageDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.user.UserProfileDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.account.AuthAccountMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.session.AuthRefreshSessionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.application.ChannelApplicationMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ban.ChannelBanMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ChannelMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.member.ChannelMemberMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.readstate.ChannelReadStateMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file.FileUploadMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.mention.MentionMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.MessageMapper;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.user.UserProfileMapper;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageEventDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcMessageEventDatabaseService;
-import org.springframework.transaction.PlatformTransactionManager;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cache.CacheInvalidationTasks;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.database.api.health.DatabaseHealthService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.cache.DatabaseCache;
+import team.carrypigeon.backend.infrastructure.service.database.impl.health.MysqlInitializationChecker;
+import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
 import team.carrypigeon.backend.infrastructure.service.database.impl.health.JdbcDatabaseHealthService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcClientSupport;
 
 /**
  * 数据库服务自动配置。
@@ -69,7 +65,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.jdbc.JdbcCl
 @ConditionalOnProperty(prefix = "service.database.mysql", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(DatabaseServiceProperties.class)
 @MapperScan(
-    basePackages = "team.carrypigeon.backend.infrastructure.service.database.impl.mybatis.mapper",
+    basePackages = "team.carrypigeon.backend.infrastructure.service.database.impl.persistence",
     annotationClass = org.apache.ibatis.annotations.Mapper.class
 )
 public class DatabaseServiceAutoConfiguration {
@@ -95,14 +91,8 @@ public class DatabaseServiceAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public JdbcClientSupport jdbcClientSupport(JdbcClient jdbcClient) {
-        return new JdbcClientSupport(jdbcClient);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public DatabaseHealthService databaseHealthService(JdbcClientSupport jdbcClientSupport) {
-        return new JdbcDatabaseHealthService(jdbcClientSupport);
+    public DatabaseHealthService databaseHealthService(JdbcClient jdbcClient) {
+        return new JdbcDatabaseHealthService(jdbcClient);
     }
 
     /**
@@ -119,17 +109,9 @@ public class DatabaseServiceAutoConfiguration {
     public DatabaseCache databaseCache(
             ObjectProvider<CacheService> cacheServiceProvider,
             ObjectMapper objectMapper,
-            DatabaseServiceProperties properties,
-            CacheInvalidationTasks invalidationTasks
+            DatabaseServiceProperties properties
     ) {
-        return new DatabaseCache(cacheServiceProvider.getIfAvailable(), objectMapper, properties, invalidationTasks);
-    }
-
-    /** 失效任务属于数据库适配实现，业务模块无需知道缓存与重试的存储结构。 */
-    @Bean
-    public CacheInvalidationTasks cacheInvalidationTasks(JdbcClient jdbc, PlatformTransactionManager transactions,
-            ObjectProvider<CacheService> cache) {
-        return new CacheInvalidationTasks(jdbc, transactions, cache.getIfAvailable());
+        return new DatabaseCache(cacheServiceProvider.getIfAvailable(), objectMapper, properties);
     }
 
     @Bean
@@ -143,72 +125,74 @@ public class DatabaseServiceAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(FileUploadDatabaseService.class)
     public FileUploadDatabaseService fileUploadDatabaseService(FileUploadMapper mapper) {
-        return new MybatisFileUploadDatabaseService(mapper);
+        return new FileUploadDatabaseServiceImpl(mapper);
     }
 
     @Bean
     @ConditionalOnMissingBean(AuthAccountDatabaseService.class)
     public AuthAccountDatabaseService authAccountDatabaseService(AuthAccountMapper authAccountMapper, DatabaseCache databaseCache) {
-        return new MybatisPlusAuthAccountDatabaseService(authAccountMapper, databaseCache);
+        return new AuthAccountDatabaseServiceImpl(authAccountMapper, databaseCache);
     }
 
     @Bean
     @ConditionalOnMissingBean(AuthRefreshSessionDatabaseService.class)
     public AuthRefreshSessionDatabaseService authRefreshSessionDatabaseService(AuthRefreshSessionMapper authRefreshSessionMapper, TimeProvider timeProvider) {
-        return new MybatisPlusAuthRefreshSessionDatabaseService(authRefreshSessionMapper, timeProvider);
+        return new AuthRefreshSessionDatabaseServiceImpl(authRefreshSessionMapper, timeProvider);
     }
 
     @Bean
     @ConditionalOnMissingBean(ChannelApplicationDatabaseService.class)
     public ChannelApplicationDatabaseService channelApplicationDatabaseService(ChannelApplicationMapper channelApplicationMapper) {
-        return new MybatisPlusChannelApplicationDatabaseService(channelApplicationMapper);
+        return new ChannelApplicationDatabaseServiceImpl(channelApplicationMapper);
     }
 
     @Bean
     @ConditionalOnMissingBean(ChannelBanDatabaseService.class)
     public ChannelBanDatabaseService channelBanDatabaseService(ChannelBanMapper channelBanMapper, DatabaseCache databaseCache) {
-        return new MybatisPlusChannelBanDatabaseService(channelBanMapper, databaseCache);
+        return new ChannelBanDatabaseServiceImpl(channelBanMapper, databaseCache);
     }
 
     @Bean
     @ConditionalOnMissingBean(ChannelDatabaseService.class)
     public ChannelDatabaseService channelDatabaseService(ChannelMapper channelMapper, DatabaseCache databaseCache) {
-        return new MybatisPlusChannelDatabaseService(channelMapper, databaseCache);
+        return new ChannelDatabaseServiceImpl(channelMapper, databaseCache);
     }
 
     @Bean
     @ConditionalOnMissingBean(ChannelMemberDatabaseService.class)
     public ChannelMemberDatabaseService channelMemberDatabaseService(ChannelMemberMapper channelMemberMapper, DatabaseCache databaseCache) {
-        return new MybatisPlusChannelMemberDatabaseService(channelMemberMapper, databaseCache);
+        return new ChannelMemberDatabaseServiceImpl(channelMemberMapper, databaseCache);
     }
 
     @Bean
     @ConditionalOnMissingBean(ChannelReadStateDatabaseService.class)
     public ChannelReadStateDatabaseService channelReadStateDatabaseService(ChannelReadStateMapper channelReadStateMapper) {
-        return new MybatisPlusChannelReadStateDatabaseService(channelReadStateMapper);
+        return new ChannelReadStateDatabaseServiceImpl(channelReadStateMapper);
     }
 
     @Bean
     @ConditionalOnMissingBean(MentionDatabaseService.class)
     public MentionDatabaseService mentionDatabaseService(MentionMapper mentionMapper) {
-        return new MybatisPlusMentionDatabaseService(mentionMapper);
+        return new MentionDatabaseServiceImpl(mentionMapper);
     }
 
-    @Bean
-    @ConditionalOnMissingBean(MessageEventDatabaseService.class)
-    public MessageEventDatabaseService messageEventDatabaseService(JdbcClient jdbc) {
-        return new JdbcMessageEventDatabaseService(jdbc);
-    }
 
     @Bean
     @ConditionalOnMissingBean(MessageDatabaseService.class)
     public MessageDatabaseService messageDatabaseService(MessageMapper messageMapper) {
-        return new MybatisPlusMessageDatabaseService(messageMapper);
+        return new MessageDatabaseServiceImpl(messageMapper);
     }
 
     @Bean
     @ConditionalOnMissingBean(UserProfileDatabaseService.class)
     public UserProfileDatabaseService userProfileDatabaseService(UserProfileMapper userProfileMapper, DatabaseCache databaseCache) {
-        return new MybatisPlusUserProfileDatabaseService(userProfileMapper, databaseCache);
+        return new UserProfileDatabaseServiceImpl(userProfileMapper, databaseCache);
     }
+    /** 为已启用的Database实现注册独立启动检查。 */
+    @Bean
+    @ConditionalOnMissingBean(MysqlInitializationChecker.class)
+    public MysqlInitializationChecker databaseInitializationChecker(DatabaseHealthService healthService) {
+        return new MysqlInitializationChecker(healthService);
+    }
+
 }

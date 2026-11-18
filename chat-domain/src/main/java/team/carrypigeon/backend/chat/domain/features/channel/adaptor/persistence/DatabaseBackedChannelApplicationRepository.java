@@ -40,7 +40,7 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     @Override
     public PageResult<ChannelApplication> page(long channelId, PageQuery page) {
         PageResult<ChannelApplicationRecord> result =
-                channelApplicationDatabaseService.pageApplicationsByChannelId(channelId, page);
+                channelApplicationDatabaseService.pageByChannelId(channelId, page);
         return new PageResult<>(
                 result.items().stream().map(this::toDomain).toList(),
                 result.page(),
@@ -62,7 +62,7 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     @Override
     public void delete(long applicationId) {
         // 物理删除；重新申请场景会先写入新记录再删除旧记录，以保持同一 (频道, 申请人) 至多一条
-        channelApplicationDatabaseService.delete(applicationId);
+        channelApplicationDatabaseService.deleteById(applicationId);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     @Override
     public Optional<ChannelApplication> findByRelation(long channelId, long applicantId) {
         // 底层为单行查询，调用方依赖"同一 (频道, 申请人) 至多一行"这一前提，重复行会导致查询直接失败
-        return channelApplicationDatabaseService.findByChannelAndApplicant(channelId, applicantId).map(this::toDomain);
+        return channelApplicationDatabaseService.findByChannelIdAndApplicantId(channelId, applicantId).map(this::toDomain);
     }
 
     /**

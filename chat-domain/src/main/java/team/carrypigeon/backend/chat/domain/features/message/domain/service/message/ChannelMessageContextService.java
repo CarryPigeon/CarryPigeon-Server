@@ -19,7 +19,7 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
 
 /**
  * 频道消息锚点上下文查询领域实现。
- * 职责：读取锚点消息及其前后固定窗口。
+ * 职责：读取单条频道消息及锚点前后固定窗口。
  * 边界：不承载方向翻页、搜索、发送或撤回。
  */
 @Service
@@ -37,13 +37,15 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
     }
 
     @Override
+    public ChannelMessageResult getMessage(long accountId, long channelId, long messageId) {
+        channelContextApi.requireMemberContext(channelId, accountId);
+        return ChannelMessageResult.of(requireChannelMessage(channelId, messageId));
+    }
+
+    @Override
     public ChannelMessageContext getMessagesAround(GetChannelMessagesAroundQuery query) {
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
-        CPChannelMessage anchorMessage = messageRepository.findById(query.anchorMessageId())
-                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-        if (anchorMessage.channelId() != channel.channelId()) {
-            throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
-        }
+        CPChannelMessage anchorMessage = requireChannelMessage(channel.channelId(), query.anchorMessageId());
 
         Stream<CPChannelMessage> before = query.before() == 0
                 ? Stream.empty()
@@ -68,5 +70,15 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
                 .map(message -> ChannelMessageResult.of(message))
                 .toList();
         return new ChannelMessageContext(items);
+    }
+
+    private CPChannelMessage requireChannelMessage(long channelId, long messageId) {
+        CPChannelMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
+        // 跨频道消息按不存在处理，避免向当前频道成员泄露其他频道的消息。
+        if (message.channelId() != channelId) {
+            throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
+        }
+        return message;
     }
 }

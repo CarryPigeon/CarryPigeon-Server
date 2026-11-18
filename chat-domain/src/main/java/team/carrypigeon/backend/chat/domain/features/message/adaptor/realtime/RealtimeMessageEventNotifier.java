@@ -1,12 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
 
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrame;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageEventDatabaseService;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -20,10 +20,11 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
 
 /**
  * 基于实时通道的消息事件通知适配器。
- * 职责：把域内的消息事件意图翻译为线上事件名与载荷，创建与撤回在消息事务中入库，其余事件仍在提交后实时发布。
- * 边界：不读取仓储，domain data 直接使用业务消息快照。
+ * 职责：在业务提交后发布消息和已读通知；频道消息事件暂存于进程内。
+ * 边界：频道事件仅携带消息 ID，不缓存消息正文。
  */
 @Component
+@Slf4j
 public class RealtimeMessageEventNotifier implements MessageEventNotifier {
 
     private static final RealtimeEventType MESSAGE_CREATED = new RealtimeEventType("message.created");
@@ -33,17 +34,15 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
 
     private final RealtimeEventApi realtimeEventApi;
     private final TimeProvider timeProvider;
-    private final MessageEventDatabaseService events;
+    private final ChannelEventBuffer eventBuffer;
     private final IdGenerator ids;
-    private final JsonProvider json;
 
     public RealtimeMessageEventNotifier(RealtimeEventApi realtimeEventApi, TimeProvider timeProvider,
-            MessageEventDatabaseService events, IdGenerator ids, JsonProvider json) {
+            ChannelEventBuffer eventBuffer, IdGenerator ids) {
         this.realtimeEventApi = realtimeEventApi;
         this.timeProvider = timeProvider;
-        this.events = events;
+        this.eventBuffer = eventBuffer;
         this.ids = ids;
-        this.json = json;
     }
 
     @Override
@@ -60,20 +59,28 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
     }
 
     @Override
-    public void messageCreated(CPChannelMessage message) {
-        // 事件与消息共用当前事务；不依赖提交后内存回调，进程中断后仍能恢复。
-        events.append(ids.nextLongId(), message.channelId(), message.messageId(), MESSAGE_CREATED.wireName(),
-                json.toJson(new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
+    public void messageCreated(AfterCommitExecutor afterCommit, CPChannelMessage message) {
+        afterCommit.execute(() -> publishMessageEvent(MESSAGE_CREATED, message));
     }
 
     @Override
-    public void messageRecalled(CPChannelMessage message) {
-        events.append(ids.nextLongId(), message.channelId(), message.messageId(), MESSAGE_RECALLED.wireName(),
-                json.toJson(new MessageRecalledPayload(Long.toString(message.channelId()),
-                        Long.toString(message.messageId()), timeProvider.nowMillis())));
-        // 已撤回正文不能从保留窗口内的创建事件重新读取；与撤回和事件追加一起提交。
-        events.redactCreated(message.channelId(), message.messageId(),
-                json.toJson(new MessageCreatedPayload(Long.toString(message.channelId()), toBody(message))));
+    public void messageRecalled(AfterCommitExecutor afterCommit, CPChannelMessage message) {
+        afterCommit.execute(() -> publishMessageEvent(MESSAGE_RECALLED, message));
+    }
+
+    private void publishMessageEvent(RealtimeEventType type, CPChannelMessage message) {
+        var event = eventBuffer.append(message.channelId(), ids.nextLongId(), type.wireName(), message.messageId());
+        try {
+            realtimeEventApi.publishToChannel(message.channelId(), new RealtimeFrame.Event(
+                    Long.toString(event.eventId()), type, event.createdAt(), Map.of(
+                            "channel_id", Long.toString(message.channelId()),
+                            "message_id", Long.toString(message.messageId()),
+                            "event_sequence", event.sequence())));
+        } catch (RuntimeException exception) {
+            // 数据库已提交；保留事件供重连补拉，不能将已成功的业务操作报告为失败。
+            log.warn("频道事件推送失败，重连后可通过游标补拉：channelId={}, eventId={}",
+                    message.channelId(), event.eventId(), exception);
+        }
     }
 
     @Override
@@ -92,24 +99,4 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
         )));
     }
 
-    /**
-     * 把领域消息快照翻译为线上消息体。
-     *
-     * @param message 消息快照
-     * @return 线上消息体
-     */
-    private MessageBody toBody(CPChannelMessage message) {
-        return new MessageBody(
-                Long.toString(message.messageId()),
-                Long.toString(message.senderId()),
-                Long.toString(message.channelId()),
-                message.sequence(),
-                message.domain(),
-                message.data(),
-                message.sendTime().toEpochMilli(),
-                message.mentions().stream().map(String::valueOf).toList(),
-                message.preview(),
-                message.status().name().toLowerCase(Locale.ROOT)
-        );
-    }
 }

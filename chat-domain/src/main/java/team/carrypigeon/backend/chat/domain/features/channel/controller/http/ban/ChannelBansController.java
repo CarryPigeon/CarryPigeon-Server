@@ -101,13 +101,16 @@ public class ChannelBansController {
             @PathVariable
             @Positive(message = "targetAccountId must be greater than 0")
             long targetAccountId,
-            @Valid @RequestBody
+            @Valid
+            @RequestBody
             ChannelBanRequest body,
-            @AuthenticationPrincipal CpPrincipal cpPrincipal
+
+            @AuthenticationPrincipal
+            CpPrincipal cpPrincipal
     ) {
         ChannelBanResult result = channelBanApi.banChannelMemberUntil(
+                cpPrincipal.accountId(),
                 new BanChannelMemberUntilCommand(
-                        cpPrincipal.accountId(),
                         channelId,
                         targetAccountId,
                         body.reason(),

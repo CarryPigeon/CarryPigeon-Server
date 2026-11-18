@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.beans.factory.annotation.Qualifier;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
+import team.carrypigeon.backend.infrastructure.service.storage.impl.health.MinioInitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioObjectStorageService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.minio.MinioStorageHealthService;
@@ -89,6 +90,13 @@ public class StorageServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public StorageHealthService storageHealthService(MinioClient minioClient, MinioStorageProperties properties) {
         return new MinioStorageHealthService(minioClient, properties);
+    }
+
+    /** 为已启用的Storage实现注册独立启动检查。 */
+    @Bean
+    @ConditionalOnMissingBean(MinioInitializationChecker.class)
+    public MinioInitializationChecker storageInitializationChecker(StorageHealthService healthService) {
+        return new MinioInitializationChecker(healthService);
     }
 
 }

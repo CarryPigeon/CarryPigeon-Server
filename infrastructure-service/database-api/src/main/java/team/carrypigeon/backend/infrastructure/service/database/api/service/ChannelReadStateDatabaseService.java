@@ -17,50 +17,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 public interface ChannelReadStateDatabaseService {
 
     /**
-     * 写入新的已读状态记录。
-     *
-     * @param record 待写入记录
-     */
-    void insert(ChannelReadStateRecord record);
-
-    /**
-     * 批量写入已读状态记录。
-     *
-     * @param records 待写入记录
-     */
-    void insertAll(List<ChannelReadStateRecord> records);
-
-    /**
-     * 按复合主键删除记录。
-     *
-     * @param key 复合主键
-     */
-    void delete(ChannelReadStateKey key);
-
-    /**
-     * 按复合主键批量删除记录。
-     *
-     * @param keys 复合主键列表
-     */
-    void deleteAll(List<ChannelReadStateKey> keys);
-
-    /**
-     * 按复合主键更新完整已读状态记录。
-     *
-     * @param record 待更新记录
-     */
-    void update(ChannelReadStateRecord record);
-
-    /**
-     * 分页查询已读状态记录。
-     * 说明：按 (频道 ID, 账户 ID) 升序返回，供离线维护与元能力完整性使用。
-     *
-     * @param page 分页参数
-     * @return 分页已读状态记录
-     */
-    PageResult<ChannelReadStateRecord> list(PageQuery page);
-
-    /**
      * 按复合主键查询记录。
      *
      * @param key 复合主键
@@ -86,13 +42,6 @@ public interface ChannelReadStateDatabaseService {
     Optional<ChannelReadStateRecord> findByIdForUpdate(ChannelReadStateKey key);
 
     /**
-     * 新增或覆盖频道已读状态。
-     *
-     * @param record 待写入已读状态记录
-     */
-    void upsert(ChannelReadStateRecord record);
-
-    /**
      * 查询账户各频道的未读统计投影。
      * 说明：跨表聚合读模型是性能例外，不解释权限或时间线规则。
      *
@@ -100,4 +49,60 @@ public interface ChannelReadStateDatabaseService {
      * @return 未读统计投影列表
      */
     List<ChannelUnreadRecord> findUnreadsByAccountId(long accountId);
+
+    /**
+     * 分页查询已读状态记录。
+     * 说明：按 (频道 ID, 账户 ID) 升序返回，供离线维护与元能力完整性使用。
+     *
+     * @param page 分页参数
+     * @return 分页已读状态记录
+     */
+    PageResult<ChannelReadStateRecord> page(PageQuery page);
+
+    /**
+     * 写入新的已读状态记录。
+     *
+     * @param record 待写入记录
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(ChannelReadStateRecord record);
+
+    /**
+     * 批量写入已读状态记录。
+     *
+     * @param records 待写入记录
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<ChannelReadStateRecord> records);
+
+    /**
+     * 按复合主键更新完整已读状态记录。
+     *
+     * @param record 待更新记录
+     * @return 数据库报告恰好影响一条记录时为 true
+     */
+    boolean update(ChannelReadStateRecord record);
+
+    /**
+     * 新增或覆盖频道已读状态。
+     *
+     * @param record 待写入已读状态记录
+     */
+    void upsert(ChannelReadStateRecord record);
+
+    /**
+     * 按复合主键删除记录。
+     *
+     * @param key 复合主键
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(ChannelReadStateKey key);
+
+    /**
+     * 按复合主键批量删除记录。
+     *
+     * @param keys 复合主键列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<ChannelReadStateKey> keys);
 }

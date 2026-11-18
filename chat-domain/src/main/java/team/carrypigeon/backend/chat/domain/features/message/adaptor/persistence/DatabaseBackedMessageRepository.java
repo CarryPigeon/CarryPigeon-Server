@@ -3,8 +3,6 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageChange;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageChangePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -23,7 +21,6 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageEventDatabaseService;
 
 /**
  * 基于 database-api 的消息仓储适配器。
@@ -38,16 +35,13 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     private static final String STATUS_SENT = "sent";
 
     private final MessageDatabaseService messageDatabaseService;
-    private final MessageEventDatabaseService events;
     private final JsonProviderImpl jsonProvider;
     private final ObjectReader dataReader;
 
     public DatabaseBackedMessageRepository(
-            MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider, ObjectMapper objectMapper,
-            MessageEventDatabaseService events
+            MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider, ObjectMapper objectMapper
     ) {
         this.messageDatabaseService = messageDatabaseService;
-        this.events = events;
         this.jsonProvider = jsonProvider;
         // 无类型 Map 的整数统一恢复为 Long，避免小 ID 被 Jackson 恢复为 Integer。
         this.dataReader = objectMapper.readerFor(DATA_TYPE).with(DeserializationFeature.USE_LONG_FOR_INTS);
@@ -56,21 +50,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     @Override
     public boolean deleteChannelBatch(long channelId, int limit) {
         boolean messagesDone = messageDatabaseService.deleteChannelBatch(channelId, limit);
-        boolean eventsDone = events.deleteChannelBatch(channelId, limit);
-        return messagesDone && eventsDone;
-    }
-
-    @Override
-    public MessageChangePage findChanges(long channelId, Long afterSequence, int limit) {
-        var page = events.readChanges(channelId, afterSequence, limit);
-        return new MessageChangePage(page.latestSequence(), page.expiredThrough(), page.events().stream().map(event -> {
-            try {
-                Map<String, Object> payload = dataReader.readValue(event.payload());
-                return new MessageChange(event.eventId(), event.sequence(), event.type(), payload, event.createdAt());
-            } catch (JsonProcessingException exception) {
-                throw new IllegalStateException("invalid persisted message event payload", exception);
-            }
-        }).toList());
+        return messagesDone;
     }
 
     @Override

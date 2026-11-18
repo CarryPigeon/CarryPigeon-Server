@@ -8,6 +8,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
+import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -18,6 +19,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMail
  * 职责：基于 Spring Mail 实现 mail-api 定义的纯文本邮件发送契约。
  * 边界：SMTP 访问细节封装在 impl 内部，不向上层泄露。
  */
+@Service
 public class SmtpMailSenderService implements MailSenderService {
 
     private final JavaMailSender mailSender;

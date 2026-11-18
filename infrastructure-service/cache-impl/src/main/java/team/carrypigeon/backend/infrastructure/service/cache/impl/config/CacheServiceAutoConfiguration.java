@@ -15,6 +15,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHealthService;
+import team.carrypigeon.backend.infrastructure.service.cache.impl.health.RedisInitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.health.RedisCacheHealthService;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.redis.RedisCacheService;
@@ -74,6 +75,14 @@ public class CacheServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public CacheHealthService cacheHealthService(StringRedisTemplate redisTemplate) {
         return new RedisCacheHealthService(redisTemplate);
+    }
+
+
+    /** 为已启用的Cache实现注册独立启动检查。 */
+    @Bean
+    @ConditionalOnMissingBean(RedisInitializationChecker.class)
+    public RedisInitializationChecker cacheInitializationChecker(CacheHealthService healthService) {
+        return new RedisInitializationChecker(healthService);
     }
 
 }

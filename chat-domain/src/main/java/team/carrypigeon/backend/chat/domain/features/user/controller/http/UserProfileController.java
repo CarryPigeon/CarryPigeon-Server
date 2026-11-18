@@ -138,12 +138,16 @@ public class UserProfileController {
             @ApiResponse(responseCode = "422", description = "请求体字段非法")
     })
     public ResponseEntity<Void> updateUserProfile(
-            @AuthenticationPrincipal CpPrincipal cpPrincipal,
-            @Valid @RequestBody PatchCurrentUserProfileRequest body
+            @AuthenticationPrincipal
+            CpPrincipal cpPrincipal,
+
+            @Valid
+            @RequestBody
+            PatchCurrentUserProfileRequest body
     ) {
         userProfileDomainApi.updateUserProfile(
+                cpPrincipal.accountId(),
                 new UpdateCurrentUserProfileCommand(
-                    cpPrincipal.accountId(),
                     body.avatar(),
                     body.brief(),
                     body.sex() == null ? 0L : body.sex(),

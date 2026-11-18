@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,10 +23,11 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageContextApi;
 
 /**
  * 频道消息命令 HTTP 入口。
- * 职责：提供频道消息发送与撤回能力。
+ * 职责：提供频道消息发送、单条查询与撤回能力。
  * 边界：不承载历史、锚点上下文或搜索查询。
  */
 @Validated
@@ -36,9 +38,11 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 public class ChannelMessageController {
 
     private final ChannelMessageApi channelMessageApi;
+    private final ChannelMessageContextApi messageContextApi;
 
-    public ChannelMessageController(ChannelMessageApi channelMessageApi) {
+    public ChannelMessageController(ChannelMessageApi channelMessageApi, ChannelMessageContextApi messageContextApi) {
         this.channelMessageApi = channelMessageApi;
+        this.messageContextApi = messageContextApi;
     }
 
     /**
@@ -56,8 +60,13 @@ public class ChannelMessageController {
     )
     @ApiResponses({@ApiResponse(responseCode = "201", description = "消息发送成功")})
     public ResponseEntity<ChannelMessageResponse> sendChannelMessage(
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @Valid @NotNull(message = "request body must not be null") @RequestBody SendChannelMessageRequest requestBody,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @Valid
+        @NotNull(message = "request body must not be null")
+        @RequestBody
+        SendChannelMessageRequest requestBody,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         ChannelMessageResult result = channelMessageApi.sendChannelMessage(
@@ -72,6 +81,31 @@ public class ChannelMessageController {
     }
 
     /**
+     * 查询频道中的单条消息，已撤回时返回消息的当前状态。
+     *
+     * @param channelId 消息所在的频道id
+     * @param messageId 消息id
+     * @param cpPrincipal 当前认证用户
+     * @return 消息详细信息
+     * */
+    @GetMapping("/{channelId}/messages/{messageId}")
+    @Operation(
+        summary = "查询消息",
+        description = "频道成员按消息 ID 查询当前状态；跨频道消息按不存在处理。"
+    )
+    public ChannelMessageResponse getMessageById(
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @PathVariable
+        @Positive(message = "messageId must be greater than 0")
+        long messageId,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
+    ){
+        return ChannelMessageResponse.from(messageContextApi.getMessage(cpPrincipal.accountId(), channelId, messageId));
+    }
+    /**
      * 撤回指定频道消息。
      * 输出：成功时返回 204，无响应体。
      *
@@ -84,8 +118,12 @@ public class ChannelMessageController {
     @Operation(summary = "撤回消息", description = "按频道与消息 ID 撤回指定消息，成功返回 204。")
     @ApiResponses({@ApiResponse(responseCode = "204", description = "消息撤回成功，响应体为空")})
     public ResponseEntity<Void> recallChannelMessage(
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @PathVariable @Positive(message = "messageId must be greater than 0") long messageId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @PathVariable
+        @Positive(message = "messageId must be greater than 0")
+        long messageId,
         @AuthenticationPrincipal CpPrincipal cpPrincipal
     ) {
         channelMessageApi.recallChannelMessage(cpPrincipal.accountId(), channelId, messageId);

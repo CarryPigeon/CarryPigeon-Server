@@ -21,6 +21,11 @@
 
     <fileSets>
         <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>lib</outputDirectory>
+            <includes><include>distribution-${project.version}.jar</include></includes>
+        </fileSet>
+        <fileSet>
             <directory>${project.basedir}/..</directory>
             <outputDirectory>.</outputDirectory>
             <includes><include>LICENSE</include></includes>

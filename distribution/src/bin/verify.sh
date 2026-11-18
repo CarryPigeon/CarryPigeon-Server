@@ -20,4 +20,4 @@ for file in config/application.yaml config/log4j2-spring.xml; do
 done
 exec "$JAVA" "-Dspring.config.additional-location=file:$DIST_DIR/config/" \
   -cp "$DIST_DIR/app/*:$DIST_DIR/lib/*" \
-  team.carrypigeon.backend.starter.DistributionVerifier "$@"
+  team.carrypigeon.backend.distribution.DistributionVerifier "$@"

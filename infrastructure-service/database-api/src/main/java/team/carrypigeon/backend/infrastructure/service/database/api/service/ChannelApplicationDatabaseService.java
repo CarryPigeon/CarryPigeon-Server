@@ -14,55 +14,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
  */
 public interface ChannelApplicationDatabaseService {
 
-    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
-    List<ChannelApplicationRecord> deleteBatchByChannelId(long channelId, int limit);
-
-
-    /**
-     * 写入新的申请记录。
-     *
-     * @param record 待持久化申请记录
-     */
-    void insert(ChannelApplicationRecord record);
-
-    /**
-     * 批量写入申请记录。
-     *
-     * @param records 待持久化申请记录
-     */
-    void insertAll(List<ChannelApplicationRecord> records);
-
-    /**
-     * 按申请 ID 删除记录。
-     *
-     * @param applicationId 申请 ID
-     */
-    void delete(long applicationId);
-
-    /**
-     * 按申请 ID 批量删除记录。
-     *
-     * @param applicationIds 申请 ID 列表
-     */
-    void deleteAll(List<Long> applicationIds);
-
-    /**
-     * 按申请 ID、频道 ID 和 PENDING 状态条件更新，仅修改状态及响应时间。
-     *
-     * @param record 审批结果，status 为 ACCEPTED 或 DECLINED，respondedAt 非空
-     * @return 恰好更新一条待处理申请时为 true；条件未命中时为 false
-     */
-    boolean decideIfPending(ChannelApplicationRecord record);
-
-    /**
-     * 分页查询申请记录。
-     * 说明：按申请 ID 升序返回，供离线维护与元能力完整性使用。
-     *
-     * @param page 分页参数
-     * @return 分页申请记录
-     */
-    PageResult<ChannelApplicationRecord> list(PageQuery page);
-
     /**
      * 按申请 ID 查询申请记录。
      *
@@ -86,7 +37,16 @@ public interface ChannelApplicationDatabaseService {
      * @param applicantId 申请人账户 ID
      * @return 命中时返回申请记录，未命中时返回空
      */
-    Optional<ChannelApplicationRecord> findByChannelAndApplicant(long channelId, long applicantId);
+    Optional<ChannelApplicationRecord> findByChannelIdAndApplicantId(long channelId, long applicantId);
+
+    /**
+     * 分页查询申请记录。
+     * 说明：按申请 ID 升序返回，供离线维护与元能力完整性使用。
+     *
+     * @param page 分页参数
+     * @return 分页申请记录
+     */
+    PageResult<ChannelApplicationRecord> page(PageQuery page);
 
     /**
      * 分页查询频道下的申请记录。
@@ -96,7 +56,50 @@ public interface ChannelApplicationDatabaseService {
      * @param page 分页参数
      * @return 分页申请记录
      */
-    PageResult<ChannelApplicationRecord> pageApplicationsByChannelId(long channelId, PageQuery page);
+    PageResult<ChannelApplicationRecord> pageByChannelId(long channelId, PageQuery page);
+
+    /**
+     * 写入新的申请记录。
+     *
+     * @param record 待持久化申请记录
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(ChannelApplicationRecord record);
+
+    /**
+     * 批量写入申请记录。
+     *
+     * @param records 待持久化申请记录
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<ChannelApplicationRecord> records);
+
+    /**
+     * 按申请 ID、频道 ID 和 PENDING 状态条件更新，仅修改状态及响应时间。
+     *
+     * @param record 审批结果，status 为 ACCEPTED 或 DECLINED，respondedAt 非空
+     * @return 恰好更新一条待处理申请时为 true；条件未命中时为 false
+     */
+    boolean decideIfPending(ChannelApplicationRecord record);
+
+    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
+    List<ChannelApplicationRecord> deleteBatchByChannelId(long channelId, int limit);
+
+    /**
+     * 按申请 ID 删除记录。
+     *
+     * @param applicationId 申请 ID
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(long applicationId);
+
+    /**
+     * 按申请 ID 批量删除记录。
+     *
+     * @param applicationIds 申请 ID 列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<Long> applicationIds);
 
     /**
      * 删除频道下的全部申请记录。

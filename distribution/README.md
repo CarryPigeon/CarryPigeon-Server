@@ -3,6 +3,8 @@
 执行 `mvn -pl distribution -am package`，得到
 `distribution/target/full-distribution.zip` 和目录
 `distribution/target/full-distribution/full-distribution/`。
+`application-starter` 只提供启动入口；具体基础设施实现由分发模块装配，
+不应单独使用 starter JAR 启动完整应用。本地开发启动脚本同样使用分发模块的运行类路径。
 
 当前包内脚本支持 Linux，需要 Bash、curl、Java 25 或更新版本，以及 util-linux 的 `flock`。
 Windows 可自行使用 Java 类路径启动；当前不提供包内 Windows 生命周期脚本。

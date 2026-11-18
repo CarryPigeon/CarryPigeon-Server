@@ -15,50 +15,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRe
 public interface AuthRefreshSessionDatabaseService {
 
     /**
-     * 写入新的刷新会话记录。
-     *
-     * @param record 待持久化会话记录
-     */
-    void insert(AuthRefreshSessionRecord record);
-
-    /**
-     * 批量写入刷新会话记录。
-     *
-     * @param records 待持久化会话记录
-     */
-    void insertAll(List<AuthRefreshSessionRecord> records);
-
-    /**
-     * 按会话 ID 删除记录。
-     *
-     * @param sessionId 会话 ID
-     */
-    void delete(long sessionId);
-
-    /**
-     * 按会话 ID 批量删除记录。
-     *
-     * @param sessionIds 会话 ID 列表
-     */
-    void deleteAll(List<Long> sessionIds);
-
-    /**
-     * 更新刷新会话记录。
-     *
-     * @param record 待更新会话记录
-     */
-    void update(AuthRefreshSessionRecord record);
-
-    /**
-     * 分页查询刷新会话记录。
-     * 说明：按会话 ID 升序返回，供离线维护与元能力完整性使用。
-     *
-     * @param page 分页参数
-     * @return 分页会话记录
-     */
-    PageResult<AuthRefreshSessionRecord> list(PageQuery page);
-
-    /**
      * 按会话 ID 查询刷新会话。
      *
      * @param sessionId 刷新会话 ID
@@ -75,6 +31,39 @@ public interface AuthRefreshSessionDatabaseService {
     List<AuthRefreshSessionRecord> findByIds(List<Long> sessionIds);
 
     /**
+     * 分页查询刷新会话记录。
+     * 说明：按会话 ID 升序返回，供离线维护与元能力完整性使用。
+     *
+     * @param page 分页参数
+     * @return 分页会话记录
+     */
+    PageResult<AuthRefreshSessionRecord> page(PageQuery page);
+
+    /**
+     * 写入新的刷新会话记录。
+     *
+     * @param record 待持久化会话记录
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(AuthRefreshSessionRecord record);
+
+    /**
+     * 批量写入刷新会话记录。
+     *
+     * @param records 待持久化会话记录
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<AuthRefreshSessionRecord> records);
+
+    /**
+     * 更新刷新会话记录。
+     *
+     * @param record 待更新会话记录
+     * @return 数据库报告恰好影响一条记录时为 true
+     */
+    boolean update(AuthRefreshSessionRecord record);
+
+    /**
      * 撤销刷新会话。
      *
      * @param sessionId 刷新会话 ID
@@ -88,4 +77,20 @@ public interface AuthRefreshSessionDatabaseService {
      * @return 成功抢占撤销权时返回 true；已被其它请求撤销时返回 false
      */
     boolean revokeIfActive(long sessionId);
+
+    /**
+     * 按会话 ID 删除记录。
+     *
+     * @param sessionId 会话 ID
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(long sessionId);
+
+    /**
+     * 按会话 ID 批量删除记录。
+     *
+     * @param sessionIds 会话 ID 列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<Long> sessionIds);
 }

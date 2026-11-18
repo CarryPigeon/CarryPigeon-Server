@@ -45,12 +45,12 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     @Override
     public Optional<ChannelMember> findByRelationForAuthorization(long channelId, long accountId) {
-        return channelMemberDatabaseService.findByRelationForAuthorization(channelId, accountId).map(this::toDomain);
+        return channelMemberDatabaseService.findByChannelIdAndAccountIdDirect(channelId, accountId).map(this::toDomain);
     }
 
     @Override
     public Optional<ChannelMember> findByRelationForUpdate(long channelId, long accountId) {
-        return channelMemberDatabaseService.findByRelationForUpdate(channelId, accountId).map(this::toDomain);
+        return channelMemberDatabaseService.findByChannelIdAndAccountIdForUpdate(channelId, accountId).map(this::toDomain);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     @Override
     public Optional<ChannelMember> findByRelation(long channelId, long accountId) {
-        return channelMemberDatabaseService.findByRelation(channelId, accountId).map(this::toDomain);
+        return channelMemberDatabaseService.findByChannelIdAndAccountId(channelId, accountId).map(this::toDomain);
     }
 
     @Override
@@ -71,7 +71,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
     @Override
     public void delete(long id) {
         // 这里按成员关系主键删除，不是按账号删除；移除单个成员请传 ChannelMember.id
-        channelMemberDatabaseService.delete(id);
+        channelMemberDatabaseService.deleteById(id);
     }
 
     @Override
@@ -87,12 +87,12 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     @Override
     public PageResult<ChannelMember> pageByAccountId(long accountId, PageQuery page) {
-        return toPage(channelMemberDatabaseService.pageMembersByAccountId(accountId, page));
+        return toPage(channelMemberDatabaseService.pageByAccountId(accountId, page));
     }
 
     @Override
     public PageResult<ChannelMember> pageByChannelId(long channelId, PageQuery page) {
-        return toPage(channelMemberDatabaseService.pageMembersByChannelId(channelId, page));
+        return toPage(channelMemberDatabaseService.pageByChannelId(channelId, page));
     }
 
     /**

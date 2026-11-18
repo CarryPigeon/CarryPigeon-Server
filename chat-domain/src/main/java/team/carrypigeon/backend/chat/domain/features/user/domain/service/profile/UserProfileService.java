@@ -85,10 +85,10 @@ public class UserProfileService implements UserProfileApi {
     }
 
     @Override
-    public void updateUserProfile(UpdateCurrentUserProfileCommand command) {
+    public void updateUserProfile(long operatorAccountId, UpdateCurrentUserProfileCommand command) {
         try {
             transactionRunner.runInTransaction(() -> {
-                UserProfile existingProfile = userProfileRepository.findByAccountIdForUpdate(command.accountId())
+                UserProfile existingProfile = userProfileRepository.findByAccountIdForUpdate(operatorAccountId)
                     .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
 
                 UserProfile updatedProfile = existingProfile.updateProfile(
@@ -99,7 +99,7 @@ public class UserProfileService implements UserProfileApi {
                     timeProvider.nowInstant()
                 );
                 // 资料行锁串行化同账号更新；文件引用与资料必须一起提交，不能在提交后补记。
-                fileReferences.replaceAvatarReference(command.accountId(), command.avatarUrl());
+                fileReferences.replaceAvatarReference(operatorAccountId, command.avatarUrl());
                 userProfileRepository.update(updatedProfile);
                 return new UserProfileResult(
                     updatedProfile.accountId(),
@@ -112,9 +112,9 @@ public class UserProfileService implements UserProfileApi {
                     updatedProfile.updatedAt()
                 );
             });
-            AuditLogs.success("user.profile_update", command.accountId());
+            AuditLogs.success("user.profile_update", operatorAccountId);
         } catch (ProblemException exception) {
-            AuditLogs.failure("user.profile_update", command.accountId(), exception.reason());
+            AuditLogs.failure("user.profile_update", operatorAccountId, exception.reason());
             throw exception;
         }
     }

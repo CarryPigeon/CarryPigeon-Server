@@ -24,10 +24,10 @@ public interface ObjectStorageService {
     StorageObject put(String objectKey, InputStream content, long size, String contentType);
 
     /**
-     * 读取对象元信息
+     * 读取对象元信息及内容。
      *
      * @param objectKey 对象键
-     * @return 对象不存在时返回空；存在时仅返回元信息，不强制打开对象内容流
+     * @return 对象不存在时返回空；存在时内容流必须存在，调用方负责关闭
      */
     Optional<StorageObject> get(String objectKey);
 

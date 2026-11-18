@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
+import team.carrypigeon.backend.infrastructure.service.mail.impl.health.SmtpInitializationChecker;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.smtp.SmtpMailHealthService;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.smtp.SmtpMailSenderService;
@@ -56,6 +57,13 @@ public class MailServiceAutoConfiguration {
     @ConditionalOnMissingBean
     public MailHealthService mailHealthService(JavaMailSenderImpl mailSender) {
         return new SmtpMailHealthService(mailSender);
+    }
+
+    /** 为已启用的Mail实现注册独立启动检查。 */
+    @Bean
+    @ConditionalOnMissingBean(SmtpInitializationChecker.class)
+    public SmtpInitializationChecker mailInitializationChecker(MailHealthService healthService) {
+        return new SmtpInitializationChecker(healthService);
     }
 
 }

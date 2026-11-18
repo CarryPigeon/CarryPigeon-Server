@@ -33,22 +33,6 @@
             <artifactId>infrastructure-basic</artifactId>
         </dependency>
         <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>database-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>cache-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>storage-impl</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>CarryPigeon</groupId>
-            <artifactId>mail-impl</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
             <exclusions>
@@ -94,23 +78,6 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>team.carrypigeon.backend.starter.ApplicationStarter</mainClass>
-                    <classifier>exec</classifier>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
     </build>
 
 </project>

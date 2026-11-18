@@ -30,8 +30,9 @@ public interface UserProfileApi {
     /**
      * 更新当前账号用户资料。
      *
+     * @param operatorAccountId 当前登录账户 ID
      * @param command 当前用户资料更新业务命令
      */
-    void updateUserProfile(UpdateCurrentUserProfileCommand command);
+    void updateUserProfile(long operatorAccountId, UpdateCurrentUserProfileCommand command);
 
 }

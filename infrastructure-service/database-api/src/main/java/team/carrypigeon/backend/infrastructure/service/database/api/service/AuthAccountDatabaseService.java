@@ -15,50 +15,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAc
 public interface AuthAccountDatabaseService {
 
     /**
-     * 写入新的鉴权账户记录。
-     *
-     * @param record 待持久化账户记录
-     */
-    void insert(AuthAccountRecord record);
-
-    /**
-     * 批量写入鉴权账户记录。
-     *
-     * @param records 待持久化账户记录
-     */
-    void insertAll(List<AuthAccountRecord> records);
-
-    /**
-     * 按账户 ID 删除记录。
-     *
-     * @param accountId 账户 ID
-     */
-    void delete(long accountId);
-
-    /**
-     * 按账户 ID 批量删除记录。
-     *
-     * @param accountIds 账户 ID 列表
-     */
-    void deleteAll(List<Long> accountIds);
-
-    /**
-     * 更新鉴权账户记录。
-     *
-     * @param record 待更新账户记录
-     */
-    void update(AuthAccountRecord record);
-
-    /**
-     * 分页查询鉴权账户记录。
-     * 说明：按账户 ID 升序返回，供离线维护与元能力完整性使用。
-     *
-     * @param page 分页参数
-     * @return 分页账户记录
-     */
-    PageResult<AuthAccountRecord> list(PageQuery page);
-
-    /**
      * 按账户 ID 查询鉴权账户。
      *
      * @param accountId 账户 ID
@@ -89,4 +45,53 @@ public interface AuthAccountDatabaseService {
      * @return 命中时返回账户记录，未命中时返回空
      */
     Optional<AuthAccountRecord> findByEmail(String email);
+
+    /**
+     * 分页查询鉴权账户记录。
+     * 说明：按账户 ID 升序返回，供离线维护与元能力完整性使用。
+     *
+     * @param page 分页参数
+     * @return 分页账户记录
+     */
+    PageResult<AuthAccountRecord> page(PageQuery page);
+
+    /**
+     * 写入新的鉴权账户记录。
+     *
+     * @param record 待持久化账户记录
+     * @return 恰好插入一条时为 true
+     */
+    boolean insert(AuthAccountRecord record);
+
+    /**
+     * 批量写入鉴权账户记录。
+     *
+     * @param records 待持久化账户记录
+     * @return 全部记录插入时为 true；空集合返回 true
+     */
+    boolean insertAll(List<AuthAccountRecord> records);
+
+    /**
+     * 更新鉴权账户记录。
+     *
+     * @param record 待更新账户记录
+     * @return 数据库报告恰好影响一条记录时为 true
+     */
+    boolean update(AuthAccountRecord record);
+
+    /**
+     * 按账户 ID 删除记录。
+     *
+     * @param accountId 账户 ID
+     * @return 恰好删除一条时为 true，未命中为 false
+     */
+    boolean deleteById(long accountId);
+
+    /**
+     * 按账户 ID 批量删除记录。
+     *
+     * @param accountIds 账户 ID 列表
+     * @return 至少删除一条时为 true；空集合返回 true
+     */
+    boolean deleteByIds(List<Long> accountIds);
 }

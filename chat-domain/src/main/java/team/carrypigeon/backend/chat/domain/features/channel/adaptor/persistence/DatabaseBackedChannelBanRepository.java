@@ -33,7 +33,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
 
     @Override
     public Optional<ChannelBan> findByRelationForAuthorization(long channelId, long bannedAccountId) {
-        return channelBanDatabaseService.findByRelationForAuthorization(channelId, bannedAccountId).map(this::toDomain);
+        return channelBanDatabaseService.findByChannelIdAndBannedAccountIdDirect(channelId, bannedAccountId).map(this::toDomain);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     public PageResult<ChannelBan> page(long channelId, PageQuery page) {
         // 返回该频道全部禁言记录（含已解除与已过期），是否仍然生效由调用方按 revokedAt 与 expiresAt 判定
         PageResult<ChannelBanRecord> result =
-                channelBanDatabaseService.pageBansByChannelId(channelId, page);
+                channelBanDatabaseService.pageByChannelId(channelId, page);
         return new PageResult<>(
                 result.items().stream().map(this::toDomain).toList(),
                 result.page(),
@@ -68,7 +68,7 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
 
     @Override
     public void delete(long banId) {
-        channelBanDatabaseService.delete(banId);
+        channelBanDatabaseService.deleteById(banId);
     }
 
     @Override
