@@ -214,7 +214,7 @@ public class ChannelController {
     @DeleteMapping("/{channelId}")
     @Operation(
             summary = "删除频道",
-            description = "提交后频道立即不可访问，关联数据由后台分批清理；原操作者重复删除仍成功。返回 204，响应体为空。"
+            description = "提交后频道立即不可访问，关联数据由后台异步清理。返回 204，响应体为空；频道不存在时返回 404。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "删除成功，响应体为空"),

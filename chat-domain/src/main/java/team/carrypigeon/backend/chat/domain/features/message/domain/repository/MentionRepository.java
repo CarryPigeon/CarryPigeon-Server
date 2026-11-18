@@ -8,6 +8,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mentio
  */
 public interface MentionRepository {
 
+    /** 删除频道下的全部提及记录。 */
+    void deleteByChannelId(long channelId);
+
     /**
      * 批量保存消息产生的提及记录。
      *

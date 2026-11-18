@@ -27,6 +27,11 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
         this.channelReadStateDatabaseService = channelReadStateDatabaseService;
     }
 
+    @Override
+    public void deleteByChannelId(long channelId) {
+        channelReadStateDatabaseService.deleteByChannelId(channelId);
+    }
+
     /**
      * 查询账户在频道中的已读状态。
      */

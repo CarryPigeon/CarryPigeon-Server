@@ -38,6 +38,7 @@ public class ChannelService implements ChannelApi {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelEventNotifier channelEventNotifier;
+    private final ChannelDeletionService channelDeletionService;
     private final IdGenerator idGenerator;
     private final TimeProvider timeProvider;
     private final TransactionRunner transactionRunner;
@@ -46,6 +47,7 @@ public class ChannelService implements ChannelApi {
         ChannelRepository channelRepository,
         ChannelMemberRepository channelMemberRepository,
         ChannelEventNotifier channelEventNotifier,
+        ChannelDeletionService channelDeletionService,
         IdGenerator idGenerator,
         TimeProvider timeProvider,
         TransactionRunner transactionRunner
@@ -53,6 +55,7 @@ public class ChannelService implements ChannelApi {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.channelEventNotifier = channelEventNotifier;
+        this.channelDeletionService = channelDeletionService;
         this.idGenerator = idGenerator;
         this.timeProvider = timeProvider;
         this.transactionRunner = transactionRunner;
@@ -118,25 +121,17 @@ public class ChannelService implements ChannelApi {
     public void deleteChannel(long operatorAccountId, long channelId) {
         transactionRunner.runInTransaction(afterCommit -> {
             // 所有频道写入按频道、成员的顺序加锁；删除持锁期间不能新建关联数据。
-            Channel channel = channelRepository.findByIdForUpdate(channelId).orElse(null);
-            if (channel == null) {
-                // 只有原发起者可以幂等重试；不能以不存在的频道 ID 探测或触发其它账号的清理任务。
-                if (channelRepository.findDeletionOperator(channelId).filter(id -> id == operatorAccountId).isPresent()) {
-                    return;
-                }
-                throw ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND);
-            }
+            Channel channel = channelRepository.findByIdForUpdate(channelId)
+                    .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 操作者必须先是频道成员，再判断其角色，避免把"非成员"与"角色不足"混为一类拒绝
             ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
             }
-            // 先登记持久化任务再撤下主记录，同事务提交后所有频道访问立即失败。
-            // 大量成员、消息等由后台按批清理，不在 HTTP 事务中全量读取或删除。
-            channelRepository.scheduleDeletion(channelId, operatorAccountId);
+            // 撤下主记录后再异步清理关联数据，避免在 HTTP 事务中全量删除。
             channelRepository.delete(channel.id());
-            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(operatorAccountId));
+            afterCommit.execute(() -> channelDeletionService.submit(channelId));
         });
         AuditLogs.success("channel.delete", operatorAccountId, "channel_id", channelId);
     }

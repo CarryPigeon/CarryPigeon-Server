@@ -10,6 +10,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.model.Channe
  */
 public interface ChannelReadStateRepository {
 
+    /** 删除频道下的全部已读状态。 */
+    void deleteByChannelId(long channelId);
+
     Optional<ChannelReadState> findByChannelIdAndAccountId(long channelId, long accountId);
 
     ChannelReadState upsert(ChannelReadState readState);

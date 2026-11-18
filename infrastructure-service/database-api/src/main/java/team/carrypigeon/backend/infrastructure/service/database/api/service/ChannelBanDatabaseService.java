@@ -87,9 +87,6 @@ public interface ChannelBanDatabaseService {
      */
     boolean update(ChannelBanRecord record);
 
-    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
-    List<ChannelBanRecord> deleteBatchByChannelId(long channelId, int limit);
-
     /**
      * 按封禁 ID 删除记录。
      *

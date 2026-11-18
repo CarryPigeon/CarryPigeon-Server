@@ -120,9 +120,6 @@ public interface ChannelMemberDatabaseService {
      */
     boolean update(ChannelMemberRecord record);
 
-    /** 删除该频道最多 limit 条关系，返回已删除记录用于进度及通知；只用于已撤下频道的清理事务。 */
-    List<ChannelMemberRecord> deleteBatchByChannelId(long channelId, int limit);
-
     /**
      * 按成员关系 ID 删除成员关系。
      *

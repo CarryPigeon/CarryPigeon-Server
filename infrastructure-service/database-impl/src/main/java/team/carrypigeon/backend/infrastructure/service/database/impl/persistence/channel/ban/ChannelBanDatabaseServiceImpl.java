@@ -29,19 +29,6 @@ public class ChannelBanDatabaseServiceImpl implements ChannelBanDatabaseService 
         this.databaseCache = databaseCache;
     }
 
-    /** 在外层清理事务中限量删除禁言记录，失败时随本批一起回滚。 */
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public List<ChannelBanRecord> deleteBatchByChannelId(long channelId, int limit) {
-        List<ChannelBanRecord> records = channelBanMapper.selectList(new LambdaQueryWrapper<ChannelBanEntity>()
-                .eq(ChannelBanEntity::getChannelId, channelId)
-                .orderByAsc(ChannelBanEntity::getBanId)
-                .last("LIMIT " + limit))
-                .stream().map(ChannelBanEntity::toRecord).toList();
-        deleteByIds(records.stream().map(ChannelBanRecord::banId).toList());
-        return records;
-    }
-
     /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
     @Override
     public Optional<ChannelBanRecord> findByChannelIdAndBannedAccountIdDirect(long channelId, long bannedAccountId) {

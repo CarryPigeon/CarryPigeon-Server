@@ -48,9 +48,8 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public boolean deleteChannelBatch(long channelId, int limit) {
-        boolean messagesDone = messageDatabaseService.deleteChannelBatch(channelId, limit);
-        return messagesDone;
+    public void deleteByChannelId(long channelId) {
+        messageDatabaseService.deleteByChannelId(channelId);
     }
 
     @Override

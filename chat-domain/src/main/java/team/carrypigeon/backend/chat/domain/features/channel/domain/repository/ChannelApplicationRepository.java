@@ -13,10 +13,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
  */
 public interface ChannelApplicationRepository {
 
-    /** 清理已撤下频道的一批关系；返回本批清理条数。 */
-    int deleteBatchByChannelId(long channelId, int limit);
-
-
     /**
      * 按申请 ID 查询申请记录。
      *

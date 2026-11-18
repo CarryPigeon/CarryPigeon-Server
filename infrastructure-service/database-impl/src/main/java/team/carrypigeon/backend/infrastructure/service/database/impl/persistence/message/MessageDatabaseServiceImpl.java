@@ -34,16 +34,10 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
 
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
-    public boolean deleteChannelBatch(long channelId, int limit) {
-        int affected = messageMapper.deleteMentionsBatch(channelId, limit)
-                + messageMapper.deleteReadStatesBatch(channelId, limit)
-                + messageMapper.deleteSendRequestsBatch(channelId, limit)
-                + messageMapper.deleteMessagesBatch(channelId, limit);
-        if (affected == 0) {
-            messageMapper.deleteSequence(channelId);
-            return true;
-        }
-        return false;
+    public void deleteByChannelId(long channelId) {
+        messageMapper.deleteSendRequestsByChannelId(channelId);
+        messageMapper.delete(new LambdaQueryWrapper<MessageEntity>().eq(MessageEntity::getChannelId, channelId));
+        messageMapper.deleteSequence(channelId);
     }
 
     @Override

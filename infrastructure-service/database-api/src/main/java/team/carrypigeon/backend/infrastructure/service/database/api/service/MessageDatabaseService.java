@@ -133,8 +133,8 @@ public interface MessageDatabaseService {
      */
     boolean update(MessageRecord record);
 
-    /** 分批清理已撤下频道的消息侧数据，必须加入删除任务事务；无剩余数据时返回 true。 */
-    boolean deleteChannelBatch(long channelId, int limit);
+    /** 清理已撤下频道的消息侧数据，必须在事务中调用。 */
+    void deleteByChannelId(long channelId);
 
     /**
      * 按消息 ID 删除消息记录。

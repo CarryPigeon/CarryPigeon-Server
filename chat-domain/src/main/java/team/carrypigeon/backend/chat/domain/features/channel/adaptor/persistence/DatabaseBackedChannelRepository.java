@@ -28,26 +28,6 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
-    public void scheduleDeletion(long channelId, long operatorAccountId) {
-        channelDatabaseService.scheduleDeletion(channelId, operatorAccountId);
-    }
-
-    @Override
-    public Optional<Long> findDeletionOperator(long channelId) {
-        return channelDatabaseService.findDeletionOperator(channelId);
-    }
-
-    @Override
-    public Optional<Long> findPendingDeletionForUpdate() {
-        return channelDatabaseService.findPendingDeletionForUpdate();
-    }
-
-    @Override
-    public void completeDeletion(long channelId) {
-        channelDatabaseService.completeDeletion(channelId);
-    }
-
-    @Override
     public Optional<Channel> findByIdForAuthorization(long channelId) {
         return channelDatabaseService.findByIdDirect(channelId).map(this::toDomainModel);
     }

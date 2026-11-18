@@ -26,6 +26,11 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
     }
 
     @Override
+    public void deleteByChannelId(long channelId) {
+        mentionDatabaseService.deleteByChannelId(channelId);
+    }
+
+    @Override
     public void saveAll(List<Mention> mentions) {
         mentionDatabaseService.insertAll(mentions.stream()
                 .map(mention -> new MentionRecord(

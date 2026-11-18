@@ -153,6 +153,12 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
                 .eq(MentionEntity::getMessageId, messageId));
     }
 
+    @Override
+    public void deleteByChannelId(long channelId) {
+        mentionMapper.delete(new LambdaQueryWrapper<MentionEntity>()
+                .eq(MentionEntity::getChannelId, channelId));
+    }
+
     /**
      * 按通用条件查询提及记录。
      */

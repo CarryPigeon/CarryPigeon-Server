@@ -105,4 +105,7 @@ public interface ChannelReadStateDatabaseService {
      * @return 至少删除一条时为 true；空集合返回 true
      */
     boolean deleteByIds(List<ChannelReadStateKey> keys);
+
+    /** 删除频道下的全部已读状态。 */
+    void deleteByChannelId(long channelId);
 }

@@ -111,4 +111,7 @@ public interface MentionDatabaseService {
      * @param messageId 消息 ID
      */
     void deleteByMessageId(long messageId);
+
+    /** 删除频道下的全部提及记录。 */
+    void deleteByChannelId(long channelId);
 }

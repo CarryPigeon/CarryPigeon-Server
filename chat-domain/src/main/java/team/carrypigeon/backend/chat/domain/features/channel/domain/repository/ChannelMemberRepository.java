@@ -20,10 +20,6 @@ public interface ChannelMemberRepository {
     /** 直接查询账号已加入且仍存在的频道 ID，用于认证连接建立在线订阅。 */
     List<Long> findChannelIdsByAccountId(long accountId);
 
-    /** 清理已撤下频道的一批关系；返回本批被移除的账号供通知。 */
-    List<Long> deleteBatchByChannelId(long channelId, int limit);
-
-
     /**
      * 为授权判断直接读取数据库，绕过最终一致的展示缓存。
      * 返回当前事务可见的记录；不存在时为空，不提供检查与后续写入之间的并发保证。

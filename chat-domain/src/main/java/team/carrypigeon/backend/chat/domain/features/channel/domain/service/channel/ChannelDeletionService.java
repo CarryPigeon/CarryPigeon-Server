@@ -2,73 +2,72 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.service.cha
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
+import java.util.concurrent.Executor;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.ChannelMessageCleanupApi;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
- * 已删除频道的分批清理任务。频道在请求事务中已撤下，本服务只清理关联数据。
- * 每批独立提交并持有删除任务行锁；异常回滚当前批，重启后按未完成记录继续，不把进度仅放在内存中。
+ * 已删除频道的进程内异步清理。频道在请求事务提交后撤下，关联数据在清理事务中删除。
+ * 任务不持久化，进程退出或清理失败后不会自动恢复。
  */
 @Slf4j
 @Service
 public class ChannelDeletionService {
-    private static final int BATCH_SIZE = 1000;
-    private final ChannelRepository channels;
     private final ChannelApplicationRepository applications;
     private final ChannelBanRepository bans;
     private final ChannelMemberRepository members;
     private final ChannelMessageCleanupApi messages;
     private final ChannelEventNotifier notifier;
     private final TransactionRunner transactions;
+    private final Executor executor;
 
-    public ChannelDeletionService(ChannelRepository channels, ChannelApplicationRepository applications,
+    public ChannelDeletionService(ChannelApplicationRepository applications,
             ChannelBanRepository bans, ChannelMemberRepository members, ChannelMessageCleanupApi messages,
-            ChannelEventNotifier notifier, TransactionRunner transactions) {
-        this.channels = channels;
+            ChannelEventNotifier notifier, TransactionRunner transactions,
+            @Qualifier("channelDeletionExecutor") Executor executor) {
         this.applications = applications;
         this.bans = bans;
         this.members = members;
         this.messages = messages;
         this.notifier = notifier;
         this.transactions = transactions;
+        this.executor = executor;
     }
 
-    /** 每次调度只处理一批，避免大频道清理长期占用数据库事务或调度线程。 */
-    @Scheduled(fixedDelayString = "${cp.channel.deletion-cleanup-delay-ms:1000}")
-    public void cleanPendingChannels() {
+    /** 在频道删除提交后将清理工作交给进程内队列。 */
+    public void submit(long channelId) {
         try {
-            cleanNextBatch();
+            executor.execute(() -> cleanChannel(channelId));
         } catch (RuntimeException exception) {
-            // 当前批已回滚，任务仍是未完成状态；后续调度会重试，不能误标完成。
-            log.error("Channel deletion batch failed; pending task will be retried", exception);
+            // 频道删除已经提交，无法通过抛出异常撤销；记录未受理的频道供运维处理。
+            log.error("Failed to submit channel cleanup, channelId={}", channelId, exception);
         }
     }
 
-    /** 处理一个持锁任务；返回 false 表示没有待处理任务，便于手动运维时逐批推进。 */
-    public boolean cleanNextBatch() {
-        return transactions.runInTransaction(afterCommit -> {
-            Long channelId = channels.findPendingDeletionForUpdate().orElse(null);
-            if (channelId == null) {
-                return false;
-            }
-            int applicationsDeleted = applications.deleteBatchByChannelId(channelId, BATCH_SIZE);
-            int bansDeleted = bans.deleteBatchByChannelId(channelId, BATCH_SIZE);
-            List<Long> removedAccounts = members.deleteBatchByChannelId(channelId, BATCH_SIZE);
-            boolean messagesDone = messages.deleteChannelBatch(channelId, BATCH_SIZE);
-            if (!removedAccounts.isEmpty()) {
-                notifier.accountChannelsChanged(afterCommit, removedAccounts);
-            }
-            if (applicationsDeleted == 0 && bansDeleted == 0 && removedAccounts.isEmpty() && messagesDone) {
-                channels.completeDeletion(channelId);
-            }
-            return true;
-        });
+    private void cleanChannel(long channelId) {
+        try {
+            transactions.runInTransaction(afterCommit -> {
+                // 成员关系删除后无法再确定接收者，因此在同一事务中先保存账号列表。
+                List<Long> accountIds = members.listByChannelId(channelId).stream()
+                        .map(ChannelMember::accountId).toList();
+                applications.deleteByChannelId(channelId);
+                bans.deleteByChannelId(channelId);
+                members.deleteByChannelId(channelId);
+                messages.deleteChannel(channelId);
+                // 仅在成员关系删除提交后通知，避免客户端刷新时看到旧关系。
+                if (!accountIds.isEmpty()) {
+                    notifier.accountChannelsChanged(afterCommit, accountIds);
+                }
+            });
+        } catch (RuntimeException exception) {
+            log.error("Channel cleanup failed, channelId={}", channelId, exception);
+        }
     }
 }

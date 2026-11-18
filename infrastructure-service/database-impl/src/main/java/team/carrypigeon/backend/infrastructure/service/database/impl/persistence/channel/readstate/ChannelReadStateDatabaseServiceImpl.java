@@ -72,6 +72,12 @@ public class ChannelReadStateDatabaseServiceImpl implements ChannelReadStateData
         return channelReadStateMapper.deleteByKeys(keys) > 0;
     }
 
+    @Override
+    public void deleteByChannelId(long channelId) {
+        channelReadStateMapper.delete(new LambdaQueryWrapper<ChannelReadStateEntity>()
+                .eq(ChannelReadStateEntity::getChannelId, channelId));
+    }
+
     /**
      * 按频道与账户更新完整已读状态记录。
      */

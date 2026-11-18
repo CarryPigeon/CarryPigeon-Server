@@ -29,19 +29,6 @@ public class ChannelApplicationDatabaseServiceImpl implements ChannelApplication
         this.channelApplicationMapper = channelApplicationMapper;
     }
 
-    /** 在外层清理事务中限量删除申请记录，失败时随本批一起回滚。 */
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public List<ChannelApplicationRecord> deleteBatchByChannelId(long channelId, int limit) {
-        List<ChannelApplicationRecord> records = channelApplicationMapper.selectList(new LambdaQueryWrapper<ChannelApplicationEntity>()
-                .eq(ChannelApplicationEntity::getChannelId, channelId)
-                .orderByAsc(ChannelApplicationEntity::getApplicationId)
-                .last("LIMIT " + limit))
-                .stream().map(ChannelApplicationEntity::toRecord).toList();
-        deleteByIds(records.stream().map(ChannelApplicationRecord::applicationId).toList());
-        return records;
-    }
-
     @Override
     public Optional<ChannelApplicationRecord> findByChannelIdAndApplicantId(long channelId, long applicantId) {
         return Optional.ofNullable(channelApplicationMapper.selectOne(

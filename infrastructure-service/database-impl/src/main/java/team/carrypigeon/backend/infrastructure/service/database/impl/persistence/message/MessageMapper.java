@@ -21,17 +21,8 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
     @Delete("DELETE FROM chat_message_sequence WHERE channel_id = #{channelId}")
     void deleteSequence(@Param("channelId") long channelId);
 
-    @Delete("DELETE FROM chat_message WHERE channel_id = #{channelId} LIMIT #{limit}")
-    int deleteMessagesBatch(@Param("channelId") long channelId, @Param("limit") int limit);
-
-    @Delete("DELETE FROM chat_message_send_request WHERE channel_id = #{channelId} LIMIT #{limit}")
-    int deleteSendRequestsBatch(@Param("channelId") long channelId, @Param("limit") int limit);
-
-    @Delete("DELETE FROM chat_channel_read_state WHERE channel_id = #{channelId} LIMIT #{limit}")
-    int deleteReadStatesBatch(@Param("channelId") long channelId, @Param("limit") int limit);
-
-    @Delete("DELETE FROM chat_mention WHERE channel_id = #{channelId} LIMIT #{limit}")
-    int deleteMentionsBatch(@Param("channelId") long channelId, @Param("limit") int limit);
+    @Delete("DELETE FROM chat_message_send_request WHERE channel_id = #{channelId}")
+    int deleteSendRequestsByChannelId(@Param("channelId") long channelId);
 
     /** 唯一键把同一发送者、频道和请求 ID 的并发调用串行化；重复请求不得覆盖原摘要。 */
     @Insert("""

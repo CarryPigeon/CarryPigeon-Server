@@ -61,19 +61,6 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
         return channelMemberMapper.findChannelIdsByAccountId(accountId);
     }
 
-    /** 在外层清理事务中限量删除成员，并失效对应缓存；返回账号用于提交后通知。 */
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public List<ChannelMemberRecord> deleteBatchByChannelId(long channelId, int limit) {
-        List<ChannelMemberRecord> records = channelMemberMapper.selectList(new LambdaQueryWrapper<ChannelMemberEntity>()
-                .eq(ChannelMemberEntity::getChannelId, channelId)
-                .orderByAsc(ChannelMemberEntity::getMemberId)
-                .last("LIMIT " + limit))
-                .stream().map(ChannelMemberEntity::toRecord).toList();
-        deleteByIds(records.stream().map(ChannelMemberRecord::memberId).toList());
-        return records;
-    }
-
     /** 授权数据只从数据库读取，避免缓存失效延迟继续授予旧权限。 */
     @Override
     public Optional<ChannelMemberRecord> findByChannelIdAndAccountIdDirect(long channelId, long accountId) {

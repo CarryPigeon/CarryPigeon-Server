@@ -6,7 +6,6 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ChannelEntity;
 
@@ -17,21 +16,6 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.persistence
  */
 @Mapper
 public interface ChannelMapper extends BaseMapper<ChannelEntity> {
-
-    /** 与频道移除同事务登记清理任务，不能先移除频道再异步创建任务。 */
-    @Insert("INSERT INTO chat_channel_deletion (channel_id, operator_account_id, requested_at) VALUES (#{channelId}, #{operatorAccountId}, CURRENT_TIMESTAMP(6))")
-    void scheduleDeletion(@Param("channelId") long channelId, @Param("operatorAccountId") long operatorAccountId);
-
-    /** 当前读识别原所有者的删除重试，包括清理已完成的情况。 */
-    @Select("SELECT operator_account_id FROM chat_channel_deletion WHERE channel_id = #{channelId} FOR UPDATE")
-    Long selectDeletionOperator(@Param("channelId") long channelId);
-
-    /** 每次只锁一个未完成任务；任务进度由已清理数据持久化，事务回滚后可原地重试。 */
-    @Select("SELECT channel_id FROM chat_channel_deletion WHERE completed_at IS NULL ORDER BY channel_id LIMIT 1 FOR UPDATE SKIP LOCKED")
-    Long selectPendingDeletionForUpdate();
-
-    @Update("UPDATE chat_channel_deletion SET completed_at = CURRENT_TIMESTAMP(6) WHERE channel_id = #{channelId}")
-    void completeDeletion(@Param("channelId") long channelId);
 
     /**
      * 普通频道发现页及其成员数；先限制频道窗口，再聚合本页成员，避免对全站成员先分组。
