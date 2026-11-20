@@ -1,5 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.file.controller.http;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -9,10 +14,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,13 +27,15 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
+import team.carrypigeon.backend.chat.domain.features.file.config.ServerAvatarProperty;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.dto.FileUploadResponse;
-import team.carrypigeon.backend.chat.domain.features.file.config.ServerAvatarProperty;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.FileTransferApi;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
+import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
@@ -63,28 +66,30 @@ public class FileController {
 
     /**
      * 申请文件上传授权。
-     * 输入：文件名、MIME 类型和声明大小。
-     * 输出：包含 `share_key`、上传地址和过期时间的上传响应。
+     *
+     * <p>请求 {@code POST /api/files/uploads}。JSON 请求体示例 {@code {"filename":"note.txt","mime_type":"text/plain","size_bytes":3}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code FileUploadResponse}。
+     * <p>失败示例：声明文件过大 40001，配额不足 40004。
      *
      * @param request 上传申请请求
      * @param principal 当前认证主体
-     * @return 文件上传授权响应
      */
     @PreAuthorize("isAuthenticated()")
-    @PostMapping("/uploads")
+    @PostMapping(value = "/uploads", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "申请文件上传", description = "生成同源上传入口与稳定 share_key。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回上传授权结果")
-    })
-    public FileUploadResponse createUpload(
-        @Valid @RequestBody CreateFileUploadRequest request,
-        @AuthenticationPrincipal CpPrincipal principal
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回上传授权结果", useReturnTypeSchema = true))
+    public Result<FileUploadResponse> createUpload(
+        @Valid
+        @RequestBody
+        CreateFileUploadRequest request,
+        @AuthenticationPrincipal
+        CpPrincipal principal
     ) {
         FileUploadGrantResult result = fileTransferDomainApi.createUploadGrant(
                 principal.accountId(),
                 request.sizeBytes()
         );
-        return new FileUploadResponse(
+        return Result.success(new FileUploadResponse(
                 IdUtil.toString(result.fileId()),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
@@ -93,25 +98,29 @@ public class FileController {
                         java.util.Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
                         result.expiresAt().toEpochMilli()
                 )
-        );
+        ));
     }
 
     /**
      * 通过同源 HTTP PUT 写入文件内容。
      * 副作用：会把请求体内容写入对象存储。
-     * 失败：当请求体读取失败时返回统一业务失败异常。
+     *
+     * <p>请求 {@code PUT /api/files/uploads/example-share-key}。请求体为原始字节，例如 text/plain 的 abc；Content-Length 为 3。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：缺少长度头 HTTP 411，请求体过大 HTTP 413，授权无效 40002。
      *
      * @param shareKey 上传授权 share key
      * @param request 当前 HTTP 请求，提供认证主体和上传内容流
-     * @return HTTP 204
      */
     @PreAuthorize("isAuthenticated()")
-    @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE)
-    @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容；完成后相同内容重试返回成功，不同内容返回 409。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "文件内容写入成功")})
-    public ResponseEntity<Void> uploadFile(
-        @PathVariable String shareKey,
-        @AuthenticationPrincipal CpPrincipal principal,
+    @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE, produces = "application/json")
+    @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容；完成后相同内容重试返回成功，不同内容返回业务码 40006。")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> uploadFile(
+        @PathVariable
+        String shareKey,
+        @AuthenticationPrincipal
+        CpPrincipal principal,
         HttpServletRequest request
     ) {
         // 不接受未知长度的分块上传；实际读取仍按授权大小校验，不能只信任此头。
@@ -129,7 +138,7 @@ public class FileController {
                     request.getContentLengthLong(),
                     request.getInputStream()
             );
-            return ResponseEntity.noContent().build();
+            return Result.success();
         } catch (IOException exception) {
             throw ProblemException.of(FileProblem.UPLOAD_READ_FAILED, exception);
         }
@@ -138,10 +147,12 @@ public class FileController {
     /**
      * 按 `share_key` 下载已完成文件。
      * 访问规则：登录且持有链接即可下载，不检查频道成员关系；上传授权到期不影响下载。
-     * 输出：通过应用服务器转发文件内容流。
+     *
+     * <p>请求 {@code GET /api/files/download/example-share-key}。无请求体。
+     * <p>成功响应 HTTP 200，返回文件原始字节及对应媒体类型。
+     * <p>失败示例：文件不存在 HTTP 404，缺少认证 HTTP 401。
      *
      * @param shareKey 下载 share key
-     * @return 文件内容响应
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/download/{shareKey}")
@@ -153,8 +164,9 @@ public class FileController {
             @ApiResponse(responseCode = "401", description = "尚未认证"),
             @ApiResponse(responseCode = "404", description = "文件不存在、尚未完成或已回收")
     })
-    public ResponseEntity<?> download(
-        @PathVariable String shareKey
+    public ResponseEntity<InputStreamResource> download(
+        @PathVariable
+        String shareKey
     ) {
         FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(shareKey)
                 .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
@@ -167,11 +179,10 @@ public class FileController {
 
     /**
      * 下载服务端头像。
-     * 输入：无，匿名可访问。
-     * 输出：从本地配置路径读取服务端头像文件内容。
-     * 失败语义：头像文件不存在时返回 404。
      *
-     * @return 服务端头像二进制内容
+     * <p>请求 {@code GET /api/files/download/server/head}。无请求体。
+     * <p>成功响应 HTTP 200，返回文件原始字节及对应媒体类型。
+     * <p>失败示例：文件不存在 HTTP 404。
      */
     @PermitAll
     @GetMapping("/download/server/head")
@@ -182,14 +193,14 @@ public class FileController {
                             schema = @Schema(type = "string", format = "binary"))),
             @ApiResponse(responseCode = "404", description = "服务端头像不存在")
     })
-    public ResponseEntity<?> downloadServerHead() {
+    public ResponseEntity<InputStreamResource> downloadServerHead() {
         Path avatarPath = Path.of(serverAvatarProperty.path());
         if (!Files.exists(avatarPath)) {
-            throw ProblemException.of(FileProblem.FILE_NOT_FOUND, "server avatar file not found: " + serverAvatarProperty.path());
+            throw ProblemException.of(FileProblem.FILE_NOT_FOUND, "server avatar file not found");
         }
         try {
-            InputStream inputStream = Files.newInputStream(avatarPath);
             String contentType = Files.probeContentType(avatarPath);
+            InputStream inputStream = Files.newInputStream(avatarPath);
             String type = contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType;
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, type)

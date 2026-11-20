@@ -3,14 +3,14 @@ package team.carrypigeon.backend.chat.domain.config.http.log.mdc;
 import java.io.IOException;
 import java.util.UUID;
 
-import org.springframework.core.Ordered;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.Ordered;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
 
@@ -45,6 +45,7 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter implements Ordere
         String traceId = resolveTraceId(request, requestId);
         String route = resolveRoute(request);
         try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.HTTP)) {
+            response.setHeader(REQUEST_ID_HEADER, requestId);
             LogContexts.sessionId(requestId);
             LogContexts.traceId(traceId);
             LogContexts.route(route);

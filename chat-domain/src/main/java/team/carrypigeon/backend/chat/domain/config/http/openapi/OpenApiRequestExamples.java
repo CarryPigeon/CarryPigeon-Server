@@ -19,7 +19,7 @@ final class OpenApiRequestExamples {
     private static final String MULTIPART_FORM_DATA_TYPE = "multipart/form-data";
     private static final String OCTET_STREAM_TYPE = "application/octet-stream";
     private static final Map<String, RequestExample> REQUEST_EXAMPLES = Map.ofEntries(
-            Map.entry("POST /api/auth/login", jsonExample("测试账号登录", """
+            Map.entry("POST /api/auth/login/pwd", jsonExample("测试账号登录", """
                     {
                       "username": "carry-owner",
                       "password": "carrypigeon123"
@@ -28,7 +28,9 @@ final class OpenApiRequestExamples {
             Map.entry("POST /api/auth/register", jsonExample("用户名密码注册", """
                     {
                       "username": "carry-user",
-                      "password": "carrypigeon123"
+                      "password": "carrypigeon123",
+                      "email": "carry-user@example.test",
+                      "code": "123456"
                     }
                     """)),
             Map.entry("POST /api/auth/email_codes", jsonExample("发送邮箱验证码", """
@@ -37,31 +39,20 @@ final class OpenApiRequestExamples {
                       "purpose": "LOGIN"
                     }
                     """)),
-            Map.entry("POST /api/auth/tokens", jsonExample("邮箱验证码登录", """
+            Map.entry("POST /api/auth/login/email", jsonExample("邮箱验证码登录", """
                     {
-                      "grant_type": "email_code",
                       "email": "carry-user@example.test",
-                      "code": "123456",
-                      "client": {
-                        "device_id": "apifox-device-1",
-                        "installed_plugins": []
-                      }
+                      "code": "123456"
                     }
                     """)),
             Map.entry("POST /api/auth/refresh", jsonExample("刷新访问令牌", """
                     {
-                      "refresh_token": "{{refreshToken}}",
-                      "client": {
-                        "device_id": "apifox-device-1"
-                      }
+                      "refresh_token": "{{refreshToken}}"
                     }
                     """)),
             Map.entry("POST /api/auth/revoke", jsonExample("撤销刷新令牌", """
                     {
-                      "refresh_token": "{{refreshToken}}",
-                      "client": {
-                        "device_id": "apifox-device-1"
-                      }
+                      "refresh_token": "{{refreshToken}}"
                     }
                     """)),
             Map.entry("POST /api/gates/required/check", jsonExample("required gate 预检查", """
@@ -72,7 +63,7 @@ final class OpenApiRequestExamples {
                       }
                     }
                     """)),
-            Map.entry("PUT /api/users/me/email", jsonExample("更新邮箱", """
+            Map.entry("PUT /api/auth/me/email", jsonExample("更新邮箱", """
                     {
                       "email": "carry-user@example.test",
                       "code": "123456"
@@ -80,7 +71,6 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("PATCH /api/users/me", jsonExample("更新当前用户资料", """
                     {
-                      "username": "carry-owner",
                       "avatar": "avatars/users/carry-owner.png",
                       "brief": "Updated from Apifox",
                       "sex": 0,
@@ -101,8 +91,7 @@ final class OpenApiRequestExamples {
             Map.entry("POST /api/channels", jsonExample("创建频道", """
                     {
                       "name": "apifox-channel",
-                      "brief": "Created from Apifox",
-                      "avatar": "avatars/channels/apifox-channel.png"
+                      "brief": "Created from Apifox"
                     }
                     """)),
             Map.entry("PATCH /api/channels/{channelId}", jsonExample("更新频道资料", """

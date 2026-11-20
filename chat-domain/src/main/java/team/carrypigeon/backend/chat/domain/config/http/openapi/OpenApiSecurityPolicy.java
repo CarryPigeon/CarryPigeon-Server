@@ -24,17 +24,10 @@ final class OpenApiSecurityPolicy {
         if (path == null || !path.startsWith("/api/")) {
             return false;
         }
-        if ("/api/server".equals(path)
-                || "/api/gates/required/check".equals(path)
-                || "/api/plugins/catalog".equals(path)
-                || "/api/domains/catalog".equals(path)) {
-            return false;
-        }
-        return !"/api/auth/register".equals(path)
-                && !"/api/auth/login".equals(path)
-                && !"/api/auth/email_codes".equals(path)
-                && !"/api/auth/tokens".equals(path)
-                && !"/api/auth/refresh".equals(path)
-                && !"/api/auth/revoke".equals(path);
+        return switch (path) {
+            case "/api/server", "/api/files/download/server/head", "/api/auth/register", "/api/auth/login/pwd",
+                "/api/auth/login/email", "/api/auth/email_codes", "/api/auth/refresh", "/api/auth/revoke" -> false;
+            default -> true;
+        };
     }
 }

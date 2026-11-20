@@ -2,19 +2,18 @@ package team.carrypigeon.backend.chat.domain.config.http.security;
 
 import jakarta.servlet.DispatcherType;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpMethod;
-import org.springframework.web.cors.CorsUtils;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
+import org.springframework.web.cors.CorsUtils;
 
 /***
  * spring security配置，用于项目中的鉴权和认证功能
@@ -29,7 +28,7 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            JsonProvider jsonProvider,
+            SecurityErrorResponses errors,
             Environment environment
     ) throws Exception {
         http
@@ -52,8 +51,8 @@ public class SecurityConfiguration {
                 auth.anyRequest().authenticated();
             })
             .exceptionHandling(ex -> ex
-                .authenticationEntryPoint(new JsonAuthenticationEntryPoint(jsonProvider))
-                .accessDeniedHandler(new JsonAccessDeniedHandler(jsonProvider))
+                .authenticationEntryPoint(new JsonAuthenticationEntryPoint(errors))
+                .accessDeniedHandler(new JsonAccessDeniedHandler(errors))
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

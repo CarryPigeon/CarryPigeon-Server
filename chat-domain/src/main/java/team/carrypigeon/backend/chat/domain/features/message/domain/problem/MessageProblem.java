@@ -10,43 +10,50 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
 public enum MessageProblem implements ProblemMapping {
 
     /** 消息相关入参不合法。 */
-    INVALID_INPUT(422, "validation_failed", "validation failed"),
+    INVALID_INPUT(10001, 422, "validation_failed", "validation failed"),
 
     /** 同一请求 ID 已经绑定其它发送载荷。 */
-    SEND_REQUEST_CONFLICT(409, "message_request_conflict", "request id is already used with a different payload"),
+    SEND_REQUEST_CONFLICT(30003, 409, "message_request_conflict", "request id is already used with a different payload"),
 
     /** 已提交的请求对应消息已经被删除，不能将旧请求重新创建为新消息。 */
-    SEND_RESULT_GONE(410, "message_result_gone", "the original message is no longer available"),
+    SEND_RESULT_GONE(30004, 410, "message_result_gone", "the original message is no longer available"),
 
     /** 分页游标格式非法。 */
-    CURSOR_INVALID(422, "cursor_invalid", "cursor is invalid"),
+    CURSOR_INVALID(10013, 422, "cursor_invalid", "cursor is invalid"),
 
     /** 游标已超出保留窗口，客户端必须重新记录当前事件位置并读取消息快照。 */
-    EVENT_CURSOR_EXPIRED(410, "message_event_cursor_expired", "message snapshot must be refreshed"),
+    EVENT_CURSOR_EXPIRED(30005, 410, "message_event_cursor_expired", "message snapshot must be refreshed"),
 
     /** 目标消息不存在。 */
-    MESSAGE_NOT_FOUND(404, "not_found", "message does not exist"),
+    MESSAGE_NOT_FOUND(30001, 404, "not_found", "message does not exist"),
 
     /** 目标提及记录不存在。 */
-    MENTION_NOT_FOUND(404, "not_found", "mention not found"),
+    MENTION_NOT_FOUND(30002, 404, "not_found", "mention not found"),
 
     /** 当前成员处于禁言状态，不能投递消息。 */
-    USER_MUTED(403, "user_muted", "channel member is muted"),
+    USER_MUTED(30006, 403, "user_muted", "channel member is muted"),
 
     /** 调用方无权撤回目标消息。 */
-    RECALL_FORBIDDEN(403, "channel_message_recall_forbidden", "channel message recall is not allowed"),
+    RECALL_FORBIDDEN(30007, 403, "channel_message_recall_forbidden", "channel message recall is not allowed"),
 
     /** 当前运行时没有该消息 domain 的处理器。 */
-    UNSUPPORTED_DOMAIN(422, "unsupported_message_domain", "message domain is not supported");
+    UNSUPPORTED_DOMAIN(30008, 422, "unsupported_message_domain", "message domain is not supported");
 
+    private final int code;
     private final int status;
     private final String reason;
     private final String message;
 
-    MessageProblem(int status, String reason, String message) {
+    MessageProblem(int code, int status, String reason, String message) {
+        this.code = code;
         this.status = status;
         this.reason = reason;
         this.message = message;
+    }
+
+    @Override
+    public int code() {
+        return code;
     }
 
     @Override

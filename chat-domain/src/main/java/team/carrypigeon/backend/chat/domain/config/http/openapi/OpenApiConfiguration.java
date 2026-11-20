@@ -2,15 +2,14 @@ package team.carrypigeon.backend.chat.domain.config.http.openapi;
 
 import java.util.Map;
 
-import org.springdoc.core.customizers.OpenApiCustomizer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * OpenAPI 文档装配配置。
@@ -35,9 +34,9 @@ public class OpenApiConfiguration {
                         .description("面向前端、测试与集成方的 CarryPigeon Backend HTTP API 门户。\n\n"
                                 + "使用说明：\n"
                                 + "1. 大多数受保护接口需要在 Swagger Authorize 中仅填写 access token，Bearer 前缀由 Swagger UI 添加。\n"
-                                + "2. 当前对外协议以 `docs/api/API.md` 为基准，HTTP 成功响应直接返回资源对象，不使用 `CPResponse` 统一成功包装。\n"
+                                + "2. 业务 JSON 遵循 docs/02-http-result.md。HTTP 200 时按数字 code 判断，成功数据位于 data。\n"
                                 + "3. JSON 字段、查询参数与 path 参数统一为 `snake_case`，雪花 ID 统一编码为十进制字符串。\n"
-                                + "4. 失败响应统一为 `{ \"error\": { status, reason, message, details? } }`，请以 `error.reason` 作为分支条件。\n"
+                                + "4. 失败响应包含五位整数 code 和英文 message；文件下载保留传输状态和原始字节。\n"
                                 + "5. 导入建议使用 `/v3/api-docs`；导入后创建 `local` 环境，并配置 `token`、`refreshToken`、`channelId=100` 等变量。"))
                 .addServersItem(new Server()
                         .url("http://127.0.0.1:8080")
@@ -87,7 +86,7 @@ public class OpenApiConfiguration {
                         }
                         OpenApiSecurityPolicy.ensureSecurity(operation, path);
                         OpenApiRequestExamples.ensureRequestExample(operation, httpMethod.name(), path);
-                        OpenApiErrorResponses.ensureCommonErrorResponses(operation, path, httpMethod.name());
+                        OpenApiErrorResponses.documentProtocol(operation, path);
                     }));
             OpenApiParameterNamingPolicy.normalize(openApi);
         };

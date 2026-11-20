@@ -1,62 +1,54 @@
 package team.carrypigeon.backend.chat.domain.config.http.security;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import team.carrypigeon.backend.chat.domain.config.http.error.ApiError;
-import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.util.ServletRequestPathUtils;
 
-/**
- * 安全层统一错误响应写入器。
- * 职责：让 Spring Security 的 401/403/500 与其他 HTTP 错误使用同一 {@link ApiErrorResponse} 结构。
- * 边界：只负责安全层错误响应，不承载认证或授权判断。
- */
+/** 认证在 DispatcherServlet 之前失败时，按实际路由选择与 MVC 相同的错误处理器。 */
+@Component
 final class SecurityErrorResponses {
 
-    private SecurityErrorResponses() {
+    private final HandlerMapping routes;
+    private final HandlerExceptionResolver exceptions;
+
+    SecurityErrorResponses(
+        @Lazy @Qualifier("requestMappingHandlerMapping") HandlerMapping routes,
+        @Lazy @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptions
+    ) {
+        this.routes = routes;
+        this.exceptions = exceptions;
     }
 
-    /**
-     * 写入标准错误响应。
-     *
-     * @param jsonProvider JSON 序列化入口
-     * @param response HTTP 响应
-     * @param status HTTP 状态
-     * @param reason 稳定失败原因
-     * @param message 客户端可读消息
-     * @param details 可选错误明细
-     */
-    static void write(
-            JsonProvider jsonProvider,
-            HttpServletResponse response,
-            int status,
-            String reason,
-            String message,
-            Map<String, Object> details
-    ) throws IOException {
+    void write(HttpServletRequest request, HttpServletResponse response, Exception failure) {
         if (response.isCommitted()) {
             return;
         }
-        response.setStatus(status);
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        if (status == HttpStatus.UNAUTHORIZED.value()) {
-            response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
+        Object handler = null;
+        String path = ServletRequestPathUtils.parseAndCache(request).pathWithinApplication().value();
+        // 只解析映射，不调用控制器。未知路径/错误方法优先返回 404/405，避免被认证错误遮蔽。
+        // Swagger 静态资源由独立安全策略保护，不属于业务路由。
+        if (!path.startsWith("/swagger-ui") && !path.startsWith("/v3/api-docs")) {
+            try {
+                HandlerExecutionChain route = routes.getHandler(request);
+                if (route == null) {
+                    failure = new NoHandlerFoundException(request.getMethod(), path, new HttpHeaders());
+                } else {
+                    handler = route.getHandler();
+                }
+            } catch (Exception routingFailure) {
+                failure = routingFailure;
+            }
         }
-        ApiError error = new ApiError(
-                status,
-                reason,
-                message,
-                LogContexts.currentSessionId(),
-                details
-        );
-        response.getWriter().write(jsonProvider.toJson(new ApiErrorResponse(error)));
+        if (exceptions.resolveException(request, response, handler, failure) == null) {
+            throw new IllegalStateException("Cannot render HTTP error", failure);
+        }
     }
 }

@@ -2,7 +2,13 @@ package team.carrypigeon.backend.chat.domain.features.auth.controller.http;
 
 import java.util.Locale;
 
-import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,14 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.security.PermitAll;
-import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
 import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.EmailLoginRequestBody;
@@ -59,55 +59,45 @@ public class AuthController {
     }
 
     /**
-     * 用户名密码注册<br/>
-     * 注册需要邮箱进行验证<br/>
-     * 用户名和邮箱都必须唯一的绑定到一个账户上</br>
-     * 请求格式：
-     * ```json
-     * {
-     *     "username": "string",
-     *     "password": "string",
-     *     "email": "string",
-     *     "code": "string"
-     * }
-     * ```
-     * <br/>
-     * 登陆后响应用户id和用户名，用于用户登录时候
+     * 用户名密码注册
+     * 注册需要邮箱进行验证
+     * 用户名和邮箱都必须唯一的绑定到一个账户上
+     *
+     * <p>请求 {@code POST /api/auth/register}。JSON 请求体示例 {@code {"username":"alice","email":"alice@example.com","password":"example-password","code":"123456"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code RegisterResponseBody}。
+     * <p>失败示例：用户名已占用 11010，邮箱已占用 11011。
      */
-    @PostMapping("/register")
+    @PostMapping(value = "/register", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "用户注册", description = "使用用户名邮箱以及密码创建新账户。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "注册成功")
-    })
-    public ResponseEntity<RegisterResponseBody> register(
-        @Valid @RequestBody RegisterRequestBody request
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "注册成功", useReturnTypeSchema = true))
+    public Result<RegisterResponseBody> register(
+        @Valid
+        @RequestBody
+        RegisterRequestBody request
     ) {
         RegisterResult result = authAccountApi.register(request.username().trim(), request.password(),request.email().toLowerCase(Locale.ROOT),request.code());
-        return ResponseEntity.status(201).body(new RegisterResponseBody(IdUtil.toString(result.accountId()), result.username()));
+        return Result.success(new RegisterResponseBody(IdUtil.toString(result.accountId()), result.username()));
     }
 
     /**
-     * 用户名密码登录，可通过配置文件配置限制用户名密码登录<br/>
-     * 参考请求：
-     * ```json
-     * {
-     *     "username": "string",
-     *     "password": "string"
-     * }
-     * ```
-     * <br/>
-     * 登陆后响应会话令牌，用于后续请求认证
+     * 用户名密码登录，可通过配置文件配置限制用户名密码登录
+     *
+     * <p>请求 {@code POST /api/auth/login/pwd}。JSON 请求体示例 {@code {"username":"alice","password":"example-password"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code AuthSessionTokenResponse}。
+     * <p>失败示例：凭据错误 11006，登录限流 11008。
      */
-    @PostMapping("/login/pwd")
+    @PostMapping(value = "/login/pwd", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "用户名密码登录", description = "使用用户名密码创建会话并签发 token。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
-    })
-    public ResponseEntity<AuthSessionTokenResponse> loginByPWD(@Valid @RequestBody PWDLoginRequestBody request,
-            HttpServletRequest httpRequest) {
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回会话令牌结果", useReturnTypeSchema = true))
+    public Result<AuthSessionTokenResponse> loginByPWD(
+        @Valid
+        @RequestBody
+        PWDLoginRequestBody request,
+        HttpServletRequest httpRequest
+    ) {
         AuthTokenResult result = authTokenApi.loginByPWD(request.username().trim(), request.password(),
                 clientAddressResolver.resolve(httpRequest));
-        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+        return Result.success(new AuthSessionTokenResponse(
             "Bearer",
             result.accessToken(),
             result.expiresIn(),
@@ -117,27 +107,22 @@ public class AuthController {
     }
 
     /**
-     * 邮箱验证码登录<br/>
-     * 参考请求：
-     * ```json
-     * {
-     *     "email": "string",
-     *     "code": "string"
-     * }
-     * ```
-     * <br/>
-     * 登陆后响应会话令牌，用于后续请求认证
+     * 邮箱验证码登录
+     *
+     * <p>请求 {@code POST /api/auth/login/email}。JSON 请求体示例 {@code {"email":"alice@example.com","code":"123456"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code AuthSessionTokenResponse}。
+     * <p>失败示例：验证码无效 12001。
      */
-    @PostMapping("/login/email")
+    @PostMapping(value = "/login/email", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "邮箱验证码登录", description = "使用邮箱验证码创建会话并签发 token。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "返回会话令牌结果")
-    })
-    public ResponseEntity<AuthSessionTokenResponse> loginByEmail(
-        @Valid @RequestBody EmailLoginRequestBody request
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回会话令牌结果", useReturnTypeSchema = true))
+    public Result<AuthSessionTokenResponse> loginByEmail(
+        @Valid
+        @RequestBody
+        EmailLoginRequestBody request
     ) {
         AuthTokenResult result = authTokenApi.loginByEmail(request.email().trim().toLowerCase(Locale.ROOT),request.code());
-        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+        return Result.success(new AuthSessionTokenResponse(
             "Bearer",
             result.accessToken(),
             result.expiresIn(),
@@ -147,25 +132,22 @@ public class AuthController {
     }
 
     /**
-     * 使用 refresh token 刷新 access token<br/>
-     * 示例请求：
-     * ```json
-     * {
-     *     "refresh_token": "string"
-     * }
-     * ```
-     * @return 会话令牌响应
+     * 使用 refresh token 刷新 access token
+     *
+     * <p>请求 {@code POST /api/auth/refresh}。JSON 请求体示例 {@code {"refresh_token":"example-refresh-token"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code AuthSessionTokenResponse}。
+     * <p>失败示例：刷新令牌无效 11004。
      */
-    @PostMapping("/refresh")
+    @PostMapping(value = "/refresh", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "刷新访问令牌", description = "使用 refresh token 刷新 access token，可同时轮换 refresh token。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回新的会话令牌结果")
-    })
-    public ResponseEntity<AuthSessionTokenResponse> refresh(
-        @Valid @RequestBody RefreshAccessTokenRequestBody request
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回新的会话令牌结果", useReturnTypeSchema = true))
+    public Result<AuthSessionTokenResponse> refresh(
+        @Valid
+        @RequestBody
+        RefreshAccessTokenRequestBody request
     ) {
         AuthTokenResult result = authTokenApi.refreshToken(request.refreshToken().trim());
-        return ResponseEntity.ok().body(new AuthSessionTokenResponse(
+        return Result.success(new AuthSessionTokenResponse(
             "Bearer",
             result.accessToken(),
             result.expiresIn(),
@@ -175,48 +157,46 @@ public class AuthController {
     }
 
     /**
-     * 撤销 refresh token<br/>
-     * 参考请求：
-     * ```json
-     * {
-     *     "refresh_token": "string"
-     * }
-     * ```
+     * 撤销 refresh token
+     *
+     * <p>请求 {@code POST /api/auth/revoke}。JSON 请求体示例 {@code {"refresh_token":"example-refresh-token"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：刷新令牌无效 11004。
      */
-    @PostMapping("/revoke")
+    @PostMapping(value = "/revoke", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "撤销 refresh token", description = "撤销指定 refresh token 对应的 refresh session。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "撤销成功")
-    })
-    public ResponseEntity<Void> revoke(
-        @Valid @RequestBody RevokeRefreshTokenRequestBody request
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> revoke(
+        @Valid
+        @RequestBody
+        RevokeRefreshTokenRequestBody request
     ) {
         authTokenApi.logout(request.refreshToken());
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 
     /**
-     * 更新用户邮箱<br/>
-     * 参考请求：<br/>
-     * ```json
-     * {
-     *     "email": "string",
-     *     "code": "string"
-     * }
-     * ```
-     * */
+     * 更新用户邮箱
+     *
+     * <p>请求 {@code PUT /api/auth/me/email}。JSON 请求体示例 {@code {"email":"alice@example.com","code":"123456"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：邮箱已占用 11011。
+     */
     @PreAuthorize("isAuthenticated()")
-    @PutMapping("/me/email")
+    @PutMapping(value = "/me/email", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
-    @ApiResponses({@ApiResponse(responseCode = "204", description = "邮箱更新成功")})
-    public ResponseEntity<Void> updateEmail(
-        @AuthenticationPrincipal CpPrincipal cpPrincipal,
-        @Valid @RequestBody UpdateCurrentAccountEmailRequest body
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> updateEmail(
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal,
+        @Valid
+        @RequestBody
+        UpdateCurrentAccountEmailRequest body
     ) {
         // 更新数据
         authAccountApi.updateEmail(cpPrincipal.accountId(), body.email().trim().toLowerCase(Locale.ROOT), body.code());
         // 响应
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 
 }

@@ -1,32 +1,32 @@
 package team.carrypigeon.backend.chat.domain.features.user.controller.http;
 
-import io.swagger.v3.oas.annotations.Parameter;
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.constraints.Positive;
-import java.util.List;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.ResponseEntity;
+
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.dto.*;
-import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -34,7 +34,6 @@ import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
  * 职责：承接当前登录用户资料查询与更新协议请求并返回统一响应模型。
  * 边界：当前阶段不暴露资料创建协议。
  */
-@Validated
 @RestController
 @RequestMapping("/api/users")
 @PreAuthorize("isAuthenticated()")
@@ -60,23 +59,24 @@ public class UserProfileController {
     /**
      * 按账户 ID 查询用户详细资料；登录邮箱属于公开资料，任意已认证用户均可读取。
      *
+     * <p>请求 {@code GET /api/users/1001/detail}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code UserDetailProfileResponse}。
+     * <p>失败示例：资料不存在 50001。
+     *
      * @param accountId 账户 ID
-     * @return 统一响应包装的用户资料
      */
-    @GetMapping("/{accountId}/detail")
+    @GetMapping(value = "/{accountId}/detail", produces = "application/json")
     @Operation(summary = "按账户 ID 读取资料", description = "任意已认证用户可读取公开资料，包含目标用户的登录邮箱。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回用户公开资料"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "404", description = "资料不存在")
-    })
-    public UserDetailProfileResponse getByAccountId(
-            @Parameter(description = "目标账户 ID", example = "1001")
-            @PathVariable @Positive(message = "accountId must be greater than 0") long accountId
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回用户公开资料", useReturnTypeSchema = true))
+    public Result<UserDetailProfileResponse> getByAccountId(
+        @Parameter(description = "目标账户 ID", example = "1001")
+        @PathVariable
+        @Positive(message = "accountId must be greater than 0")
+        long accountId
     ) {
         UserProfileResult result = userProfileDomainApi.findById(accountId);
         PublicAccountResult account = authAccountApi.getAccount(accountId);
-        return new UserDetailProfileResponse(
+        return Result.success(new UserDetailProfileResponse(
                 result.accountId() + "",
                 result.username(),
                 result.avatarUrl(),
@@ -84,25 +84,24 @@ public class UserProfileController {
                 result.bio(),
                 result.sex(),
                 result.birthday()
-        );
+        ));
     }
 
     /**
      * 按 ID 批量查询用户公开简略资料，主要用于群聊列表展示
-     * 因此返回值不包含bio等个性化冗杂信息
+     *
+     * <p>请求 {@code GET /api/users?ids=1001,1002}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code UserPublicProfileListResponse}。
+     * <p>失败示例：请求参数错误 10001。
      *
      * @param ids 要查询的账户 ID 列表
-     * @return 公开资料列表外壳
      */
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @Operation(summary = "批量读取公开资料", description = "按 `ids` 批量读取用户公开资料，避免客户端 N+1 请求。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回公开资料 items 列表"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "422", description = "ids 缺失或格式非法")
-    })
-    public UserPublicProfileListResponse list(
-            @RequestParam List<Long> ids
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回公开资料 items 列表", useReturnTypeSchema = true))
+    public Result<UserPublicProfileListResponse> list(
+        @RequestParam
+        List<Long> ids
     ) {
         List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(ids).stream()
                 .map(user -> new UserPublicProfileResponse(
@@ -112,38 +111,27 @@ public class UserProfileController {
                     )
                 )
                 .toList();
-        return new UserPublicProfileListResponse(result);
+        return Result.success(new UserPublicProfileListResponse(result));
     }
 
     /**
-     * 更新当前登录用户公开资料。<br/>
-     * 不包含用户名、邮箱和密码等account表信息<br/>
-     * ```json
-     * {
-     *   "avatar": "string",
-     *   "brief": "string",
-     *   "sex": 0,
-     *   "birthday": 0
-     * }
-     * ```
+     * 更新当前登录用户公开资料。
+     *
+     * <p>请求 {@code PATCH /api/users/me}。JSON 请求体示例 {@code {"avatar":"avatars/alice.png","brief":"Hello","sex":0,"birthday":0}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：资料不存在 50001。
+     *
      * @param body 用户资料更新请求
-     * @return HTTP 204
      */
-    @PatchMapping("/me")
+    @PatchMapping(value = "/me", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新当前用户资料", description = "按 v1 字段语义更新当前登录账户资料。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "更新成功"),
-            @ApiResponse(responseCode = "401", description = "未认证"),
-            @ApiResponse(responseCode = "404", description = "资料不存在"),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法")
-    })
-    public ResponseEntity<Void> updateUserProfile(
-            @AuthenticationPrincipal
-            CpPrincipal cpPrincipal,
-
-            @Valid
-            @RequestBody
-            PatchCurrentUserProfileRequest body
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> updateUserProfile(
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal,
+        @Valid
+        @RequestBody
+        PatchCurrentUserProfileRequest body
     ) {
         userProfileDomainApi.updateUserProfile(
                 cpPrincipal.accountId(),
@@ -154,25 +142,26 @@ public class UserProfileController {
                     body.birthday() == null ? 0L : body.birthday()
                 )
         );
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 
     /**
-     * TODO 待审核必要性
-     * 获取当前登录用户资料。
+     * 读取当前认证账号的资料。
+     *
+     * <p>请求 {@code GET /api/users/me}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code UserDetailProfileResponse}。
+     * <p>失败示例：账号不存在 11009。
      *
      * @param cpPrincipal 当前登录用户
-     * @return 统一响应包装的用户资料
      */
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/me")
+    @GetMapping(value = "/me", produces = "application/json")
     @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "返回当前用户资料"),
-        @ApiResponse(responseCode = "401", description = "未认证"),
-        @ApiResponse(responseCode = "404", description = "资料不存在")
-    })
-    public UserDetailProfileResponse me(@AuthenticationPrincipal CpPrincipal cpPrincipal) {
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回当前用户资料", useReturnTypeSchema = true))
+    public Result<UserDetailProfileResponse> me(
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
+    ) {
         return this.getByAccountId(cpPrincipal.accountId());
     }
 }

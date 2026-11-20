@@ -8,6 +8,8 @@ import jakarta.annotation.security.PermitAll;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.features.server.controller.http.dto.ServerDiscoveryResponse;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 
@@ -34,15 +36,15 @@ public class ServerController {
     /**
      * 服务发现文档。
      *
-     * @return 客户端握手阶段的发现信息
+     * <p>请求 {@code GET /api/server}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ServerDiscoveryResponse}。
+     * <p>失败示例：内部错误 10012。
      */
     @PermitAll
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @Operation(summary = "读取服务发现文档", description = "返回客户端握手与登录前置阶段所需的服务发现信息。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回服务发现文档")
-    })
-    public ServerDiscoveryResponse getServerDiscoveryDocument() {
-        return ServerDiscoveryResponse.from(serverEntranceDomainApi.getServerDiscoveryDocument());
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回服务发现文档", useReturnTypeSchema = true))
+    public Result<ServerDiscoveryResponse> getServerDiscoveryDocument() {
+        return Result.success(ServerDiscoveryResponse.from(serverEntranceDomainApi.getServerDiscoveryDocument()));
     }
 }

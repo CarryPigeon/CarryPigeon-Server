@@ -1,14 +1,12 @@
 package team.carrypigeon.backend.chat.domain.config.http.security;
 
+import java.io.IOException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
-
-import java.io.IOException;
 
 /***
  * 无认证响应
@@ -18,10 +16,10 @@ import java.io.IOException;
 @Slf4j
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    private final JsonProvider jsonProvider;
+    private final SecurityErrorResponses errors;
 
-    public JsonAuthenticationEntryPoint(JsonProvider jsonProvider) {
-        this.jsonProvider = jsonProvider;
+    public JsonAuthenticationEntryPoint(SecurityErrorResponses errors) {
+        this.errors = errors;
     }
 
     @Override
@@ -29,14 +27,7 @@ public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
                          AuthenticationException authException) throws IOException {
         log.info("HTTP authentication required, method={}",
                 request.getMethod());
-        SecurityErrorResponses.write(
-                jsonProvider,
-                response,
-                HttpStatus.UNAUTHORIZED.value(),
-                "unauthorized",
-                "authentication is required",
-                null
-        );
+        errors.write(request, response, authException);
     }
 }
 

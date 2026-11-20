@@ -1,13 +1,14 @@
 package team.carrypigeon.backend.infrastructure.basic.plugin.message.api;
 
-import org.springframework.stereotype.Component;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Component;
+
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
+import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
 
 @Component
 public class CPChannelMessageDispatcher {
@@ -32,6 +33,11 @@ public class CPChannelMessageDispatcher {
         CPChannelMessageHandler handler = handlers.get(domain);
         if (handler == null) {
             throw ProblemException.of(new ProblemMapping() {
+                @Override
+                public int code() {
+                    return 30008;
+                }
+
                 @Override
                 public int status() {
                     return 404;

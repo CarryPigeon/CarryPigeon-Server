@@ -3,6 +3,10 @@ package team.carrypigeon.backend.chat.domain.config.http.security;
 import java.io.IOException;
 import java.util.List;
 
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.NonNull;
@@ -12,14 +16,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /**
@@ -34,11 +33,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final AuthTokenApi authTokenApi;
-    private final JsonProvider jsonProvider;
+    private final SecurityErrorResponses errors;
 
-    public JwtAuthenticationFilter(AuthTokenApi authTokenApi, JsonProvider jsonProvider) {
+    public JwtAuthenticationFilter(AuthTokenApi authTokenApi, SecurityErrorResponses errors) {
         this.authTokenApi = authTokenApi;
-        this.jsonProvider = jsonProvider;
+        this.errors = errors;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // 探针自行校验来源，仅返回就绪状态。
+        return (request.getContextPath() + "/internal/readiness").equals(request.getRequestURI());
     }
 
     @Override
@@ -72,29 +77,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 log.info("HTTP authentication rejected, method={}, reason={}",
                         request.getMethod(), exception.reason());
             }
-            String message = exception.getMessage() == null || exception.getMessage().isBlank()
-                    ? "authentication is required"
-                    : exception.getMessage();
-            SecurityErrorResponses.write(
-                    jsonProvider,
-                    response,
-                    exception.status(),
-                    exception.reason(),
-                    message,
-                    exception.details()
-            );
+            errors.write(request, response, exception);
             return;
         } catch (RuntimeException exception) {
             SecurityContextHolder.clearContext();
             log.error("HTTP authentication failed unexpectedly, method={}", request.getMethod(), exception);
-            SecurityErrorResponses.write(
-                    jsonProvider,
-                    response,
-                    500,
-                    "internal_error",
-                    "internal server error",
-                    null
-            );
+            errors.write(request, response, exception);
             return;
         }
         // TODO 用户权限分流

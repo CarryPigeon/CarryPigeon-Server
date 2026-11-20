@@ -7,9 +7,14 @@ package team.carrypigeon.backend.infrastructure.basic.exception;
  */
 public interface ProblemMapping {
 
+    /** 稳定的五位业务错误码。 */
+    default int code() {
+        return 10012;
+    }
+
     /**
-     * 响应状态码。
-     * 输出：4xx 或 5xx 的标准状态码，由异常处理入口直接采用。
+     * 失败类别的标准 HTTP 状态，用于下载及日志分级。
+     * 普通业务 JSON 由协议入口将此类别映射为 HTTP 200。
      */
     int status();
 

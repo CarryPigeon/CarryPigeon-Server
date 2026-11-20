@@ -1,10 +1,19 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http;
 
 import java.util.List;
-import org.springframework.http.ResponseEntity;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -15,31 +24,19 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
 import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBody;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.DiscoverChannelResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.CreateChannelRequest;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.DiscoverChannelResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.UpdateChannelProfileRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
@@ -51,7 +48,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Validated
 @Tag(name = "频道", description = "频道基础信息与频道发现能力。")
 public class ChannelController {
 
@@ -66,57 +62,72 @@ public class ChannelController {
         this.channelQueryApi = channelQueryApi;
     }
 
-    /** 查询所有普通频道的公开摘要，系统频道隐藏；发现结果不授予资料或消息读取权限。 */
-    @GetMapping("/discover")
+    /**
+     * 查询所有普通频道的公开摘要，系统频道隐藏；发现结果不授予资料或消息读取权限。
+     *
+     * <p>请求 {@code GET /api/channels/discover?q=project}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code CursorPageResponse<DiscoverChannelResponse>}。
+     * <p>失败示例：查询参数错误 10001。
+     */
+    @GetMapping(value = "/discover", produces = "application/json")
     @Operation(summary = "发现频道", description = "按频道 ID 升序发现普通频道，系统频道隐藏。关键词按名称或简介包含匹配；加入频道仍需申请审批，消息仅成员可读。")
-    public CursorPageResponse<DiscoverChannelResponse> discoverChannels(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 CursorPageResponse<DiscoverChannelResponse>，失败时返回五位错误码", useReturnTypeSchema = true))
+    public Result<CursorPageResponse<DiscoverChannelResponse>> discoverChannels(
         @Parameter(description = "名称或简介关键词，省略或空白时不过滤")
-        @RequestParam(name = "q", required = false) @Size(max = 128) String keyword,
+        @RequestParam(name = "q", required = false)
+        @Size(max = 128, message = "q must contain at most 128 characters")
+        String keyword,
         @Parameter(description = "上一页返回的 next_cursor，十进制频道 ID，作为排他下界")
-        @RequestParam(required = false) @Positive Long cursor,
-        @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit,
-        @AuthenticationPrincipal CpPrincipal principal
+        @RequestParam(required = false)
+        @Positive(message = "cursor must be greater than 0")
+        Long cursor,
+        @RequestParam(defaultValue = "20")
+        @Min(value = 1, message = "limit must be between 1 and 50")
+        @Max(value = 50, message = "limit must be between 1 and 50")
+        int limit,
+        @AuthenticationPrincipal
+        CpPrincipal principal
     ) {
         List<DiscoverChannelResult> found = channelQueryApi.discoverChannels(principal.accountId(), keyword, cursor, limit);
         boolean hasMore = found.size() > limit;
         List<DiscoverChannelResult> items = hasMore ? found.subList(0, limit) : found;
-        return CursorPageResponse.of(items.stream().map(item -> new DiscoverChannelResponse(
+        return Result.success(CursorPageResponse.of(items.stream().map(item -> new DiscoverChannelResponse(
                 Long.toString(item.cid()), item.name(), item.brief(), item.avatar(),
                 item.memberCount(), item.requiresApplication())).toList(),
-                hasMore ? Long.toString(items.getLast().cid()) : null, hasMore);
+                hasMore ? Long.toString(items.getLast().cid()) : null, hasMore));
     }
 
     /**
-     * 返回当前账号存在成员关系的频道列表<br/>
+     * 返回当前账号存在成员关系的频道列表
+     *
+     * <p>请求 {@code GET /api/channels?page=1&page_size=20}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code PageResponse<ChannelResponseBody>}。
+     * <p>失败示例：分页参数错误 10001。
      */
-    @GetMapping
+    @GetMapping(produces = "application/json")
     @Operation(
             summary = "获取频道列表",
-            description = "分页返回当前登录账号存在成员关系的频道列表。无可见频道时返回空 items，不返回 404。"
+            description = "分页返回当前登录账号存在成员关系的频道列表。无可见频道时返回空 items。"
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为分页外壳，items 为频道摘要数组",
-                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "page 或 page_size 超出范围，reason 为 validation_failed",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public PageResponse<ChannelResponseBody> listChannels(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为频道摘要数组", useReturnTypeSchema = true))
+    public Result<PageResponse<ChannelResponseBody>> listChannels(
         @Parameter(description = "页码，从 1 开始", example = "1")
         @RequestParam(name = "page", defaultValue = "1")
-        @Min(value = 1, message = "page must be greater than 0") int page,
+        @Min(value = 1, message = "page must be greater than 0")
+        int page,
         @Parameter(description = "每页条数，范围 1..50", example = "20")
         @RequestParam(name = "page_size", defaultValue = "20")
         @Min(value = 1, message = "page_size must be between 1 and 50")
-        @Max(value = 50, message = "page_size must be between 1 and 50") int pageSize,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @Max(value = 50, message = "page_size must be between 1 and 50")
+        int pageSize,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         PageResult<ChannelResult> result = channelApi.listChannels(
                 cpPrincipal.accountId(),
                 new PageQuery(page, pageSize)
         );
-        return new PageResponse<>(
+        return Result.success(new PageResponse<>(
                 result.items().stream()
                         .map(channel -> new ChannelResponseBody(
                                 IdUtil.toString(channel.channelId()),
@@ -130,76 +141,66 @@ public class ChannelController {
                 result.pageSize(),
                 result.total(),
                 result.hasMore()
-        );
+        ));
     }
 
     /**
      * 按频道 ID 返回频道资料。
      * 约束：调用方必须是该频道成员，否则拒绝访问。
      *
+     * <p>请求 {@code GET /api/channels/2001}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelResponseBody}。
+     * <p>失败示例：频道不存在 20001，非成员 20002。
+     *
      * @param channelId 目标频道 ID
      * @param cpPrincipal 当前认证用户
-     * @return 频道资料响应
      */
-    @GetMapping("/{channelId}")
+    @GetMapping(value = "/{channelId}", produces = "application/json")
     @Operation(
             summary = "获取频道资料",
             description = "按频道 ID 返回频道名称、简介、系统频道标记与创建时间。"
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为频道详情，含 cid、name、brief、system_channel、created_at",
-                    content = @Content(schema = @Schema(implementation = ChannelResponseBody.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "当前账号不是该频道成员，reason 为 channel_membership_required",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ChannelResponseBody getChannelById(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为频道详情，含 cid、name、brief、system_channel、created_at", useReturnTypeSchema = true))
+    public Result<ChannelResponseBody> getChannelById(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         ChannelResult result = channelApi.getChannelById(cpPrincipal.accountId(), channelId);
-        return new ChannelResponseBody(
+        return Result.success(new ChannelResponseBody(
             IdUtil.toString(result.channelId()),
             result.name(),
             result.brief(),
             result.systemChannel(),
             result.createdAt().toEpochMilli()
-        );
+        ));
     }
 
     /**
-     * 创建频道并把创建者设为所有者<br/>
-     * 请求示例：
-     * ```json
-     * {
-     *     "name": "频道名称",
-     *     "brief": "频道简介"
-     * }
-     * ```
+     * 创建频道并把创建者设为所有者
+     *
+     * <p>请求 {@code POST /api/channels}。JSON 请求体示例 {@code {"name":"项目讨论","brief":"版本计划"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelResponseBody}。
+     * <p>失败示例：字段校验失败 10001。
      */
-    @PostMapping
+    @PostMapping(produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(
             summary = "创建频道",
             description = "创建普通频道并把创建者设为其所有者。"
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "响应体为新建频道摘要项，含 cid、name、brief",
-                    content = @Content(schema = @Schema(implementation = ChannelResponseBody.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法，reason 为 validation_failed",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ResponseEntity<ChannelResponseBody> createChannel(
-        @Valid @RequestBody CreateChannelRequest body,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为新建频道资料", useReturnTypeSchema = true))
+    public Result<ChannelResponseBody> createChannel(
+        @Valid
+        @RequestBody
+        CreateChannelRequest body,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         ChannelResult result = channelApi.createChannel(cpPrincipal.accountId(), body.name(), body.brief());
-        return ResponseEntity.status(201).body(new ChannelResponseBody(
+        return Result.success(new ChannelResponseBody(
             IdUtil.toString(result.channelId()),
             result.name(),
             result.brief(),
@@ -210,64 +211,54 @@ public class ChannelController {
 
     /**
      * 删除指定频道。
+     *
+     * <p>请求 {@code DELETE /api/channels/2001}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：频道不存在 20001，要求所有者 20006。
      */
-    @DeleteMapping("/{channelId}")
+    @DeleteMapping(value = "/{channelId}", produces = "application/json")
     @Operation(
             summary = "删除频道",
-            description = "提交后频道立即不可访问，关联数据由后台异步清理。返回 204，响应体为空；频道不存在时返回 404。"
+            description = "提交后频道立即不可访问，关联数据由后台异步清理。返回 200，data 为 null；频道不存在时返回业务码 20001。"
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "删除成功，响应体为空"),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或不是所有者，reason 为 not_channel_member 或 channel_owner_required",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ResponseEntity<Void> deleteChannel(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> deleteChannel(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         channelApi.deleteChannel(cpPrincipal.accountId(), channelId);
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 
     /**
      * 更新指定频道的名称与简介
-     * <br/>
-     * 请求示例：
-     * ```json
-     * {
-     *     "name": "频道名称",
-     *     "brief": "频道简介"
-     * }
-     * ```
+     *
+     * <p>请求 {@code PATCH /api/channels/2001}。JSON 请求体示例 {@code {"name":"项目讨论","brief":"版本计划"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：频道不存在 20001，角色不足 20010。
      */
-    @PatchMapping("/{channelId}")
+    @PatchMapping(value = "/{channelId}", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(
             summary = "更新频道资料",
-            description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。成功返回 204，响应体为空。"
+            description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。成功返回 200，data 为 null。"
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "更新成功，响应体为空"),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_profile_forbidden",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法，reason 为 validation_failed",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ResponseEntity<Void> updateChannelProfile(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> updateChannelProfile(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @Valid @RequestBody UpdateChannelProfileRequest body,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @Valid
+        @RequestBody
+        UpdateChannelProfileRequest body,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         channelApi.updateChannelProfile(cpPrincipal.accountId(), channelId, body.name(), body.brief());
-        return ResponseEntity.noContent().build();
+        return Result.success();
     }
 }

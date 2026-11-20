@@ -11,10 +11,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Positive;
-
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,14 +20,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
 import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
+import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.CreateChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.DecideChannelApplicationRequest;
-import team.carrypigeon.backend.chat.domain.config.http.error.ApiErrorResponse;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -42,7 +41,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 @RestController
 @RequestMapping("/api/channels")
 @PreAuthorize("isAuthenticated()")
-@Validated
 @Tag(name = "频道申请", description = "入群申请与审批能力。")
 public class ChannelApplicationController {
 
@@ -58,86 +56,82 @@ public class ChannelApplicationController {
      * 为当前账号创建入群申请。
      * 副作用：持久化一条 PENDING 申请记录，并替换该账号在同一频道的历史申请记录。
      *
+     * <p>请求 {@code POST /api/channels/2001/applications}。JSON 请求体示例 {@code {"reason":"加入项目讨论"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelApplicationResponse}。
+     * <p>失败示例：频道不存在 20001。
+     *
      * @param channelId 目标频道 ID
      * @param request 入群申请请求
      * @param cpPrincipal 当前认证用户
-     * @return 新建申请结果
      */
-    @PostMapping("/{channelId}/applications")
+    @PostMapping(value = "/{channelId}/applications", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(
             summary = "申请加入频道",
             description = "为当前账号创建入群申请。同一账号在同一频道只保留一条申请记录，重复提交会替换已审批的历史记录。",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
-                    description = "请求体仅含 reason：必填但允许空字符串，超过长度上限或缺失时返回 422",
+                    description = "请求体仅含 reason：必填但允许空字符串，超过长度上限或缺失时返回业务码 10001",
                     content = @Content(schema = @Schema(implementation = CreateChannelApplicationRequest.class))
             )
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为新建申请，含 application_id、cid、uid、reason、apply_time、status",
-                    content = @Content(schema = @Schema(implementation = ChannelApplicationResponse.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在，reason 为 not_found",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "请求体字段非法、当前账号已是成员或已存在待处理申请",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ChannelApplicationResponse createApplication(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为新建申请，含 application_id、cid、uid、reason、apply_time、status", useReturnTypeSchema = true))
+    public Result<ChannelApplicationResponse> createApplication(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
-        @Valid @RequestBody CreateChannelApplicationRequest request,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @Valid
+        @RequestBody
+        CreateChannelApplicationRequest request,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationApi.createChannelApplication(cpPrincipal.accountId(), channelId, request.reason()));
+        return Result.success(toResponse(channelApplicationApi.createChannelApplication(cpPrincipal.accountId(), channelId, request.reason())));
     }
 
     /**
      * 查询指定频道的入群申请列表。
      * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
      *
+     * <p>请求 {@code GET /api/channels/2001/applications?page=1&page_size=20}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code PageResponse<ChannelApplicationResponse>}。
+     * <p>失败示例：角色不足 20012。
+     *
      * @param channelId 目标频道 ID
      * @param cpPrincipal 当前认证用户
-     * @return 入群申请列表响应
      */
-    @GetMapping("/{channelId}/applications")
+    @GetMapping(value = "/{channelId}/applications", produces = "application/json")
     @Operation(summary = "获取入群申请列表", description = "分页读取频道入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为分页外壳，items 为申请数组",
-                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_invite_forbidden",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "page 或 page_size 超出范围，reason 为 validation_failed",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public PageResponse<ChannelApplicationResponse> listApplications(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为申请数组", useReturnTypeSchema = true))
+    public Result<PageResponse<ChannelApplicationResponse>> listApplications(
         @Parameter(description = "目标频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "页码，从 1 开始", example = "1")
         @RequestParam(name = "page", defaultValue = "1")
-        @Min(value = 1, message = "page must be greater than 0") int page,
+        @Min(value = 1, message = "page must be greater than 0")
+        int page,
         @Parameter(description = "每页条数，范围 1..50", example = "20")
         @RequestParam(name = "page_size", defaultValue = "20")
         @Min(value = 1, message = "page_size must be between 1 and 50")
-        @Max(value = 50, message = "page_size must be between 1 and 50") int pageSize,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @Max(value = 50, message = "page_size must be between 1 and 50")
+        int pageSize,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
         PageResult<ChannelApplicationResult> result = channelApplicationApi.listChannelApplications(
                 cpPrincipal.accountId(),
                 channelId,
                 new PageQuery(page, pageSize)
         );
-        return new PageResponse<>(
+        return Result.success(new PageResponse<>(
                 result.items().stream().map(this::toResponse).toList(),
                 result.page(),
                 result.pageSize(),
                 result.total(),
                 result.hasMore()
-        );
+        ));
     }
 
     /**
@@ -145,52 +139,48 @@ public class ChannelApplicationController {
      * 副作用：更新申请状态；批准时新增频道成员关系。
      * 约束：申请必须归属于路径声明的频道且处于待处理状态，调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
      *
+     * <p>请求 {@code POST /api/channels/2001/applications/5001/decisions}。JSON 请求体示例 {@code {"decision":"approve"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelApplicationResponse}。
+     * <p>失败示例：申请不存在 20005，申请已处理 20016。
+     *
      * @param channelId 申请所属频道 ID
      * @param applicationId 目标申请 ID
      * @param request 审批请求
      * @param cpPrincipal 当前认证用户
-     * @return 审批后的申请结果
      */
-    @PostMapping("/{channelId}/applications/{applicationId}/decisions")
+    @PostMapping(value = "/{channelId}/applications/{applicationId}/decisions", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(
             summary = "审批入群申请",
             description = "按 approve 或 reject 处理待审批申请，要求 OWNER 或 ADMIN 成员角色。"
                     + "批准时同时新增一条 MEMBER 成员关系。",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
-                    description = "请求体仅含 decision：只接受 approve 或 reject，其余取值返回 422",
+                    description = "请求体仅含 decision：只接受 approve 或 reject，其余取值返回业务码 10001",
                     content = @Content(schema = @Schema(implementation = DecideChannelApplicationRequest.class))
             )
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "响应体为审批后的申请，status 为 accepted 或 declined",
-                    content = @Content(schema = @Schema(implementation = ChannelApplicationResponse.class))),
-            @ApiResponse(responseCode = "401", description = "未认证，响应体为标准错误包装",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "非频道成员或角色不足，reason 为 not_channel_member 或 channel_invite_forbidden",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "频道不存在，或申请不属于该频道（按不存在处理以免泄露跨频道申请存在性）",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "申请已被处理（reason 为 application_already_processed），"
-                    + "或申请人已是频道成员（reason 为 conflict）",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
-            @ApiResponse(responseCode = "422", description = "审批决定不是 approve 或 reject，reason 为 validation_failed",
-                    content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
-    })
-    public ChannelApplicationResponse decideApplication(
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为审批后的申请，status 为 accepted 或 declined", useReturnTypeSchema = true))
+    public Result<ChannelApplicationResponse> decideApplication(
         @Parameter(description = "申请所属频道 ID", example = "2001")
-        @PathVariable @Positive(message = "channelId must be greater than 0") long channelId,
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
         @Parameter(description = "目标申请 ID", example = "3001")
-        @PathVariable @Positive(message = "applicationId must be greater than 0") long applicationId,
-        @Valid @RequestBody DecideChannelApplicationRequest request,
-        @AuthenticationPrincipal CpPrincipal cpPrincipal
+        @PathVariable
+        @Positive(message = "applicationId must be greater than 0")
+        long applicationId,
+        @Valid
+        @RequestBody
+        DecideChannelApplicationRequest request,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
     ) {
-        return toResponse(channelApplicationApi.decideChannelApplication(
+        return Result.success(toResponse(channelApplicationApi.decideChannelApplication(
             cpPrincipal.accountId(),
             channelId,
             applicationId,
             request.decision()
-        ));
+        )));
     }
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {

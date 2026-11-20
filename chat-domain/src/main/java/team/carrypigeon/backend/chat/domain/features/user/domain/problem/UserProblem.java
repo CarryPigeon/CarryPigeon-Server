@@ -10,16 +10,23 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemMapping;
 public enum UserProblem implements ProblemMapping {
 
     /** 目标用户资料不存在。 */
-    PROFILE_NOT_FOUND(404, "not_found", "user profile does not exist");
+    PROFILE_NOT_FOUND(50001, 404, "not_found", "user profile does not exist");
 
+    private final int code;
     private final int status;
     private final String reason;
     private final String message;
 
-    UserProblem(int status, String reason, String message) {
+    UserProblem(int code, int status, String reason, String message) {
+        this.code = code;
         this.status = status;
         this.reason = reason;
         this.message = message;
+    }
+
+    @Override
+    public int code() {
+        return code;
     }
 
     @Override
