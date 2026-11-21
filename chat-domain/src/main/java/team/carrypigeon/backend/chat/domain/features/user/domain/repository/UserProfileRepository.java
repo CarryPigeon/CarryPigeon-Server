@@ -31,6 +31,14 @@ public interface UserProfileRepository {
     List<UserProfile> findByAccountIds(List<Long> accountIds);
 
     /**
+     * 检查分享密钥是否被用户资料引用。
+     *
+     * @param shareKey 分享密钥
+     * @return 是否被引用
+     */
+    boolean containShareKeyReference(String shareKey);
+
+    /**
      * 保存新的用户资料。
      *
      * @param userProfile 待保存资料

@@ -60,7 +60,7 @@ public class FileController {
      * 创建文件 HTTP 入口。
      *
      * @param fileTransferDomainApi 文件传输领域 API
-     * @param serverAvatarProperty 服务端头像配置
+     * @param serverAvatarProperty  服务端头像配置
      */
     public FileController(FileTransferApi fileTransferDomainApi, ServerAvatarProperty serverAvatarProperty) {
         this.fileTransferDomainApi = fileTransferDomainApi;
@@ -74,7 +74,7 @@ public class FileController {
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code FileUploadResponse}。
      * <p>失败示例：声明文件过大 40001，配额不足 40004。
      *
-     * @param request 上传申请请求
+     * @param request   上传申请请求
      * @param principal 当前认证主体
      */
     @PreAuthorize("isAuthenticated()")
@@ -99,10 +99,11 @@ public class FileController {
                 IdUtil.toString(result.fileId()),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
-                        "PUT",
-                        result.uploadUrl(),
-                        Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
-                        result.expiresAt().toEpochMilli()
+                    "PUT",
+                    result.uploadUrl(),
+                    Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
+                    result.expiresAt().toEpochMilli(),
+                    result.hasSameFile()
                 )
             )
         );
@@ -117,7 +118,7 @@ public class FileController {
      * <p>失败示例：缺少长度头 HTTP 411，请求体过大 HTTP 413，授权无效 40002。
      *
      * @param shareKey 上传授权 share key
-     * @param request 当前 HTTP 请求，提供认证主体和上传内容流
+     * @param request  当前 HTTP 请求，提供认证主体和上传内容流
      */
     @PreAuthorize("isAuthenticated()")
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE, produces = "application/json")
@@ -139,11 +140,11 @@ public class FileController {
         }
         try {
             fileTransferDomainApi.uploadFile(
-                    principal.accountId(),
-                    shareKey,
-                    request.getContentType(),
-                    request.getContentLengthLong(),
-                    request.getInputStream()
+                principal.accountId(),
+                shareKey,
+                request.getContentType(),
+                request.getContentLengthLong(),
+                request.getInputStream()
             );
             return Result.success();
         } catch (IOException exception) {
@@ -165,18 +166,18 @@ public class FileController {
     @GetMapping("/download/{shareKey}")
     @Operation(summary = "获取文件下载", description = "任意已认证用户持有 share_key 即可下载已完成文件，不要求频道成员身份；上传授权到期不影响下载。")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "直接返回文件二进制内容",
-                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                            schema = @Schema(type = "string", format = "binary"))),
-            @ApiResponse(responseCode = "401", description = "尚未认证"),
-            @ApiResponse(responseCode = "404", description = "文件不存在、尚未完成或已回收")
+        @ApiResponse(responseCode = "200", description = "直接返回文件二进制内容",
+            content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                schema = @Schema(type = "string", format = "binary"))),
+        @ApiResponse(responseCode = "401", description = "尚未认证"),
+        @ApiResponse(responseCode = "404", description = "文件不存在、尚未完成或已回收")
     })
     public ResponseEntity<InputStreamResource> download(
         @PathVariable
         String shareKey
     ) {
         FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(shareKey)
-                .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
+            .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
         String type = downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType();
         String contentDisposition = ContentDisposition.attachment()
             .filename(downloadResult.fileName(), StandardCharsets.UTF_8)
@@ -201,10 +202,10 @@ public class FileController {
     @GetMapping("/download/server/head")
     @Operation(summary = "下载服务端头像", description = "从本地配置路径读取并返回服务端头像。")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "返回服务端头像",
-                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
-                            schema = @Schema(type = "string", format = "binary"))),
-            @ApiResponse(responseCode = "404", description = "服务端头像不存在")
+        @ApiResponse(responseCode = "200", description = "返回服务端头像",
+            content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                schema = @Schema(type = "string", format = "binary"))),
+        @ApiResponse(responseCode = "404", description = "服务端头像不存在")
     })
     public ResponseEntity<InputStreamResource> downloadServerHead() {
         Path avatarPath = Path.of(serverAvatarProperty.path());
@@ -216,8 +217,8 @@ public class FileController {
             InputStream inputStream = Files.newInputStream(avatarPath);
             String type = contentType == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : contentType;
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, type)
-                    .body(new InputStreamResource(inputStream));
+                .header(HttpHeaders.CONTENT_TYPE, type)
+                .body(new InputStreamResource(inputStream));
         } catch (IOException exception) {
             throw ProblemException.of(FileProblem.UPLOAD_READ_FAILED, exception);
         }

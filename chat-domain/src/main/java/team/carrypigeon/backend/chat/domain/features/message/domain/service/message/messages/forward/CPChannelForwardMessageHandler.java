@@ -33,7 +33,7 @@ public class CPChannelForwardMessageHandler implements CPChannelMessageHandler {
         }
         // 不允许伪造消息源，其他的保持不变
         for (CPChannelMessage messageItem : messageRepository.findByIds(cpChannelForwardMessageData.getMessageIds())) {
-            if (messageItem.channelId() != message.channelId()){
+            if (messageItem.channelId() != cpChannelForwardMessageData.getSourceChannelId()){
                 throw ProblemException.of(MessageProblem.INVALID_INPUT);
             }
         }

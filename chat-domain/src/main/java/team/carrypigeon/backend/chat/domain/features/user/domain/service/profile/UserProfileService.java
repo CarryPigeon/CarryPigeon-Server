@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.chat.domain.features.file.domain.api.reference.FileReferenceApi;
+import team.carrypigeon.backend.chat.domain.features.user.domain.capability.FileReferenceApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
@@ -98,9 +98,11 @@ public class UserProfileService implements UserProfileApi {
                     command.birthday(),
                     timeProvider.nowInstant()
                 );
-                // 资料行锁串行化同账号更新；文件引用与资料必须一起提交，不能在提交后补记。
-                fileReferences.replaceAvatarReference(operatorAccountId, command.avatarUrl());
                 userProfileRepository.update(updatedProfile);
+                if (!existingProfile.avatarUrl().equals(updatedProfile.avatarUrl())){
+                    // 标记头像
+                    fileReferences.replaceAvatarReference(existingProfile.avatarUrl(), updatedProfile.avatarUrl());
+                }
                 return new UserProfileResult(
                     updatedProfile.accountId(),
                     authAccountAdaptor.findById(updatedProfile.accountId()).username(),

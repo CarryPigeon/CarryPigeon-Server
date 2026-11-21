@@ -24,10 +24,12 @@ public class FileCleanupService {
     public void cleanFiles() {
         try {
             repository.findExpired().forEach(file -> {
-                // 清理文件
-                storage.delete(file.objectKey());
                 // 清理数据库记录
                 repository.delete(file.fileId());
+                if(file.objectKey()!=null){
+                    // 清理文件
+                    storage.delete(file.objectKey());
+                }
             });
         } catch (RuntimeException exception) {
             log.error("File cleanup batch failed; persisted state will be retried", exception);

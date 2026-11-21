@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file;
 
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -7,10 +9,12 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.FileRe
 
 import java.time.Instant;
 
+@TableName("files")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class FileEntity {
+    @TableId
     long fileId;
     long ownerAccountId;
     String fileName;

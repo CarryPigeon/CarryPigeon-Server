@@ -12,8 +12,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
-import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.user.UserProfileEntity;
-import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.user.UserProfileMapper;
 
 /**
  * MyBatis-Plus 用户资料数据库服务。
@@ -95,6 +93,11 @@ public class UserProfileDatabaseServiceImpl implements UserProfileDatabaseServic
             evictRecord(accountId);
         }
         return affectedRows > 0;
+    }
+
+    @Override
+    public boolean containShareKeyReference(String shareKey) {
+        return userProfileMapper.exists(new LambdaQueryWrapper<UserProfileEntity>().eq(UserProfileEntity::getAvatarUrl, shareKey));
     }
 
     /**

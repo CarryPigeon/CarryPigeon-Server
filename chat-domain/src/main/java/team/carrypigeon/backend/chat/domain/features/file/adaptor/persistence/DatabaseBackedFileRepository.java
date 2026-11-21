@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.file.adaptor.persistence;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -56,7 +57,7 @@ public class DatabaseBackedFileRepository implements FileRepository {
 
     @Override
     public List<CPFile> findExpired() {
-        return List.of();
+        return database.findExpired().stream().map(this::toDomain).toList();
     }
 
     private CPFile toDomain(FileRecord row) {
@@ -84,11 +85,11 @@ public class DatabaseBackedFileRepository implements FileRepository {
                 cpFile.fileName(),
                 cpFile.shareKey(),
                 cpFile.sizeBytes(),
-                cpFile.status().name(),
+                CPFile.Status.COMPLETED.name(),
                 objectKey,
                 cpFile.sha256(),
                 contentType,
-                cpFile.expiresAt(),
+                cpFile.expiresAt().plus(Duration.ofDays(7)),
                 completedAt
             )
         );

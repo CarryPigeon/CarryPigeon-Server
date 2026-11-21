@@ -7,5 +7,5 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
  * @param content 保留原始空白的正文
  * @param replyToMid 可选的回复消息 ID
  */
-public record CPChannelTextMessageOriginData(String content, Long replyToMid) {
+public record CPChannelTextMessageOriginData(String content, String replyToMid) {
 }

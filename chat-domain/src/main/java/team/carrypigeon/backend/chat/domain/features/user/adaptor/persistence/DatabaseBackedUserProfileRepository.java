@@ -45,6 +45,11 @@ public class DatabaseBackedUserProfileRepository implements UserProfileRepositor
                 .toList();
     }
 
+    @Override
+    public boolean containShareKeyReference(String shareKey) {
+        return userProfileDatabaseService.containShareKeyReference(shareKey);
+    }
+
     /**
      * 持久化新的用户资料。
      */

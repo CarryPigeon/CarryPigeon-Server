@@ -26,7 +26,9 @@ public record FileUploadResponse(
             @Schema(description = "上传附带请求头")
             Map<String, String> headers,
             @Schema(description = "过期时间（epoch 毫秒）", example = "1700000100000")
-            long expiresAt
+            long expiresAt,
+            @Schema(description = "是否已存在", example = "false")
+            boolean hasSame
     ) {
     }
 }

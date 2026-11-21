@@ -11,7 +11,7 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
  */
 @MessageHandler(CPChannelVoiceMessageHandler.DOMAIN)
 public class CPChannelVoiceMessageHandler implements CPChannelMessageHandler {
-    public static final String DOMAIN = "Core:Void:V1";
+    public static final String DOMAIN = "Core:Voice:V1";
 
     private final CPChannelAttachmentMessageHandler attachmentMessageHandler;
 

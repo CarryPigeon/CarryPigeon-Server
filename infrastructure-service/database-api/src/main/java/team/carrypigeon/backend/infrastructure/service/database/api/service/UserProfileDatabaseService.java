@@ -81,4 +81,12 @@ public interface UserProfileDatabaseService {
      * @return 至少删除一条时为 true；空集合返回 true
      */
     boolean deleteByIds(List<Long> accountIds);
+
+    /**
+     * 检查分享密钥是否被用户资料引用。
+     *
+     * @param shareKey 分享密钥
+     * @return 被引用时返回 true
+     */
+    boolean containShareKeyReference(String shareKey);
 }

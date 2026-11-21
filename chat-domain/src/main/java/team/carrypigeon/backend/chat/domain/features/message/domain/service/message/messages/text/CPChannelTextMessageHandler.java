@@ -47,11 +47,11 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
     public CPChannelMessage handle(CPChannelMessage message) throws ProblemException {
         CPChannelTextMessageOriginData originData = parseAndValidate(message.data());
         String content = originData.content();
-        Long replyMessageId = originData.replyToMid();
-
-        // 归属与状态校验通过后才读取发送者资料，避免从无权访问的消息派生快照。
+        Long replyMessageId = null;
         CPChannelTextMessageData.CPChannelTextMessageReplyToUser replyToUser = null;
-        if (replyMessageId != null) {
+        if(originData.replyToMid()!=null){
+            replyMessageId = Long.parseLong(originData.replyToMid());
+            // 归属与状态校验通过后才读取发送者资料，避免从无权访问的消息派生快照。
             CPChannelMessage repliedMessage = messageRepository.findById(replyMessageId)
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             // 跨频道和已撤回的回复目标统一按不存在处理，避免泄露目标消息信息。
@@ -65,7 +65,6 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
                 repliedMessage.sendTime().toEpochMilli()
             );
         }
-
         CPChannelTextMessageData data = new CPChannelTextMessageData(
             content, replyMessageId, replyToUser
         );
@@ -90,24 +89,21 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
     private CPChannelTextMessageOriginData parseAndValidate(Map<String, Object> payload) {
         // 直接检查原始 JSON 值，避免 Jackson 把数字或布尔值宽松转换成字符串。
         if (!(payload.get("content") instanceof String content) || content.isBlank()) {
-            throw invalidField("data.content", "content must be a non-blank string");
+            throw invalidField("content must be a non-blank string");
         }
         if (content.codePointCount(0, content.length()) > MAX_CONTENT_CODE_POINTS) {
-            throw invalidField("data.content", "content must contain at most 4096 Unicode code points");
+            throw invalidField("content must contain at most 4096 Unicode code points");
         }
         Object replyValue = payload.get("reply_to_mid");
         if (replyValue == null) {
             return new CPChannelTextMessageOriginData(content, null);
         }
-        if (!(replyValue instanceof Long replyMessageId) || replyMessageId <= 0) {
-            throw invalidField("data.reply_to_mid", "reply_to_mid must be a positive message ID");
-        }
-        return new CPChannelTextMessageOriginData(content, replyMessageId);
+        return new CPChannelTextMessageOriginData(content, String.valueOf(replyValue));
     }
 
-    private ProblemException invalidField(String field, String message) {
+    private ProblemException invalidField(String message) {
         return ProblemException.of(MessageProblem.INVALID_INPUT, message, Map.of(
-            "field_errors", List.of(Map.of("field", field, "reason", "invalid", "message", message))
+            "field_errors", List.of(Map.of("field", "data.content", "reason", "invalid", "message", message))
         ));
     }
 }

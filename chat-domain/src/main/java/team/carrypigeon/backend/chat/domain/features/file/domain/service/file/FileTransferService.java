@@ -90,7 +90,7 @@ public class FileTransferService implements FileTransferApi {
                 sameFile.get().fileId(),
                 sameFile.get().shareKey(),
                 "/api/files/uploads/" + sameFile.get().shareKey(),
-                sameFile.get().expiresAt(),
+                sameFile.get().expiresAt().plus(Duration.ofDays(7)),
                 true
             );
         }
