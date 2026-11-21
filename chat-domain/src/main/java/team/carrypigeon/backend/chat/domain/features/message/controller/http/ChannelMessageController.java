@@ -81,7 +81,6 @@ public class ChannelMessageController {
         ChannelMessageResult result = channelMessageApi.sendChannelMessage(
             cpPrincipal.accountId(),
             channelId,
-            requestBody.requestId(),
             requestBody.domain().trim(),
             requestBody.data(),
             requestBody.mentions()

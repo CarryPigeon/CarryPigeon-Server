@@ -63,11 +63,6 @@ public class ChannelContextService implements ChannelContextApi {
     }
 
     @Override
-    public List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds) {
-        return channelMemberRepository.filterMemberAccountIds(channelId, accountIds);
-    }
-
-    @Override
     public List<Long> joinedChannelIds(long accountId) {
         return channelMemberRepository.findChannelIdsByAccountId(accountId);
     }

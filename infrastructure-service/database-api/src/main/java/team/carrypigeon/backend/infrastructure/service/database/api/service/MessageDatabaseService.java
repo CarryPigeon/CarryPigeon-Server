@@ -2,8 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageSendRequestRecord;
 
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
@@ -98,9 +96,6 @@ public interface MessageDatabaseService {
      * @return 分页消息记录
      */
     PageResult<MessageRecord> page(PageQuery page);
-
-    /** 在消息事务中插入或锁定发送请求，返回持锁读取的原摘要与消息 ID；禁止独立提交占位。 */
-    MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
 
     /**
      * 分配频道内下一消息序号，必须加入消息写入所在事务，不能独立提交。

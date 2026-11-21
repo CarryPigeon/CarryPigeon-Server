@@ -3,8 +3,6 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 
@@ -17,14 +15,6 @@ public interface MessageRepository {
 
     /** 清理已撤下频道的消息侧数据，必须在事务中调用。 */
     void deleteByChannelId(long channelId);
-
-
-    /**
-     * 在发送事务中预占请求 ID；同一发送者和频道的并发重试等待首个事务结束。
-     * 新记录使用 proposedMessageId；已有记录返回原摘要与消息 ID，回滚不能留下占位。
-     * 幂等记录不按时间自动过期，不能因原消息缺失而重建发送请求。
-     */
-    MessageSendRequest reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId);
 
     /**
      * 分配频道内下一消息序号，调用方必须在同一事务中保存消息。

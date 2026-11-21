@@ -10,16 +10,12 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * HTTP 发送 canonical 频道消息请求。
  * 边界：mentions 只接受提醒用户 ID；所有 domain 专属字段必须位于 data。
  */
 public record SendChannelMessageRequest(
-    @Schema(description = "客户端生成的请求 UUID，同一条消息的重试保持不变", example = "d5224614-e2db-4fde-b22a-410337f3c85a")
-    @NotNull(message = "request_id must not be null")
-    UUID requestId,
     @Schema(description = "消息 domain，格式为主分类:子分类:版本号", example = "Core:Text:V1")
     @NotBlank(message = "domain must not be blank")
     @Size(max = 128, message = "domain length must be less than or equal to 128")

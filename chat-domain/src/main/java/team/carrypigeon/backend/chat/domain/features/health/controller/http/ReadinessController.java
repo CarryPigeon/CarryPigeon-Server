@@ -1,8 +1,10 @@
-package team.carrypigeon.backend.chat.domain.controller.http;
+package team.carrypigeon.backend.chat.domain.features.health.controller.http;
 
 import io.netty.util.NetUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.availability.ApplicationAvailability;
 import org.springframework.boot.availability.ReadinessState;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -43,7 +45,7 @@ public class ReadinessController implements ApplicationListener<ContextClosedEve
     }
 
     @Override
-    public void onApplicationEvent(ContextClosedEvent event) {
+    public void onApplicationEvent(@NonNull ContextClosedEvent event) {
         closing = true;
     }
 

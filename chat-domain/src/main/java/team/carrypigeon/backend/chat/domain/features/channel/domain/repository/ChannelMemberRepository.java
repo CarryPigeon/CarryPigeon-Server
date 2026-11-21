@@ -14,9 +14,6 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
  */
 public interface ChannelMemberRepository {
 
-    /** 直接查询仍存在频道的成员关系，仅返回候选账号中的有效成员；空集合返回空。 */
-    List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds);
-
     /** 直接查询账号已加入且仍存在的频道 ID，用于认证连接建立在线订阅。 */
     List<Long> findChannelIdsByAccountId(long accountId);
 

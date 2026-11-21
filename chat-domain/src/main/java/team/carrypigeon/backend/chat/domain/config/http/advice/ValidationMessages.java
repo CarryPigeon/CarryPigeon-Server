@@ -37,7 +37,7 @@ final class ValidationMessages {
             return validation.getParameterValidationResults().stream()
                 .sorted(Comparator.comparingInt((ParameterValidationResult result) -> sourceOrder(result.getMethodParameter()))
                     .thenComparingInt(result -> result.getMethodParameter().getParameterIndex())
-                    .thenComparing(result -> result.getContainerIndex(), Comparator.nullsFirst(Integer::compareTo)))
+                    .thenComparing(ParameterValidationResult::getContainerIndex, Comparator.nullsFirst(Integer::compareTo)))
                 .map(ValidationMessages::parameterMessage)
                 .findFirst().orElse(FALLBACK);
         }

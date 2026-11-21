@@ -40,8 +40,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.problem.Mess
 public class ChannelMessageHistoryController {
 
     // 版本与频道均进入作用域，旧消息 ID 游标及其它频道的序号不能被静默接受。
-    private static final String BEFORE_CURSOR_SCOPE = "channel_messages_before_v2_";
-    private static final String AFTER_CURSOR_SCOPE = "channel_messages_after_v2_";
+    private static final String BEFORE_CURSOR_SCOPE = "channel_messages_before_";
+    private static final String AFTER_CURSOR_SCOPE = "channel_messages_after_";
 
     private final ChannelMessageHistoryApi channelMessageHistoryApi;
 
@@ -78,8 +78,7 @@ public class ChannelMessageHistoryController {
         ChannelMessagePage page = channelMessageHistoryApi.getLatestMessages(
             new GetLatestChannelMessagesQuery(cpPrincipal.accountId(), channelId, limit)
         );
-        Long syncSequence = page.items().isEmpty() ? null : page.items().getFirst().sequence();
-        return Result.success(toResponse(page, channelId, BEFORE_CURSOR_SCOPE, syncSequence));
+        return Result.success(toResponse(page, channelId, BEFORE_CURSOR_SCOPE));
     }
 
     /**
@@ -121,7 +120,7 @@ public class ChannelMessageHistoryController {
                 limit
             )
         );
-        return Result.success(toResponse(page, channelId, BEFORE_CURSOR_SCOPE, null));
+        return Result.success(toResponse(page, channelId, BEFORE_CURSOR_SCOPE));
     }
 
     /**
@@ -163,21 +162,18 @@ public class ChannelMessageHistoryController {
                 limit
             )
         );
-        Long syncSequence = page.items().isEmpty() ? sequence : page.items().getLast().sequence();
-        return Result.success(toResponse(page, channelId, AFTER_CURSOR_SCOPE, syncSequence));
+        return Result.success(toResponse(page, channelId, AFTER_CURSOR_SCOPE));
     }
 
     private ChannelMessageHistoryResponse toResponse(
             ChannelMessagePage page,
             long channelId,
-            String cursorScope,
-            Long syncSequence
+            String cursorScope
     ) {
         return new ChannelMessageHistoryResponse(
             page.items().stream().map(ChannelMessageResponse::from).toList(),
             OpaqueCursorCodec.encode(cursorScope + channelId, page.nextCursor()),
-            page.hasMore(),
-            OpaqueCursorCodec.encode(AFTER_CURSOR_SCOPE + channelId, syncSequence)
+            page.hasMore()
         );
     }
 }

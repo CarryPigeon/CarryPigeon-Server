@@ -54,12 +54,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public MessageSendRequest reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
-        var record = messageDatabaseService.reserveSend(accountId, channelId, requestId, payloadHash, proposedMessageId);
-        return new MessageSendRequest(record.payloadHash(), record.messageId());
-    }
-
-    @Override
     public long nextSequence(long channelId) {
         return messageDatabaseService.nextSequence(channelId);
     }

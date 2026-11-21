@@ -28,10 +28,6 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
         this.channelMemberDatabaseService = channelMemberDatabaseService;
     }
 
-    @Override
-    public List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds) {
-        return channelMemberDatabaseService.filterMemberAccountIds(channelId, accountIds);
-    }
 
     @Override
     public List<Long> findChannelIdsByAccountId(long accountId) {

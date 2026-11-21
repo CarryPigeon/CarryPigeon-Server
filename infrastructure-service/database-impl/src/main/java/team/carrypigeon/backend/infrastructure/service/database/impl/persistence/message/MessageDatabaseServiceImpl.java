@@ -35,16 +35,8 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
     @Override
     @Transactional(propagation = Propagation.MANDATORY)
     public void deleteByChannelId(long channelId) {
-        messageMapper.deleteSendRequestsByChannelId(channelId);
         messageMapper.delete(new LambdaQueryWrapper<MessageEntity>().eq(MessageEntity::getChannelId, channelId));
         messageMapper.deleteSequence(channelId);
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public MessageSendRequestRecord reserveSend(long accountId, long channelId, UUID requestId, String payloadHash, long proposedMessageId) {
-        messageMapper.reserveSend(accountId, channelId, requestId.toString(), payloadHash, proposedMessageId);
-        return messageMapper.selectSendForUpdate(accountId, channelId, requestId.toString());
     }
 
     @Override

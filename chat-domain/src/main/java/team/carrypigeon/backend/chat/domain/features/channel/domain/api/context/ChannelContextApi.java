@@ -22,9 +22,6 @@ public interface ChannelContextApi {
     /** 消息等频道写入先锁频道再校验成员，锁持有到外层事务结束，避免删除后创建新的关联数据。 */
     ChannelContext requireMemberContextForUpdate(long channelId, long accountId);
 
-    /** 只保留候选集合中的当前频道成员，不使用展示缓存；空集合返回空。 */
-    List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds);
-
     /** 返回账号已加入且尚未删除的频道 ID，不使用展示缓存。 */
     List<Long> joinedChannelIds(long accountId);
 
