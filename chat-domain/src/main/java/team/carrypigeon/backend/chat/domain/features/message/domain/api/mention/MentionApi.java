@@ -1,51 +1,32 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.api.mention;
 
 import java.util.List;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.result.MentionResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
 
-/**
- * 提及领域 API。
- * 职责：暴露提及列表和已读标记能力。
- * 边界：不暴露 controller 协议、具体实现类和 mention 仓储细节。
- * 输入：提及列表查询对象或账号、mention、频道游标等稳定业务入参。
- * 输出：提及投影列表或已读标记副作用。
- * 失败语义：目标 mention 不存在时由领域问题异常表达；请求字段合法性由 controller 保证。
- * 调用方：通过本接口读取和维护 mention 已读状态，不直接写 mention 存储。
- */
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.result.MentionPage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.result.MentionResult;
+
+/** 当前账号的提及收件箱，只允许读取和处理本人在已加入频道内的提及。 */
 public interface MentionApi {
 
-    /**
-     * 查询账号收到的提及列表。
-     * 输入：查询对象携带账号、频道筛选、未读筛选和分页游标。
-     * 输出：提及结果投影列表。
-     * 约束：列表只返回当前账号可见的提及记录。
-     *
-     * @param query 提及列表查询条件
-     * @return 提及结果投影列表
-     */
-    List<MentionResult> listMentions(ListMentionsQuery query);
+    /** 查询一条可见提及，缺失或不可见均返回提及不存在。 */
+    MentionResult getMention(long accountId, long mentionId);
 
-    /**
-     * 将单条提及标记为已读。
-     * 输入：账号 ID 和 mention ID。
-     * 副作用：更新目标 mention 的已读状态。
-     * 约束：账号只能标记归属于自己的 mention。
-     *
-     * @param accountId 当前账号 ID
-     * @param mentionId 目标 mention ID
-     */
+    /** 按输入首次出现的顺序返回可见提及，略过缺失项。 */
+    List<MentionResult> getMentions(long accountId, List<Long> mentionIds);
+
+    /** 跨频道按提及 ID 倒序读取一页，查询本身不标记已读。 */
+    MentionPage listMentions(ListMentionsQuery query);
+
+    /** 查询指定频道的收件箱，账号必须是当前成员。 */
+    MentionPage listChannelMentions(long channelId, ListMentionsQuery query);
+
+    /** 单条幂等已读；不存在或不再可见的提及统一报错。 */
     void markMentionRead(long accountId, long mentionId);
 
-    /**
-     * 批量标记提及为已读。
-     * 输入：账号 ID、可选 mention 上界和可选频道 ID。
-     * 副作用：将范围内属于当前账号的 mention 标记为已读。
-     * 约束：范围过滤由调用方传入，更新条件始终包含当前账号。
-     *
-     * @param accountId 当前账号 ID
-     * @param beforeMentionId 可选 mention 上界，通常表示只处理该 ID 之前的提及
-     * @param channelId 可选频道 ID，用于限制只处理某个频道内的提及
-     */
-    void markMentionsRead(long accountId, Long beforeMentionId, Long channelId);
+    /** 标记所有可见频道内的提及；上界包含端点，null 表示本次更新匹配的全部。 */
+    void markMentionsRead(long accountId, Long throughMentionId);
+
+    /** 仅标记指定频道内的提及，成员要求和上界含义同收件箱查询与个人范围已读。 */
+    void markChannelMentionsRead(long accountId, long channelId, Long throughMentionId);
 }

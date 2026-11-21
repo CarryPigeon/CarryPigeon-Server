@@ -131,11 +131,14 @@ final class OpenApiRequestExamples {
                       "last_read_mid": "{{messageId}}"
                     }
                     """)),
-            Map.entry("PUT /api/mentions/read_state", jsonExample("批量标记提及已读", """
-                    {
-                      "before_mention_id": "{{mentionId}}",
-                      "cid": "{{channelId}}"
-                    }
+            Map.entry("POST /api/mentions/ids", jsonExample("按 ID 读取提及", """
+                    {"mention_ids":["{{mentionId}}"]}
+                    """)),
+            Map.entry("PUT /api/mentions/read", jsonExample("已读至指定提及", """
+                    {"through_mention_id":"{{mentionId}}"}
+                    """)),
+            Map.entry("PUT /api/channels/{channelId}/mentions/read", jsonExample("频道内已读至指定提及", """
+                    {"through_mention_id":"{{mentionId}}"}
                     """))
     );
 

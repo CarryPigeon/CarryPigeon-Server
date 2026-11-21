@@ -15,7 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 
 /**
  * 基于 database-api 的频道已读状态仓储适配器。
- * 职责：在 message feature 内完成已读状态领域模型与 database-api 记录模型转换，并编排“只前进不后退”规则。
+ * 职责：在 message feature 内完成已读状态领域模型与 database-api 记录模型转换，并提供写事务内的锁定读。
  * 边界：不解释未读统计 SQL；该能力属于 database 读模型例外。
  */
 @Component
@@ -40,26 +40,15 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
         return channelReadStateDatabaseService.findById(new ChannelReadStateKey(channelId, accountId)).map(this::toDomain);
     }
 
-    /**
-     * 新增或覆盖已读状态。
-     * 输出：返回调用方传入的领域对象，保持上层事务上下文一致。
-     */
     @Override
-    public ChannelReadState upsert(ChannelReadState readState) {
-        channelReadStateDatabaseService.upsert(toRecord(readState));
-        return readState;
+    public Optional<ChannelReadState> findForUpdate(long channelId, long accountId) {
+        return channelReadStateDatabaseService.findByIdForUpdate(new ChannelReadStateKey(channelId, accountId))
+                .map(this::toDomain);
     }
 
     @Override
-    public boolean advanceIfNewer(ChannelReadState readState) {
-        Optional<ChannelReadState> current = channelReadStateDatabaseService
-                .findByIdForUpdate(new ChannelReadStateKey(readState.channelId(), readState.accountId()))
-                .map(this::toDomain);
-        if (current.isPresent() && current.get().lastReadSequence() >= readState.lastReadSequence()) {
-            return false;
-        }
+    public void save(ChannelReadState readState) {
         channelReadStateDatabaseService.upsert(toRecord(readState));
-        return true;
     }
 
     /**
@@ -77,7 +66,6 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
-                record.lastReadSequence(),
                 record.createdAt(),
                 record.updatedAt()
         );
@@ -88,7 +76,6 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
                 readState.channelId(),
                 readState.accountId(),
                 readState.lastReadMessageId(),
-                readState.lastReadSequence(),
                 readState.createdAt(),
                 readState.updatedAt()
         );
@@ -96,5 +83,10 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
 
     private ChannelUnread toDomain(ChannelUnreadRecord record) {
         return new ChannelUnread(record.channelId(), record.unreadCount());
+    }
+
+    @Override
+    public long countUnreads(long channelId, long accountId, long afterMessageId) {
+        return channelReadStateDatabaseService.countUnreads(channelId, accountId, afterMessageId);
     }
 }

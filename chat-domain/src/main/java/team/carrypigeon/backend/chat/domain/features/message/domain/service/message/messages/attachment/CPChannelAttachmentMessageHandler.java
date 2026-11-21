@@ -39,7 +39,6 @@ public class CPChannelAttachmentMessageHandler implements CPChannelMessageHandle
             message.messageId(),
             message.senderId(),
             message.channelId(),
-            message.sequence(),
             message.domain(),
             objectMapper.convertValue(data, new TypeReference<>() {}),
             message.sendTime(),

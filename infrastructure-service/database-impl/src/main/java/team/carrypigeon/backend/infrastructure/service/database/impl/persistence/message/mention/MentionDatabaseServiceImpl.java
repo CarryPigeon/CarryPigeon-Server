@@ -21,6 +21,14 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Ment
  */
 public class MentionDatabaseServiceImpl implements MentionDatabaseService {
 
+    // 收件人退群或频道删除后立即隐藏记录，所有收件箱操作使用相同的可见范围。
+    private static final String VISIBLE_CHANNEL = """
+            SELECT 1 FROM chat_channel_member cm
+            JOIN chat_channel c ON c.channel_id = cm.channel_id
+            WHERE cm.channel_id = chat_mention.channel_id
+              AND cm.account_id = chat_mention.target_account_id
+            """;
+
     private final MentionMapper mentionMapper;
 
     public MentionDatabaseServiceImpl(MentionMapper mentionMapper) {
@@ -28,12 +36,13 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
     }
 
     @Override
-    public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
+    public int markAllAsRead(long accountId, Long throughMentionId, Long channelId) {
         // 账号与未读谓词始终存在；撤回删除先完成时不会重建记录，更新先完成时仍允许之后删除。
         return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
                 .eq(MentionEntity::getTargetAccountId, accountId)
                 .eq(MentionEntity::getRead, false)
-                .lt(beforeMentionId != null, MentionEntity::getMentionId, beforeMentionId)
+                .exists(VISIBLE_CHANNEL)
+                .le(throughMentionId != null, MentionEntity::getMentionId, throughMentionId)
                 .eq(channelId != null, MentionEntity::getChannelId, channelId)
                 .set(MentionEntity::getRead, true));
     }
@@ -68,6 +77,35 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
                         .eq(MentionEntity::getMentionId, mentionId)
                         .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_mention.channel_id")))
                 .map(MentionEntity::toRecord);
+    }
+
+    @Override
+    public List<MentionRecord> findVisibleByIds(long accountId, List<Long> mentionIds) {
+        if (mentionIds.isEmpty()) {
+            return List.of();
+        }
+        return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
+                        .eq(MentionEntity::getTargetAccountId, accountId)
+                        .in(MentionEntity::getMentionId, mentionIds)
+                        .exists(VISIBLE_CHANNEL)).stream()
+                .map(MentionEntity::toRecord)
+                .toList();
+    }
+
+    @Override
+    public boolean markAsRead(long accountId, long mentionId) {
+        int changed = mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
+                .eq(MentionEntity::getMentionId, mentionId)
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getRead, false)
+                .exists(VISIBLE_CHANNEL)
+                .set(MentionEntity::getRead, true));
+        // 零行更新可能是重复请求，也可能是撤回或退群；仅前者成功。
+        return changed == 1 || mentionMapper.exists(new LambdaQueryWrapper<MentionEntity>()
+                .eq(MentionEntity::getMentionId, mentionId)
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getRead, true)
+                .exists(VISIBLE_CHANNEL));
     }
 
     /**
@@ -164,16 +202,17 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
      */
     @Override
     public List<MentionRecord> find(MentionQuery query) {
-        return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
+        IPage<MentionEntity> page = mentionMapper.selectPage(
+                new Page<>(1, query.limit(), false),
+                new LambdaQueryWrapper<MentionEntity>()
                         .eq(MentionEntity::getTargetAccountId, query.accountId())
-                        // 删除提交后立即隐藏提及，不等待后台物理清理。
-                        .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_mention.channel_id")
+                        .exists(VISIBLE_CHANNEL)
                         .lt(query.beforeMentionId() != null, MentionEntity::getMentionId, query.beforeMentionId())
                         .eq(query.read() != null, MentionEntity::getRead, query.read())
                         .eq(query.channelId() != null, MentionEntity::getChannelId, query.channelId())
                         .orderByDesc(MentionEntity::getMentionId)
-                        .last("LIMIT " + query.limit()))
-                .stream()
+        );
+        return page.getRecords().stream()
                 .map(MentionEntity::toRecord)
                 .toList();
     }

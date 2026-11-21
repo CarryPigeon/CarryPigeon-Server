@@ -31,6 +31,12 @@ public interface MentionDatabaseService {
      */
     List<MentionRecord> findByIds(List<Long> mentionIds);
 
+    /** 读取当前收件人在仍加入频道内的提及，空集合返回空列表。 */
+    List<MentionRecord> findVisibleByIds(long accountId, List<Long> mentionIds);
+
+    /** 标记一条可见提及，重复标记成功，不可见时返回 false。 */
+    boolean markAsRead(long accountId, long mentionId);
+
     /**
      * 按通用条件查询提及记录。
      * 输出：按提及 ID 倒序返回，最多 query.limit 条。
@@ -68,10 +74,10 @@ public interface MentionDatabaseService {
 
     /**
      * 将指定账号当前匹配的未读提及集合更新为已读，不读取完整记录或插入数据。
-     * beforeMentionId 是排他上界，channelId 是可选频道；为空时不施加对应条件。
+     * throughMentionId 是包含端点的上界，channelId 是可选频道；为空时不施加对应条件。
      * 无上界时以这条 UPDATE 实际匹配的集合为准，返回从未读变为已读的行数。
      */
-    int markAllAsRead(long accountId, Long beforeMentionId, Long channelId);
+    int markAllAsRead(long accountId, Long throughMentionId, Long channelId);
 
     /**
      * 更新完整提及记录。

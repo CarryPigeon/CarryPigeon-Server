@@ -61,7 +61,7 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
             String frameText = encode(type, payload);
             cpNettyRealtimeConnectionManager.broadcastToChannel(channelId, frameText);
         } catch (RuntimeException exception) {
-            // 业务事务已经提交；索引或授权查询失败时停止本次推送，客户端按频道序号补拉。
+            // 业务事务已经提交；索引或授权查询失败时停止本次推送，客户端通过频道事件游标补拉。
             log.error("Failed to deliver channel event, channelId={}, type={}", channelId, type.wireName(), exception);
         }
     }

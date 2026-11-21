@@ -11,6 +11,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * 频道已读状态持久化实体。
  * 职责：承接 chat_channel_read_state 表字段与 MyBatis-Plus 映射。
@@ -26,7 +28,6 @@ public class ChannelReadStateEntity {
     private Long channelId;
     private Long accountId;
     private Long lastReadMessageId;
-    private Long lastReadSequence;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -37,10 +38,9 @@ public class ChannelReadStateEntity {
      */
     public ChannelReadStateRecord toRecord() {
         return new ChannelReadStateRecord(
-                java.util.Objects.requireNonNull(channelId, "channelId"),
-                java.util.Objects.requireNonNull(accountId, "accountId"),
-                java.util.Objects.requireNonNull(lastReadMessageId, "lastReadMessageId"),
-                lastReadSequence == null ? 0L : lastReadSequence,
+                requireNonNull(channelId, "channelId"),
+                requireNonNull(accountId, "accountId"),
+                requireNonNull(lastReadMessageId, "lastReadMessageId"),
                 createdAt,
                 updatedAt
         );
@@ -57,7 +57,6 @@ public class ChannelReadStateEntity {
                 record.channelId(),
                 record.accountId(),
                 record.lastReadMessageId(),
-                record.lastReadSequence(),
                 record.createdAt(),
                 record.updatedAt()
         );

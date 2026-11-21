@@ -42,7 +42,6 @@ public class CPChannelForwardMessageHandler implements CPChannelMessageHandler {
             message.messageId(),
             message.senderId(),
             message.channelId(),
-            message.sequence(),
             message.domain(),
             message.data(),
             message.sendTime(),

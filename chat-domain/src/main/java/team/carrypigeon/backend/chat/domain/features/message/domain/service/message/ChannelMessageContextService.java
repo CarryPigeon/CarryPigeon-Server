@@ -52,14 +52,14 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
                 ? Stream.empty()
                 : messageRepository.findBeforeByChannelId(
                         channel.channelId(),
-                        anchorMessage.sequence(),
+                        anchorMessage.messageId(),
                         query.before()
                 ).stream();
         Stream<CPChannelMessage> after = query.after() == 0
                 ? Stream.empty()
                 : messageRepository.findAfterByChannelId(
                         channel.channelId(),
-                        anchorMessage.sequence(),
+                        anchorMessage.messageId(),
                         query.after()
                 ).stream();
 
@@ -67,7 +67,7 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
                         Stream.concat(before, Stream.of(anchorMessage)),
                         after
                 )
-                .sorted(Comparator.comparingLong(CPChannelMessage::sequence).reversed())
+                .sorted(Comparator.comparingLong(CPChannelMessage::messageId).reversed())
                 .map(ChannelMessageResult::of)
                 .toList();
         return new ChannelMessageContext(items);

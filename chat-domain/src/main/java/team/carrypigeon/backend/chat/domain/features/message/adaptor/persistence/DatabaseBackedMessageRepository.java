@@ -3,8 +3,6 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistenc
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
-import team.carrypigeon.backend.chat.domain.features.message.domain.model.MessageSendRequest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -54,11 +52,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public long nextSequence(long channelId) {
-        return messageDatabaseService.nextSequence(channelId);
-    }
-
-    @Override
     public void save(CPChannelMessage message) {
         messageDatabaseService.insert(toPersistenceRecord(message));
     }
@@ -87,17 +80,17 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     }
 
     @Override
-    public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorSequence, int limit) {
+    public List<CPChannelMessage> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
         return messageDatabaseService
-            .findBeforeByChannelId(channelId, cursorSequence, limit)
+            .findBeforeByChannelId(channelId, cursorMessageId, limit)
             .stream()
             .map(this::toDomainMessage).toList();
     }
 
     @Override
-    public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorSequence, int limit) {
+    public List<CPChannelMessage> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
         return messageDatabaseService
-            .findAfterByChannelId(channelId, cursorSequence, limit)
+            .findAfterByChannelId(channelId, cursorMessageId, limit)
             .stream()
             .map(this::toDomainMessage)
             .toList();
@@ -107,13 +100,13 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     public List<CPChannelMessage> searchByChannelId(
             long channelId,
             String keyword,
-            Long cursorSequence,
+            Long cursorMessageId,
             Long senderAccountId,
             String domain,
             int limit
     ) {
         return messageDatabaseService
-            .searchByChannelId(channelId, keyword, cursorSequence, senderAccountId, domain, STATUS_SENT, limit)
+            .searchByChannelId(channelId, keyword, cursorMessageId, senderAccountId, domain, STATUS_SENT, limit)
             .stream()
             .map(this::toDomainMessage)
             .toList();
@@ -129,7 +122,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 record.messageId(),
                 record.senderId(),
                 record.channelId(),
-                record.sequence(),
                 record.domain(),
                 parseData(record.data()),
                 record.sendTime(),
@@ -145,7 +137,6 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
                 message.messageId(),
                 message.senderId(),
                 message.channelId(),
-                message.sequence(),
                 message.domain(),
                 jsonProvider.toJson(message.data()),
                 message.sendTime(),

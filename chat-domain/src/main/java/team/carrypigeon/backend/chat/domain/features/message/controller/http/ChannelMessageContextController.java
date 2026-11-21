@@ -54,7 +54,7 @@ public class ChannelMessageContextController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages/around", produces = "application/json")
-    @Operation(summary = "读取锚点上下文", description = "返回锚点消息前后的固定窗口消息，结果按频道序号倒序排列。")
+    @Operation(summary = "读取锚点上下文", description = "返回锚点消息前后的固定窗口消息，结果按消息 ID 倒序排列。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items 上下文消息数组", useReturnTypeSchema = true))
     public Result<ChannelMessageContextResponse> getMessagesAround(
         @Parameter(description = "目标频道 ID", example = "2001")

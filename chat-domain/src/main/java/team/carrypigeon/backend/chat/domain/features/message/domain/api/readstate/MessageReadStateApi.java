@@ -3,6 +3,7 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.readsta
 import java.util.List;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadSummaryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelUnreadResult;
 
 /**
@@ -10,6 +11,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstat
  * 职责：暴露频道消息已读位置更新与未读统计能力。
  */
 public interface MessageReadStateApi {
+
+    /** 返回当前成员的锚点及其后的有效未读数。无已读记录时从频道开头计数。 */
+    ChannelReadSummaryResult getChannelReadState(long accountId, long channelId);
 
     /**
      * 更新当前账号在频道中的最后已读消息位置。

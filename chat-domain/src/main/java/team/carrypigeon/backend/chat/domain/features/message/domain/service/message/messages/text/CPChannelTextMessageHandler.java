@@ -75,7 +75,6 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             message.messageId(),
             message.senderId(),
             message.channelId(),
-            message.sequence(),
             message.domain(),
             objectMapper.convertValue(data, new TypeReference<>() {}),
             message.sendTime(),

@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistence;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -53,7 +52,7 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
 
     @Override
     public List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId) {
-        // 如果是false则为查询所有mention,需要用readFilter标记为null取消查询条件
+        // 查询全部时省略已读条件，保留收件人和频道可见性条件。
         Boolean readFilter = unreadOnly ? Boolean.FALSE : null;
         return mentionDatabaseService.find(new MentionQuery(accountId, cursorMentionId, readFilter, channelId, limit)).stream()
                 .map(this::toDomain)
@@ -61,31 +60,18 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
     }
 
     @Override
-    public boolean markAsRead(long accountId, long mentionId) {
-        Optional<MentionRecord> existing = mentionDatabaseService.findById(mentionId);
-        if (existing.isEmpty() || existing.get().targetAccountId() != accountId) {
-            return false;
-        }
-        MentionRecord record = existing.get();
-        if (record.read()) {
-            return true;
-        }
-        mentionDatabaseService.update(new MentionRecord(
-                record.mentionId(),
-                record.channelId(),
-                record.messageId(),
-                record.fromAccountId(),
-                record.targetType(),
-                record.targetAccountId(),
-                record.createdAt(),
-                true
-        ));
-        return true;
+    public List<Mention> findVisibleByIds(long accountId, List<Long> mentionIds) {
+        return mentionDatabaseService.findVisibleByIds(accountId, mentionIds).stream().map(this::toDomain).toList();
     }
 
     @Override
-    public int markAllAsRead(long accountId, Long beforeMentionId, Long channelId) {
-        return mentionDatabaseService.markAllAsRead(accountId, beforeMentionId, channelId);
+    public boolean markAsRead(long accountId, long mentionId) {
+        return mentionDatabaseService.markAsRead(accountId, mentionId);
+    }
+
+    @Override
+    public int markAllAsRead(long accountId, Long throughMentionId, Long channelId) {
+        return mentionDatabaseService.markAllAsRead(accountId, throughMentionId, channelId);
     }
 
     private Mention toDomain(MentionRecord record) {

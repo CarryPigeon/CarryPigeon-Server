@@ -7,13 +7,13 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.api.message
  *
  * @param accountId 当前账户 ID
  * @param channelId 频道 ID
- * @param cursorSequence 排他游标频道序号
+ * @param cursorMessageId 排他游标消息 ID
  * @param limit 查询条数
  */
 public record GetChannelMessagesBeforeQuery(
         long accountId,
         long channelId,
-        long cursorSequence,
+        long cursorMessageId,
         int limit
 ) {
 }

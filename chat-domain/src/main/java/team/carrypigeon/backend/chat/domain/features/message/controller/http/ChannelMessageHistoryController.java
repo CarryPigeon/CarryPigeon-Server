@@ -39,9 +39,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.problem.Mess
 @Tag(name = "频道消息", description = "频道消息方向查询能力。")
 public class ChannelMessageHistoryController {
 
-    // 版本与频道均进入作用域，旧消息 ID 游标及其它频道的序号不能被静默接受。
-    private static final String BEFORE_CURSOR_SCOPE = "channel_messages_before_";
-    private static final String AFTER_CURSOR_SCOPE = "channel_messages_after_";
+    // 版本与频道均进入作用域，防止旧序号游标或其他频道的消息 ID 被误作翻页位置。
+    private static final String BEFORE_CURSOR_SCOPE = "channel_messages_before_mid_";
+    private static final String AFTER_CURSOR_SCOPE = "channel_messages_after_mid_";
 
     private final ChannelMessageHistoryApi channelMessageHistoryApi;
 
@@ -61,7 +61,7 @@ public class ChannelMessageHistoryController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages", produces = "application/json")
-    @Operation(summary = "读取最新消息", description = "按频道序号降序返回最新消息；next_cursor 读取更旧消息。")
+    @Operation(summary = "读取最新消息", description = "按消息 ID 降序返回最新消息；next_cursor 读取更旧消息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<ChannelMessageHistoryResponse> getLatestMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
@@ -136,7 +136,7 @@ public class ChannelMessageHistoryController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages/after", produces = "application/json")
-    @Operation(summary = "读取更新消息", description = "使用 next_cursor 按频道序号升序补拉；省略 cursor 从头开始。")
+    @Operation(summary = "读取更新消息", description = "使用 next_cursor 按消息 ID 升序补拉；省略 cursor 从头开始。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<ChannelMessageHistoryResponse> getMessagesAfter(
         @Parameter(description = "目标频道 ID", example = "2001")
@@ -153,12 +153,12 @@ public class ChannelMessageHistoryController {
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal
     ) {
-        Long sequence = OpaqueCursorCodec.decode(AFTER_CURSOR_SCOPE + channelId, cursor, MessageProblem.CURSOR_INVALID);
+        Long cursorMessageId = OpaqueCursorCodec.decode(AFTER_CURSOR_SCOPE + channelId, cursor, MessageProblem.CURSOR_INVALID);
         ChannelMessagePage page = channelMessageHistoryApi.getMessagesAfter(
             new GetChannelMessagesAfterQuery(
                 cpPrincipal.accountId(),
                 channelId,
-                sequence == null ? 0L : sequence,
+                cursorMessageId == null ? 0L : cursorMessageId,
                 limit
             )
         );

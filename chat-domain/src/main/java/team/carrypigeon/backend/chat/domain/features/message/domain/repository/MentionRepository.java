@@ -27,8 +27,12 @@ public interface MentionRepository {
 
     List<Mention> listByAccountId(long accountId, Long cursorMentionId, int limit, boolean unreadOnly, Long channelId);
 
+    /** 只返回收件人当前可见的记录，查询结果无顺序保证。 */
+    List<Mention> findVisibleByIds(long accountId, List<Long> mentionIds);
+
+    /** 单条幂等已读；本人可见且已读时也返回 true。 */
     boolean markAsRead(long accountId, long mentionId);
 
-    /** 直接更新当前账号匹配的未读集合，ID 上界排他；返回本次实际变为已读的条数，重复执行返回 0。 */
-    int markAllAsRead(long accountId, Long beforeMentionId, Long channelId);
+    /** 直接更新当前账号匹配的未读集合，包含 ID 上界；返回本次实际变为已读的条数，重复执行返回 0。 */
+    int markAllAsRead(long accountId, Long throughMentionId, Long channelId);
 }

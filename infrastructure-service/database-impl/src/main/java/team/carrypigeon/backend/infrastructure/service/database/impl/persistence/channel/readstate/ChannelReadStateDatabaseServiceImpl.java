@@ -87,7 +87,6 @@ public class ChannelReadStateDatabaseServiceImpl implements ChannelReadStateData
                 .eq(ChannelReadStateEntity::getChannelId, record.channelId())
                 .eq(ChannelReadStateEntity::getAccountId, record.accountId())
                 .set(ChannelReadStateEntity::getLastReadMessageId, record.lastReadMessageId())
-                .set(ChannelReadStateEntity::getLastReadSequence, record.lastReadSequence())
                 .set(ChannelReadStateEntity::getCreatedAt, record.createdAt())
                 .set(ChannelReadStateEntity::getUpdatedAt, record.updatedAt()));
         return affectedRows == 1;
@@ -142,7 +141,10 @@ public class ChannelReadStateDatabaseServiceImpl implements ChannelReadStateData
      */
     @Override
     public Optional<ChannelReadStateRecord> findByIdForUpdate(ChannelReadStateKey key) {
-        return Optional.ofNullable(channelReadStateMapper.selectByRelationForUpdate(key.channelId(), key.accountId()))
+        return Optional.ofNullable(channelReadStateMapper.selectOne(new LambdaQueryWrapper<ChannelReadStateEntity>()
+                        .eq(ChannelReadStateEntity::getChannelId, key.channelId())
+                        .eq(ChannelReadStateEntity::getAccountId, key.accountId())
+                        .last("FOR UPDATE")))
                 .map(ChannelReadStateEntity::toRecord);
     }
 
@@ -170,5 +172,13 @@ public class ChannelReadStateDatabaseServiceImpl implements ChannelReadStateData
                     .forEach(result::add);
         }
         return List.copyOf(result);
+    }
+
+    @Override
+    public long countUnreads(long channelId, long accountId, long afterMessageId) {
+        var boundary = new ChannelReadStateMapper.UnreadBoundary(channelId, afterMessageId);
+        return channelReadStateMapper.countUnreads(accountId, List.of(boundary)).stream()
+                .mapToLong(ChannelUnreadProjection::getUnreadCount)
+                .findFirst().orElse(0L);
     }
 }

@@ -14,7 +14,6 @@ import java.util.Map;
  * @param messageId 消息 ID
  * @param senderId 发送者账号 ID
  * @param channelId 所属频道 ID
- * @param sequence 频道内提交顺序，事务分配，不以消息 ID 排序
  * @param domain 消息 domain
  * @param data domain 专属 canonical 数据，数值 ID 使用 Long，协议字符串由适配层转换
  * @param sendTime 服务端发送时间
@@ -27,7 +26,6 @@ public record CPChannelMessage(
         long messageId,
         long senderId,
         long channelId,
-        long sequence,
         String domain,
         Map<String, Object> data,
         Instant sendTime,

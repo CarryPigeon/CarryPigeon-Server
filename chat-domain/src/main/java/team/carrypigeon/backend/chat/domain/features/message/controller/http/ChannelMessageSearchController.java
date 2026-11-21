@@ -39,7 +39,7 @@ import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 @Tag(name = "频道消息", description = "频道消息搜索能力。")
 public class ChannelMessageSearchController {
 
-    private static final String SEARCH_CURSOR_SCOPE = "channel_message_search_v2_";
+    private static final String SEARCH_CURSOR_SCOPE = "channel_message_search_mid_";
 
     private final ChannelMessageSearchApi channelMessageSearchApi;
 
@@ -63,7 +63,7 @@ public class ChannelMessageSearchController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages/search", produces = "application/json")
-    @Operation(summary = "搜索消息", description = "在指定频道内按 MySQL ngram 自然语言全文匹配搜索正文，按频道序号倒序分页，不按相关度排序。默认双字分词，单字及纯符号可能无结果；不搜索回复元数据。")
+    @Operation(summary = "搜索消息", description = "在指定频道内按 MySQL ngram 自然语言全文匹配搜索正文，按消息 ID 倒序分页，不按相关度排序。默认双字分词，单字及纯符号可能无结果；不搜索回复元数据。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<CursorPageResponse<ChannelMessageResponse>> searchChannelMessages(
         @Parameter(description = "目标频道 ID", example = "2001")

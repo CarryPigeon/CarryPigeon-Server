@@ -35,7 +35,7 @@ public interface MessageDatabaseService {
 
     /**
      * 查询频道最新消息。
-     * 输出：按频道序号倒序返回，最多 limit 条。
+     * 输出：按消息 ID 倒序返回，最多 limit 条。
      *
      * @param channelId 频道 ID
      * @param limit 最大返回条数
@@ -45,25 +45,25 @@ public interface MessageDatabaseService {
 
     /**
      * 查询频道内指定消息之前的更旧消息。
-     * 输出：按频道序号倒序返回，最多 limit 条。
+     * 输出：按消息 ID 倒序返回，最多 limit 条。
      *
      * @param channelId 频道 ID
-     * @param cursorSequence 排他游标频道序号
+     * @param cursorMessageId 排他游标消息 ID
      * @param limit 最大返回条数
      * @return 更旧消息记录列表
      */
-    List<MessageRecord> findBeforeByChannelId(long channelId, long cursorSequence, int limit);
+    List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit);
 
     /**
      * 查询频道内指定消息之后的更新消息。
-     * 输出：按频道序号升序返回，最多 limit 条。
+     * 输出：按消息 ID 升序返回，最多 limit 条。
      *
      * @param channelId 频道 ID
-     * @param cursorSequence 排他游标频道序号
+     * @param cursorMessageId 排他游标消息 ID
      * @param limit 最大返回条数
      * @return 更新消息记录列表
      */
-    List<MessageRecord> findAfterByChannelId(long channelId, long cursorSequence, int limit);
+    List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit);
 
     /**
      * 在频道内按关键字和过滤条件搜索消息。
@@ -71,7 +71,7 @@ public interface MessageDatabaseService {
      *
      * @param channelId 频道 ID
      * @param keyword 搜索关键字
-     * @param cursorSequence 搜索排他游标频道序号，可为空
+     * @param cursorMessageId 搜索排他游标消息 ID，可为空
      * @param senderAccountId 发送者账户 ID，可为空
      * @param domain 消息 domain，可为空
      * @param status 消息状态，可为空
@@ -81,7 +81,7 @@ public interface MessageDatabaseService {
     List<MessageRecord> searchByChannelId(
             long channelId,
             String keyword,
-            Long cursorSequence,
+            Long cursorMessageId,
             Long senderAccountId,
             String domain,
             String status,
@@ -96,12 +96,6 @@ public interface MessageDatabaseService {
      * @return 分页消息记录
      */
     PageResult<MessageRecord> page(PageQuery page);
-
-    /**
-     * 分配频道内下一消息序号，必须加入消息写入所在事务，不能独立提交。
-     * 同频道的后续分配等待当前事务结束，回滚不消耗序号。
-     */
-    long nextSequence(long channelId);
 
     /**
      * 写入新的消息记录。

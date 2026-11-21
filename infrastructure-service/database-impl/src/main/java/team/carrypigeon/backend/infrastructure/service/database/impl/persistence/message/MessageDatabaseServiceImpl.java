@@ -36,15 +36,6 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void deleteByChannelId(long channelId) {
         messageMapper.delete(new LambdaQueryWrapper<MessageEntity>().eq(MessageEntity::getChannelId, channelId));
-        messageMapper.deleteSequence(channelId);
-    }
-
-    @Override
-    @Transactional(propagation = Propagation.MANDATORY)
-    public long nextSequence(long channelId) {
-        // INSERT/UPDATE 获得排他行锁；MANDATORY 防止脱离消息事务后提前释放锁。
-        messageMapper.advanceSequence(channelId);
-        return messageMapper.selectSequenceForUpdate(channelId);
     }
 
     @Override
@@ -127,30 +118,30 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
     public List<MessageRecord> findLatestByChannelId(long channelId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .orderByDesc(MessageEntity::getSequence), limit);
+                .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
     @Override
-    public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorSequence, int limit) {
+    public List<MessageRecord> findBeforeByChannelId(long channelId, long cursorMessageId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .lt(MessageEntity::getSequence, cursorSequence)
-                .orderByDesc(MessageEntity::getSequence), limit);
+                .lt(MessageEntity::getMessageId, cursorMessageId)
+                .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
     @Override
-    public List<MessageRecord> findAfterByChannelId(long channelId, long cursorSequence, int limit) {
+    public List<MessageRecord> findAfterByChannelId(long channelId, long cursorMessageId, int limit) {
         return selectLimited(new LambdaQueryWrapper<MessageEntity>()
                 .eq(MessageEntity::getChannelId, channelId)
-                .gt(MessageEntity::getSequence, cursorSequence)
-                .orderByAsc(MessageEntity::getSequence), limit);
+                .gt(MessageEntity::getMessageId, cursorMessageId)
+                .orderByAsc(MessageEntity::getMessageId), limit);
     }
 
     @Override
     public List<MessageRecord> searchByChannelId(
             long channelId,
             String keyword,
-            Long cursorSequence,
+            Long cursorMessageId,
             Long senderAccountId,
             String domain,
             String status,
@@ -161,10 +152,10 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
                 .eq(status != null && !status.isBlank(), MessageEntity::getStatus, status)
                 // ngram 自然语言全文匹配，仅搜索处理器提供的正文；参数绑定不解释用户输入为 SQL。
                 .apply("MATCH(search_text) AGAINST({0} IN NATURAL LANGUAGE MODE)", keyword)
-                .lt(cursorSequence != null, MessageEntity::getSequence, cursorSequence)
+                .lt(cursorMessageId != null, MessageEntity::getMessageId, cursorMessageId)
                 .eq(senderAccountId != null, MessageEntity::getSenderId, senderAccountId)
                 .eq(domain != null && !domain.isBlank(), MessageEntity::getDomain, domain)
-                .orderByDesc(MessageEntity::getSequence), limit);
+                .orderByDesc(MessageEntity::getMessageId), limit);
     }
 
     private List<MessageRecord> selectLimited(

@@ -7,6 +7,7 @@ import java.util.List;
  * 未读列表响应。
  */
 public record UnreadListResponse(
-        @Schema(description = "未读频道项") List<UnreadItemResponse> items
+    @Schema(description = "有未读消息的频道数，等于 items 的长度") int total,
+    @Schema(description = "未读频道项") List<UnreadItemResponse> items
 ) {
 }

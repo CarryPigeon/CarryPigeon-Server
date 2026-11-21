@@ -12,7 +12,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.Channe
 /**
  * 频道已读状态数据库服务抽象。
  * 职责：提供已读状态表级通用元能力、锁定读与专用未读读模型查询。
- * 边界：不承载“只前进不后退”等业务规则；该规则由 Repository 在锁定读后判断。
+ * 边界：不承载“只前进不后退”等业务规则；该规则由业务服务在锁定读后判断。
  */
 public interface ChannelReadStateDatabaseService {
 
@@ -108,4 +108,7 @@ public interface ChannelReadStateDatabaseService {
 
     /** 删除频道下的全部已读状态。 */
     void deleteByChannelId(long channelId);
+
+    /** 以给定消息 ID 为排他下界，统计成员在单个频道最多 10000 条有效未读。 */
+    long countUnreads(long channelId, long accountId, long afterMessageId);
 }

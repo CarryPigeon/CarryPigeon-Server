@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadStateResult;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelReadSummaryResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.result.ChannelUnreadResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
@@ -51,6 +52,18 @@ public class MessageReadStateService implements MessageReadStateApi {
     }
 
     @Override
+    public ChannelReadSummaryResult getChannelReadState(long accountId, long channelId) {
+        return transactionRunner.runInTransaction(afterCommit -> {
+            channelContextApi.requireMemberContext(channelId, accountId);
+            Long anchor = readStateRepository.findByChannelIdAndAccountId(channelId, accountId)
+                    .map(ChannelReadState::lastReadMessageId).orElse(null);
+            // 使用响应中的同一个锚点计数，首次访问不会创建已读记录。
+            long unread = readStateRepository.countUnreads(channelId, accountId, anchor == null ? 0L : anchor);
+            return new ChannelReadSummaryResult(channelId, accountId, anchor, unread);
+        });
+    }
+
+    @Override
     public ChannelReadStateResult updateChannelReadState(long accountId, long channelId, long lastReadMessageId) {
         return transactionRunner.runInTransaction(afterCommit -> {
             // 已读也是关联写入，必须在读取锚点前取得频道锁，防止清理后重新写入状态。
@@ -61,10 +74,10 @@ public class MessageReadStateService implements MessageReadStateApi {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             ChannelReadState current = readStateRepository
-                    .findByChannelIdAndAccountId(channelId, accountId)
+                    .findForUpdate(channelId, accountId)
                     .orElse(null);
-            // 消息 ID 仅定位锚点；晚分配的雪花 ID 不代表晚提交，已读边界按频道序号推进。
-            if (current != null && current.lastReadSequence() >= message.sequence()) {
+            // 多端重复或较早的上报返回已保存的锚点。
+            if (current != null && current.lastReadMessageId() >= lastReadMessageId) {
                 return toResult(current);
             }
             Instant now = this.timeProvider.nowInstant();
@@ -72,17 +85,12 @@ public class MessageReadStateService implements MessageReadStateApi {
                     channelId,
                     accountId,
                     lastReadMessageId,
-                    message.sequence(),
-                    current == null ? now: current.createdAt(),
+                    current == null ? now : current.createdAt(),
                     now
             );
-            if (readStateRepository.advanceIfNewer(updated)) {
-                messageEventNotifier.readStateUpdated(afterCommit, updated);
-                return toResult(updated);
-            }
-            return readStateRepository.findByChannelIdAndAccountId(channelId, accountId)
-                    .map(this::toResult)
-                    .orElseGet(() -> toResult(updated));
+            readStateRepository.save(updated);
+            messageEventNotifier.readStateUpdated(afterCommit, updated);
+            return toResult(updated);
         });
     }
 

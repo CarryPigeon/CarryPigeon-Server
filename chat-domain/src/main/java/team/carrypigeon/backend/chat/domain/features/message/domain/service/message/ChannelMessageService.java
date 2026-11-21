@@ -81,13 +81,11 @@ public class ChannelMessageService implements ChannelMessageApi {
             if (!channelMessageDispatcher.supports(domain)) {
                 throw ProblemException.of(MessageProblem.UNSUPPORTED_DOMAIN);
             }
-            // 分配序号后持锁到消息、提及一并提交，后续序号不能先提交可见。
             // 组装消息
             CPChannelMessage originalMessage = new CPChannelMessage(
                     proposedMessageId,
                     accountId,
                     channelId,
-                    messageRepository.nextSequence(channelId),
                     domain,
                     data,
                     timeProvider.nowInstant(),
@@ -163,7 +161,6 @@ public class ChannelMessageService implements ChannelMessageApi {
                     existingMessage.messageId(),
                     existingMessage.senderId(),
                     existingMessage.channelId(),
-                    existingMessage.sequence(),
                     existingMessage.domain(),
                     Map.of(),
                     existingMessage.sendTime(),

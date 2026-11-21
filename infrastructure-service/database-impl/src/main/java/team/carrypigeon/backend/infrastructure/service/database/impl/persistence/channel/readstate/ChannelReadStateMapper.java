@@ -32,7 +32,6 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 channel_id,
                 account_id,
                 last_read_message_id,
-                last_read_sequence,
                 created_at,
                 updated_at
             )
@@ -42,7 +41,6 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 #{record.channelId},
                 #{record.accountId},
                 #{record.lastReadMessageId},
-                #{record.lastReadSequence},
                 #{record.createdAt},
                 #{record.updatedAt}
               )
@@ -62,42 +60,20 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                 channel_id,
                 account_id,
                 last_read_message_id,
-                last_read_sequence,
                 created_at,
                 updated_at
             ) VALUES (
                 #{channelId},
                 #{accountId},
                 #{lastReadMessageId},
-                #{lastReadSequence},
                 #{createdAt},
                 #{updatedAt}
             )
             ON DUPLICATE KEY UPDATE
                 last_read_message_id = VALUES(last_read_message_id),
-                last_read_sequence = VALUES(last_read_sequence),
                 updated_at = VALUES(updated_at)
             """)
     int upsertState(ChannelReadStateEntity entity);
-
-    /**
-     * 以行锁读取指定账户在频道中的已读状态。
-     * 约束：必须在事务内调用。
-     *
-     * @param channelId 频道 ID
-     * @param accountId 账户 ID
-     * @return 命中时返回实体，未命中时返回 null
-     */
-    @Select("""
-            SELECT channel_id, account_id, last_read_message_id, last_read_sequence, created_at, updated_at
-            FROM chat_channel_read_state
-            WHERE channel_id = #{channelId} AND account_id = #{accountId}
-            FOR UPDATE
-            """)
-    ChannelReadStateEntity selectByRelationForUpdate(
-            @Param("channelId") long channelId,
-            @Param("accountId") long accountId
-    );
 
     /**
      * 按复合主键批量查询。
@@ -107,7 +83,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
      */
     @Select("""
             <script>
-            SELECT channel_id, account_id, last_read_message_id, last_read_sequence, created_at, updated_at
+            SELECT channel_id, account_id, last_read_message_id, created_at, updated_at
             FROM chat_channel_read_state
             WHERE (channel_id, account_id) IN
             <foreach collection="keys" item="key" open="(" separator="," close=")">
@@ -134,12 +110,12 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
             """)
     int deleteByKeys(@Param("keys") List<ChannelReadStateKey> keys);
 
-    /** 账户当前可见频道及其已读边界；无已读记录时从序号 0 开始。 */
-    record UnreadBoundary(long channelId, long lastReadSequence) {}
+    /** 账户当前可见频道及其已读边界；无已读记录时从 ID 下界 0 开始。 */
+    record UnreadBoundary(long channelId, long lastReadMessageId) {}
 
     /** 先读取各频道的边界，使后续计数可以使用常量范围索引，而非逐行过滤已读历史。 */
     @Select("""
-            SELECT cm.channel_id, COALESCE(r.last_read_sequence, 0) AS last_read_sequence
+            SELECT cm.channel_id, COALESCE(r.last_read_message_id, 0) AS last_read_message_id
             FROM chat_channel_member cm
             JOIN chat_channel c ON c.channel_id = cm.channel_id
             LEFT JOIN chat_channel_read_state r
@@ -161,7 +137,7 @@ public interface ChannelReadStateMapper extends BaseMapper<ChannelReadStateEntit
                         SELECT 1 FROM chat_message m FORCE INDEX (idx_message_unread)
                         WHERE m.channel_id = #{boundary.channelId}
                           AND m.status = 'sent'
-                          AND m.sequence &gt; #{boundary.lastReadSequence}
+                          AND m.message_id &gt; #{boundary.lastReadMessageId}
                           AND m.sender_id != #{accountId}
                         LIMIT 10000
                     ) limited_unreads
