@@ -37,15 +37,16 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
     }
 
     @Override
-    public ChannelMessageResult getMessage(long accountId, long channelId, long messageId) {
-        channelContextApi.requireMemberContext(channelId, accountId);
-        return ChannelMessageResult.of(requireChannelMessage(channelId, messageId));
+    public ChannelMessageResult getMessage( long messageId) {
+        return ChannelMessageResult.of(messageRepository.findById(messageId)
+            .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND)));
     }
 
     @Override
     public ChannelMessageContext getMessagesAround(GetChannelMessagesAroundQuery query) {
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
-        CPChannelMessage anchorMessage = requireChannelMessage(channel.channelId(), query.anchorMessageId());
+        CPChannelMessage anchorMessage = messageRepository.findById(query.anchorMessageId())
+            .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
 
         Stream<CPChannelMessage> before = query.before() == 0
                 ? Stream.empty()
@@ -67,18 +68,17 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
                         after
                 )
                 .sorted(Comparator.comparingLong(CPChannelMessage::sequence).reversed())
-                .map(message -> ChannelMessageResult.of(message))
+                .map(ChannelMessageResult::of)
                 .toList();
         return new ChannelMessageContext(items);
     }
 
-    private CPChannelMessage requireChannelMessage(long channelId, long messageId) {
-        CPChannelMessage message = messageRepository.findById(messageId)
-                .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
-        // 跨频道消息按不存在处理，避免向当前频道成员泄露其他频道的消息。
-        if (message.channelId() != channelId) {
-            throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
-        }
-        return message;
+    @Override
+    public List<ChannelMessageResult> getMessages(List<Long> messageIds) {
+        return messageRepository.findByIds(messageIds)
+            .stream()
+            .map(ChannelMessageResult::of)
+            .toList();
     }
+
 }

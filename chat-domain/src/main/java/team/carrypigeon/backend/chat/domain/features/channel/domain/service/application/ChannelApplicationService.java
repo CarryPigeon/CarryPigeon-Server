@@ -128,6 +128,18 @@ public class ChannelApplicationService implements ChannelApplicationApi {
     }
 
     @Override
+    public PageResult<ChannelApplicationResult> listMyChannelApplications(long applicant, PageQuery page) {
+        PageResult<ChannelApplication> applications = channelApplicationRepository.pageMe(applicant, page);
+        List<ChannelApplicationResult> items = applications.items().stream()
+            .map(invite -> ChannelApplicationResult.from(
+                invite,
+                invite.reason() == null || invite.reason().isBlank() ? "" : invite.reason().trim()
+            ))
+            .toList();
+        return new PageResult<>(items, applications.page(), applications.pageSize(), applications.total());
+    }
+
+    @Override
     public ChannelApplicationResult decideChannelApplication(long operatorAccountId, long channelId, long applicationId, String decision) {
         ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
             // 与转移、踢出和删除遵守同一锁顺序，拿锁后再检查申请及当前治理权限。

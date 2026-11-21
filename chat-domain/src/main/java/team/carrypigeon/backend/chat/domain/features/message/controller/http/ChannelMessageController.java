@@ -18,11 +18,18 @@ import org.springframework.web.bind.annotation.RestController;
 
 import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageIdsRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
+import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessagesResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.SendChannelMessageRequest;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
+
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 频道消息命令 HTTP 入口。
@@ -76,7 +83,7 @@ public class ChannelMessageController {
             channelId,
             requestBody.requestId(),
             requestBody.domain().trim(),
-            requestBody.toDomainData(),
+            requestBody.data(),
             requestBody.mentions()
         );
         return Result.success(ChannelMessageResponse.from(result));
@@ -87,13 +94,11 @@ public class ChannelMessageController {
      *
      * <p>请求 {@code GET /api/channels/2001/messages/3001}。无请求体。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelMessageResponse}。
-     * <p>失败示例：消息不存在或属于其他频道 30001。
+     * <p>失败示例：消息不存在 30001。
      *
-     * @param channelId 消息所在的频道id
      * @param messageId 消息id
-     * @param cpPrincipal 当前认证用户
      */
-    @GetMapping(value = "/{channelId}/messages/{messageId}", produces = "application/json")
+    @GetMapping(value = "/messages/{messageId}", produces = "application/json")
     @Operation(
         summary = "查询消息",
         description = "频道成员按消息 ID 查询当前状态；跨频道消息按不存在处理。"
@@ -101,15 +106,35 @@ public class ChannelMessageController {
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 ChannelMessageResponse，失败时返回五位错误码", useReturnTypeSchema = true))
     public Result<ChannelMessageResponse> getMessageById(
         @PathVariable
-        @Positive(message = "channelId must be greater than 0")
-        long channelId,
-        @PathVariable
         @Positive(message = "messageId must be greater than 0")
-        long messageId,
-        @AuthenticationPrincipal
-        CpPrincipal cpPrincipal
+        long messageId
     ){
-        return Result.success(ChannelMessageResponse.from(messageContextApi.getMessage(cpPrincipal.accountId(), channelId, messageId)));
+        return Result.success(ChannelMessageResponse.from(messageContextApi.getMessage(messageId)));
+    }
+
+    /**
+     * 根据消息ids查询信息
+     * <p>请求 {@code POST /api/channels/2001/messages/ids}。JSON 请求体示例 {@code {"message_ids":[3001,3002]}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelMessageResponse}。
+     * <p>失败示例：消息不存在 30001。
+     *
+     * @param requestBody 消息 ID 列表
+     */
+    @PostMapping(value = "/messages/ids", produces = "application/json", consumes = {"application/json", "application/*+json"})
+    @Operation(
+        summary = "查询消息",
+        description = "成员按消息 ID 列表查询当前状态"
+    )
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 ChannelMessageResponse，失败时返回五位错误码", useReturnTypeSchema = true))
+    public Result<ChannelMessagesResponse> getMessagesByIds(
+        @Valid
+        @NotNull(message = "request body must not be null")
+        @RequestBody
+        ChannelMessageIdsRequest requestBody
+    ) {
+        // 转化为long[]
+        List<Long> messageIds = Arrays.stream(requestBody.getMessageIds()).mapToLong(Long::parseLong).boxed().toList();
+        return Result.success(ChannelMessagesResponse.of(messageContextApi.getMessages(messageIds)));
     }
     /**
      * 撤回指定频道消息。

@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class CPChannelTextMessageData {
-    public static final String DOMAIN = "Core:Text:V1";
 
     private String content;
     private Long replyToMid;

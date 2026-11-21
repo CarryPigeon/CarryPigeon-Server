@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -122,6 +123,11 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
             .stream()
             .map(this::toDomainMessage)
             .toList();
+    }
+
+    @Override
+    public Collection<CPChannelMessage> findByIds(List<Long> messageIds) {
+        return messageDatabaseService.findByIds(messageIds).stream().map(this::toDomainMessage).toList();
     }
 
     private CPChannelMessage toDomainMessage(MessageRecord record) {

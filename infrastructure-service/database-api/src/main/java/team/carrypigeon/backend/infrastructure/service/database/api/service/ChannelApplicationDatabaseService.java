@@ -59,6 +59,15 @@ public interface ChannelApplicationDatabaseService {
     PageResult<ChannelApplicationRecord> pageByChannelId(long channelId, PageQuery page);
 
     /**
+     * 按申请人账户 ID 分页查询申请记录。
+     *
+     * @param applicantId 操作员账户 ID
+     * @param page 分页参数
+     * @return 分页申请记录
+     */
+    PageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, PageQuery page);
+
+    /**
      * 写入新的申请记录。
      *
      * @param record 待持久化申请记录

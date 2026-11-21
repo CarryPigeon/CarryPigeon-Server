@@ -36,6 +36,14 @@ public interface ChannelApplicationApi {
     PageResult<ChannelApplicationResult> listChannelApplications(long accountId, long channelId, PageQuery page);
 
     /**
+     * 分页查询自己的频道申请列表
+     *
+     * @param applicant 操作者账号
+     * @param page 分页参数
+     * @return 分页频道申请投影
+     */
+    PageResult<ChannelApplicationResult> listMyChannelApplications(long applicant, PageQuery page);
+    /**
      * 审批频道加入申请。
      *
      * @param operatorAccountId 操作者账号

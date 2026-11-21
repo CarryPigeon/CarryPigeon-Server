@@ -90,6 +90,45 @@ public class ChannelApplicationController {
     }
 
     /**
+     * 个人查询自己申请的列表和详情
+     * 约束：调用方必须已经登陆
+     *
+     * <p>请求 {@code GET /api/channels/applications?page=1&page_size=20}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code PageResponse<ChannelApplicationResponse>}。
+     * <p>失败示例：角色不足 20012。
+     *
+     * @param cpPrincipal 当前认证用户
+     * */
+    @GetMapping(value = "/applications", produces = "application/json")
+    @Operation(summary = "获取入群申请列表", description = "分页读取个人入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为申请数组", useReturnTypeSchema = true))
+    public Result<PageResponse<ChannelApplicationResponse>> listApplications(
+        @Parameter(description = "页码，从 1 开始", example = "1")
+        @RequestParam(name = "page", defaultValue = "1")
+        @Min(value = 1, message = "page must be greater than 0")
+        int page,
+        @Parameter(description = "每页条数，范围 1..50", example = "20")
+        @RequestParam(name = "page_size", defaultValue = "20")
+        @Min(value = 1, message = "page_size must be between 1 and 50")
+        @Max(value = 50, message = "page_size must be between 1 and 50")
+        int pageSize,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
+    ) {
+        PageResult<ChannelApplicationResult> result = channelApplicationApi.listMyChannelApplications(
+                cpPrincipal.accountId(),
+                new PageQuery(page, pageSize)
+        );
+        return Result.success(new PageResponse<>(
+                result.items().stream().map(this::toResponse).toList(),
+                result.page(),
+                result.pageSize(),
+                result.total(),
+                result.hasMore()
+        ));
+    }
+
+    /**
      * 查询指定频道的入群申请列表。
      * 约束：调用方必须具备该频道 OWNER 或 ADMIN 成员角色。
      *

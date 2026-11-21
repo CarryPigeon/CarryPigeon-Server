@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.features.channel.adaptor.persistenc
 
 import java.util.Optional;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
@@ -64,6 +63,17 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
     public void deleteByChannelId(long channelId) {
         // 频道删除时一次性清理申请记录，避免先加载全量申请再逐条删除
         channelApplicationDatabaseService.deleteByChannelId(channelId);
+    }
+
+    @Override
+    public PageResult<ChannelApplication> pageMe(long applicantId, PageQuery page) {
+        PageResult<ChannelApplicationRecord> pageResult = channelApplicationDatabaseService.pageByApplicantAccountId(applicantId, page);
+        return new PageResult<>(
+            pageResult.items().stream().map(this::toDomain).toList(),
+            pageResult.page(),
+            pageResult.pageSize(),
+            pageResult.total()
+        );
     }
 
     @Override

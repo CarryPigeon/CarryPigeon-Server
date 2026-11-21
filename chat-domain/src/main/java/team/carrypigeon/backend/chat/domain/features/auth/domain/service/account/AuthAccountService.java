@@ -63,11 +63,11 @@ public class AuthAccountService implements AuthAccountApi {
                 emailVerificationApi.verifyCode(email, code, EmailCodePurpose.REGISTER, null);
                 // 存在性校验，确保username和邮箱的唯一性
                 authAccountRepository.findByUsername(username)
-                        .ifPresent(existing -> {
+                        .ifPresent(_ -> {
                             throw ProblemException.of(AuthProblem.USERNAME_ALREADY_EXISTS);
                         });
                 authAccountRepository.findByEmail(email)
-                        .ifPresent(existing -> {
+                        .ifPresent(_ -> {
                             throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
                         });
                 // 用户信息创建
@@ -122,7 +122,7 @@ public class AuthAccountService implements AuthAccountApi {
                 // 判断新邮箱是否与已有邮箱绑定
                 authAccountRepository.findByEmail(email)
                         .filter(account -> account.id() != accountId)
-                        .ifPresent(account -> {
+                        .ifPresent(_ -> {
                             throw ProblemException.of(AuthProblem.EMAIL_ALREADY_EXISTS);
                         });
                 // 更新用户邮箱
@@ -138,6 +138,32 @@ public class AuthAccountService implements AuthAccountApi {
             AuditLogs.success("auth.email_change", accountId);
         } catch (ProblemException exception) {
             AuditLogs.failure("auth.email_change", accountId, exception.reason());
+            throw exception;
+        }
+    }
+
+    @Override
+    public void updatePassword(Long accountId, String password, String code) {
+        try {
+            transactionRunner.runInTransaction(() -> {
+                // 获取当前用户
+                AuthAccount existingAccount = authAccountRepository.findById(accountId)
+                    .orElseThrow(() -> ProblemException.of(AuthProblem.ACCOUNT_NOT_FOUND));
+                // 验证邮箱验证码
+                emailVerificationApi.verifyCode(existingAccount.email(), code, EmailCodePurpose.RESET_PASSWORD, accountId);
+                // 更新用户密码
+                authAccountRepository.update(new AuthAccount(
+                    existingAccount.id(),
+                    existingAccount.username(),
+                    passwordHasher.hash(password),
+                    existingAccount.email(),
+                    existingAccount.createdAt(),
+                    timeProvider.nowInstant()
+                ));
+            });
+            AuditLogs.success("auth.password_change", accountId);
+        } catch (ProblemException exception) {
+            AuditLogs.failure("auth.password_change", accountId, exception.reason());
             throw exception;
         }
     }

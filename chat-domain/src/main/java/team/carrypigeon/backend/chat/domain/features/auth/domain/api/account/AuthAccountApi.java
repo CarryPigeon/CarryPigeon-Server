@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.auth.domain.api.account;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 
@@ -49,4 +51,14 @@ public interface AuthAccountApi {
      */
     void updateEmail(long accountId, String email, String code);
 
+    /**
+     * 使用密码验证码更新当前账号的密码。
+     * 输入：命令包含当前账号、新密码和验证码。
+     * 副作用：消费有效验证码并持久化新密码。
+     *
+     * @param accountId 当前账号id
+     * @param password 新密码
+     * @param code 密码验证码
+     */
+    void updatePassword(Long accountId, String password, String code);
 }

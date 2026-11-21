@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -104,4 +105,12 @@ public interface MessageRepository {
             String domain,
             int limit
     );
+
+    /**
+     * 按消息 ID 列查询消息。
+     *
+     * @param messageIds 消息 ID 列
+     * @return 查询命中消息集合
+     */
+    Collection<CPChannelMessage> findByIds(List<Long> messageIds);
 }

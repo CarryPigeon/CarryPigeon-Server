@@ -74,4 +74,14 @@ public interface ChannelApplicationRepository {
      * @param channelId 频道 ID
      */
     void deleteByChannelId(long channelId);
+
+    /**
+     * 分页查询申请者发起的申请记录。
+     * 输出：按申请 ID 倒序返回。
+     *
+     * @param operatorAccountId 申请者账户 ID
+     * @param page 分页参数
+     * @return 分页申请记录
+     */
+    PageResult<ChannelApplication> pageMe(long operatorAccountId, PageQuery page);
 }

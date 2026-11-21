@@ -66,8 +66,10 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
         if (records == null || records.isEmpty()) {
             return true;
         }
-        int affectedRows = messageMapper.insertAll(records.stream().map(MessageEntity::from).toList());
-        return affectedRows == records.size();
+        for (MessageRecord record : records) {
+            this.insert(record);
+        }
+        return true;
     }
 
     @Override

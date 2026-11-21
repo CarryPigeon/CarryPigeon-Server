@@ -52,45 +52,4 @@ public interface MessageMapper extends BaseMapper<MessageEntity> {
     /** 使用当前读，避免 MySQL REPEATABLE READ 快照看不到刚等待提交的序号。 */
     @Select("SELECT last_sequence FROM chat_message_sequence WHERE channel_id = #{channelId} FOR UPDATE")
     long selectSequenceForUpdate(@Param("channelId") long channelId);
-
-    /**
-     * 单条 SQL 批量插入消息记录。
-     *
-     * @param messages 待插入消息实体
-     * @return 受影响行数
-     */
-    @Insert("""
-            <script>
-            INSERT INTO chat_message (
-                message_id,
-                sender_id,
-                channel_id,
-                sequence,
-                domain,
-                data,
-                send_time,
-                mentions,
-                preview,
-                search_text,
-                status
-            )
-            VALUES
-            <foreach collection="messages" item="message" separator=",">
-              (
-                #{message.messageId},
-                #{message.senderId},
-                #{message.channelId},
-                #{message.sequence},
-                #{message.domain},
-                #{message.data},
-                #{message.sendTime},
-                #{message.mentions},
-                #{message.preview},
-                #{message.searchText},
-                #{message.status}
-              )
-            </foreach>
-            </script>
-            """)
-    int insertAll(@Param("messages") List<MessageEntity> messages);
 }

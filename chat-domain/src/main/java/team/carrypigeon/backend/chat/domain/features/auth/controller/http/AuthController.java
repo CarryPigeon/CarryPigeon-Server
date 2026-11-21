@@ -20,14 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
 import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.AuthSessionTokenResponse;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.EmailLoginRequestBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.PWDLoginRequestBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RefreshAccessTokenRequestBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterRequestBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RegisterResponseBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.RevokeRefreshTokenRequestBody;
-import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.UpdateCurrentAccountEmailRequest;
+import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
@@ -199,4 +192,26 @@ public class AuthController {
         return Result.success();
     }
 
+    /**
+     * 更新用户密码
+     * <p>请求 {@code PUT /api/auth/me/password}。JSON 请求体示例 {@code {"password":"example-password","code":"123456"}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：密码错误 11002，验证码无效 12001。
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping(value = "/me/password", produces = "application/json", consumes = {"application/json", "application/*+json"})
+    @Operation(summary = "更新当前用户密码", description = "使用验证码更新当前登录账户密码。")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> updatePassword(
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal,
+        @Valid
+        @RequestBody
+        UpdateCurrentAccountPasswordRequest body
+    ) {
+        // 更新数据
+        authAccountApi.updatePassword(cpPrincipal.accountId(), body.password(), body.code());
+        // 响应
+        return Result.success();
+    }
 }

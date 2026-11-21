@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.text.CPChannelTextMessageData;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 
 /**
@@ -31,19 +30,13 @@ public record ChannelMessageResponse(
      * @return v1 消息响应
      */
     public static ChannelMessageResponse from(ChannelMessageResult result) {
-        Map<String, Object> responseData = result.data();
-        if (CPChannelTextMessageData.DOMAIN.equals(result.domain()) && responseData.containsKey("reply_to_mid")) {
-            responseData = new LinkedHashMap<>(responseData);
-            Long replyId = (Long) responseData.get("reply_to_mid");
-            responseData.put("reply_to_mid", replyId == null ? null : replyId.toString());
-        }
         return new ChannelMessageResponse(
             IdUtil.toString(result.messageId()),
             IdUtil.toString(result.senderId()),
             IdUtil.toString(result.channelId()),
             result.sequence(),
             result.domain(),
-            responseData,
+            result.data(),
             result.preview(),
             result.mentions().stream().map(IdUtil::toString).toList(),
             result.sendTime().toEpochMilli()

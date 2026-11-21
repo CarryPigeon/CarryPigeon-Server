@@ -220,7 +220,6 @@ public class ChannelController {
         CpPrincipal cpPrincipal
     ) {
         long newOwnerId = Long.parseLong(body.newOwner());
-
         // 数据校验
         if (newOwnerId <= 0) {
             throw new IllegalArgumentException("newOwnerId must be greater than 0");

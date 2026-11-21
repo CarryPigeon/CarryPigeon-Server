@@ -66,6 +66,22 @@ public class ChannelApplicationDatabaseServiceImpl implements ChannelApplication
         );
     }
 
+    @Override
+    public PageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, PageQuery page) {
+        IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
+                new Page<>(page.page(), page.pageSize(), true),
+                new LambdaQueryWrapper<ChannelApplicationEntity>()
+                        .eq(ChannelApplicationEntity::getApplicantId, applicantId)
+                        .orderByDesc(ChannelApplicationEntity::getApplicationId)
+        );
+        return new PageResult<>(
+                result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
+                page.page(),
+                page.pageSize(),
+                result.getTotal()
+        );
+    }
+
     /**
      * 插入新的申请记录。
      */

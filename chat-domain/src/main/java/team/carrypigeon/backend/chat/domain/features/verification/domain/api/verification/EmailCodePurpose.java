@@ -4,5 +4,6 @@ package team.carrypigeon.backend.chat.domain.features.verification.domain.api.ve
 public enum EmailCodePurpose {
     REGISTER,
     LOGIN,
-    CHANGE_EMAIL
+    CHANGE_EMAIL,
+    RESET_PASSWORD;
 }

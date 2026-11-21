@@ -23,8 +23,10 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessag
  * 预处理消息格式:{@link CPChannelTextMessageOriginData}<br/>
  * 入库格式：{@link CPChannelTextMessageData}
  * */
-@MessageHandler(CPChannelTextMessageData.DOMAIN)
+@MessageHandler(CPChannelTextMessageHandler.DOMAIN)
 public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
+    public static final String DOMAIN = "Core:Text:V1";
+
     private static final int MAX_CONTENT_CODE_POINTS = 4096;
     private static final int PREVIEW_CODE_POINTS = 20;
 
@@ -80,7 +82,6 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             message.sendTime(),
             message.mentions(),
             content.substring(0, previewEnd),
-            // 搜索正文单独派生，避免把回复对象的姓名、预览等元数据混入检索。
             content,
             message.status()
         );
