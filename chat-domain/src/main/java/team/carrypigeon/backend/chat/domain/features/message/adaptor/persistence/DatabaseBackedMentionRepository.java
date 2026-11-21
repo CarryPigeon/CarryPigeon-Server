@@ -86,4 +86,9 @@ public class DatabaseBackedMentionRepository implements MentionRepository {
                 record.read()
         );
     }
+
+    @Override
+    public void deleteByChannelAndRecipient(long channelId, long accountId) {
+        mentionDatabaseService.deleteByChannelAndRecipient(channelId, accountId);
+    }
 }

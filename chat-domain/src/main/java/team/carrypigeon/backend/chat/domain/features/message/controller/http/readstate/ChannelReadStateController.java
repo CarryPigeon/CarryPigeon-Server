@@ -53,7 +53,7 @@ public class ChannelReadStateController {
      * 频道不存在返回 20001，非成员返回 20002。
      */
     @GetMapping(value = "/channels/{channelId}/read_state", produces = "application/json")
-    @Operation(summary = "读取频道已读位置和未读数", description = "未上报过时锚点为 null；排除本人和已撤回的消息。")
+    @Operation(summary = "读取频道已读位置和未读数", description = "入群时以最新消息初始化锚点，空频道从 null 开始；统计排除本人和已撤回的消息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功或业务错误 10001、11001、20001、20002", useReturnTypeSchema = true))
     public Result<ChannelReadSummaryResponse> getReadState(
         @Parameter(description = "频道 ID", example = "2001")

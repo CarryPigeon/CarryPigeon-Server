@@ -309,4 +309,21 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
     private void evictRelation(long channelId, long accountId) {
         databaseCache.evict(relationKey(channelId, accountId));
     }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<Long> findMemberAccountIds(long channelId, List<Long> candidates) {
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        // 当前读避免复用插件或上层事务已经建立的快照；组合唯一键保证每个接收人只出现一次。
+        return channelMemberMapper.selectList(new LambdaQueryWrapper<ChannelMemberEntity>()
+                        .select(ChannelMemberEntity::getAccountId)
+                        .eq(ChannelMemberEntity::getChannelId, channelId)
+                        .in(ChannelMemberEntity::getAccountId, candidates)
+                        .orderByAsc(ChannelMemberEntity::getAccountId)
+                        .last("FOR SHARE")).stream()
+                .map(ChannelMemberEntity::getAccountId)
+                .toList();
+    }
 }

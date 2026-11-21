@@ -27,4 +27,7 @@ public interface ChannelContextApi {
 
     /** 查询目标当前是否为频道治理者，不要求目标仍是成员；非成员返回 false。 */
     boolean isModerator(long channelId, long accountId);
+
+    /** 发送事务持有频道锁时，取候选账号中当前仍属该频道的成员 ID，去重并按 ID 升序返回。 */
+    List<Long> findMemberAccountIds(long channelId, List<Long> candidates);
 }

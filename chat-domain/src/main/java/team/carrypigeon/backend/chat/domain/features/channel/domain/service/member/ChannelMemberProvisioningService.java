@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.member;
 
+import java.time.Instant;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberProvisioningApi;
@@ -8,10 +11,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channe
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-
-import java.time.Instant;
-import java.util.List;
 
 /**
  * 新账号频道成员关系初始化 API 实现。
@@ -22,14 +23,18 @@ import java.util.List;
 public class ChannelMemberProvisioningService implements ChannelMemberProvisioningApi {
 
     private final ChannelRepository channelRepository;
+    private final MessageReadStateApi readStates;
     private final ChannelMemberRepository channelMemberRepository;
     private final IdGenerator idGenerator;
 
     public ChannelMemberProvisioningService(
         ChannelRepository channelRepository,
-        ChannelMemberRepository channelMemberRepository, IdGenerator idGenerator
+        MessageReadStateApi readStates,
+        ChannelMemberRepository channelMemberRepository,
+        IdGenerator idGenerator
     ) {
         this.channelRepository = channelRepository;
+        this.readStates = readStates;
         this.channelMemberRepository = channelMemberRepository;
         this.idGenerator = idGenerator;
     }
@@ -43,7 +48,7 @@ public class ChannelMemberProvisioningService implements ChannelMemberProvisioni
                 continue;
             }
             // 幂等保护：账号已在该频道存在成员关系时跳过，避免重复注册或多链路调用产生重复行
-            if (channelMemberRepository.findByRelationForAuthorization(systemChannel.id(), accountId).isEmpty()) {
+            if (channelMemberRepository.findByRelationForUpdate(systemChannel.id(), accountId).isEmpty()) {
                 // 系统频道的成员统一以 MEMBER 角色加入，不分配 OWNER 或 ADMIN，因此不参与频道治理
                 channelMemberRepository.save(new ChannelMember(
                     idGenerator.nextLongId(),
@@ -52,6 +57,7 @@ public class ChannelMemberProvisioningService implements ChannelMemberProvisioni
                     ChannelMemberRole.MEMBER,
                     joinedAt
                 ));
+                readStates.initializeOnJoin(systemChannel.id(), accountId);
             }
         }
     }

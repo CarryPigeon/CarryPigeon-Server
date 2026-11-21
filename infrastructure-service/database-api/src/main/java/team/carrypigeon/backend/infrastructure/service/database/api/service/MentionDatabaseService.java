@@ -120,4 +120,7 @@ public interface MentionDatabaseService {
 
     /** 删除频道下的全部提及记录。 */
     void deleteByChannelId(long channelId);
+
+    /** 清除离开频道的接收人全部提及，包括已读记录。 */
+    void deleteByChannelAndRecipient(long channelId, long accountId);
 }

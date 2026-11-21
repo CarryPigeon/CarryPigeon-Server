@@ -5,24 +5,25 @@ import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfileQuery;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfileQuery;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.ChannelMessageCleanupApi;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 
 /**
  * 频道治理领域服务。
@@ -33,6 +34,7 @@ import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 public class ChannelMemberService implements ChannelMemberApi {
 
     private final ChannelRepository channelRepository;
+    private final ChannelMessageCleanupApi messageCleanup;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelEventNotifier channelEventNotifier;
     private final MemberProfileQuery memberProfileQuery;
@@ -40,12 +42,14 @@ public class ChannelMemberService implements ChannelMemberApi {
 
     public ChannelMemberService(
         ChannelRepository channelRepository,
+        ChannelMessageCleanupApi messageCleanup,
         ChannelMemberRepository channelMemberRepository,
         MemberProfileQuery memberProfileQuery,
         ChannelEventNotifier channelEventNotifier,
         TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
+        this.messageCleanup = messageCleanup;
         this.channelMemberRepository = channelMemberRepository;
         this.channelEventNotifier = channelEventNotifier;
         this.memberProfileQuery = memberProfileQuery;
@@ -215,6 +219,7 @@ public class ChannelMemberService implements ChannelMemberApi {
             }
             // 删除成员关系后重新取快照，通知中不再包含被移除者
             channelMemberRepository.delete(target.id());
+            messageCleanup.deleteMemberState(channelId, targetAccountId);
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(target.accountId()));
             // 通知频道内其余成员刷新成员列表

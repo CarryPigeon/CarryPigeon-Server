@@ -170,4 +170,15 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
                 .map(MessageEntity::toRecord)
                 .toList();
     }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Long findLatestMessageIdForJoin(long channelId) {
+        MessageEntity latest = messageMapper.selectOne(new LambdaQueryWrapper<MessageEntity>()
+                .select(MessageEntity::getMessageId)
+                .eq(MessageEntity::getChannelId, channelId)
+                .orderByDesc(MessageEntity::getMessageId)
+                .last("LIMIT 1 FOR SHARE"));
+        return latest == null ? null : latest.getMessageId();
+    }
 }

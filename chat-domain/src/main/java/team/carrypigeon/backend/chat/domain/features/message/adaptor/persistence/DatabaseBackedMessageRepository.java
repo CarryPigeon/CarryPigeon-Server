@@ -163,4 +163,9 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
     private List<Long> parseMentions(String mentions) {
         return mentions == null || mentions.isBlank() ? List.of() : jsonProvider.fromJson(mentions, MENTIONS_TYPE);
     }
+
+    @Override
+    public Long findLatestMessageIdForJoin(long channelId) {
+        return messageDatabaseService.findLatestMessageIdForJoin(channelId);
+    }
 }

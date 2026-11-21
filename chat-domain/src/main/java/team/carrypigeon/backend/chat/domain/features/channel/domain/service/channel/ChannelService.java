@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.channel;
 
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -11,21 +10,23 @@ import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.ChannelMessageCleanupApi;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 频道生命周期领域服务。
@@ -36,6 +37,8 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 public class ChannelService implements ChannelApi {
 
     private final ChannelRepository channelRepository;
+    private final ChannelMessageCleanupApi messageCleanup;
+    private final MessageReadStateApi readStates;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelEventNotifier channelEventNotifier;
     private final ChannelDeletionService channelDeletionService;
@@ -45,6 +48,8 @@ public class ChannelService implements ChannelApi {
 
     public ChannelService(
         ChannelRepository channelRepository,
+        ChannelMessageCleanupApi messageCleanup,
+        MessageReadStateApi readStates,
         ChannelMemberRepository channelMemberRepository,
         ChannelEventNotifier channelEventNotifier,
         ChannelDeletionService channelDeletionService,
@@ -53,6 +58,8 @@ public class ChannelService implements ChannelApi {
         TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
+        this.messageCleanup = messageCleanup;
+        this.readStates = readStates;
         this.channelMemberRepository = channelMemberRepository;
         this.channelEventNotifier = channelEventNotifier;
         this.channelDeletionService = channelDeletionService;
@@ -98,11 +105,14 @@ public class ChannelService implements ChannelApi {
     @Override
     public void quitChannel(Long accountId, long channelId) {
         transactionRunner.runInTransaction(afterCommit -> {
-            // 判断账号是否在频道内
+            // 与发送提及、初始化阅读进度使用相同锁序，防止刚清空的收件箱被并发发送重新写入。
+            channelRepository.findByIdForUpdate(channelId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             ChannelMember channelMember = channelMemberRepository.findByRelationForUpdate(channelId, accountId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 在则退出
             channelMemberRepository.delete(channelMember.id());
+            messageCleanup.deleteMemberState(channelId, accountId);
             // 通知当前账号频道已删除
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             // 通知频道其他人
@@ -166,6 +176,7 @@ public class ChannelService implements ChannelApi {
             channelRepository.save(channel);
             // 创建者直接落 OWNER 角色，这是后续所有频道治理动作的权限来源
             channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), accountId, ChannelMemberRole.OWNER, now));
+            readStates.initializeOnJoin(channelId, accountId);
             // 提交后通知该账号刷新可见频道集合，回滚时不应发出通知
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelResult.from(channel);
@@ -186,7 +197,8 @@ public class ChannelService implements ChannelApi {
             if (operator.role() != ChannelMemberRole.OWNER) {
                 throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
             }
-            // 撤下主记录后再异步清理关联数据，避免在 HTTP 事务中全量删除。
+            // 收件箱可跨频道查询，必须随主记录一起删除；其余频道数据提交后清理。
+            messageCleanup.deleteChannelMentions(channelId);
             channelRepository.delete(channel.id());
             afterCommit.execute(() -> channelDeletionService.submit(channelId));
         });

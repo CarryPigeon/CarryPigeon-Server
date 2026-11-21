@@ -140,4 +140,7 @@ public interface MessageDatabaseService {
      * @return 至少删除一条时为 true；空集合返回 true
      */
     boolean deleteByIds(List<Long> messageIds);
+
+    /** 入群事务已持有频道锁。读取该频道当前最大的消息 ID，空频道返回 null。 */
+    Long findLatestMessageIdForJoin(long channelId);
 }

@@ -1,30 +1,30 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.service.application;
 
-
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.Channel;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
+import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
+import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
 
 /**
  * 频道申请流领域服务。
@@ -35,6 +35,7 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 public class ChannelApplicationService implements ChannelApplicationApi {
 
     private final ChannelRepository channelRepository;
+    private final MessageReadStateApi readStates;
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelApplicationRepository channelApplicationRepository;
     private final ChannelEventNotifier channelEventNotifier;
@@ -44,6 +45,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
 
     public ChannelApplicationService(
             ChannelRepository channelRepository,
+            MessageReadStateApi readStates,
             ChannelMemberRepository channelMemberRepository,
             ChannelApplicationRepository channelInviteRepository,
             ChannelEventNotifier channelEventNotifier,
@@ -52,6 +54,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             TransactionRunner transactionRunner
     ) {
         this.channelRepository = channelRepository;
+        this.readStates = readStates;
         this.channelMemberRepository = channelMemberRepository;
         this.channelApplicationRepository = channelInviteRepository;
         this.channelEventNotifier = channelEventNotifier;
@@ -188,6 +191,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {
                 // 批准即建立成员关系，初始角色固定为 MEMBER；申请状态与成员写入必须同事务
                 channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), application.channelId(), application.applicantId(), ChannelMemberRole.MEMBER, timeProvider.nowInstant()));
+                readStates.initializeOnJoin(channelId, application.applicantId());
             }
             // 在事务内取成员快照：批准后申请人已在其中，拒绝时则不含申请人
             channelEventNotifier.channelChanged(afterCommit, application.channelId(), ChannelChangeScope.APPLICATIONS);

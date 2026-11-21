@@ -89,4 +89,9 @@ public class DatabaseBackedChannelReadStateRepository implements ChannelReadStat
     public long countUnreads(long channelId, long accountId, long afterMessageId) {
         return channelReadStateDatabaseService.countUnreads(channelId, accountId, afterMessageId);
     }
+
+    @Override
+    public void deleteByMember(long channelId, long accountId) {
+        channelReadStateDatabaseService.deleteById(new ChannelReadStateKey(channelId, accountId));
+    }
 }

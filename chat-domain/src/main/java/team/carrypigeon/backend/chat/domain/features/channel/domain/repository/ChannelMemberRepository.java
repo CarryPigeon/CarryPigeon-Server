@@ -101,4 +101,7 @@ public interface ChannelMemberRepository {
      * @param channelId 频道 ID
      */
     void deleteByChannelId(long channelId);
+
+    /** 发送事务持有频道锁时，取候选账号中当前仍属该频道的成员 ID，去重并按 ID 升序返回。 */
+    List<Long> findMemberAccountIds(long channelId, List<Long> candidates);
 }

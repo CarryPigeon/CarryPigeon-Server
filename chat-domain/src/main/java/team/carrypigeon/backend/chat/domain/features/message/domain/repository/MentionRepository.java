@@ -35,4 +35,7 @@ public interface MentionRepository {
 
     /** 直接更新当前账号匹配的未读集合，包含 ID 上界；返回本次实际变为已读的条数，重复执行返回 0。 */
     int markAllAsRead(long accountId, Long throughMentionId, Long channelId);
+
+    /** 清除离开频道的接收人全部提及，包括已读记录。 */
+    void deleteByChannelAndRecipient(long channelId, long accountId);
 }

@@ -40,7 +40,7 @@ public class ChannelReadStateEntity {
         return new ChannelReadStateRecord(
                 requireNonNull(channelId, "channelId"),
                 requireNonNull(accountId, "accountId"),
-                requireNonNull(lastReadMessageId, "lastReadMessageId"),
+                lastReadMessageId,
                 createdAt,
                 updatedAt
         );

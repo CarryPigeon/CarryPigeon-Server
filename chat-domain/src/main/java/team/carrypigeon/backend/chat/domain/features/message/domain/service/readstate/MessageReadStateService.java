@@ -77,7 +77,7 @@ public class MessageReadStateService implements MessageReadStateApi {
                     .findForUpdate(channelId, accountId)
                     .orElse(null);
             // 多端重复或较早的上报返回已保存的锚点。
-            if (current != null && current.lastReadMessageId() >= lastReadMessageId) {
+            if (current != null && current.lastReadMessageId() != null && current.lastReadMessageId() >= lastReadMessageId) {
                 return toResult(current);
             }
             Instant now = this.timeProvider.nowInstant();
@@ -110,5 +110,13 @@ public class MessageReadStateService implements MessageReadStateApi {
                 readState.accountId(),
                 readState.lastReadMessageId()
         );
+    }
+
+    @Override
+    public void initializeOnJoin(long channelId, long accountId) {
+        // 频道锁串行化发送与入群；只取索引末端的 ID，包括后来撤回的消息位置。
+        Long anchor = messageRepository.findLatestMessageIdForJoin(channelId);
+        Instant now = timeProvider.nowInstant();
+        readStateRepository.save(new ChannelReadState(channelId, accountId, anchor, now, now));
     }
 }

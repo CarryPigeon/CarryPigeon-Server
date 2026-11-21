@@ -134,4 +134,9 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
             channelMember.joinedAt()
         );
     }
+
+    @Override
+    public List<Long> findMemberAccountIds(long channelId, List<Long> candidates) {
+        return channelMemberDatabaseService.findMemberAccountIds(channelId, candidates);
+    }
 }

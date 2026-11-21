@@ -21,14 +21,6 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Ment
  */
 public class MentionDatabaseServiceImpl implements MentionDatabaseService {
 
-    // 收件人退群或频道删除后立即隐藏记录，所有收件箱操作使用相同的可见范围。
-    private static final String VISIBLE_CHANNEL = """
-            SELECT 1 FROM chat_channel_member cm
-            JOIN chat_channel c ON c.channel_id = cm.channel_id
-            WHERE cm.channel_id = chat_mention.channel_id
-              AND cm.account_id = chat_mention.target_account_id
-            """;
-
     private final MentionMapper mentionMapper;
 
     public MentionDatabaseServiceImpl(MentionMapper mentionMapper) {
@@ -41,7 +33,6 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
         return mentionMapper.update(null, new LambdaUpdateWrapper<MentionEntity>()
                 .eq(MentionEntity::getTargetAccountId, accountId)
                 .eq(MentionEntity::getRead, false)
-                .exists(VISIBLE_CHANNEL)
                 .le(throughMentionId != null, MentionEntity::getMentionId, throughMentionId)
                 .eq(channelId != null, MentionEntity::getChannelId, channelId)
                 .set(MentionEntity::getRead, true));
@@ -73,9 +64,7 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
      */
     @Override
     public Optional<MentionRecord> findById(long mentionId) {
-        return Optional.ofNullable(mentionMapper.selectOne(new LambdaQueryWrapper<MentionEntity>()
-                        .eq(MentionEntity::getMentionId, mentionId)
-                        .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_mention.channel_id")))
+        return Optional.ofNullable(mentionMapper.selectById(mentionId))
                 .map(MentionEntity::toRecord);
     }
 
@@ -86,8 +75,7 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
         }
         return mentionMapper.selectList(new LambdaQueryWrapper<MentionEntity>()
                         .eq(MentionEntity::getTargetAccountId, accountId)
-                        .in(MentionEntity::getMentionId, mentionIds)
-                        .exists(VISIBLE_CHANNEL)).stream()
+                        .in(MentionEntity::getMentionId, mentionIds)).stream()
                 .map(MentionEntity::toRecord)
                 .toList();
     }
@@ -98,14 +86,12 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
                 .eq(MentionEntity::getMentionId, mentionId)
                 .eq(MentionEntity::getTargetAccountId, accountId)
                 .eq(MentionEntity::getRead, false)
-                .exists(VISIBLE_CHANNEL)
                 .set(MentionEntity::getRead, true));
         // 零行更新可能是重复请求，也可能是撤回或退群；仅前者成功。
         return changed == 1 || mentionMapper.exists(new LambdaQueryWrapper<MentionEntity>()
                 .eq(MentionEntity::getMentionId, mentionId)
                 .eq(MentionEntity::getTargetAccountId, accountId)
-                .eq(MentionEntity::getRead, true)
-                .exists(VISIBLE_CHANNEL));
+                .eq(MentionEntity::getRead, true));
     }
 
     /**
@@ -206,7 +192,6 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
                 new Page<>(1, query.limit(), false),
                 new LambdaQueryWrapper<MentionEntity>()
                         .eq(MentionEntity::getTargetAccountId, query.accountId())
-                        .exists(VISIBLE_CHANNEL)
                         .lt(query.beforeMentionId() != null, MentionEntity::getMentionId, query.beforeMentionId())
                         .eq(query.read() != null, MentionEntity::getRead, query.read())
                         .eq(query.channelId() != null, MentionEntity::getChannelId, query.channelId())
@@ -215,5 +200,12 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
         return page.getRecords().stream()
                 .map(MentionEntity::toRecord)
                 .toList();
+    }
+
+    @Override
+    public void deleteByChannelAndRecipient(long channelId, long accountId) {
+        mentionMapper.delete(new LambdaQueryWrapper<MentionEntity>()
+                .eq(MentionEntity::getTargetAccountId, accountId)
+                .eq(MentionEntity::getChannelId, channelId));
     }
 }

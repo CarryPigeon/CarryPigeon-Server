@@ -97,4 +97,7 @@ public interface MessageRepository {
      * @return 查询命中消息集合
      */
     Collection<CPChannelMessage> findByIds(List<Long> messageIds);
+
+    /** 入群事务已持有频道锁。读取该频道当前最大的消息 ID，空频道返回 null。 */
+    Long findLatestMessageIdForJoin(long channelId);
 }

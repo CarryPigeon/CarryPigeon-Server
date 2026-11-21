@@ -32,4 +32,7 @@ public interface MessageReadStateApi {
      * @return 未读统计列表
      */
     List<ChannelUnreadResult> listUnreads(long accountId);
+
+    /** 在新成员关系写入的同一事务内初始化锚点。调用方持有频道锁，且仅在实际新增成员关系后调用。 */
+    void initializeOnJoin(long channelId, long accountId);
 }

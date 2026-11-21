@@ -94,4 +94,9 @@ public class ChannelContextService implements ChannelContextApi {
             .filter(expiresAt -> expiresAt.isAfter(now))
             .orElse(null);
     }
+
+    @Override
+    public List<Long> findMemberAccountIds(long channelId, List<Long> candidates) {
+        return channelMemberRepository.findMemberAccountIds(channelId, candidates);
+    }
 }

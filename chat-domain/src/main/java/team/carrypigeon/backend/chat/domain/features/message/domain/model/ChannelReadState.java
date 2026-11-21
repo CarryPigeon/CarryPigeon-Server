@@ -6,14 +6,14 @@ import java.time.Instant;
  * 频道已读状态领域模型。
  * @param channelId 频道 ID
  * @param accountId 账号 ID
- * @param lastReadMessageId 最后已读消息的稳定身份
+ * @param lastReadMessageId 已读边界；入群时频道为空则为 null
  * @param createdAt 创建时间
  * @param updatedAt 更新时间
  */
 public record ChannelReadState(
         long channelId,
         long accountId,
-        long lastReadMessageId,
+        Long lastReadMessageId,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -104,8 +104,9 @@ public class ChannelMessageService implements ChannelMessageApi {
                         + ", handler=" + handler.getClass().getName());
             }
             messageRepository.save(finalMessage);
-            // 生成提及记录；只保留当前频道成员，避免产生无法访问的提及
-            List<Mention> savedMentions = finalMessage.mentions().stream()
+            // 插件处理后的提及才是最终候选。只为发送时仍在群内的账号创建收件箱记录并推送。
+            List<Long> recipients = channelContextApi.findMemberAccountIds(channelId, finalMessage.mentions());
+            List<Mention> savedMentions = recipients.stream()
                     .map(targetAccountId -> new Mention(
                             idGenerator.nextLongId(),
                             channelId,
