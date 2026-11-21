@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.member;
 
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Optional;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -45,16 +44,6 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
         this.databaseCache = databaseCache;
     }
 
-    @Override
-    public List<Long> filterMemberAccountIds(long channelId, List<Long> accountIds) {
-        // 在线账号较多时限制单条 IN 大小，查询量随在线候选数变化，不加载频道全部离线成员。
-        List<Long> members = new ArrayList<>();
-        for (int start = 0; start < accountIds.size(); start += 1000) {
-            members.addAll(channelMemberMapper.filterMemberAccountIds(channelId,
-                    accountIds.subList(start, Math.min(start + 1000, accountIds.size()))));
-        }
-        return members;
-    }
 
     @Override
     public List<Long> findChannelIdsByAccountId(long accountId) {

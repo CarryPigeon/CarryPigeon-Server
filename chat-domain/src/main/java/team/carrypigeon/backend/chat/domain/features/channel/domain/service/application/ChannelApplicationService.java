@@ -94,8 +94,8 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             channelEventNotifier.channelChanged(
                     afterCommit,
                     channel.id(),
-                    ChannelChangeScope.APPLICATIONS,
-                    channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList());
+                    ChannelChangeScope.APPLICATIONS
+            );
             // 申请人自身也需要刷新频道集合，其视角不属于上面的频道成员快照
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelApplicationResult.from(application, normalizedReason);
@@ -190,16 +190,14 @@ public class ChannelApplicationService implements ChannelApplicationApi {
                 channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), application.channelId(), application.applicantId(), ChannelMemberRole.MEMBER, timeProvider.nowInstant()));
             }
             // 在事务内取成员快照：批准后申请人已在其中，拒绝时则不含申请人
-            List<Long> recipientAccountIds = List.copyOf(channelMemberRepository.listByChannelId(application.channelId()).stream().map(ChannelMember::accountId).toList());
-            channelEventNotifier.channelChanged(
-                    afterCommit, application.channelId(), ChannelChangeScope.APPLICATIONS, recipientAccountIds);
+            channelEventNotifier.channelChanged(afterCommit, application.channelId(), ChannelChangeScope.APPLICATIONS);
+            // 申请人视角的频道集合也需要刷新，与上面的频道成员快照相互独立
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(application.applicantId()));
             if (decidedStatus == ChannelApplicationStatus.ACCEPTED) {
                 // 仅批准会改变成员集，拒绝不需要发出成员集变化通知
                 channelEventNotifier.channelChanged(
-                        afterCommit, application.channelId(), ChannelChangeScope.MEMBERS, recipientAccountIds);
+                        afterCommit, application.channelId(), ChannelChangeScope.MEMBERS);
             }
-            // 申请人视角的频道集合也需要刷新，与上面的频道成员快照相互独立
-            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(application.applicantId()));
             return ChannelApplicationResult.from(
                     updated,
                     updated.reason() == null || updated.reason().isBlank() ? "" : updated.reason().trim()

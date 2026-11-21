@@ -15,7 +15,6 @@ import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChanne
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
 import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
-import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
@@ -33,14 +32,12 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
     private static final RealtimeEventType READ_STATE_UPDATED = new RealtimeEventType("read_state.updated");
 
     private final RealtimeEventApi realtimeEventApi;
-    private final TimeProvider timeProvider;
     private final ChannelEventBuffer eventBuffer;
     private final IdGenerator ids;
 
-    public RealtimeMessageEventNotifier(RealtimeEventApi realtimeEventApi, TimeProvider timeProvider,
+    public RealtimeMessageEventNotifier(RealtimeEventApi realtimeEventApi,
             ChannelEventBuffer eventBuffer, IdGenerator ids) {
         this.realtimeEventApi = realtimeEventApi;
-        this.timeProvider = timeProvider;
         this.eventBuffer = eventBuffer;
         this.ids = ids;
     }

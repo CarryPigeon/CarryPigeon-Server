@@ -1,6 +1,5 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.capability;
 
-import java.util.Collection;
 import java.util.List;
 
 import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
@@ -12,19 +11,18 @@ import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunn
  */
 public interface ChannelEventNotifier {
 
+
     /**
-     * 通知频道成员某类视图已失效。
+     * 通知所有频道在线成员某类视图已失效。
      *
-     * @param afterCommit 提交后动作注册器
+     * @param afterCommitExecutor 提交后动作注册器
      * @param channelId 频道 ID
      * @param scope 失效范围
-     * @param recipientAccountIds 接收账号快照
      */
     void channelChanged(
-            AfterCommitExecutor afterCommit,
+            AfterCommitExecutor afterCommitExecutor,
             long channelId,
-            ChannelChangeScope scope,
-            Collection<Long> recipientAccountIds
+            ChannelChangeScope scope
     );
 
     /**

@@ -103,10 +103,7 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
-            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
-                    .stream().map(ChannelMember::accountId).toList();
-            channelEventNotifier.channelChanged(
-                    afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
         AuditLogs.success("channel.member.promote", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);
@@ -144,10 +141,7 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
-            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
-                .stream().map(ChannelMember::accountId).toList();
-            channelEventNotifier.channelChanged(
-                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
         AuditLogs.success("channel.member.demote", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);
@@ -193,10 +187,7 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 两条角色变更在同一事务提交后才对其它事务可见。
-            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
-                .stream().map(ChannelMember::accountId).toList();
-            channelEventNotifier.channelChanged(
-                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
             return ChannelOwnershipTransferResult.from(previousOwner, newOwner);
         });
         AuditLogs.success("channel.member.transfer", operatorAccountId,
@@ -224,13 +215,10 @@ public class ChannelMemberService implements ChannelMemberApi {
             }
             // 删除成员关系后重新取快照，通知中不再包含被移除者
             channelMemberRepository.delete(target.id());
-            List<Long> accounts = channelMemberRepository.listByChannelId(channelId)
-                .stream().map(ChannelMember::accountId).toList();
-            // 通知频道内其余成员刷新成员列表
-            channelEventNotifier.channelChanged(
-                afterCommit, channel.id(), ChannelChangeScope.MEMBERS, accounts);
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(target.accountId()));
+            // 通知频道内其余成员刷新成员列表
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
         AuditLogs.success("channel.member.kick", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);

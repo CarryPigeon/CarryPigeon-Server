@@ -15,20 +15,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ChannelMemberMapper extends BaseMapper<ChannelMemberEntity> {
 
-    /** 只投影候选账号，频道主记录撤下后即使成员尚未清理也不返回。 */
-    @Select("""
-            <script>
-            SELECT cm.account_id FROM chat_channel_member cm
-            JOIN chat_channel c ON c.channel_id = cm.channel_id
-            WHERE cm.channel_id = #{channelId} AND cm.account_id IN
-            <foreach collection="accountIds" item="accountId" open="(" separator="," close=")">
-                #{accountId}
-            </foreach>
-            ORDER BY cm.account_id
-            </script>
-            """)
-    List<Long> filterMemberAccountIds(@Param("channelId") long channelId, @Param("accountIds") List<Long> accountIds);
-
     @Select("""
             SELECT cm.channel_id FROM chat_channel_member cm
             JOIN chat_channel c ON c.channel_id = cm.channel_id

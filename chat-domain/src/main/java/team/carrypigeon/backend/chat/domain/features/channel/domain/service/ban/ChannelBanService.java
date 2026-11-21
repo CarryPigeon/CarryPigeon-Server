@@ -144,8 +144,7 @@ public class ChannelBanService implements ChannelBanApi {
                 );
                 channelBanRepository.update(ban);
             }
-            List<Long> recipients = channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList();
-            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS, recipients);
+            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS);
             return ChannelBanResult.from(ban);
         });
         AuditLogs.success("channel.ban", operatorAccountId,
@@ -186,8 +185,8 @@ public class ChannelBanService implements ChannelBanApi {
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channel.id(),
-                ChannelChangeScope.BANS,
-                channelMemberRepository.listByChannelId(channel.id()).stream().map(ChannelMember::accountId).toList());
+                ChannelChangeScope.BANS
+            );
         });
         AuditLogs.success("channel.unban", operatorAccountId,
                 "channel_id", channelId, "target_uid", targetAccountId);

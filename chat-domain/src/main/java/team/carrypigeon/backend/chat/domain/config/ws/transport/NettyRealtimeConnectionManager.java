@@ -2,7 +2,6 @@ package team.carrypigeon.backend.chat.domain.config.ws.transport;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -90,8 +89,7 @@ public class NettyRealtimeConnectionManager implements RealtimeConnectionManager
         if (online == null || online.isEmpty()) {
             return;
         }
-        List<Long> authorized = channelContext.filterMemberAccountIds(channelId, List.copyOf(online));
-        for (long accountId : authorized) {
+        for (long accountId : online) {
             sendToAccount(accountId, channelId, frameText);
         }
     }

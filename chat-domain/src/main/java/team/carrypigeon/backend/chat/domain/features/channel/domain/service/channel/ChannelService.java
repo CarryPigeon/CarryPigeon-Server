@@ -103,12 +103,13 @@ public class ChannelService implements ChannelApi {
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
             // 在则退出
             channelMemberRepository.delete(channelMember.id());
+            // 通知当前账号频道已删除
+            channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             // 通知频道其他人
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channelId,
-                ChannelChangeScope.MEMBERS,
-                channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList()
+                ChannelChangeScope.MEMBERS
             );
         });
     }
@@ -143,8 +144,7 @@ public class ChannelService implements ChannelApi {
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channelId,
-                ChannelChangeScope.MEMBERS,
-                List.of(operator.accountId(), newOwner.accountId())
+                ChannelChangeScope.MEMBERS
             );
         });
     }
@@ -218,8 +218,7 @@ public class ChannelService implements ChannelApi {
             channelEventNotifier.channelChanged(
                 afterCommit,
                 updated.id(),
-                ChannelChangeScope.PROFILE,
-                channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList()
+                ChannelChangeScope.PROFILE
             );
             return ChannelResult.from(updated);
         });
