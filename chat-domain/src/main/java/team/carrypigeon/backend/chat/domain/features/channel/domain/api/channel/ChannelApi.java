@@ -66,4 +66,19 @@ public interface ChannelApi {
      * @return 频道列表
      */
     List<ChannelResult> getChannelByIds(List<Long> channelIds);
+
+    /**
+     * 账号退出频道
+     * @param accountId 账号 ID
+     * @param channelId 频道 ID
+     */
+    void quitChannel(Long accountId, long channelId);
+
+    /**
+     * 转让频道
+     * @param operatorId 操作者 ID
+     * @param channelId 频道 ID
+     * @param newOwnerId 新所有者 ID
+     */
+    void transferChannel(long operatorId, long channelId, long newOwnerId);
 }

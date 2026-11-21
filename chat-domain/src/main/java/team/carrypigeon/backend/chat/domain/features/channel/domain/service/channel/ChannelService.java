@@ -96,6 +96,60 @@ public class ChannelService implements ChannelApi {
     }
 
     @Override
+    public void quitChannel(Long accountId, long channelId) {
+        transactionRunner.runInTransaction(afterCommit -> {
+            // 判断账号是否在频道内
+            ChannelMember channelMember = channelMemberRepository.findByRelationForUpdate(channelId, accountId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
+            // 在则退出
+            channelMemberRepository.delete(channelMember.id());
+            // 通知频道其他人
+            channelEventNotifier.channelChanged(
+                afterCommit,
+                channelId,
+                ChannelChangeScope.MEMBERS,
+                channelMemberRepository.listByChannelId(channelId).stream().map(ChannelMember::accountId).toList()
+            );
+        });
+    }
+
+    @Override
+    public void transferChannel(long operatorId, long channelId, long newOwnerId) {
+        transactionRunner.runInTransaction(afterCommit -> {
+            if (operatorId == newOwnerId){
+                throw ProblemException.of(ChannelProblem.INVALID_INPUT);
+            }
+            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
+            if (operator.role() != ChannelMemberRole.OWNER) {
+                throw ProblemException.of(ChannelProblem.OWNER_REQUIRED);
+            }
+            ChannelMember newOwner = channelMemberRepository.findByRelationForUpdate(channelId, newOwnerId)
+                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
+            channelMemberRepository.update(new ChannelMember(
+                newOwner.id(),
+                newOwner.channelId(),
+                newOwner.accountId(),
+                ChannelMemberRole.OWNER,
+                newOwner.joinedAt()
+            ));
+            channelMemberRepository.update(new ChannelMember(
+                operator.id(),
+                operator.channelId(),
+                operator.accountId(),
+                ChannelMemberRole.ADMIN,
+                operator.joinedAt()
+            ));
+            channelEventNotifier.channelChanged(
+                afterCommit,
+                channelId,
+                ChannelChangeScope.MEMBERS,
+                List.of(operator.accountId(), newOwner.accountId())
+            );
+        });
+    }
+
+    @Override
     public ChannelResult createChannel(long accountId, String name, String brief) {
         ChannelResult result = transactionRunner.runInTransaction(afterCommit -> {
             // 频道与创建者的成员关系必须同事务写入，否则会出现"频道存在但没有任何成员"的孤儿频道

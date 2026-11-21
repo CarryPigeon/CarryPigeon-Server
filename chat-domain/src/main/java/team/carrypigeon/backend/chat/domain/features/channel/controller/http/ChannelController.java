@@ -14,15 +14,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.Result;
@@ -171,6 +163,70 @@ public class ChannelController {
             result.systemChannel(),
             result.createdAt().toEpochMilli()
         ));
+    }
+
+    /**
+     * 退出频道
+     * 约束：调用方必须是该频道成员，否则拒绝访问。
+     *
+     * <p>请求 {@code DELETE /api/channels/2001}。无请求体。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：频道不存在 20001，要求成员 20007。
+     */
+    @DeleteMapping(value = "/{channelId}", produces = "application/json")
+    @Operation(
+            summary = "退出频道",
+            description = "提交后立即退出频道，关联数据由后台异步清理。返回 200，data 为 null；频道不存在时返回业务码 20001。"
+    )
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> quitChannel(
+        @Parameter(description = "目标频道 ID", example = "2001")
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
+    ) {
+        channelApi.quitChannel(cpPrincipal.accountId(), channelId);
+        return Result.success();
+    }
+
+    /**
+     * 转让频道
+     * 约束：调用方必须是该频道所有者，否则拒绝访问。
+     *
+     * <p>请求 {@code PUT /api/channels/2001/transfer}。JSON 请求体示例 {@code {"new_owner_id": 1001}}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
+     * <p>失败示例：频道不存在 20001，要求所有者 20006，用户不存在 20002，用户不在频道 20003。
+     *
+     * @param channelId 目标频道 ID
+     * @param body 转让请求体，包含新所有者 ID
+     */
+    @PutMapping(value = "/{channelId}/transfer", produces = "application/json")
+    @Operation(
+            summary = "转让频道",
+            description = "提交后频道所有者变更为 new_owner_id，原所有者不再拥有该频道。"
+    )
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
+    public Result<Void> transferChannel(
+        @Parameter(description = "目标频道 ID", example = "2001")
+        @PathVariable
+        @Positive(message = "channelId must be greater than 0")
+        long channelId,
+        @Parameter(description = "转让请求体，包含新所有者 ID", example = "{\"new_owner_id\": 1001}")
+        @RequestBody
+        TransferChannelRequest body,
+        @AuthenticationPrincipal
+        CpPrincipal cpPrincipal
+    ) {
+        long newOwnerId = Long.parseLong(body.newOwner());
+
+        // 数据校验
+        if (newOwnerId <= 0) {
+            throw new IllegalArgumentException("newOwnerId must be greater than 0");
+        }
+        channelApi.transferChannel(cpPrincipal.accountId(), channelId, newOwnerId);
+        return Result.success();
     }
 
     /**
