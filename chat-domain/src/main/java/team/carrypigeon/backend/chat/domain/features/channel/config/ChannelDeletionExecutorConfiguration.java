@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.config;
+package team.carrypigeon.backend.chat.domain.features.channel.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

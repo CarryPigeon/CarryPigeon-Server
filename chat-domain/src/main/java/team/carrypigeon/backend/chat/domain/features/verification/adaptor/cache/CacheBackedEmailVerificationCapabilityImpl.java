@@ -141,6 +141,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
             case REGISTER -> "register a CarryPigeon account";
             case LOGIN -> "sign in to CarryPigeon";
             case CHANGE_EMAIL -> "change your CarryPigeon account email";
+            case RESET_PASSWORD -> "reset your CarryPigeon account password";
         };
         return "Your verification code to " + action + " is: " + code + "\n\n"
                 + "This code will expire in 10 minutes.";
