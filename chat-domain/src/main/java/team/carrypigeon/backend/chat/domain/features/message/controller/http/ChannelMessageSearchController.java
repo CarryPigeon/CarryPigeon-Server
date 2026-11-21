@@ -24,7 +24,7 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageSearchApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.capability.OpaqueCursorCodec;
+import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
 

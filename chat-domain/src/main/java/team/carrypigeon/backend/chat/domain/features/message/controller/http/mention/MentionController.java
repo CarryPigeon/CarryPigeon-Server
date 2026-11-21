@@ -26,7 +26,7 @@ import team.carrypigeon.backend.chat.domain.features.message.controller.http.men
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.UpdateMentionReadStateRequest;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.MentionApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.capability.OpaqueCursorCodec;
+import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 

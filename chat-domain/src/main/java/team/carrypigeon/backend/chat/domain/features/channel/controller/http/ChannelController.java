@@ -24,8 +24,10 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
+import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
 import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
+import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
@@ -39,6 +41,8 @@ import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 @PreAuthorize("isAuthenticated()")
 @Tag(name = "频道", description = "频道基础信息与频道发现能力。")
 public class ChannelController {
+
+    private static final String DISCOVER_CURSOR_SCOPE = "channel_discover";
 
     private final ChannelApi channelApi;
     private final ChannelQueryApi channelQueryApi;
@@ -54,22 +58,22 @@ public class ChannelController {
     /**
      * 查询所有普通频道的公开摘要，系统频道隐藏；发现结果不授予资料或消息读取权限。
      *
-     * <p>请求 {@code GET /api/channels/discover?q=project}。无请求体。
+     * <p>请求 {@code GET /api/channels/discover?q=project&limit=20}。无请求体。
+     * <p>后续页把上一页返回的 {@code next_cursor} 原样传回 {@code cursor}，不要解析或拼接。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code CursorPageResponse<DiscoverChannelResponse>}。
-     * <p>失败示例：查询参数错误 10001。
+     * <p>失败示例：查询参数错误 10001，游标无效 10013。
      */
     @GetMapping(value = "/discover", produces = "application/json")
-    @Operation(summary = "发现频道", description = "按频道 ID 升序发现普通频道，系统频道隐藏。关键词按名称或简介包含匹配；加入频道仍需申请审批，消息仅成员可读。")
+    @Operation(summary = "发现频道", description = "按频道 ID 升序发现普通频道，系统频道隐藏。关键词按名称或简介包含匹配；加入频道仍需申请审批，消息仅成员可读。next_cursor 为不透明游标，必须原样回传。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 CursorPageResponse<DiscoverChannelResponse>，失败时返回五位错误码", useReturnTypeSchema = true))
     public Result<CursorPageResponse<DiscoverChannelResponse>> discoverChannels(
         @Parameter(description = "名称或简介关键词，省略或空白时不过滤")
         @RequestParam(name = "q", required = false)
         @Size(max = 128, message = "q must contain at most 128 characters")
         String keyword,
-        @Parameter(description = "上一页返回的 next_cursor，十进制频道 ID，作为排他下界")
+        @Parameter(description = "上一页返回的 next_cursor，不透明游标，不能解析或拼接")
         @RequestParam(required = false)
-        @Positive(message = "cursor must be greater than 0")
-        Long cursor,
+        String cursor,
         @RequestParam(defaultValue = "20")
         @Min(value = 1, message = "limit must be between 1 and 50")
         @Max(value = 50, message = "limit must be between 1 and 50")
@@ -77,13 +81,19 @@ public class ChannelController {
         @AuthenticationPrincipal
         CpPrincipal principal
     ) {
-        List<DiscoverChannelResult> found = channelQueryApi.discoverChannels(principal.accountId(), keyword, cursor, limit);
+        Long cursorChannelId = OpaqueCursorCodec.decode(DISCOVER_CURSOR_SCOPE, cursor, ChannelProblem.CURSOR_INVALID);
+        List<DiscoverChannelResult> found = channelQueryApi.discoverChannels(
+                principal.accountId(), keyword, cursorChannelId, limit);
         boolean hasMore = found.size() > limit;
         List<DiscoverChannelResult> items = hasMore ? found.subList(0, limit) : found;
+        String nextCursor = hasMore
+                ? OpaqueCursorCodec.encode(DISCOVER_CURSOR_SCOPE, items.getLast().cid())
+                : null;
+
         return Result.success(CursorPageResponse.of(items.stream().map(item -> new DiscoverChannelResponse(
                 Long.toString(item.cid()), item.name(), item.brief(), item.avatar(),
                 item.memberCount(), item.requiresApplication())).toList(),
-                hasMore ? Long.toString(items.getLast().cid()) : null, hasMore));
+                nextCursor, hasMore));
     }
 
     /**
@@ -169,11 +179,11 @@ public class ChannelController {
      * 退出频道
      * 约束：调用方必须是该频道成员，否则拒绝访问。
      *
-     * <p>请求 {@code DELETE /api/channels/2001}。无请求体。
+     * <p>请求 {@code POST /api/channels/2001/quit}。无请求体。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
      * <p>失败示例：频道不存在 20001，要求成员 20007。
      */
-    @DeleteMapping(value = "/{channelId}", produces = "application/json")
+    @PostMapping(value = "/{channelId}/quit", produces = "application/json")
     @Operation(
             summary = "退出频道",
             description = "提交后立即退出频道，关联数据由后台异步清理。返回 200，data 为 null；频道不存在时返回业务码 20001。"
@@ -195,7 +205,7 @@ public class ChannelController {
      * 转让频道
      * 约束：调用方必须是该频道所有者，否则拒绝访问。
      *
-     * <p>请求 {@code PUT /api/channels/2001/transfer}。JSON 请求体示例 {@code {"new_owner_id": 1001}}。
+     * <p>请求 {@code PUT /api/channels/2001/transfer}。JSON 请求体示例 {@code {"new_owner": "1001"}}。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code null}。
      * <p>失败示例：频道不存在 20001，要求所有者 20006，用户不存在 20002，用户不在频道 20003。
      *
@@ -205,7 +215,7 @@ public class ChannelController {
     @PutMapping(value = "/{channelId}/transfer", produces = "application/json")
     @Operation(
             summary = "转让频道",
-            description = "提交后频道所有者变更为 new_owner_id，原所有者不再拥有该频道。"
+            description = "提交后频道所有者变更为 new_owner，原所有者不再拥有该频道。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
     public Result<Void> transferChannel(
@@ -213,7 +223,7 @@ public class ChannelController {
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
         long channelId,
-        @Parameter(description = "转让请求体，包含新所有者 ID", example = "{\"new_owner_id\": 1001}")
+        @Parameter(description = "转让请求体，包含新所有者 ID", example = "{\"new_owner\": \"1001\"}")
         @RequestBody
         TransferChannelRequest body,
         @AuthenticationPrincipal

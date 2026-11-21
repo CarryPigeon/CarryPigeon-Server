@@ -70,9 +70,9 @@ public class FileController {
     /**
      * 申请文件上传授权。
      *
-     * <p>请求 {@code POST /api/files/uploads}。JSON 请求体示例 {@code {"filename":"note.txt","mime_type":"text/plain","size_bytes":3}}。
+     * <p>请求 {@code POST /api/files/uploads}。JSON 请求体示例 {@code {"filename":"note.txt","size_bytes":3,"sha256":"<64-hex>"}}。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code FileUploadResponse}。
-     * <p>失败示例：声明文件过大 40001，配额不足 40004。
+     * <p>失败示例：声明文件过大 40001，sha256 缺失 10001。
      *
      * @param request   上传申请请求
      * @param principal 当前认证主体

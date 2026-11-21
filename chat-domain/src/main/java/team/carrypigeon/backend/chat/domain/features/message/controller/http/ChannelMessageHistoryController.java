@@ -25,7 +25,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessagesBeforeQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetLatestChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
-import team.carrypigeon.backend.chat.domain.features.message.domain.capability.OpaqueCursorCodec;
+import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 
 /**
@@ -61,8 +61,8 @@ public class ChannelMessageHistoryController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages", produces = "application/json")
-    @Operation(summary = "读取最新消息", description = "按频道序号降序返回最新消息；next_cursor 读取更旧消息，sync_cursor 用于 after 增量补拉。旧版游标须重新获取。")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more + sync_cursor 分页对象", useReturnTypeSchema = true))
+    @Operation(summary = "读取最新消息", description = "按频道序号降序返回最新消息；next_cursor 读取更旧消息。")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<ChannelMessageHistoryResponse> getLatestMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
@@ -84,7 +84,7 @@ public class ChannelMessageHistoryController {
     /**
      * 查询频道内更旧消息。
      *
-     * <p>请求 {@code GET /api/channels/2001/messages/before?cursor=Y2hhbm5lbF9tZXNzYWdlc19iZWZvcmVfdjJfMjAwMTo3}。无请求体。
+     * <p>请求 {@code GET /api/channels/2001/messages/before?cursor=<next_cursor>}。无请求体。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelMessageHistoryResponse}。
      * <p>失败示例：游标无效 10013。
      *
@@ -95,13 +95,13 @@ public class ChannelMessageHistoryController {
      */
     @GetMapping(value = "/{channelId}/messages/before", produces = "application/json")
     @Operation(summary = "读取更旧消息", description = "以 cursor 为排他边界继续向更旧方向读取频道消息。")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more + sync_cursor 分页对象", useReturnTypeSchema = true))
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<ChannelMessageHistoryResponse> getMessagesBefore(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
         long channelId,
-        @Parameter(description = "最新页或 before 页返回的 v2 next_cursor，与频道绑定")
+        @Parameter(description = "最新页或 before 页返回的 next_cursor，与频道绑定")
         @RequestParam
         @NotBlank(message = "cursor must not be blank")
         String cursor,
@@ -136,14 +136,14 @@ public class ChannelMessageHistoryController {
      * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}/messages/after", produces = "application/json")
-    @Operation(summary = "读取更新消息", description = "使用 sync_cursor 按频道序号升序补拉；省略 cursor 从头开始。has_more=false 时仍保留 sync_cursor 供轮询。推送可能乱序，不能以最大推送序号跳过补拉。")
-    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more + sync_cursor 分页对象", useReturnTypeSchema = true))
+    @Operation(summary = "读取更新消息", description = "使用 next_cursor 按频道序号升序补拉；省略 cursor 从头开始。")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
     public Result<ChannelMessageHistoryResponse> getMessagesAfter(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
         long channelId,
-        @Parameter(description = "latest 或 after 页返回的 v2 sync_cursor；省略时从头开始")
+        @Parameter(description = "latest 或 after 页返回的 next_cursor；省略时从头开始")
         @RequestParam(required = false)
         String cursor,
         @Parameter(description = "返回条数，范围 1..50", example = "20")

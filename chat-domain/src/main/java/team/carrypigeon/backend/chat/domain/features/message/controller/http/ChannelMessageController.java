@@ -27,9 +27,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 频道消息命令 HTTP 入口。
@@ -53,9 +51,9 @@ public class ChannelMessageController {
     /**
      * 发送消息。
      *
-     * <p>请求 {@code POST /api/channels/2001/messages}。JSON 请求体示例 {@code {"request_id":"d5224614-e2db-4fde-b22a-410337f3c85a","domain":"Core:Text:V1","data":{"content":"Hello"},"mentions":[]}}。
+     * <p>请求 {@code POST /api/channels/2001/messages}。JSON 请求体示例 {@code {"domain":"Core:Text:V1","data":{"content":"Hello"},"mentions":[]}}。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelMessageResponse}。
-     * <p>失败示例：发送请求标识冲突 30003，禁言 30006。
+     * <p>失败示例：禁言 30006，domain 不支持 30008。
      *
      * @param channelId   目标频道 ID
      * @param requestBody 消息体
@@ -64,7 +62,7 @@ public class ChannelMessageController {
     @PostMapping(value = "/{channelId}/messages", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(
         summary = "发送消息",
-        description = "按 canonical envelope 发送频道消息；request_id 必填，同一发送者和频道内重试保持 UUID 不变。同键同载荷返回原消息当前状态，不同载荷返回业务码 30003；幂等记录不自动过期。domain 格式为主分类:子分类:版本号，data 由对应消息处理器校验。"
+        description = "按 canonical envelope 发送频道消息；domain 格式为主分类:子分类:版本号，data 由对应消息处理器校验。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "消息发送成功", useReturnTypeSchema = true))
     public Result<ChannelMessageResponse> sendChannelMessage(

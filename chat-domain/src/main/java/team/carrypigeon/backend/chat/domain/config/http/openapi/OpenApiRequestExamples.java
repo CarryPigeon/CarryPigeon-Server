@@ -82,8 +82,8 @@ final class OpenApiRequestExamples {
             Map.entry("POST /api/files/uploads", jsonExample("申请文件上传", """
                     {
                       "filename": "apifox-note.txt",
-                      "mime_type": "text/plain",
-                      "size_bytes": 128
+                      "size_bytes": 128,
+                      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                     }
                     """)),
             Map.entry("PUT /api/files/uploads/{shareKey}", binaryExample(
@@ -118,7 +118,6 @@ final class OpenApiRequestExamples {
                     """)),
             Map.entry("POST /api/channels/{channelId}/messages", jsonExample("发送文本消息", """
                     {
-                      "request_id": "d5224614-e2db-4fde-b22a-410337f3c85a",
                       "domain": "Core:Text:V1",
                       "data": {
                         "content": "hello from Apifox",
