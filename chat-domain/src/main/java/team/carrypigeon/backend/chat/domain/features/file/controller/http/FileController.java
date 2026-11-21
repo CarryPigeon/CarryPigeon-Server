@@ -2,19 +2,13 @@ package team.carrypigeon.backend.chat.domain.features.file.controller.http;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.annotation.security.PermitAll;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +22,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.security.PermitAll;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.file.config.ServerAvatarProperty;
@@ -86,19 +89,23 @@ public class FileController {
         CpPrincipal principal
     ) {
         FileUploadGrantResult result = fileTransferDomainApi.createUploadGrant(
-                principal.accountId(),
-                request.sizeBytes()
+            principal.accountId(),
+            request.filename(),
+            request.sha256(),
+            request.sizeBytes()
         );
-        return Result.success(new FileUploadResponse(
+        return Result.success(
+            new FileUploadResponse(
                 IdUtil.toString(result.fileId()),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
                         "PUT",
                         result.uploadUrl(),
-                        java.util.Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
+                        Map.of(HttpHeaders.CONTENT_LENGTH, Long.toString(request.sizeBytes())),
                         result.expiresAt().toEpochMilli()
                 )
-        ));
+            )
+        );
     }
 
     /**
@@ -171,10 +178,16 @@ public class FileController {
         FileDownloadResult downloadResult = fileTransferDomainApi.downloadFile(shareKey)
                 .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
         String type = downloadResult.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : downloadResult.contentType();
+        String contentDisposition = ContentDisposition.attachment()
+            .filename(downloadResult.fileName(), StandardCharsets.UTF_8)
+            .build()
+            .toString();
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_TYPE, type)
-                .header(HttpHeaders.CONTENT_LENGTH, Long.toString(downloadResult.size()))
-                .body(new InputStreamResource(downloadResult.content()));
+            .header(HttpHeaders.CONTENT_TYPE, type)
+            .header(HttpHeaders.CONTENT_LENGTH, Long.toString(downloadResult.size()))
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition) // 关键：下载文件名
+            .body(new InputStreamResource(downloadResult.content()));
     }
 
     /**

@@ -41,7 +41,7 @@
         <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
         <checkstyle.version>10.21.3</checkstyle.version>
         <hutool.version>5.8.36</hutool.version>
-        <minio.version>8.5.17</minio.version>
+        <minio.version>9.0.4</minio.version>
     </properties>
 
     <dependencyManagement>

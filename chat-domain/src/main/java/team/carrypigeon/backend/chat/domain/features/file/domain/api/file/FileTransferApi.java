@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.file.domain.api.file;
 
 import java.io.InputStream;
 import java.util.Optional;
+
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileDownloadResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
 
@@ -16,10 +17,12 @@ public interface FileTransferApi {
      * 创建文件上传授权。
      *
      * @param accountId 上传发起账号 ID
+     * @param fileName 上传的文件名
+     * @param sha256 文件sha256值
      * @param sizeBytes 文件大小，单位字节
      * @return 文件上传授权投影
      */
-    FileUploadGrantResult createUploadGrant(long accountId, long sizeBytes);
+    FileUploadGrantResult createUploadGrant(long accountId,String fileName,String sha256, long sizeBytes);
 
     /**
      * 使用已签发 share key 上传文件内容。完成后相同内容重试成功，不同内容或已有写入者返回冲突。

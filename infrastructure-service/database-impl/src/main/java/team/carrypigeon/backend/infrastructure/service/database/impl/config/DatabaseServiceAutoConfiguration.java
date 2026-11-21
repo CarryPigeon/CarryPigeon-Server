@@ -20,11 +20,11 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelReadStateDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.api.service.FileUploadDatabaseService;
+import team.carrypigeon.backend.infrastructure.service.database.api.service.FileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
-import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file.FileUploadDatabaseServiceImpl;
+import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file.FileDatabaseServiceImpl;
 import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.account.AuthAccountDatabaseServiceImpl;
 import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.session.AuthRefreshSessionDatabaseServiceImpl;
 import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.application.ChannelApplicationDatabaseServiceImpl;
@@ -123,9 +123,9 @@ public class DatabaseServiceAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean(FileUploadDatabaseService.class)
-    public FileUploadDatabaseService fileUploadDatabaseService(FileUploadMapper mapper) {
-        return new FileUploadDatabaseServiceImpl(mapper);
+    @ConditionalOnMissingBean(FileDatabaseService.class)
+    public FileDatabaseService fileUploadDatabaseService(FileUploadMapper mapper, DatabaseCache databaseCache) {
+        return new FileDatabaseServiceImpl(mapper, databaseCache);
     }
 
     @Bean

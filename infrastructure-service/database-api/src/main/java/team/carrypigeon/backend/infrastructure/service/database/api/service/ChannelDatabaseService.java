@@ -32,10 +32,6 @@ public interface ChannelDatabaseService {
      */
     Optional<ChannelRecord> findByIdForUpdate(long channelId);
 
-
-
-
-
     /**
      * 批量读取频道记录。
      *

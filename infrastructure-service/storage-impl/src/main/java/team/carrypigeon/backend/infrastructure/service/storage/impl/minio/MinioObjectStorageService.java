@@ -1,12 +1,14 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
-import io.minio.*;
-import io.minio.errors.ErrorResponseException;
-import io.minio.http.Method;
-
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.Map;
 import java.util.Optional;
+
+import io.minio.*;
+import io.minio.errors.ErrorResponseException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.exception.StorageServiceException;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
@@ -24,11 +26,12 @@ public class MinioObjectStorageService implements ObjectStorageService {
     private final MinioClient minioClient;
     private final MinioStorageProperties properties;
     private final TimeProvider timeProvider;
+    private final static long partSize = 1024L * 1024 * 1024; // 200MB，大于你的最大文件
 
     public MinioObjectStorageService(
-            MinioClient minioClient,
-            MinioStorageProperties properties,
-            TimeProvider timeProvider
+        MinioClient minioClient,
+        MinioStorageProperties properties,
+        TimeProvider timeProvider
     ) {
         this.minioClient = minioClient;
         this.properties = properties;
@@ -37,15 +40,20 @@ public class MinioObjectStorageService implements ObjectStorageService {
 
 
     @Override
-    public StorageObject put(String objectKey, InputStream content, long size, String contentType) {
+    public StorageObject put(String objectKey, InputStream content, long size, String contentType, String sha256) {
         try {
+            // sha256 参数是 hex 字符串的话，先转 base64
+            byte[] digest = HexFormat.of().parseHex(sha256);
+            String base64Sha256 = Base64.getEncoder().encodeToString(digest);
             minioClient.putObject(
-                    PutObjectArgs.builder()
-                            .bucket(properties.bucket())
-                            .object(objectKey)
-                            .stream(content, size, -1)
-                            .contentType(contentType)
-                            .build()
+                PutObjectArgs.builder()
+                    .bucket(properties.bucket())
+                    .object(objectKey)
+                    .stream(content, size, partSize)
+                    .checksum(Checksum.Algorithm.SHA256)
+                    .headers(Map.of("x-amz-checksum-sha256", base64Sha256))  // 你的值
+                    .contentType(contentType)
+                    .build()
             );
             return StorageObject.metadata(objectKey, contentType, size);
         } catch (Exception ex) {
@@ -57,22 +65,22 @@ public class MinioObjectStorageService implements ObjectStorageService {
     public Optional<StorageObject> get(String objectKey) {
         try {
             StatObjectResponse stat = minioClient.statObject(
-                    StatObjectArgs.builder()
-                            .bucket(properties.bucket())
-                            .object(objectKey)
-                            .build()
+                StatObjectArgs.builder()
+                    .bucket(properties.bucket())
+                    .object(objectKey)
+                    .build()
             );
             InputStream content = minioClient.getObject(
-                    GetObjectArgs.builder()
-                            .bucket(properties.bucket())
-                            .object(objectKey)
-                            .build()
+                GetObjectArgs.builder()
+                    .bucket(properties.bucket())
+                    .object(objectKey)
+                    .build()
             );
             return Optional.of(new StorageObject(
-                    objectKey,
-                    stat.contentType(),
-                    stat.size(),
-                    Optional.of(content)
+                objectKey,
+                stat.contentType(),
+                stat.size(),
+                Optional.of(content)
             ));
         } catch (ErrorResponseException ex) {
             if ("NoSuchKey".equalsIgnoreCase(ex.errorResponse().code()) || "NoSuchObject".equalsIgnoreCase(ex.errorResponse().code())) {
@@ -92,10 +100,10 @@ public class MinioObjectStorageService implements ObjectStorageService {
     public void delete(String objectKey) {
         try {
             minioClient.removeObject(
-                    RemoveObjectArgs.builder()
-                            .bucket(properties.bucket())
-                            .object(objectKey)
-                            .build()
+                RemoveObjectArgs.builder()
+                    .bucket(properties.bucket())
+                    .object(objectKey)
+                    .build()
             );
         } catch (Exception ex) {
             throw new StorageServiceException("failed to delete storage object: " + objectKey, ex);
@@ -110,12 +118,12 @@ public class MinioObjectStorageService implements ObjectStorageService {
     public PresignedUrl createPresignedUrl(String objectKey, Duration ttlSeconds) {
         try {
             String url = minioClient.getPresignedObjectUrl(
-                    GetPresignedObjectUrlArgs.builder()
-                            .method(Method.GET)
-                            .bucket(properties.bucket())
-                            .object(objectKey)
-                            .expiry((int) ttlSeconds.toSeconds())
-                            .build()
+                GetPresignedObjectUrlArgs.builder()
+                    .method(Http.Method.GET)
+                    .bucket(properties.bucket())
+                    .object(objectKey)
+                    .expiry((int) ttlSeconds.toSeconds())
+                    .build()
             );
             return new PresignedUrl(java.net.URI.create(url), timeProvider.nowInstant().plus(ttlSeconds));
         } catch (Exception ex) {

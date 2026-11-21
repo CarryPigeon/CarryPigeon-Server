@@ -11,6 +11,7 @@ import java.time.Instant;
  * @param shareKey 分享键
  * @param uploadUrl 同源上传 URL
  * @param expiresAt 上传入口过期时间
+ * @param hasSameFile 是否有同样的文件
  */
-public record FileUploadGrantResult(long fileId, String shareKey, String uploadUrl, Instant expiresAt) {
+public record FileUploadGrantResult(long fileId, String shareKey, String uploadUrl, Instant expiresAt,boolean hasSameFile) {
 }

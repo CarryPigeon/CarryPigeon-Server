@@ -5,9 +5,9 @@ import java.util.Objects;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.reference.FileReferenceApi;
-import team.carrypigeon.backend.chat.domain.features.file.domain.model.FileUpload;
+import team.carrypigeon.backend.chat.domain.features.file.domain.model.CPFile;
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
-import team.carrypigeon.backend.chat.domain.features.file.domain.repository.FileUploadRepository;
+import team.carrypigeon.backend.chat.domain.features.file.domain.repository.FileRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
@@ -15,10 +15,10 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 @Service
 public class FileReferenceService implements FileReferenceApi {
     private static final String DOWNLOAD_PATH = "/api/files/download/";
-    private final FileUploadRepository uploads;
+    private final FileRepository uploads;
     private final TimeProvider time;
 
-    public FileReferenceService(FileUploadRepository uploads, TimeProvider time) {
+    public FileReferenceService(FileRepository uploads, TimeProvider time) {
         this.uploads = uploads;
         this.time = time;
     }
@@ -26,13 +26,13 @@ public class FileReferenceService implements FileReferenceApi {
     @Override
     public void replaceAvatarReference(long accountId, String avatarUrl) {
         Long previousId = uploads.avatarFileId(accountId).orElse(null);
-        FileUpload target = referencedUpload(avatarUrl);
+        CPFile target = referencedUpload(avatarUrl);
         Long targetId = target == null ? null : target.fileId();
         // 不同账号可能交换头像；按文件 ID 排序持锁，避免相反顺序锁定两个文件。
         for (Long fileId : Stream.of(previousId, targetId).filter(Objects::nonNull).distinct().sorted().toList()) {
-            FileUpload locked = uploads.findByIdForUpdate(fileId)
+            CPFile locked = uploads.findByIdForUpdate(fileId)
                     .orElseThrow(() -> ProblemException.of(FileProblem.FILE_NOT_FOUND));
-            if (fileId.equals(targetId) && locked.status() != FileUpload.Status.COMPLETED) {
+            if (fileId.equals(targetId) && locked.status() != CPFile.Status.COMPLETED) {
                 throw ProblemException.of(FileProblem.FILE_NOT_FOUND);
             }
         }
@@ -45,7 +45,7 @@ public class FileReferenceService implements FileReferenceApi {
         }
     }
 
-    private FileUpload referencedUpload(String avatarUrl) {
+    private CPFile referencedUpload(String avatarUrl) {
         if (avatarUrl == null || avatarUrl.isBlank()) {
             return null;
         }
@@ -64,7 +64,7 @@ public class FileReferenceService implements FileReferenceApi {
         if (!shareKey.startsWith("shr_")) {
             return null;
         }
-        FileUpload upload = uploads.findByShareKey(shareKey).orElse(null);
+        CPFile upload = uploads.findByShareKey(shareKey).orElse(null);
         if (upload == null && !uri.isAbsolute()) {
             throw ProblemException.of(FileProblem.FILE_NOT_FOUND);
         }

@@ -1,12 +1,14 @@
 # CarryPigeon Backend
 
-CarryPigeon Backend 是一个基于 **Java 25 + Spring Boot** 的开源聊天后端脚手架。
+> 面向小社区与特定场景的自部署 IM 内核：**最小核心、明确约束、插件扩展**。
 
-## 当前状态
+CarryPigeon Backend 是一个基于 **Java 25 + Spring Boot** 的开源聊天后端。它不是 QQ/微信式的通用 IM，也不是开箱即用的完整产品；核心只保留频道聊天的最小闭环，差异化能力由插件补齐。
 
-- 主要目标：稳定聊天内核、HTTP API、标准错误模型、基础鉴权与可替换基础设施边界
-- 当前交付方式：`thin jar + libs` 分发
-- 当前外部依赖：MySQL、Redis、MinIO
+## 适合谁
+
+- 想自己部署、自己掌控数据的小社区、兴趣组、内部团队。
+- 有特定消息类型或外部服务需求，愿意写插件的人。
+- 想要一个 Java/Spring 底座，而不是一整套不可改的 IM 平台。
 
 ## 主要特性
 

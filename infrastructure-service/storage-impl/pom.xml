@@ -10,7 +10,6 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>storage-impl</artifactId>
-    <version>1.0.0</version>
     <name>storage-impl</name>
     <description>storage-impl</description>
     <packaging>jar</packaging>
@@ -26,6 +25,17 @@
         <dependency>
             <groupId>io.minio</groupId>
             <artifactId>minio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>5.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp-jvm</artifactId>
+            <!-- 建议与你的 MinIO 版本所依赖的 OkHttp 版本保持一致，例如 5.5.0 -->
+            <version>5.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -3,6 +3,7 @@ package team.carrypigeon.backend.infrastructure.service.storage.api.service;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Optional;
+
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.PresignedUrl;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 
@@ -20,8 +21,9 @@ public interface ObjectStorageService {
      * @param content   对象内容输入流
      * @param size      对象内容大小
      * @param contentType 对象内容类型
+     * @param sha256 对象内容的sha256
      */
-    StorageObject put(String objectKey, InputStream content, long size, String contentType);
+    StorageObject put(String objectKey, InputStream content, long size, String contentType,String sha256);
 
     /**
      * 读取对象元信息及内容。
