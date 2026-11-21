@@ -49,6 +49,15 @@ public interface ChannelRepository {
      * @param channelIds 频道 ID 集合
      * @return 命中的频道列表；不保证与入参顺序一致
      */
+    Collection<Channel> findByIds(List<Long> channelIds);
+
+    /**
+     * 按频道 ID 集合批量查询频道。
+     * 约束：调用方需保证集合非空，空集合会产生无意义的空 IN 条件。
+     *
+     * @param channelIds 频道 ID 集合
+     * @return 命中的频道列表；不保证与入参顺序一致
+     */
     List<Channel> listByIds(Collection<Long> channelIds);
 
     /**
@@ -87,4 +96,5 @@ public interface ChannelRepository {
      * @param channelId 频道 ID
      */
     void delete(long channelId);
+
 }

@@ -50,6 +50,13 @@ public class DatabaseBackedChannelRepository implements ChannelRepository {
     }
 
     @Override
+    public Collection<Channel> findByIds(List<Long> channelIds) {
+        return channelDatabaseService.findByIds(channelIds).stream()
+                .map(this::toDomainModel)
+                .toList();
+    }
+
+    @Override
     public List<Channel> listByIds(Collection<Long> channelIds) {
         // 注意：本适配器不处理空集合，调用方需自行拦截，否则会下传空 IN 条件
         return channelDatabaseService.findByIds(List.copyOf(channelIds)).stream()

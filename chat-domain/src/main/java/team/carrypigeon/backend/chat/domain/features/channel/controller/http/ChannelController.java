@@ -27,10 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
 import team.carrypigeon.backend.chat.domain.config.http.Result;
 import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.ChannelResponseBody;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.CreateChannelRequest;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.DiscoverChannelResponse;
-import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.UpdateChannelProfileRequest;
+import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
@@ -150,10 +147,9 @@ public class ChannelController {
      *
      * <p>请求 {@code GET /api/channels/2001}。无请求体。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelResponseBody}。
-     * <p>失败示例：频道不存在 20001，非成员 20002。
+     * <p>失败示例：频道不存在 20001
      *
      * @param channelId 目标频道 ID
-     * @param cpPrincipal 当前认证用户
      */
     @GetMapping(value = "/{channelId}", produces = "application/json")
     @Operation(
@@ -165,17 +161,51 @@ public class ChannelController {
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
-        long channelId,
-        @AuthenticationPrincipal
-        CpPrincipal cpPrincipal
+        long channelId
     ) {
-        ChannelResult result = channelApi.getChannelById(cpPrincipal.accountId(), channelId);
+        ChannelResult result = channelApi.getChannelById(channelId);
         return Result.success(new ChannelResponseBody(
             IdUtil.toString(result.channelId()),
             result.name(),
             result.brief(),
             result.systemChannel(),
             result.createdAt().toEpochMilli()
+        ));
+    }
+
+    /**
+     * 按频道 ID 列表返回频道资料。
+     * 约束：调用方必须是该频道成员，否则拒绝访问。
+     *
+     * <p>请求 {@code POST /api/channels/list}。JSON 请求体示例 {@code [2001, 2002]}。
+     * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelListResponseBody}。
+     * <p>失败示例：频道不存在 20001
+     *
+     * @param channelIds 目标频道 ID 列表
+     */
+    @PostMapping(value = "/list", produces = "application/json")
+    @Operation(
+            summary = "获取频道列表",
+            description = "按频道 ID 列表返回频道名称、简介、系统频道标记与创建时间。"
+    )
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为频道详情数组，含 cid、name、brief、system_channel、created_at", useReturnTypeSchema = true))
+    public Result<ChannelListResponseBody> getChannelByIds(
+        @Parameter(description = "目标频道 ID 列表", example = "[2001, 2002]")
+        @RequestBody
+        List<Long> channelIds
+    ) {
+        List<ChannelResult> results = channelApi.getChannelByIds(channelIds);
+        return Result.success(new ChannelListResponseBody(
+            results.size(),
+            results.stream()
+                .map(channel -> new ChannelResponseBody(
+                    IdUtil.toString(channel.channelId()),
+                    channel.name(),
+                    channel.brief(),
+                    channel.systemChannel(),
+                    channel.createdAt().toEpochMilli()
+                ))
+                .toList()
         ));
     }
 

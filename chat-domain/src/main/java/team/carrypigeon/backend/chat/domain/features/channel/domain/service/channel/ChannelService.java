@@ -82,14 +82,17 @@ public class ChannelService implements ChannelApi {
     }
 
     @Override
-    public ChannelResult getChannelById(long accountId, long channelId) {
-        Channel channel = channelRepository.findByIdForAuthorization(channelId)
+    public ChannelResult getChannelById(long channelId) {
+        Channel channel = channelRepository.findById(channelId)
             .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-        // 可见性校验与列表保持同一标准：只要不存在成员关系就拒绝，不为系统频道放开
-        if (channelMemberRepository.findByRelationForAuthorization(channel.id(), accountId).isEmpty()) {
-            throw ProblemException.of(ChannelProblem.READ_FORBIDDEN);
-        }
         return ChannelResult.from(channel);
+    }
+
+    @Override
+    public List<ChannelResult> getChannelByIds(List<Long> channelIds) {
+        return channelRepository.findByIds(channelIds).stream()
+            .map(ChannelResult::from)
+            .toList();
     }
 
     @Override

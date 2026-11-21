@@ -4,6 +4,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 
+import java.util.List;
+
 /**
  * 频道核心领域 API。
  * 职责：暴露频道列表与详情读取、频道创建、删除与资料更新能力。
@@ -23,11 +25,10 @@ public interface ChannelApi {
     /**
      * 查询当前账号可见的单个频道。
      *
-     * @param accountId 当前账号 ID，用于可见性校验
      * @param channelId 频道 ID
      * @return 频道投影
      */
-    ChannelResult getChannelById(long accountId, long channelId);
+    ChannelResult getChannelById(long channelId);
 
     /**
      * 创建普通频道并把创建者设为所有者。
@@ -58,4 +59,11 @@ public interface ChannelApi {
      * @param brief 频道简介
      */
     void updateChannelProfile(long operatorAccountId, long channelId, String name, String brief);
+
+    /**
+     * 根据 ID 列表获取频道列表信息
+     * @param channelIds 频道 ID 列表
+     * @return 频道列表
+     */
+    List<ChannelResult> getChannelByIds(List<Long> channelIds);
 }
