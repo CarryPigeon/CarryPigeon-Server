@@ -3,14 +3,12 @@ package team.carrypigeon.backend.chat.domain.features.message.controller.http.dt
 import java.util.List;
 
 /**
- * 消息方向查询响应。
- * @param items 当前页消息，latest/before 按消息 ID 降序，after 按升序
- * @param nextCursor 当前方向下一页游标，无更多消息时为空
- * @param hasMore 当前方向是否还有更多消息
+ * 频道消息历史响应。
+ * @param items 按消息 ID 降序排列的当前页消息
+ * @param hasMore 是否还有更旧的消息
  */
 public record ChannelMessageHistoryResponse(
         List<ChannelMessageResponse> items,
-        String nextCursor,
         boolean hasMore
 ) {
 }

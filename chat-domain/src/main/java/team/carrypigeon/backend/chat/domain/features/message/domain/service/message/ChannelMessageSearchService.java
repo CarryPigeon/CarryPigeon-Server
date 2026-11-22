@@ -48,7 +48,6 @@ public class ChannelMessageSearchService implements ChannelMessageSearchApi {
         List<ChannelMessageResult> items = pageMessages.stream()
                 .map(ChannelMessageResult::of)
                 .toList();
-        Long nextCursor = hasMore ? items.getLast().messageId() : null;
-        return new ChannelMessagePage(items, nextCursor, hasMore);
+        return new ChannelMessagePage(items, hasMore);
     }
 }

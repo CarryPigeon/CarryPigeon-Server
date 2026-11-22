@@ -7,18 +7,14 @@ import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.ChannelContextApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.context.result.ChannelContext;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageHistoryApi;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessagesAfterQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetChannelMessagesBeforeQuery;
-import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.GetLatestChannelMessagesQuery;
+import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.ListChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
 
 /**
- * 频道消息方向查询领域实现。
- * 职责：分别实现最新、更旧和更新三个固定方向的消息查询。
- * 边界：不承载锚点上下文、搜索、发送或撤回。
+ * 校验频道成员身份并按消息 ID 降序读取频道历史。
  */
 @Service
 public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
@@ -35,48 +31,18 @@ public class ChannelMessageHistoryService implements ChannelMessageHistoryApi {
     }
 
     @Override
-    public ChannelMessagePage getLatestMessages(GetLatestChannelMessagesQuery query) {
-        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
-        List<CPChannelMessage> messages = messageRepository.findLatestByChannelId(
-                channel.channelId(),
-                query.limit() + 1
-        );
-        return toPage(messages, query.limit());
-    }
-
-    @Override
-    public ChannelMessagePage getMessagesBefore(GetChannelMessagesBeforeQuery query) {
-        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
-        List<CPChannelMessage> messages = messageRepository.findBeforeByChannelId(
-                channel.channelId(),
-                query.cursorMessageId(),
-                query.limit() + 1
-        );
-        return toPage(messages, query.limit());
-    }
-
-    @Override
-    public ChannelMessagePage getMessagesAfter(GetChannelMessagesAfterQuery query) {
-        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
-        List<CPChannelMessage> messages = messageRepository.findAfterByChannelId(
-                channel.channelId(),
-                query.cursorMessageId(),
-                query.limit() + 1
-        );
-        return toPage(messages, query.limit());
-    }
-
-    /**
-     * 把仓储返回的探测结果裁剪为固定页大小。
-     * 约束：after 查询的仓储结果按消息 ID 升序，latest/before 按降序；本方法只做数量裁剪，不改变方向。
-     */
-    private ChannelMessagePage toPage(List<CPChannelMessage> messages, int limit) {
-        boolean hasMore = messages.size() > limit;
-        List<CPChannelMessage> pageMessages = hasMore ? messages.subList(0, limit) : messages;
-        List<ChannelMessageResult> items = pageMessages.stream()
+    public ChannelMessagePage listMessages(long accountId, ListChannelMessagesQuery query) {
+        ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), accountId);
+        // 多取一条判断是否还有更旧的消息，避免为分页额外查询总数。
+        int fetchLimit = query.limit() + 1;
+        List<CPChannelMessage> messages = query.beforeMessageId() == null
+                ? messageRepository.findLatestByChannelId(channel.channelId(), fetchLimit)
+                : messageRepository.findBeforeByChannelId(channel.channelId(), query.beforeMessageId(), fetchLimit);
+        boolean hasMore = messages.size() > query.limit();
+        List<ChannelMessageResult> items = messages.stream()
+                .limit(query.limit())
                 .map(ChannelMessageResult::of)
                 .toList();
-        Long nextCursor = hasMore ? items.getLast().messageId() : null;
-        return new ChannelMessagePage(items, nextCursor, hasMore);
+        return new ChannelMessagePage(items, hasMore);
     }
 }

@@ -106,7 +106,7 @@ public class ChannelMessageSearchController {
         );
         return Result.success(CursorPageResponse.of(
             page.items().stream().map(ChannelMessageResponse::from).toList(),
-            OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE + channelId, page.nextCursor()),
+            OpaqueCursorCodec.encode(SEARCH_CURSOR_SCOPE + channelId, page.hasMore() ? page.items().getLast().messageId() : null),
             page.hasMore()
         ));
     }

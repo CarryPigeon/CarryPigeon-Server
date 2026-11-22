@@ -45,7 +45,9 @@ public class ChannelMessageContextService implements ChannelMessageContextApi {
     @Override
     public ChannelMessageContext getMessagesAround(GetChannelMessagesAroundQuery query) {
         ChannelContext channel = channelContextApi.requireMemberContext(query.channelId(), query.accountId());
+        // 只有本频道的消息可以作为上下文锚点。
         CPChannelMessage anchorMessage = messageRepository.findById(query.anchorMessageId())
+            .filter(message -> message.channelId() == channel.channelId())
             .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
 
         Stream<CPChannelMessage> before = query.before() == 0
