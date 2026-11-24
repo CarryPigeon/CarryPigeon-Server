@@ -47,4 +47,6 @@ public class ServerController {
     public Result<ServerDiscoveryResponse> getServerDiscoveryDocument() {
         return Result.success(ServerDiscoveryResponse.from(serverEntranceDomainApi.getServerDiscoveryDocument()));
     }
+
+
 }

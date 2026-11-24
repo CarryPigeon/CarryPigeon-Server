@@ -1,9 +1,12 @@
 package team.carrypigeon.backend.chat.domain.features.server.controller.http.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import java.util.List;
 
+import team.carrypigeon.backend.chat.domain.features.server.config.PluginPropertyItem;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerDiscoveryDocument;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * `/api/server` 公开发现响应。
@@ -19,7 +22,9 @@ public record ServerDiscoveryResponse(
         @Schema(description = "实时通道地址", example = "ws://127.0.0.1:18080/api/ws")
         String wsUrl,
         @Schema(description = "服务端当前时间（epoch 毫秒）", example = "1700000000000")
-        long serverTime
+        long serverTime,
+        @Schema(description = "服务端插件列表")
+        List<PluginPropertyItem> plugins
 ) {
 
     /**
@@ -30,11 +35,12 @@ public record ServerDiscoveryResponse(
      */
     public static ServerDiscoveryResponse from(ServerDiscoveryDocument document) {
         return new ServerDiscoveryResponse(
-                document.serverId(),
-                document.name(),
-                document.brief(),
-                document.wsUrl(),
-                document.serverTime()
+            document.serverId(),
+            document.name(),
+            document.brief(),
+            document.wsUrl(),
+            document.serverTime(),
+            Arrays.stream(document.plugins()).map(ServerPluginItem::from).toList()
         );
     }
 }
