@@ -38,16 +38,6 @@ public class CPChannelMessageDispatcher {
                 }
 
                 @Override
-                public int status() {
-                    return 404;
-                }
-
-                @Override
-                public String reason() {
-                    return "no message handler for domain: " + domain;
-                }
-
-                @Override
                 public String message() {
                     return "no message handler for domain: " + domain;
                 }

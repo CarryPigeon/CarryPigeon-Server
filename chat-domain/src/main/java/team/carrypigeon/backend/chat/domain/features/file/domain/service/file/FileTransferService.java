@@ -161,7 +161,7 @@ public class FileTransferService implements FileTransferApi {
             }
             AuditLogs.success("file.upload", accountId, "file_id", upload.fileId(), "size_bytes", sizeBytes);
         } catch (ProblemException exception) {
-            AuditLogs.failure("file.upload", accountId, exception.reason());
+            AuditLogs.failure("file.upload", accountId, exception.mapping().message());
             throw exception;
         }
     }

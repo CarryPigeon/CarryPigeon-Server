@@ -30,7 +30,7 @@ public class EmailVerificationService implements EmailVerificationApi {
             cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
             AuditLogs.success("auth.code_request_accepted", accountId, "purpose", purpose);
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.code_request_accepted", accountId, exception.reason(), "purpose", purpose);
+            AuditLogs.failure("auth.code_request_accepted", accountId, exception.mapping().message(), "purpose", purpose);
             throw exception;
         }
     }

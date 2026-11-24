@@ -88,7 +88,7 @@ public class AuthAccountService implements AuthAccountApi {
             AuditLogs.success("auth.register", result.accountId());
             return result;
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.register", null, exception.reason());
+            AuditLogs.failure("auth.register", null, exception.mapping().message());
             throw exception;
         }
     }
@@ -137,7 +137,7 @@ public class AuthAccountService implements AuthAccountApi {
             });
             AuditLogs.success("auth.email_change", accountId);
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.email_change", accountId, exception.reason());
+            AuditLogs.failure("auth.email_change", accountId, exception.mapping().message());
             throw exception;
         }
     }
@@ -163,7 +163,7 @@ public class AuthAccountService implements AuthAccountApi {
             });
             AuditLogs.success("auth.password_change", accountId);
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.password_change", accountId, exception.reason());
+            AuditLogs.failure("auth.password_change", accountId, exception.mapping().message());
             throw exception;
         }
     }

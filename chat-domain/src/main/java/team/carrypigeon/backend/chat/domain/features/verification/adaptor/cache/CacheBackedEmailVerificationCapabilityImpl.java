@@ -124,7 +124,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         if (failure == null) {
             AuditLogs.success("auth.code_delivery", accountId, "challenge_id", challengeId, "purpose", purpose);
         } else {
-            AuditLogs.failure("auth.code_delivery", accountId, VerificationProblem.EMAIL_DELIVERY_FAILED.reason(),
+            AuditLogs.failure("auth.code_delivery", accountId, VerificationProblem.EMAIL_DELIVERY_FAILED.message(),
                     "challenge_id", challengeId, "purpose", purpose);
         }
         try {

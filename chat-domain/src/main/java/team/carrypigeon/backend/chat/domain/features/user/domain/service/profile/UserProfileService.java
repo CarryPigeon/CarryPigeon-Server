@@ -116,7 +116,7 @@ public class UserProfileService implements UserProfileApi {
             });
             AuditLogs.success("user.profile_update", operatorAccountId);
         } catch (ProblemException exception) {
-            AuditLogs.failure("user.profile_update", operatorAccountId, exception.reason());
+            AuditLogs.failure("user.profile_update", operatorAccountId,exception.getMessage());
             throw exception;
         }
     }

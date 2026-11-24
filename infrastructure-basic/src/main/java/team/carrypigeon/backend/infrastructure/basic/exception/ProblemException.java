@@ -106,24 +106,6 @@ public class ProblemException extends RuntimeException {
     }
 
     /**
-     * 响应状态码，等价于 {@code mapping().status()}。
-     *
-     * @return 响应状态码
-     */
-    public int status() {
-        return mapping.status();
-    }
-
-    /**
-     * 对外原因，等价于 {@code mapping().reason()}。
-     *
-     * @return 对外原因
-     */
-    public String reason() {
-        return mapping.reason();
-    }
-
-    /**
      * 结构化明细。
      *
      * @return 明细，缺失时为 null

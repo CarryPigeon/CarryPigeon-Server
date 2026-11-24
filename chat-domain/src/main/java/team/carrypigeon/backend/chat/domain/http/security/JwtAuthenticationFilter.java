@@ -70,18 +70,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              result = authTokenApi.authenticate(token);
         } catch (ProblemException exception) {
             SecurityContextHolder.clearContext();
-            if (exception.status() >= 500) {
-                log.error("HTTP authentication failed, method={}, reason={}",
-                        request.getMethod(), exception.reason(), exception);
-            } else {
-                log.info("HTTP authentication rejected, method={}, reason={}",
-                        request.getMethod(), exception.reason());
-            }
+            log.warn("HTTP authentication failed, method={}, error={}", request.getMethod(), exception.mapping().message());
             errors.write(request, response, exception);
             return;
         } catch (RuntimeException exception) {
             SecurityContextHolder.clearContext();
-            log.error("HTTP authentication failed unexpectedly, method={}", request.getMethod(), exception);
+            log.warn("HTTP authentication failed unexpectedly, method={}", request.getMethod(), exception);
             errors.write(request, response, exception);
             return;
         }

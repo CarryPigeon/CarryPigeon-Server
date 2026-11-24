@@ -1,7 +1,5 @@
 package team.carrypigeon.backend.chat.domain.http.advice;
 
-import java.util.Map;
-
 import com.fasterxml.jackson.core.exc.StreamReadException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,24 +45,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProblemException.class)
     public ResponseEntity<ErrorResult> problem(ProblemException ex, HttpServletRequest request) {
-        if (ex.status() >= 500) {
-            log.error("Dependency or internal failure: {}", ex.mapping(), ex);
-        }
-        if (ex.mapping() == FileProblem.LENGTH_REQUIRED) {
-            return failure(411, 10007, ex.mapping().message());
-        }
-        if (ex.mapping() == FileProblem.FILE_TOO_LARGE
-            && "/api/files/uploads/{shareKey}".equals(pattern(request))) {
-            return failure(413, 10008, "Request payload is too large.");
-        }
-        HttpHeaders headers = new HttpHeaders();
-        Map<String, Object> details = ex.details();
-        if (ex.status() == 429 && details != null && details.get("retry_after_seconds") instanceof Number seconds) {
-            headers.set(HttpHeaders.RETRY_AFTER, Long.toString(seconds.longValue()));
-        }
-        // 运维异常可能包含文件路径或驱动信息，只输出领域定义的安全默认文案。
-        String message = ex.status() >= 500 ? ex.mapping().message() : ex.getMessage();
-        return failure(businessStatus(request, ex.status()), ex.mapping().code(), message, headers);
+        //TODO 重写
+        return failure(businessStatus(request,200), ex.mapping().code(), ex.getMessage(), new HttpHeaders());
     }
 
     @ExceptionHandler({AuthenticationException.class, AccessDeniedException.class})

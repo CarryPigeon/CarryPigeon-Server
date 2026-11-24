@@ -175,7 +175,7 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
         if (exception instanceof ProblemException problemException) {
             writeErrorAndCloseIfUnauthenticated(
                     context, attributes, request,
-                    problemException.status(), safeMessage(problemException.getMessage()));
+                    problemException.mapping().code(), safeMessage(problemException.getMessage()));
             return;
         }
         writeErrorAndCloseIfUnauthenticated(
@@ -236,16 +236,6 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
         String requestType = request == null ? null : request.type();
         if (exception instanceof RealtimeProtocolException protocolException) {
             log.info("Realtime frame rejected, type={}, reason={}", requestType, protocolException.reason());
-            return;
-        }
-        if (exception instanceof ProblemException problemException) {
-            if (problemException.status() >= 500) {
-                log.error("Realtime frame failed, type={}, reason={}",
-                        requestType, problemException.reason(), problemException);
-            } else {
-                log.info("Realtime frame rejected, type={}, reason={}",
-                        requestType, problemException.reason());
-            }
             return;
         }
         log.warn("Realtime frame failed, type={}", requestType, exception);

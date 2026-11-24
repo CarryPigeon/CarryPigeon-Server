@@ -107,7 +107,7 @@ public class AuthSessionService implements AuthTokenApi {
                 tokenPair.refreshTokenExpiresAt()
             );
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.login", null, exception.reason(), "method", "password");
+            AuditLogs.failure("auth.login", null, exception.mapping().message(), "method", "password");
             throw exception;
         }
     }
@@ -133,7 +133,7 @@ public class AuthSessionService implements AuthTokenApi {
                 tokenPair.refreshTokenExpiresAt()
             );
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.login", null, exception.reason(), "method", "email");
+            AuditLogs.failure("auth.login", null, exception.mapping().message(), "method", "email");
             throw exception;
         }
     }
@@ -187,7 +187,7 @@ public class AuthSessionService implements AuthTokenApi {
             AuditLogs.success("auth.refresh", result.accountId());
             return result;
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.refresh", null, exception.reason());
+            AuditLogs.failure("auth.refresh", null, exception.mapping().message());
             throw exception;
         }
     }
@@ -219,7 +219,7 @@ public class AuthSessionService implements AuthTokenApi {
             long accountId = revokedAccountId.get();
             AuditLogs.success("auth.revoke", accountId == 0 ? null : accountId);
         } catch (ProblemException exception) {
-            AuditLogs.failure("auth.revoke", null, exception.reason());
+            AuditLogs.failure("auth.revoke", null, exception.mapping().message());
             throw exception;
         }
     }
