@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 
 /**
@@ -46,7 +46,7 @@ public interface ChannelApplicationDatabaseService {
      * @param page 分页参数
      * @return 分页申请记录
      */
-    PageResult<ChannelApplicationRecord> page(PageQuery page);
+    DatabasePageResult<ChannelApplicationRecord> page(DatabasePageQuery page);
 
     /**
      * 分页查询频道下的申请记录。
@@ -56,7 +56,7 @@ public interface ChannelApplicationDatabaseService {
      * @param page 分页参数
      * @return 分页申请记录
      */
-    PageResult<ChannelApplicationRecord> pageByChannelId(long channelId, PageQuery page);
+    DatabasePageResult<ChannelApplicationRecord> pageByChannelId(long channelId, DatabasePageQuery page);
 
     /**
      * 按申请人账户 ID 分页查询申请记录。
@@ -65,7 +65,7 @@ public interface ChannelApplicationDatabaseService {
      * @param page 分页参数
      * @return 分页申请记录
      */
-    PageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, PageQuery page);
+    DatabasePageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, DatabasePageQuery page);
 
     /**
      * 写入新的申请记录。

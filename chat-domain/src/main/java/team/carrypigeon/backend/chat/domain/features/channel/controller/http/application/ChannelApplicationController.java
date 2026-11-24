@@ -30,8 +30,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.controller.http.app
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
 import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道申请 HTTP 入口。

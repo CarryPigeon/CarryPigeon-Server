@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 
 /**
@@ -40,7 +40,7 @@ public interface UserProfileDatabaseService {
      * @param page 分页参数
      * @return 分页资料记录
      */
-    PageResult<UserProfileRecord> page(PageQuery page);
+    DatabasePageResult<UserProfileRecord> page(DatabasePageQuery page);
 
     /**
      * 写入新的用户资料记录。

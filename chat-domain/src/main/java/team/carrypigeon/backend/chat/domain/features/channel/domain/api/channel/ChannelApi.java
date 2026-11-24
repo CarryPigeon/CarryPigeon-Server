@@ -1,8 +1,8 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 import java.util.List;
 

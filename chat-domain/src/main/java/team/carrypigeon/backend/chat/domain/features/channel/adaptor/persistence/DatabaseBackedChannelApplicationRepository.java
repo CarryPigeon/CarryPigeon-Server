@@ -7,9 +7,11 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplicationStatus;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelApplicationRepository;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelApplicationDatabaseService;
 
 /**
@@ -33,8 +35,8 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
 
     @Override
     public PageResult<ChannelApplication> page(long channelId, PageQuery page) {
-        PageResult<ChannelApplicationRecord> result =
-                channelApplicationDatabaseService.pageByChannelId(channelId, page);
+        DatabasePageQuery query = new DatabasePageQuery(page.page(), page.pageSize());
+        DatabasePageResult<ChannelApplicationRecord> result = channelApplicationDatabaseService.pageByChannelId(channelId, query);
         return new PageResult<>(
                 result.items().stream().map(this::toDomain).toList(),
                 result.page(),
@@ -67,7 +69,8 @@ public class DatabaseBackedChannelApplicationRepository implements ChannelApplic
 
     @Override
     public PageResult<ChannelApplication> pageMe(long applicantId, PageQuery page) {
-        PageResult<ChannelApplicationRecord> pageResult = channelApplicationDatabaseService.pageByApplicantAccountId(applicantId, page);
+        DatabasePageQuery query = new DatabasePageQuery(page.page(), page.pageSize());
+        DatabasePageResult<ChannelApplicationRecord> pageResult = channelApplicationDatabaseService.pageByApplicantAccountId(applicantId, query);
         return new PageResult<>(
             pageResult.items().stream().map(this::toDomain).toList(),
             pageResult.page(),

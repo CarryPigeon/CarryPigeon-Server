@@ -9,8 +9,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
@@ -163,13 +163,13 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
      * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
      */
     @Override
-    public PageResult<ChannelMemberRecord> page(PageQuery query) {
+    public DatabasePageResult<ChannelMemberRecord> page(DatabasePageQuery query) {
         IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelMemberEntity>()
                         .orderByAsc(ChannelMemberEntity::getMemberId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),
@@ -250,7 +250,7 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
      * 边界：分页键空间无界且复用低，不属于当前缓存覆盖范围。
      */
     @Override
-    public PageResult<ChannelMemberRecord> pageByAccountId(long accountId, PageQuery query) {
+    public DatabasePageResult<ChannelMemberRecord> pageByAccountId(long accountId, DatabasePageQuery query) {
         IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelMemberEntity>()
@@ -259,7 +259,7 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
                         .exists("SELECT 1 FROM chat_channel c WHERE c.channel_id = chat_channel_member.channel_id")
                         .orderByDesc(ChannelMemberEntity::getChannelId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),
@@ -272,14 +272,14 @@ public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseSe
      * 边界：分页键空间无界且复用低，不属于当前缓存覆盖范围。
      */
     @Override
-    public PageResult<ChannelMemberRecord> pageByChannelId(long channelId, PageQuery query) {
+    public DatabasePageResult<ChannelMemberRecord> pageByChannelId(long channelId, DatabasePageQuery query) {
         IPage<ChannelMemberEntity> result = channelMemberMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelMemberEntity>()
                         .eq(ChannelMemberEntity::getChannelId, channelId)
                         .orderByDesc(ChannelMemberEntity::getMemberId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelMemberEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

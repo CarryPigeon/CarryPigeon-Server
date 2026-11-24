@@ -56,7 +56,7 @@ public final class RealtimeFrameCodec {
                     error.requestType() + ERROR_TYPE_SUFFIX,
                     error.requestId(),
                     null,
-                    new ErrorBody(error.reason(), error.message())
+                    new ErrorBody(error.code(), error.message())
             ));
         };
     }
@@ -96,9 +96,9 @@ public final class RealtimeFrameCodec {
     /**
      * 错误帧载荷。
      *
-     * @param reason 稳定错误原因
+     * @param code 错误码
      * @param message 面向客户端的错误消息
      */
-    private record ErrorBody(String reason, String message) {
+    private record ErrorBody(int code, String message) {
     }
 }

@@ -10,8 +10,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthAccountRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthAccountDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
@@ -172,13 +172,13 @@ public class AuthAccountDatabaseServiceImpl implements AuthAccountDatabaseServic
      * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
      */
     @Override
-    public PageResult<AuthAccountRecord> page(PageQuery query) {
+    public DatabasePageResult<AuthAccountRecord> page(DatabasePageQuery query) {
         IPage<AuthAccountEntity> result = authAccountMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<AuthAccountEntity>()
                         .orderByAsc(AuthAccountEntity::getId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(AuthAccountEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

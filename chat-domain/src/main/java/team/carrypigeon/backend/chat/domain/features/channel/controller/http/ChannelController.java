@@ -28,8 +28,8 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.Chan
 import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.chat.domain.shared.cursor.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.cursor.OpaqueCursorCodec;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道基础 HTTP 入口。

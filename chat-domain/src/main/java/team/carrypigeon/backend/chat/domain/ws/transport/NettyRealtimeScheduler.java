@@ -48,7 +48,8 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
             Channel channel = context.channel();
             if (channel.isActive() && attributes.getAccountId() == null) {
                 log.info("Realtime authentication timeout, channelId={}", channel.id().asShortText());
-                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", "authentication_timeout", "authentication frame was not received in time"))))
+                //TODO 错误吗规范
+                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "authentication frame was not received in time"))))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), timeoutSeconds, TimeUnit.SECONDS);
@@ -67,7 +68,8 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
                     && expiresAt.equals(currentTokenExpiresAt)) {
                 log.info("Realtime access token expired, channelId={}, uid={}",
                         channel.id().asShortText(), attributes.getAccountId());
-                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", "token_expired", "access token is expired"))))
+                //TODO 错误码规范
+                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "access token is expired"))))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), delayMillis, TimeUnit.MILLISECONDS);

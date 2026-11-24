@@ -11,8 +11,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.AuthRefreshSessionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.AuthRefreshSessionDatabaseService;
 
@@ -97,13 +97,13 @@ public class AuthRefreshSessionDatabaseServiceImpl implements AuthRefreshSession
      * 分页查询刷新会话记录。
      */
     @Override
-    public PageResult<AuthRefreshSessionRecord> page(PageQuery query) {
+    public DatabasePageResult<AuthRefreshSessionRecord> page(DatabasePageQuery query) {
         IPage<AuthRefreshSessionEntity> result = authRefreshSessionMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<AuthRefreshSessionEntity>()
                         .orderByAsc(AuthRefreshSessionEntity::getId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(AuthRefreshSessionEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

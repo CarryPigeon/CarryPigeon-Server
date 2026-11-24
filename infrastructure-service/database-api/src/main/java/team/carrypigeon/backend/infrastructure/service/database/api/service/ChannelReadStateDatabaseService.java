@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateKey;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelReadStateRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelUnreadRecord;
@@ -57,7 +57,7 @@ public interface ChannelReadStateDatabaseService {
      * @param page 分页参数
      * @return 分页已读状态记录
      */
-    PageResult<ChannelReadStateRecord> page(PageQuery page);
+    DatabasePageResult<ChannelReadStateRecord> page(DatabasePageQuery page);
 
     /**
      * 写入新的已读状态记录。

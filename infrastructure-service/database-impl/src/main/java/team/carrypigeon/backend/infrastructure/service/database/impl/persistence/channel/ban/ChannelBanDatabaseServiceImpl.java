@@ -8,8 +8,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Transactional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
@@ -56,14 +56,14 @@ public class ChannelBanDatabaseServiceImpl implements ChannelBanDatabaseService 
     }
 
     @Override
-    public PageResult<ChannelBanRecord> pageByChannelId(long channelId, PageQuery query) {
+    public DatabasePageResult<ChannelBanRecord> pageByChannelId(long channelId, DatabasePageQuery query) {
         IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelBanEntity>()
                         .eq(ChannelBanEntity::getChannelId, channelId)
                         .orderByDesc(ChannelBanEntity::getBanId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelBanEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),
@@ -149,13 +149,13 @@ public class ChannelBanDatabaseServiceImpl implements ChannelBanDatabaseService 
     }
 
     @Override
-    public PageResult<ChannelBanRecord> page(PageQuery query) {
+    public DatabasePageResult<ChannelBanRecord> page(DatabasePageQuery query) {
         IPage<ChannelBanEntity> result = channelBanMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelBanEntity>()
                         .orderByAsc(ChannelBanEntity::getBanId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelBanEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

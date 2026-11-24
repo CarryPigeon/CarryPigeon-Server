@@ -9,8 +9,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelDiscoverRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelDatabaseService;
@@ -151,13 +151,13 @@ public class ChannelDatabaseServiceImpl implements ChannelDatabaseService {
      * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
      */
     @Override
-    public PageResult<ChannelRecord> page(PageQuery query) {
+    public DatabasePageResult<ChannelRecord> page(DatabasePageQuery query) {
         IPage<ChannelEntity> result = channelMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelEntity>()
                         .orderByAsc(ChannelEntity::getChannelId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

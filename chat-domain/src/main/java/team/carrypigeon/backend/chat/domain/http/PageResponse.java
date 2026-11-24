@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.http;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 通用页码分页响应。

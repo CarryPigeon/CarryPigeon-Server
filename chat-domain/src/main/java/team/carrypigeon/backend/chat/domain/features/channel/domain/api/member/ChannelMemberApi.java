@@ -2,8 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.api.member;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道成员治理领域 API。

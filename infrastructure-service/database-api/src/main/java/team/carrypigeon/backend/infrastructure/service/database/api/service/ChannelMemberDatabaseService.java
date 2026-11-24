@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
 
 /**
@@ -71,7 +71,7 @@ public interface ChannelMemberDatabaseService {
      * @param page 分页参数
      * @return 分页成员关系记录
      */
-    PageResult<ChannelMemberRecord> page(PageQuery page);
+    DatabasePageResult<ChannelMemberRecord> page(DatabasePageQuery page);
 
     /**
      * 分页查询账户参与的全部成员关系。
@@ -81,7 +81,7 @@ public interface ChannelMemberDatabaseService {
      * @param page 分页参数
      * @return 分页成员关系记录
      */
-    PageResult<ChannelMemberRecord> pageByAccountId(long accountId, PageQuery page);
+    DatabasePageResult<ChannelMemberRecord> pageByAccountId(long accountId, DatabasePageQuery page);
 
     /**
      * 分页查询频道下的成员关系。
@@ -91,7 +91,7 @@ public interface ChannelMemberDatabaseService {
      * @param page 分页参数
      * @return 分页成员关系记录
      */
-    PageResult<ChannelMemberRecord> pageByChannelId(long channelId, PageQuery page);
+    DatabasePageResult<ChannelMemberRecord> pageByChannelId(long channelId, DatabasePageQuery page);
 
     /**
      * 插入新的成员关系。

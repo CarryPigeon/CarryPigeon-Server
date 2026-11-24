@@ -2,8 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 
 import java.util.Optional;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道禁言仓储抽象。

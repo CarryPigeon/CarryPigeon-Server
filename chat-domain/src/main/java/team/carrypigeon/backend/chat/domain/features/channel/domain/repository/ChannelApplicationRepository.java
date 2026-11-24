@@ -3,8 +3,8 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.repository;
 import java.util.Optional;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelApplication;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道申请仓储抽象。

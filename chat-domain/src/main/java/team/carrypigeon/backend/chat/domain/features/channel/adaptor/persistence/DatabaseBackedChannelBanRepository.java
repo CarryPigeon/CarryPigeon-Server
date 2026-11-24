@@ -7,9 +7,11 @@ import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelBan;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelBanRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelBanDatabaseService;
 
 /**
@@ -40,8 +42,8 @@ public class DatabaseBackedChannelBanRepository implements ChannelBanRepository 
     @Override
     public PageResult<ChannelBan> page(long channelId, PageQuery page) {
         // 返回该频道全部禁言记录（含已解除与已过期），是否仍然生效由调用方按 revokedAt 与 expiresAt 判定
-        PageResult<ChannelBanRecord> result =
-                channelBanDatabaseService.pageByChannelId(channelId, page);
+        DatabasePageQuery query = new DatabasePageQuery(page.page(), page.pageSize());
+        DatabasePageResult<ChannelBanRecord> result = channelBanDatabaseService.pageByChannelId(channelId, query);
         return new PageResult<>(
                 result.items().stream().map(this::toDomain).toList(),
                 result.page(),

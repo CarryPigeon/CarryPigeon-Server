@@ -8,11 +8,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelApplicationRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelApplicationDatabaseService;
 
@@ -51,14 +48,14 @@ public class ChannelApplicationDatabaseServiceImpl implements ChannelApplication
      * 分页查询频道下的申请记录。
      */
     @Override
-    public PageResult<ChannelApplicationRecord> pageByChannelId(long channelId, PageQuery query) {
+    public DatabasePageResult<ChannelApplicationRecord> pageByChannelId(long channelId, DatabasePageQuery query) {
         IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelApplicationEntity>()
                         .eq(ChannelApplicationEntity::getChannelId, channelId)
                         .orderByDesc(ChannelApplicationEntity::getApplicationId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),
@@ -67,14 +64,14 @@ public class ChannelApplicationDatabaseServiceImpl implements ChannelApplication
     }
 
     @Override
-    public PageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, PageQuery page) {
+    public DatabasePageResult<ChannelApplicationRecord> pageByApplicantAccountId(long applicantId, DatabasePageQuery page) {
         IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
                 new Page<>(page.page(), page.pageSize(), true),
                 new LambdaQueryWrapper<ChannelApplicationEntity>()
                         .eq(ChannelApplicationEntity::getApplicantId, applicantId)
                         .orderByDesc(ChannelApplicationEntity::getApplicationId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
                 page.page(),
                 page.pageSize(),
@@ -119,13 +116,13 @@ public class ChannelApplicationDatabaseServiceImpl implements ChannelApplication
      * 分页查询申请记录。
      */
     @Override
-    public PageResult<ChannelApplicationRecord> page(PageQuery query) {
+    public DatabasePageResult<ChannelApplicationRecord> page(DatabasePageQuery query) {
         IPage<ChannelApplicationEntity> result = channelApplicationMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<ChannelApplicationEntity>()
                         .orderByAsc(ChannelApplicationEntity::getApplicationId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(ChannelApplicationEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

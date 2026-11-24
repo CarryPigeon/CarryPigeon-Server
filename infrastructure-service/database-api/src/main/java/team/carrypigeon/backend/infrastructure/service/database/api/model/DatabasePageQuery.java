@@ -1,14 +1,14 @@
-package team.carrypigeon.backend.infrastructure.basic.page;
+package team.carrypigeon.backend.infrastructure.service.database.api.model;
 
 /**
- * 通用页码分页查询参数。
+ * 数据库服务按页查询记录的位置和数量。
  * 职责：表达从 1 开始的页码和每页条数，并给出数据库偏移量。
- * 边界：只承载分页位置与数量，不承载业务过滤条件；页码与页大小的合法性由协议层校验。
+ * 边界：只承载分页位置与数量，不承载业务过滤条件。
  *
  * @param page 页码，从 1 开始
  * @param pageSize 每页条数
  */
-public record PageQuery(int page, int pageSize) {
+public record DatabasePageQuery(int page, int pageSize) {
 
     /**
      * 计算 SQL 偏移量。

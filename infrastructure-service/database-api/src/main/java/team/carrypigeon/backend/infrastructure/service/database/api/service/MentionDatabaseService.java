@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 
@@ -53,7 +53,7 @@ public interface MentionDatabaseService {
      * @param page 分页参数
      * @return 分页提及记录
      */
-    PageResult<MentionRecord> page(PageQuery page);
+    DatabasePageResult<MentionRecord> page(DatabasePageQuery page);
 
     /**
      * 写入单条提及记录。

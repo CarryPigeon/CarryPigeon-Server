@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
 /**
  * 频道成员仓储抽象。

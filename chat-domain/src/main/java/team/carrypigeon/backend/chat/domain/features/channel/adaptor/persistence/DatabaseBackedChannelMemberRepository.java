@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMember;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.model.ChannelMemberRole;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.ChannelMemberRecord;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.ChannelMemberDatabaseService;
 
 /**
@@ -78,12 +80,14 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
 
     @Override
     public PageResult<ChannelMember> pageByAccountId(long accountId, PageQuery page) {
-        return toPage(channelMemberDatabaseService.pageByAccountId(accountId, page));
+        DatabasePageQuery query = new DatabasePageQuery(page.page(), page.pageSize());
+        return toPage(channelMemberDatabaseService.pageByAccountId(accountId, query));
     }
 
     @Override
     public PageResult<ChannelMember> pageByChannelId(long channelId, PageQuery page) {
-        return toPage(channelMemberDatabaseService.pageByChannelId(channelId, page));
+        DatabasePageQuery query = new DatabasePageQuery(page.page(), page.pageSize());
+        return toPage(channelMemberDatabaseService.pageByChannelId(channelId, query));
     }
 
     /**
@@ -92,7 +96,7 @@ public class DatabaseBackedChannelMemberRepository implements ChannelMemberRepos
      * @param result 持久化分页结果
      * @return 领域分页结果
      */
-    private PageResult<ChannelMember> toPage(PageResult<ChannelMemberRecord> result) {
+    private PageResult<ChannelMember> toPage(DatabasePageResult<ChannelMemberRecord> result) {
         return new PageResult<>(
                 result.items().stream().map(this::toDomain).toList(),
                 result.page(),

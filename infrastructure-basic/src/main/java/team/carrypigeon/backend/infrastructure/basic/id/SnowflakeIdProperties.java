@@ -15,9 +15,6 @@ public record SnowflakeIdProperties(long workerId, long datacenterId) {
         validate("datacenterId", datacenterId);
     }
 
-    public SnowflakeIdProperties() {
-        this(1, 1);
-    }
 
     private static void validate(String fieldName, long value) {
         if (value < 0 || value > 31) {

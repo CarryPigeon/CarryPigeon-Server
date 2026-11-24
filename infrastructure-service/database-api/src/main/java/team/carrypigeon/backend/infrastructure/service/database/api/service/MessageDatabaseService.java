@@ -3,8 +3,8 @@ package team.carrypigeon.backend.infrastructure.service.database.api.service;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 
 /**
@@ -95,7 +95,7 @@ public interface MessageDatabaseService {
      * @param page 分页参数
      * @return 分页消息记录
      */
-    PageResult<MessageRecord> page(PageQuery page);
+    DatabasePageResult<MessageRecord> page(DatabasePageQuery page);
 
     /**
      * 写入新的消息记录。

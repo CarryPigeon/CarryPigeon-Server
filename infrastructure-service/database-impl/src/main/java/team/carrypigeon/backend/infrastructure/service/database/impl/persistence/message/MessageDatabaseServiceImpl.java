@@ -12,8 +12,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.MessageEntity;
@@ -71,13 +71,13 @@ public class MessageDatabaseServiceImpl implements MessageDatabaseService {
     }
 
     @Override
-    public PageResult<MessageRecord> page(PageQuery query) {
+    public DatabasePageResult<MessageRecord> page(DatabasePageQuery query) {
         IPage<MessageEntity> result = messageMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<MessageEntity>()
                         .orderByAsc(MessageEntity::getMessageId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(MessageEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

@@ -8,8 +8,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionQuery;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MentionRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MentionDatabaseService;
@@ -98,13 +98,13 @@ public class MentionDatabaseServiceImpl implements MentionDatabaseService {
      * 分页查询提及记录。
      */
     @Override
-    public PageResult<MentionRecord> page(PageQuery query) {
+    public DatabasePageResult<MentionRecord> page(DatabasePageQuery query) {
         IPage<MentionEntity> result = mentionMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<MentionEntity>()
                         .orderByAsc(MentionEntity::getMentionId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(MentionEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

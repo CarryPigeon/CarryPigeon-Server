@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageQuery;
+import team.carrypigeon.backend.infrastructure.service.database.api.model.DatabasePageResult;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.UserProfileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.UserProfileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
@@ -117,13 +117,13 @@ public class UserProfileDatabaseServiceImpl implements UserProfileDatabaseServic
      * 缓存：分页查询键空间无界，不参与缓存，保留给管理后台/离线维护使用。
      */
     @Override
-    public PageResult<UserProfileRecord> page(PageQuery query) {
+    public DatabasePageResult<UserProfileRecord> page(DatabasePageQuery query) {
         IPage<UserProfileEntity> result = userProfileMapper.selectPage(
                 new Page<>(query.page(), query.pageSize(), true),
                 new LambdaQueryWrapper<UserProfileEntity>()
                         .orderByAsc(UserProfileEntity::getAccountId)
         );
-        return new PageResult<>(
+        return new DatabasePageResult<>(
                 result.getRecords().stream().map(UserProfileEntity::toRecord).toList(),
                 query.page(),
                 query.pageSize(),

@@ -1,13 +1,13 @@
 package team.carrypigeon.backend.chat.domain.shared.cursor;
 
-import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
+import team.carrypigeon.backend.chat.domain.http.PageResponse;
 
 import java.util.List;
 
 /**
  * 通用游标分页响应。
  * 职责：为 message feature 的游标分页接口提供统一的 items / next_cursor / has_more 结构。
- * 边界：只表达游标分页外壳，不承载具体业务语义；页码分页使用 {@link PageResult}。
+ * 边界：只表达游标分页外壳，不承载具体业务语义；页码分页使用 {@link PageResponse}。
  *
  * @param items 当前页数据
  * @param nextCursor 下一页游标
