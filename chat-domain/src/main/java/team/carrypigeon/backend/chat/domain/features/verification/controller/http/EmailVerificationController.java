@@ -17,7 +17,6 @@ import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.limit.RateLimitApi;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
@@ -64,14 +63,6 @@ public class EmailVerificationController {
         @AuthenticationPrincipal
         CpPrincipal principal
     ) {
-        // 在占用发送配额前检查认证，账号绑定仅来自可信认证上下文。
-        Long accountId = null;
-        if (requestBody.purpose() == EmailCodePurpose.CHANGE_EMAIL) {
-            if (principal == null || principal.accountId() == null) {
-                throw ProblemException.of(VerificationProblem.AUTHENTICATION_REQUIRED);
-            }
-            accountId = principal.accountId();
-        }
         // 邮件发送频率限制
         String email = requestBody.email().trim().toLowerCase(Locale.ROOT);
         if (!rateLimitApi.tryAcquire("email:code:" + email, 60)) {
@@ -81,7 +72,11 @@ public class EmailVerificationController {
         if (!rateLimitApi.tryAcquire("email:code:ip:" + clientAddressResolver.resolve(request), 60)) {
             throw ProblemException.of(VerificationProblem.TOO_MANY_REQUESTS);
         }
-        emailVerificationApi.issueCode(email, requestBody.purpose(), accountId);
+        if (principal != null){
+            emailVerificationApi.issueCode(email, requestBody.purpose(), principal.accountId());
+        }else {
+            emailVerificationApi.issueCode(email, requestBody.purpose(), null);
+        }
         return Result.success();
     }
 }

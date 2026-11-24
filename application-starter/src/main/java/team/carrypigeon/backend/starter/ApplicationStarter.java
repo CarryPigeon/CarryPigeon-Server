@@ -24,7 +24,7 @@ public class ApplicationStarter {
      *
      * @param args 启动参数，仅用于传递运行环境相关配置，不参与业务语义处理
      */
-    public static void main(String[] args) {
+    static void main(String[] args) {
         log.info("Application is starting...");
         SpringApplication application = new SpringApplication(ApplicationStarter.class);
         application.addInitializers(ConfigurableApplicationContext::getBeanFactory);

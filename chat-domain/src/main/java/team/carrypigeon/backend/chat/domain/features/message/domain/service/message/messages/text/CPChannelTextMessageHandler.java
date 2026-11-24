@@ -66,7 +66,7 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             );
         }
         CPChannelTextMessageData data = new CPChannelTextMessageData(
-            content, replyMessageId, replyToUser
+            content, replyMessageId==null? null : String.valueOf(replyMessageId), replyToUser
         );
         int previewEnd = content.offsetByCodePoints(
             0, Math.min(content.codePointCount(0, content.length()), PREVIEW_CODE_POINTS)

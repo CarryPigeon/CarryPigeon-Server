@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import team.carrypigeon.backend.chat.domain.shared.valitation.EmailVerificationCode;
 
 /**
  * 更新当前账号邮箱请求。
@@ -17,11 +18,7 @@ public record UpdateCurrentAccountEmailRequest(
         @Size(max = 320, message = "email length must be less than or equal to 320")
         String email,
         @Schema(description = "邮箱验证码", example = "123456")
-        @NotBlank(message = "code must not be blank")
-        @Pattern(
-            regexp = "^[0-9]{6}$",
-            message = "code must be a 6-digit number"
-        )
+        @EmailVerificationCode
         String code
 ) {
 }

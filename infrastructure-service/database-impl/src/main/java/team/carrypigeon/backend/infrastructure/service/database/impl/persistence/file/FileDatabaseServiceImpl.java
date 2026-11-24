@@ -5,6 +5,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.model.FileRe
 import team.carrypigeon.backend.infrastructure.service.database.api.service.FileDatabaseService;
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -82,6 +83,11 @@ public class FileDatabaseServiceImpl implements FileDatabaseService {
             mapper.selectOne(
                 new LambdaQueryWrapper<FileEntity>()
                     .eq(FileEntity::getSha256, sha256)
+                    // 同摘要可以有多个上传授权，只有已发布且仍有效的对象可复用。
+                    .eq(FileEntity::getStatus, "COMPLETED")
+                    .gt(FileEntity::getExpiresAt, Instant.now())
+                    .orderByDesc(FileEntity::getExpiresAt, FileEntity::getFileId)
+                    .last("LIMIT 1")
             )
         ).map(FileEntity::toFileRecord);
     }
@@ -89,7 +95,7 @@ public class FileDatabaseServiceImpl implements FileDatabaseService {
     @Override
     public List<FileRecord> findExpired() {
         LambdaQueryWrapper<FileEntity> query = new LambdaQueryWrapper<FileEntity>()
-            .lt(FileEntity::getExpiresAt, System.currentTimeMillis());
+            .le(FileEntity::getExpiresAt, Instant.now());
         return mapper.selectList(query).stream().map(FileEntity::toFileRecord).toList();
     }
 

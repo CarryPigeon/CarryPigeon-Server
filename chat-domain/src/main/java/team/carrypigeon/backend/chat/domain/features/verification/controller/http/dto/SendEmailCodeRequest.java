@@ -2,9 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.verification.controller.ht
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 
 /**
@@ -15,8 +13,6 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
 public record SendEmailCodeRequest(
         @Schema(description = "目标邮箱", example = "user@example.com")
         @Email(message = "email must be a valid email address")
-        @NotBlank(message = "email must not be blank")
-        @Size(max = 320, message = "email length must be less than or equal to 320")
         String email,
         @Schema(description = "验证码用途；CHANGE_EMAIL 要求已登录", example = "LOGIN")
         @NotNull(message = "purpose must not be null")

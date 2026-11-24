@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 文本消息的业务数据与持久化投影。
- * 边界：回复 ID 使用 Long，null 表示不回复；字符串表示仅由协议适配层生成。
  */
 @Data
 @AllArgsConstructor
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class CPChannelTextMessageData {
 
     private String content;
-    private Long replyToMid;
+    private String replyToMid;
     private CPChannelTextMessageReplyToUser replyToUser;
 
     @Data

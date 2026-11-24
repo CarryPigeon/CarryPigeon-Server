@@ -90,7 +90,6 @@ CREATE TABLE chat_message (
     message_id BIGINT NOT NULL,
     sender_id BIGINT NOT NULL,
     channel_id BIGINT NOT NULL,
-    sequence BIGINT NOT NULL,
     domain VARCHAR(128) NOT NULL,
     data JSON NOT NULL,
     send_time DATETIME(6) NOT NULL,
@@ -99,8 +98,8 @@ CREATE TABLE chat_message (
     search_text TEXT NOT NULL,
     status VARCHAR(32) NOT NULL,
     PRIMARY KEY (message_id),
-    UNIQUE KEY uk_chat_message_channel_sequence (channel_id, sequence),
-    KEY idx_message_unread (channel_id, status, sequence, sender_id),
+    KEY idx_chat_message_channel_id (channel_id, message_id),
+    KEY idx_message_unread (channel_id, status, message_id, sender_id),
     FULLTEXT KEY ft_chat_message_search_text (search_text) WITH PARSER ngram
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='频道消息';
 
@@ -115,6 +114,8 @@ CREATE TABLE chat_mention (
     is_read BOOLEAN NOT NULL,
     PRIMARY KEY (mention_id),
     KEY idx_chat_mention_target_read_id (target_account_id, is_read, mention_id),
+    KEY idx_mention_target_id (target_account_id, mention_id),
+    KEY idx_mention_target_channel_id (target_account_id, channel_id, mention_id),
     KEY idx_chat_mention_message (message_id),
     KEY idx_chat_mention_channel (channel_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息提及';
@@ -123,65 +124,25 @@ CREATE TABLE chat_mention (
 CREATE TABLE chat_channel_read_state (
     channel_id BIGINT NOT NULL,
     account_id BIGINT NOT NULL,
-    last_read_message_id BIGINT NOT NULL,
-    last_read_sequence BIGINT NOT NULL DEFAULT 0,
+    last_read_message_id BIGINT NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (channel_id, account_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='频道已读状态';
 
-CREATE TABLE chat_message_sequence (
-    channel_id BIGINT NOT NULL,
-    last_sequence BIGINT NOT NULL,
-    PRIMARY KEY (channel_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='消息事务持锁分配频道序号';
-
-CREATE TABLE chat_message_send_request (
-    account_id BIGINT NOT NULL,
-    channel_id BIGINT NOT NULL,
-    request_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    payload_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    message_id BIGINT NOT NULL,
-    PRIMARY KEY (account_id, channel_id, request_id),
-    KEY idx_message_send_request_channel (channel_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发送请求幂等身份';
-
-CREATE TABLE chat_file_upload (
+CREATE TABLE files (
     file_id BIGINT NOT NULL PRIMARY KEY,
     owner_account_id BIGINT NOT NULL,
+    file_name TEXT NOT NULL,
     share_key VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     size_bytes BIGINT NOT NULL,
     status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     object_key VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NULL,
-    sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     content_type VARCHAR(255) NULL,
     expires_at DATETIME(6) NOT NULL,
     completed_at DATETIME(6) NULL,
-    reclaim_started_at DATETIME(6) NULL,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    UNIQUE KEY uk_file_upload_share_key (share_key),
-    KEY idx_file_upload_owner_status (owner_account_id, status),
-    KEY idx_file_upload_status_expiry (status, expires_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE chat_file_upload_attempt (
-    object_key VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
-    file_id BIGINT NOT NULL,
-    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    last_cleaned_at DATETIME(6) NULL,
-    next_cleanup_at DATETIME(6) NULL,
-    KEY idx_file_upload_attempt_file (file_id),
-    KEY idx_file_attempt_next_cleanup (next_cleanup_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE chat_file_quota (
-    account_id BIGINT NOT NULL PRIMARY KEY
-) ENGINE=InnoDB;
-
-CREATE TABLE chat_file_avatar_reference (
-    account_id BIGINT NOT NULL PRIMARY KEY,
-    file_id BIGINT NOT NULL,
-    KEY idx_file_avatar_reference_file (file_id)
-) ENGINE=InnoDB;
-
-
+    UNIQUE KEY uk_files_share_key (share_key),
+    KEY idx_files_digest_status_expiry (sha256, status, expires_at),
+    KEY idx_files_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件授权与已发布对象';
