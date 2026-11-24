@@ -1,7 +1,6 @@
-package team.carrypigeon.backend.chat.domain.http.advice;
+package team.carrypigeon.backend.chat.domain.http.exception;
 
 import com.fasterxml.jackson.core.exc.StreamReadException;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +8,6 @@ import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -28,14 +26,12 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
-import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import team.carrypigeon.backend.chat.domain.http.ErrorResult;
 import team.carrypigeon.backend.chat.domain.http.Result;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
-import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
 /** MVC 与 Security 共用的 HTTP 错误映射。根据匹配到的入口选择传输状态，领域错误保留稳定数字码。 */
@@ -43,36 +39,50 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * 捕获到项目的异常代码，进行统一处理
+     * */
     @ExceptionHandler(ProblemException.class)
-    public ResponseEntity<ErrorResult> problem(ProblemException ex, HttpServletRequest request) {
-        //TODO 重写
-        return failure(businessStatus(request,200), ex.mapping().code(), ex.getMessage(), new HttpHeaders());
+    public ResponseEntity<ErrorResult> problem(ProblemException ex) {
+        return failure(ex.mapping().code(), ex.getMessage(), new HttpHeaders());
     }
 
+    /**
+     * 处理权限校验异常
+     * */
     @ExceptionHandler({AuthenticationException.class, AccessDeniedException.class})
-    public ResponseEntity<ErrorResult> security(RuntimeException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResult> security(RuntimeException ex) {
         if (ex instanceof AuthenticationException) {
-            return failure(businessStatus(request, 401), AuthProblem.AUTHENTICATION_REQUIRED.code(), "Authentication is required.");
+            return failure(AuthProblem.AUTHENTICATION_REQUIRED.code(), "Authentication is required.");
         }
-        return failure(businessStatus(request, 403), 10009, "Access denied.");
+        return failure(10009, "Access denied.");
     }
 
+    /**
+     * 处理请求体不可读异常
+     * */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResult> unreadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResult> unreadable(HttpMessageNotReadableException ex) {
         if (ex.contains(StreamReadException.class)) {
-            return failure(400, 10002, "Malformed JSON.");
+            return failure(10002, "Malformed JSON.");
         }
-        return failure(businessStatus(request, 422), 10001, "Request body is missing or contains an invalid value.");
+        return failure(10001, "Request body is missing or contains an invalid value.");
     }
 
+    /**
+     * 处理参数验证异常
+     * */
     @ExceptionHandler({
         BindException.class, ConstraintViolationException.class, ServletRequestBindingException.class,
         MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class, HandlerMethodValidationException.class
     })
-    public ResponseEntity<ErrorResult> invalid(Exception ex, HttpServletRequest request) {
-        return failure(businessStatus(request, 422), 10001, ValidationMessages.first(ex));
+    public ResponseEntity<ErrorResult> invalid() {
+        return failure(10001, "Parameter validation failed.");
     }
 
+    /**
+     * 处理 HTTP 协议异常
+     * */
     @ExceptionHandler({HttpRequestMethodNotSupportedException.class, HttpMediaTypeNotAcceptableException.class,
         HttpMediaTypeNotSupportedException.class, MaxUploadSizeExceededException.class,
         NoHandlerFoundException.class, NoResourceFoundException.class})
@@ -80,57 +90,59 @@ public class GlobalExceptionHandler {
         ErrorResponse error = (ErrorResponse) ex;
         int status = error.getStatusCode().value();
         return switch (status) {
-            case 404 -> failure(404, 10003, "Route not found.");
-            case 405 -> failure(405, 10004, "Method not allowed.", error.getHeaders());
-            case 406 -> failure(406, 10005, "Requested response media type is not supported.");
-            case 413 -> failure(413, 10008, "Request payload is too large.");
-            case 415 -> failure(415, 10006, "Request media type is not supported.");
+            case 404 -> failure(10003, "Route not found.");
+            case 405 -> failure(10004, "Method not allowed.", error.getHeaders());
+            case 406 -> failure(10005, "Requested response media type is not supported.");
+            case 413 -> failure(10008, "Request payload is too large.");
+            case 415 -> failure(10006, "Request media type is not supported.");
             default -> throw new IllegalStateException("Unexpected protocol status " + status, ex);
         };
     }
 
+    /**
+     * 处理数据库悲观锁冲突异常
+     * */
     @ExceptionHandler(PessimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResult> lockConflict(PessimisticLockingFailureException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResult> lockConflict(PessimisticLockingFailureException ex) {
         log.info("Database lock conflict", ex);
-        return failure(businessStatus(request, 409), 10010, "Concurrent modification. Retry the operation.");
+        return failure(10010, "Concurrent modification. Retry the operation.");
     }
 
+    /**
+     * 处理数据库不可用异常
+     * */
     @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class})
-    public ResponseEntity<ErrorResult> unavailable(RuntimeException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResult> unavailable(RuntimeException ex) {
         log.error("Database unavailable", ex);
-        return failure(businessStatus(request, 503), 10011, "Service temporarily unavailable.");
+        return failure(10011, "Service temporarily unavailable.");
     }
 
+    /**
+     * 处理其他异常
+     * */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResult> unexpected(Exception ex, HttpServletRequest request, HttpServletResponse response) {
+    public ResponseEntity<ErrorResult> unexpected(Exception ex, HttpServletResponse response) {
         log.error("Unexpected HTTP failure", ex);
         if (response.isCommitted()) {
-            // 下载已写出字节，不能再向同一响应追加 JSON。
             return null;
         }
-        return failure(businessStatus(request, 500), 10012, "Internal server error.");
+        return failure( 10012, "Internal server error.");
     }
 
-    private static String pattern(HttpServletRequest request) {
-        return String.valueOf(request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE));
+    /**
+     * 构建失败响应
+     * */
+    private ResponseEntity<ErrorResult> failure(int code, String message) {
+        return failure(code, message, new HttpHeaders());
     }
 
-    private static int businessStatus(HttpServletRequest request, int original) {
-        String route = pattern(request);
-        return route.startsWith("/api/") && !route.startsWith("/api/files/download/") ? 200 : original;
-    }
-
-    private ResponseEntity<ErrorResult> failure(int status, int code, String message) {
-        return failure(status, code, message, new HttpHeaders());
-    }
-
-    private ResponseEntity<ErrorResult> failure(int status, int code, String message, HttpHeaders headers) {
-        log.info("HTTP failure status={} code={}", status, code);
-        var response = ResponseEntity.status(status).headers(headers).cacheControl(CacheControl.noStore())
+    /**
+     * 构建失败响应
+     * */
+    private ResponseEntity<ErrorResult> failure(int code, String message, HttpHeaders headers) {
+        log.info("HTTP failure code={}", code);
+        var response = ResponseEntity.status(200).headers(headers).cacheControl(CacheControl.noStore())
             .contentType(MediaType.APPLICATION_JSON);
-        if (status == HttpStatus.UNAUTHORIZED.value()) {
-            response.header(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
-        }
         return response.body(Result.failure(code, message));
     }
 }
