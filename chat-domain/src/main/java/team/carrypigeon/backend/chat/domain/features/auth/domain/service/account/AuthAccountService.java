@@ -18,7 +18,7 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 鉴权账号领域 API 实现。

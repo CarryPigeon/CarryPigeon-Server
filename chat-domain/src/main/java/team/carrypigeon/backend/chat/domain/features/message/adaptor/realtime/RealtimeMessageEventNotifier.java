@@ -5,17 +5,17 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeFrame;
+import team.carrypigeon.backend.chat.domain.ws.frame.RealtimeFrame;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.capability.MessageEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEvent;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEventType;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
  * 基于实时通道的消息事件通知适配器。

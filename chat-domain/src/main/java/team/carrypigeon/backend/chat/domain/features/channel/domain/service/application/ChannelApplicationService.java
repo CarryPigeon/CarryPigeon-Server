@@ -24,7 +24,7 @@ import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 频道申请流领域服务。

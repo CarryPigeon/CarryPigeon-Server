@@ -7,7 +7,6 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
-import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 
 /**
  * 初始化检查执行器。
@@ -43,7 +42,7 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
      * @param initializationChecker 待执行的初始化检查
      */
     private void runCheck(InitializationChecker initializationChecker) {
-        String checkName = safeCheckName(initializationChecker);
+        String checkName = initializationChecker.name();
         long startedAtNanos = System.nanoTime();
         try {
             InitializationCheckResult result = initializationChecker.check();
@@ -52,18 +51,16 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
                 handleFailure(initializationChecker, checkName, "check returned no result", elapsedMillis, null);
                 return;
             }
-            String message = safeMessage(result.message(), "no message");
+            String message = result.message();
             if (result.passed()) {
                 log.info("Initialization check passed [{}] in {} ms: {}", checkName, elapsedMillis, message);
                 return;
             }
             handleFailure(initializationChecker, checkName, message, elapsedMillis, null);
-        } catch (InitializationCheckFailureException exception) {
-            throw exception;
         } catch (RuntimeException exception) {
             long elapsedMillis = elapsedMillis(startedAtNanos);
             String message = exception.getClass().getSimpleName() + ": "
-                    + safeMessage(exception.getMessage(), "no message");
+                    + exception.getMessage();
             handleFailure(initializationChecker, checkName, message, elapsedMillis, exception);
         }
     }
@@ -83,7 +80,7 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
                 log.error("Required initialization check threw [{}] after {} ms: {}",
                         checkName, elapsedMillis, message, cause);
             }
-            throw new InitializationCheckFailureException(checkName, message, cause);
+            throw new RuntimeException("Required initialization check failed", cause);
         }
         if (cause == null) {
             log.warn("Initialization check failed but marked optional [{}] after {} ms: {}",
@@ -94,14 +91,7 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
                 checkName, elapsedMillis, message, cause);
     }
 
-    private String safeCheckName(InitializationChecker initializationChecker) {
-        return safeMessage(initializationChecker.name(), "unnamed");
-    }
 
-    private String safeMessage(String message, String fallback) {
-        String sanitized = LogValueSanitizer.singleLine(message);
-        return sanitized.isBlank() ? fallback : sanitized;
-    }
 
     private long elapsedMillis(long startedAtNanos) {
         return (System.nanoTime() - startedAtNanos) / 1_000_000L;

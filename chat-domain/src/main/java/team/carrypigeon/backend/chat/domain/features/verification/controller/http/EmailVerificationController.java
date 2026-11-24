@@ -12,9 +12,9 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.ClientAddressResolver;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.limit.RateLimitApi;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;

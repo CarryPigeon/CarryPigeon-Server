@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.Result;
+import team.carrypigeon.backend.chat.domain.http.Result;
 import team.carrypigeon.backend.chat.domain.features.server.controller.http.dto.ServerDiscoveryResponse;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 

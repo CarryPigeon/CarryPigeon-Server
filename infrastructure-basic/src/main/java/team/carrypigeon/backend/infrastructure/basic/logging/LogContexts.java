@@ -67,12 +67,11 @@ public final class LogContexts {
         if (key == null || key.isBlank()) {
             return;
         }
-        String sanitizedValue = LogValueSanitizer.singleLine(value);
-        if (sanitizedValue.isEmpty()) {
+        if (value.isEmpty()) {
             MDC.remove(key);
             return;
         }
-        MDC.put(key, sanitizedValue);
+        MDC.put(key, value);
     }
 
     /**

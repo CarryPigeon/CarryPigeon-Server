@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelFile;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelFileRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.MessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
 
 /**
  * 附件消息处理器

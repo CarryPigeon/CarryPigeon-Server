@@ -2,6 +2,8 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance
 
 import team.carrypigeon.backend.chat.domain.features.server.config.PluginPropertyItem;
 
+import java.util.List;
+
 /**
  * `/api/server` 公开发现文档。
  * 职责：为客户端握手与登录前置阶段提供最小发现信息。
@@ -13,6 +15,6 @@ public record ServerDiscoveryDocument(
         String brief,
         String wsUrl,
         long serverTime,
-        PluginPropertyItem[] plugins
+        List<PluginPropertyItem> plugins
 ) {
 }

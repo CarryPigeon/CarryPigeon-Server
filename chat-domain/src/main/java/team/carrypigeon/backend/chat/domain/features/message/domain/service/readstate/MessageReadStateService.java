@@ -16,9 +16,9 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.problem.Mess
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.ChannelReadStateRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 消息读状态领域 API 实现。

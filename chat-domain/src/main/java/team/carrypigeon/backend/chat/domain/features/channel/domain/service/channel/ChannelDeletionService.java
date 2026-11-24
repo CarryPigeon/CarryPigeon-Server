@@ -11,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelBanRepository;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelMemberRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.ChannelMessageCleanupApi;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 已删除频道的进程内异步清理。频道在请求事务提交后撤下，关联数据在清理事务中删除。

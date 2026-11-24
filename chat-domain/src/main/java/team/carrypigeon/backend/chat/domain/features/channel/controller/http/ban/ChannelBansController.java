@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.PageResponse;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanListItemResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanResponse;
@@ -32,7 +32,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.Chan
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 

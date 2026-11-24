@@ -18,13 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.PageResponse;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 

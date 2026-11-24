@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 
 /**
  * 频道消息 canonical 结果投影。

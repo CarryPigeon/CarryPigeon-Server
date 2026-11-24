@@ -4,7 +4,6 @@ import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import io.minio.errors.ErrorResponseException;
 import io.minio.messages.ErrorResponse;
-import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealth;
 import team.carrypigeon.backend.infrastructure.service.storage.api.health.StorageHealthService;
 import team.carrypigeon.backend.infrastructure.service.storage.impl.config.MinioStorageProperties;
@@ -48,10 +47,10 @@ public class MinioStorageHealthService implements StorageHealthService {
         if (ex instanceof ErrorResponseException errorResponseException) {
             return minioErrorDiagnostic(errorResponseException);
         }
-        return LogValueSanitizer.singleLine(ex.getClass().getSimpleName()
+        return ex.getClass().getSimpleName()
                 + ": " + valueOrFallback(ex.getMessage(), "no message")
                 + ", endpoint=" + properties.endpoint()
-                + ", bucket=" + properties.bucket());
+                + ", bucket=" + properties.bucket();
     }
 
     private String minioErrorDiagnostic(ErrorResponseException ex) {
@@ -61,7 +60,7 @@ public class MinioStorageHealthService implements StorageHealthService {
         String requestId = errorResponse == null ? "unknown" : valueOrFallback(errorResponse.requestId(), "unknown");
         String resource = errorResponse == null ? "unknown" : valueOrFallback(errorResponse.resource(), "unknown");
         int httpStatus = ex.response() == null ? 0 : ex.response().code();
-        return LogValueSanitizer.singleLine("MinIO "
+        return ("MinIO "
                 + "code=" + code
                 + ", message=" + message
                 + ", httpStatus=" + httpStatus

@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.channel.domain.capability;
 
 import java.util.List;
 
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
  * 频道变化通知能力。

@@ -10,10 +10,10 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.capability.U
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.MessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPMessageStatus;
 
 /**
  * CarryPigeon 预定义的文本消息处理器<br/>

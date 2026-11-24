@@ -19,15 +19,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
 import team.carrypigeon.backend.chat.domain.features.user.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 用户资料 HTTP 入口。

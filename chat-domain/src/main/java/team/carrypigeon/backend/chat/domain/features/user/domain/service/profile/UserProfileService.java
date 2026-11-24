@@ -16,7 +16,7 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.repository.User
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 用户资料领域服务。

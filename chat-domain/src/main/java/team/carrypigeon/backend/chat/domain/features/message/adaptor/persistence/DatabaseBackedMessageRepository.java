@@ -13,11 +13,11 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureErrorCode;
-import team.carrypigeon.backend.infrastructure.basic.exception.InfrastructureException;
+import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProblem;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPMessageStatus;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.MessageRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.MessageDatabaseService;
 
@@ -154,9 +154,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         try {
             return dataReader.readValue(data);
         } catch (JsonProcessingException exception) {
-            throw new InfrastructureException(
-                InfrastructureErrorCode.JSON_DESERIALIZE_FAILED, "Failed to deserialize message data", exception
-            );
+            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED);
         }
     }
 

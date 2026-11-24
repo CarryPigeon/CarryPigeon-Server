@@ -2,7 +2,6 @@ package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.infrastructure.basic.logging.LogValueSanitizer;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealth;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 
@@ -31,7 +30,7 @@ public class SmtpMailHealthService implements MailHealthService {
             mailSender.testConnection();
             return new MailHealth(true, "mail service is available");
         } catch (Exception exception) {
-            String diagnostic = LogValueSanitizer.singleLine(exception.getMessage());
+            String diagnostic =exception.getMessage();
             if (diagnostic.isBlank()) {
                 diagnostic = exception.getClass().getSimpleName();
             }

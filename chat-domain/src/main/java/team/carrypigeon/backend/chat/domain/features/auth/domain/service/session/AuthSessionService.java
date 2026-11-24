@@ -22,7 +22,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 鉴权会话领域 API 实现。

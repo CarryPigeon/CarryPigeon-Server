@@ -1,11 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http.dto;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 消息响应。

@@ -2,9 +2,9 @@ package team.carrypigeon.backend.chat.domain.features.message.domain.service.mes
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.attachment.CPChannelAttachmentMessageHandler;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.annotation.MessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.MessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
 
 /**
  * 语音消息处理器,直接复用附件处理器，客户端按不同的方式处理文件即可

@@ -2,7 +2,7 @@ package team.carrypigeon.backend.chat.domain.features.server.domain.service.entr
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.ws.config.RealtimeServerProperties;
 import team.carrypigeon.backend.chat.domain.features.server.config.ServerMetaProperties;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerDiscoveryDocument;
@@ -38,7 +38,8 @@ public class ServerEntranceService implements ServerEntranceApi {
                 serverMetaProperties.getName(),
                 serverMetaProperties.getDescription(),
                 realtimeServerProperties.wsUrl(),
-                timeProvider.nowMillis()
+                timeProvider.nowMillis(),
+                serverMetaProperties.getPlugins()
         );
     }
 

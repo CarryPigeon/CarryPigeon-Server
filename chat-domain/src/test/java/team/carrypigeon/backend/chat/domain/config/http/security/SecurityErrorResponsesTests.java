@@ -12,9 +12,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
-import team.carrypigeon.backend.chat.domain.config.http.advice.GlobalExceptionHandler;
+import team.carrypigeon.backend.chat.domain.http.advice.GlobalExceptionHandler;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.FileController;
 import team.carrypigeon.backend.chat.domain.features.server.controller.http.ServerController;
+import team.carrypigeon.backend.chat.domain.http.security.SecurityErrorResponses;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

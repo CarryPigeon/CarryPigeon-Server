@@ -16,18 +16,18 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import team.carrypigeon.backend.chat.domain.config.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.PageResponse;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelQueryApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
-import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.cursor.CursorPageResponse;
+import team.carrypigeon.backend.chat.domain.shared.cursor.OpaqueCursorCodec;
 import team.carrypigeon.backend.infrastructure.basic.page.PageQuery;
 import team.carrypigeon.backend.infrastructure.basic.page.PageResult;
 

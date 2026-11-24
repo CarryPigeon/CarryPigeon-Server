@@ -5,11 +5,11 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEvent;
-import team.carrypigeon.backend.infrastructure.basic.realtime.connection.RealtimeConnectionManager;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventApi;
-import team.carrypigeon.backend.infrastructure.basic.realtime.downlink.RealtimeEventType;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEvent;
+import team.carrypigeon.backend.chat.domain.ws.connection.RealtimeConnectionManager;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEventApi;
+import team.carrypigeon.backend.chat.domain.ws.downlink.RealtimeEventType;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
  * 基于实时通道的频道变化通知适配器。

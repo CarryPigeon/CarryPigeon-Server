@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageContextResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageHistoryResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;

@@ -16,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AccessTokenAuthenticationResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.security.JwtAuthenticationFilter;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 

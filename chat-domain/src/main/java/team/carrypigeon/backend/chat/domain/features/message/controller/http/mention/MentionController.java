@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionIdsRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionItemResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionItemsResponse;
@@ -31,8 +31,8 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.input.ListMentionsQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.mention.result.MentionPage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
-import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
+import team.carrypigeon.backend.chat.domain.shared.cursor.CursorPageResponse;
+import team.carrypigeon.backend.chat.domain.shared.cursor.OpaqueCursorCodec;
 
 /**
  * 提及收件箱 HTTP 入口。

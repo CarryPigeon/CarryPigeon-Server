@@ -9,7 +9,7 @@ import org.springframework.core.env.SimpleCommandLinePropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import team.carrypigeon.backend.chat.domain.features.auth.config.AuthJwtProperties;
 import team.carrypigeon.backend.chat.domain.features.file.config.FileShareKeyProperties;
-import team.carrypigeon.backend.infrastructure.basic.realtime.RealtimeServerProperties;
+import team.carrypigeon.backend.chat.domain.ws.config.RealtimeServerProperties;
 import team.carrypigeon.backend.infrastructure.service.cache.impl.config.RedisCacheProperties;
 import team.carrypigeon.backend.infrastructure.service.database.impl.config.DatabaseServiceProperties;
 import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMailProperties;

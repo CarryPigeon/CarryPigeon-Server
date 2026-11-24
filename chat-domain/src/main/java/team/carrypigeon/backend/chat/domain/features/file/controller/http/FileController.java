@@ -31,8 +31,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.file.config.ServerAvatarProperty;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.dto.CreateFileUploadRequest;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.dto.FileUploadResponse;
@@ -41,7 +41,7 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 文件 HTTP 入口。

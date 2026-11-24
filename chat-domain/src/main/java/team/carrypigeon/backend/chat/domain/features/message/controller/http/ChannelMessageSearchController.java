@@ -18,15 +18,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageSearchApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.input.SearchChannelMessagesQuery;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
-import team.carrypigeon.backend.infrastructure.basic.page.OpaqueCursorCodec;
+import team.carrypigeon.backend.chat.domain.shared.cursor.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
-import team.carrypigeon.backend.infrastructure.basic.page.CursorPageResponse;
+import team.carrypigeon.backend.chat.domain.shared.cursor.CursorPageResponse;
 
 /**
  * 频道消息搜索 HTTP 入口。

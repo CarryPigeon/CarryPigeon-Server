@@ -18,12 +18,12 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.M
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
 import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageDispatcher;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessageHandler;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPMessageStatus;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageDispatcher;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPMessageStatus;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
 /**
  * 频道消息发布领域 API 实现。

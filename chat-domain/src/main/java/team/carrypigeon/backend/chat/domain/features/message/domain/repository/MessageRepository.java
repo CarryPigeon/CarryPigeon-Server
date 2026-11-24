@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 
 /**
  * 消息仓储抽象。

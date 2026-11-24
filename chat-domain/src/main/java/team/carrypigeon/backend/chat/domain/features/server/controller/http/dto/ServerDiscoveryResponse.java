@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import team.carrypigeon.backend.chat.domain.features.server.config.PluginPropertyItem;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.result.ServerDiscoveryDocument;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -40,7 +39,7 @@ public record ServerDiscoveryResponse(
             document.brief(),
             document.wsUrl(),
             document.serverTime(),
-            Arrays.stream(document.plugins()).map(ServerPluginItem::from).toList()
+            document.plugins().stream().map(ServerPluginItem::from).toList()
         );
     }
 }

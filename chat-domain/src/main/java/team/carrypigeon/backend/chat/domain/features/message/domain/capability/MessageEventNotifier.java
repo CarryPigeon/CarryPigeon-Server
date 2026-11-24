@@ -1,9 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.capability;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.Mention;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.model.ChannelReadState;
-import team.carrypigeon.backend.infrastructure.basic.transaction.TransactionRunner.AfterCommitExecutor;
+import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner.AfterCommitExecutor;
 
 /**
  * 消息事件通知能力。

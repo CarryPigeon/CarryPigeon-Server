@@ -61,8 +61,8 @@ public final class AuditLogs {
      */
     static String buildMessage(String action, String outcome, Long uid, String reason, Object... fields) {
         StringBuilder message = new StringBuilder(96);
-        message.append("action=").append(safeToken(action, "unknown"));
-        message.append(" outcome=").append(safeToken(outcome, "unknown"));
+        message.append("action=").append(safeToken(action));
+        message.append(" outcome=").append(safeToken(outcome));
         message.append(" uid=").append(uid == null ? "" : uid);
         if (reason != null && !reason.isBlank()) {
             message.append(" reason=").append(formatValue(reason));
@@ -76,7 +76,7 @@ public final class AuditLogs {
             return;
         }
         for (int index = 0; index + 1 < fields.length; index += 2) {
-            String key = LogValueSanitizer.singleLine(String.valueOf(fields[index]));
+            String key = String.valueOf(fields[index]);
             if (key.isBlank()) {
                 continue;
             }
@@ -84,7 +84,7 @@ public final class AuditLogs {
             if (value == null) {
                 continue;
             }
-            String text = LogValueSanitizer.singleLine(String.valueOf(value));
+            String text = String.valueOf(value);
             if (text.isBlank()) {
                 continue;
             }
@@ -92,16 +92,14 @@ public final class AuditLogs {
         }
     }
 
-    private static String safeToken(String value, String fallback) {
-        String sanitized = LogValueSanitizer.singleLine(value);
-        return sanitized.isBlank() ? fallback : sanitized;
+    private static String safeToken(String value) {
+        return value.isBlank() ? "unknown" : value;
     }
 
     private static String formatValue(String value) {
-        String sanitized = LogValueSanitizer.singleLine(value);
-        if (sanitized.indexOf(' ') >= 0 || sanitized.indexOf('"') >= 0 || sanitized.indexOf('=') >= 0) {
-            return '"' + sanitized.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
+        if (value.indexOf(' ') >= 0 || value.indexOf('"') >= 0 || value.indexOf('=') >= 0) {
+            return '"' + value.replace("\\", "\\\\").replace("\"", "\\\"") + '"';
         }
-        return sanitized;
+        return value;
     }
 }

@@ -11,7 +11,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessagePage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.plugin.message.api.CPChannelMessage;
+import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 
 /**
  * 频道消息搜索领域实现。

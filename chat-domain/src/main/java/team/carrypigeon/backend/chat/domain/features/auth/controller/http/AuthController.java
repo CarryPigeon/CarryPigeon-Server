@@ -17,15 +17,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.config.http.ClientAddressResolver;
-import team.carrypigeon.backend.chat.domain.config.http.Result;
-import team.carrypigeon.backend.chat.domain.config.http.security.CpPrincipal;
+import team.carrypigeon.backend.chat.domain.http.ClientAddressResolver;
+import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AuthTokenResult;
-import team.carrypigeon.backend.infrastructure.basic.id.IdUtil;
+import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 账号和鉴权相关的api文档
