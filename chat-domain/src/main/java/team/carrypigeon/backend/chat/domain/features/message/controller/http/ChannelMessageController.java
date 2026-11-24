@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageIdsRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
@@ -65,7 +65,7 @@ public class ChannelMessageController {
         description = "按 canonical envelope 发送频道消息；domain 格式为主分类:子分类:版本号，data 由对应消息处理器校验。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "消息发送成功", useReturnTypeSchema = true))
-    public Result<ChannelMessageResponse> sendChannelMessage(
+    public Result sendChannelMessage(
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
         long channelId,
@@ -101,7 +101,7 @@ public class ChannelMessageController {
         description = "频道成员按消息 ID 查询当前状态；跨频道消息按不存在处理。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 ChannelMessageResponse，失败时返回五位错误码", useReturnTypeSchema = true))
-    public Result<ChannelMessageResponse> getMessageById(
+    public Result getMessageById(
         @PathVariable
         @Positive(message = "messageId must be greater than 0")
         long messageId
@@ -123,7 +123,7 @@ public class ChannelMessageController {
         description = "成员按消息 ID 列表查询当前状态"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 ChannelMessageResponse，失败时返回五位错误码", useReturnTypeSchema = true))
-    public Result<ChannelMessagesResponse> getMessagesByIds(
+    public Result getMessagesByIds(
         @Valid
         @NotNull(message = "request body must not be null")
         @RequestBody
@@ -149,7 +149,7 @@ public class ChannelMessageController {
     @Operation(summary = "撤回消息",
         description = "按频道与消息 ID 撤回指定消息，成功时 data 为 null。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> recallChannelMessage(
+    public Result recallChannelMessage(
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
         long channelId,

@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.http;
+package team.carrypigeon.backend.chat.domain.shared.result;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -9,7 +9,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 public record SuccessResult<T>(
     @JsonInclude(JsonInclude.Include.ALWAYS)
     T data
-) implements Result<T> {
+) implements Result {
 
     @JsonProperty("code")
     public int code() {

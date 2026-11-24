@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.ChannelReadStateResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.readstate.dto.ChannelReadSummaryResponse;
@@ -55,7 +55,7 @@ public class ChannelReadStateController {
     @GetMapping(value = "/channels/{channelId}/read_state", produces = "application/json")
     @Operation(summary = "读取频道已读位置和未读数", description = "入群时以最新消息初始化锚点，空频道从 null 开始；统计排除本人和已撤回的消息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功或业务错误 10001、11001、20001、20002", useReturnTypeSchema = true))
-    public Result<ChannelReadSummaryResponse> getReadState(
+    public Result getReadState(
         @Parameter(description = "频道 ID", example = "2001")
         @PathVariable
         @Positive
@@ -82,7 +82,7 @@ public class ChannelReadStateController {
     @PutMapping(value = "/channels/{channelId}/read_state", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新频道已读状态", description = "只前进不后退。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回已读状态", useReturnTypeSchema = true))
-    public Result<ChannelReadStateResponse> updateReadState(
+    public Result updateReadState(
         @Parameter(description = "频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -115,7 +115,7 @@ public class ChannelReadStateController {
     @GetMapping(value = "/unreads", produces = "application/json")
     @Operation(summary = "获取未读频道列表", description = "只返回有未读消息的已加入频道，total 为频道数。每个频道最多计至 10000，排除本人发送及已撤回的消息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回未读列表", useReturnTypeSchema = true))
-    public Result<UnreadListResponse> listUnreads(
+    public Result listUnreads(
         @AuthenticationPrincipal
         CpPrincipal principal
     ) {

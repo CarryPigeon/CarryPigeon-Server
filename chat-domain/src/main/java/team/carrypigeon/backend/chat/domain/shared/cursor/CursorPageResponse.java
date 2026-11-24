@@ -1,6 +1,6 @@
 package team.carrypigeon.backend.chat.domain.shared.cursor;
 
-import team.carrypigeon.backend.chat.domain.http.PageResponse;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResponse;
 
 import java.util.List;
 

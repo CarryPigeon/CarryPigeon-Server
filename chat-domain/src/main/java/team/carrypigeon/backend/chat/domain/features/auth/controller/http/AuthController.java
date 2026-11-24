@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.ClientAddressResolver;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.address.ClientAddressResolver;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
@@ -63,7 +63,7 @@ public class AuthController {
     @PostMapping(value = "/register", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "用户注册", description = "使用用户名邮箱以及密码创建新账户。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "注册成功", useReturnTypeSchema = true))
-    public Result<RegisterResponseBody> register(
+    public Result register(
         @Valid
         @RequestBody
         RegisterRequestBody request
@@ -82,7 +82,7 @@ public class AuthController {
     @PostMapping(value = "/login/pwd", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "用户名密码登录", description = "使用用户名密码创建会话并签发 token。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回会话令牌结果", useReturnTypeSchema = true))
-    public Result<AuthSessionTokenResponse> loginByPWD(
+    public Result loginByPWD(
         @Valid
         @RequestBody
         PWDLoginRequestBody request,
@@ -109,7 +109,7 @@ public class AuthController {
     @PostMapping(value = "/login/email", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "邮箱验证码登录", description = "使用邮箱验证码创建会话并签发 token。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回会话令牌结果", useReturnTypeSchema = true))
-    public Result<AuthSessionTokenResponse> loginByEmail(
+    public Result loginByEmail(
         @Valid
         @RequestBody
         EmailLoginRequestBody request
@@ -134,7 +134,7 @@ public class AuthController {
     @PostMapping(value = "/refresh", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "刷新访问令牌", description = "使用 refresh token 刷新 access token，可同时轮换 refresh token。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回新的会话令牌结果", useReturnTypeSchema = true))
-    public Result<AuthSessionTokenResponse> refresh(
+    public Result refresh(
         @Valid
         @RequestBody
         RefreshAccessTokenRequestBody request
@@ -159,7 +159,7 @@ public class AuthController {
     @PostMapping(value = "/revoke", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "撤销 refresh token", description = "撤销指定 refresh token 对应的 refresh session。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> revoke(
+    public Result revoke(
         @Valid
         @RequestBody
         RevokeRefreshTokenRequestBody request
@@ -179,7 +179,7 @@ public class AuthController {
     @PutMapping(value = "/me/email", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新当前用户邮箱", description = "使用验证码更新当前登录账户邮箱。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> updateEmail(
+    public Result updateEmail(
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal,
         @Valid
@@ -202,7 +202,7 @@ public class AuthController {
     @PutMapping(value = "/me/password", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新当前用户密码", description = "使用验证码更新当前登录账户密码。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> updatePassword(
+    public Result updatePassword(
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal,
         @Valid

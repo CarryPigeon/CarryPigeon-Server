@@ -24,7 +24,7 @@ import org.springdoc.core.utils.SpringDocAnnotationsUtils;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 
 /** 用方法的完整泛型生成成功分支，保留页内元素类型和无返回值操作的必填 null。 */
 @Component

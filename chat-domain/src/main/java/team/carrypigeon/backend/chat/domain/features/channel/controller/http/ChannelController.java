@@ -16,8 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import team.carrypigeon.backend.chat.domain.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResponse;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.ChannelApi;
@@ -66,7 +66,7 @@ public class ChannelController {
     @GetMapping(value = "/discover", produces = "application/json")
     @Operation(summary = "发现频道", description = "按频道 ID 升序发现普通频道，系统频道隐藏。关键词按名称或简介包含匹配；加入频道仍需申请审批，消息仅成员可读。next_cursor 为不透明游标，必须原样回传。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 data 为 CursorPageResponse<DiscoverChannelResponse>，失败时返回五位错误码", useReturnTypeSchema = true))
-    public Result<CursorPageResponse<DiscoverChannelResponse>> discoverChannels(
+    public Result discoverChannels(
         @Parameter(description = "名称或简介关键词，省略或空白时不过滤")
         @RequestParam(name = "q", required = false)
         @Size(max = 128, message = "q must contain at most 128 characters")
@@ -109,7 +109,7 @@ public class ChannelController {
             description = "分页返回当前登录账号存在成员关系的频道列表。无可见频道时返回空 items。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为频道摘要数组", useReturnTypeSchema = true))
-    public Result<PageResponse<ChannelResponseBody>> listChannels(
+    public Result listChannels(
         @Parameter(description = "页码，从 1 开始", example = "1")
         @RequestParam(name = "page", defaultValue = "1")
         @Min(value = 1, message = "page must be greater than 0")
@@ -159,7 +159,7 @@ public class ChannelController {
             description = "按频道 ID 返回频道名称、简介、系统频道标记与创建时间。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为频道详情，含 cid、name、brief、system_channel、created_at", useReturnTypeSchema = true))
-    public Result<ChannelResponseBody> getChannelById(
+    public Result getChannelById(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -189,7 +189,7 @@ public class ChannelController {
             description = "提交后立即退出频道，关联数据由后台异步清理。返回 200，data 为 null；频道不存在时返回业务码 20001。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> quitChannel(
+    public Result quitChannel(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -218,7 +218,7 @@ public class ChannelController {
             description = "提交后频道所有者变更为 new_owner，原所有者不再拥有该频道。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> transferChannel(
+    public Result transferChannel(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -254,7 +254,7 @@ public class ChannelController {
             description = "按频道 ID 列表返回频道名称、简介、系统频道标记与创建时间。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为频道详情数组，含 cid、name、brief、system_channel、created_at", useReturnTypeSchema = true))
-    public Result<ChannelListResponseBody> getChannelByIds(
+    public Result getChannelByIds(
         @Parameter(description = "目标频道 ID 列表", example = "[2001, 2002]")
         @RequestBody
         List<Long> channelIds
@@ -287,7 +287,7 @@ public class ChannelController {
             description = "创建普通频道并把创建者设为其所有者。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为新建频道资料", useReturnTypeSchema = true))
-    public Result<ChannelResponseBody> createChannel(
+    public Result createChannel(
         @Valid
         @RequestBody
         CreateChannelRequest body,
@@ -317,7 +317,7 @@ public class ChannelController {
             description = "提交后频道立即不可访问，关联数据由后台异步清理。返回 200，data 为 null；频道不存在时返回业务码 20001。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> deleteChannel(
+    public Result deleteChannel(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -342,7 +342,7 @@ public class ChannelController {
             description = "更新频道名称与简介，要求 OWNER 或 ADMIN 成员角色。成功返回 200，data 为 null。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> updateChannelProfile(
+    public Result updateChannelProfile(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")

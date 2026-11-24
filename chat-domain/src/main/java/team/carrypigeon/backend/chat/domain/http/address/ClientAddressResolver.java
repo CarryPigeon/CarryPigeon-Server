@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.http;
+package team.carrypigeon.backend.chat.domain.http.address;
 
 import io.netty.util.NetUtil;
 import jakarta.servlet.http.HttpServletRequest;

@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.AuthAccountApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.PublicAccountResult;
@@ -68,7 +68,7 @@ public class UserProfileController {
     @GetMapping(value = "/{accountId}/detail", produces = "application/json")
     @Operation(summary = "按账户 ID 读取资料", description = "任意已认证用户可读取公开资料，包含目标用户的登录邮箱。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回用户公开资料", useReturnTypeSchema = true))
-    public Result<UserDetailProfileResponse> getByAccountId(
+    public Result getByAccountId(
         @Parameter(description = "目标账户 ID", example = "1001")
         @PathVariable
         @Positive(message = "accountId must be greater than 0")
@@ -99,7 +99,7 @@ public class UserProfileController {
     @GetMapping(produces = "application/json")
     @Operation(summary = "批量读取公开资料", description = "按 `ids` 批量读取用户公开资料，避免客户端 N+1 请求。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回公开资料 items 列表", useReturnTypeSchema = true))
-    public Result<UserPublicProfileListResponse> list(
+    public Result list(
         @RequestParam
         List<Long> ids
     ) {
@@ -126,7 +126,7 @@ public class UserProfileController {
     @PatchMapping(value = "/me", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "更新当前用户资料", description = "按 v1 字段语义更新当前登录账户资料。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> updateUserProfile(
+    public Result updateUserProfile(
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal,
         @Valid
@@ -158,7 +158,7 @@ public class UserProfileController {
     @GetMapping(value = "/me", produces = "application/json")
     @Operation(summary = "读取当前用户资料", description = "返回当前 access token 对应账户的资料信息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回当前用户资料", useReturnTypeSchema = true))
-    public Result<UserDetailProfileResponse> me(
+    public Result me(
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal
     ) {

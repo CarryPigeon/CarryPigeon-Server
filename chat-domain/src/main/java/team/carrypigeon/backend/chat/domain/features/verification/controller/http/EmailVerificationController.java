@@ -12,8 +12,8 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import team.carrypigeon.backend.chat.domain.http.ClientAddressResolver;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.http.address.ClientAddressResolver;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.verification.controller.http.dto.SendEmailCodeRequest;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.limit.RateLimitApi;
@@ -56,7 +56,7 @@ public class EmailVerificationController {
     @PostMapping(value = "/email_codes", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "发送邮箱验证码", description = "按 REGISTER、LOGIN 或 CHANGE_EMAIL 用途签发验证码并受理异步邮件任务；成功不保证收件箱收到，最终投递失败会作废对应批次。CHANGE_EMAIL 必须登录并绑定当前账号。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> sendEmailCode(
+    public Result sendEmailCode(
         @Valid
         @RequestBody
         SendEmailCodeRequest requestBody,

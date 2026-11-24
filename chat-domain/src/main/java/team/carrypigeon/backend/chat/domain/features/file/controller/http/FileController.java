@@ -31,7 +31,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.file.config.ServerAvatarProperty;
 import team.carrypigeon.backend.chat.domain.features.file.controller.http.dto.CreateFileUploadRequest;
@@ -81,7 +81,7 @@ public class FileController {
     @PostMapping(value = "/uploads", produces = "application/json", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "申请文件上传", description = "生成同源上传入口与稳定 share_key。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回上传授权结果", useReturnTypeSchema = true))
-    public Result<FileUploadResponse> createUpload(
+    public Result createUpload(
         @Valid
         @RequestBody
         CreateFileUploadRequest request,
@@ -124,7 +124,7 @@ public class FileController {
     @PutMapping(path = "/uploads/{shareKey}", consumes = MediaType.ALL_VALUE, produces = "application/json")
     @Operation(summary = "写入文件内容", description = "使用上传授权 share_key 写入原始文件内容；完成后相同内容重试返回成功，不同内容返回业务码 40006。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> uploadFile(
+    public Result uploadFile(
         @PathVariable
         String shareKey,
         @AuthenticationPrincipal

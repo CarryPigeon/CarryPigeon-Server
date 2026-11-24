@@ -1,4 +1,4 @@
-package team.carrypigeon.backend.chat.domain.http;
+package team.carrypigeon.backend.chat.domain.http.address;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;

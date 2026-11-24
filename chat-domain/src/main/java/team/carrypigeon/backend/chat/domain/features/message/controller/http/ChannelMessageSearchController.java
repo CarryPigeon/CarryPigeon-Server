@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageResponse;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageSearchApi;
@@ -65,7 +65,7 @@ public class ChannelMessageSearchController {
     @GetMapping(value = "/{channelId}/messages/search", produces = "application/json")
     @Operation(summary = "搜索消息", description = "在指定频道内按 MySQL ngram 自然语言全文匹配搜索正文，按消息 ID 倒序分页，不按相关度排序。默认双字分词，单字及纯符号可能无结果；不搜索回复元数据。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items + next_cursor + has_more 分页对象", useReturnTypeSchema = true))
-    public Result<CursorPageResponse<ChannelMessageResponse>> searchChannelMessages(
+    public Result searchChannelMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")

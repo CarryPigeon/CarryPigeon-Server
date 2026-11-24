@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionIdsRequest;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.mention.dto.MentionItemResponse;
@@ -56,7 +56,7 @@ public class MentionController {
     @GetMapping("/mentions/{mentionId}")
     @Operation(summary = "读取一条提及")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "提及详情或错误 10001、11001、30002", useReturnTypeSchema = true))
-    public Result<MentionItemResponse> getMention(
+    public Result getMention(
         @Parameter(description = "提及 ID", example = "4001")
         @PathVariable
         @Positive
@@ -74,7 +74,7 @@ public class MentionController {
     @PostMapping(value = "/mentions/ids", consumes = {"application/json", "application/*+json"})
     @Operation(summary = "按 ID 批量读取提及", description = "接收 1 至 50 个 ID，略过不可见记录。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "提及列表或错误 10001、11001", useReturnTypeSchema = true))
-    public Result<MentionItemsResponse> getMentions(
+    public Result getMentions(
         @Valid
         @RequestBody
         MentionIdsRequest request,
@@ -94,7 +94,7 @@ public class MentionController {
     @GetMapping(value = "/mentions", params = "!cid")
     @Operation(summary = "读取个人提及收件箱", description = "提及 ID 降序，只有还有下一页时才返回游标。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "分页结果或错误 10001、10013、11001", useReturnTypeSchema = true))
-    public Result<CursorPageResponse<MentionItemResponse>> listMentions(
+    public Result listMentions(
         @Parameter(description = "上一页的 next_cursor")
         @RequestParam(required = false)
         String cursor,
@@ -122,7 +122,7 @@ public class MentionController {
     @GetMapping("/channels/{channelId}/mentions")
     @Operation(summary = "读取频道提及收件箱", description = "提及 ID 降序，只有还有下一页时才返回游标。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "分页结果或错误 10001、10013、11001、20001、20002", useReturnTypeSchema = true))
-    public Result<CursorPageResponse<MentionItemResponse>> listChannelMentions(
+    public Result listChannelMentions(
         @Parameter(description = "频道 ID", example = "2001")
         @PathVariable
         @Positive
@@ -150,7 +150,7 @@ public class MentionController {
     @PutMapping("/mentions/{mentionId}/read")
     @Operation(summary = "标记单条提及已读")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功或错误 10001、11001、30002", useReturnTypeSchema = true))
-    public Result<Void> markMentionRead(
+    public Result markMentionRead(
         @Parameter(description = "提及 ID", example = "4001")
         @PathVariable
         @Positive
@@ -170,7 +170,7 @@ public class MentionController {
     @PutMapping("/channels/{channelId}/mentions/read")
     @Operation(summary = "标记当前频道提及已读", description = "可选上界包含指定提及。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功或错误 10001、11001、20001、20002", useReturnTypeSchema = true))
-    public Result<Void> markChannelMentionsRead(
+    public Result markChannelMentionsRead(
         @Parameter(description = "频道 ID", example = "2001")
         @PathVariable
         @Positive
@@ -193,7 +193,7 @@ public class MentionController {
     @PutMapping("/mentions/read")
     @Operation(summary = "标记个人收件箱提及已读", description = "可选上界包含指定提及。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功或错误 10001、11001", useReturnTypeSchema = true))
-    public Result<Void> markMentionsRead(
+    public Result markMentionsRead(
         @Valid
         @RequestBody(required = false)
         UpdateMentionReadStateRequest body,

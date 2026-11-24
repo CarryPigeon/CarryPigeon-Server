@@ -8,7 +8,9 @@ import org.springframework.core.Ordered;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import team.carrypigeon.backend.chat.domain.http.log.request.HttpRequestLoggingFilter;
+import team.carrypigeon.backend.chat.domain.http.cors.HttpCorsProperties;
+import team.carrypigeon.backend.chat.domain.http.log.HttpRequestMdcFilter;
+import team.carrypigeon.backend.chat.domain.http.log.HttpRequestLoggingFilter;
 
 /**
  * HTTP装配配置。
@@ -49,12 +51,27 @@ public class HttpConfiguration implements WebMvcConfigurer {
      * @return 过滤器注册 Bean
      */
     @Bean
-    public FilterRegistrationBean<HttpRequestLoggingFilter> localHttpRequestDebugLoggingFilterRegistration() {
+    public FilterRegistrationBean<HttpRequestLoggingFilter> httpRequestDebugLoggingFilterRegistration() {
         FilterRegistrationBean<HttpRequestLoggingFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new HttpRequestLoggingFilter());
         registration.addUrlPatterns("/api/*");
-        registration.setName("localHttpRequestDebugLoggingFilter");
+        registration.setName("httpRequestDebugLoggingFilter");
         registration.setOrder(Ordered.LOWEST_PRECEDENCE);
+        return registration;
+    }
+
+    /**
+     * 注册MDC过滤器
+     *
+     * @return 过滤器注册 Bean
+     * */
+    @Bean
+    public FilterRegistrationBean<HttpRequestMdcFilter> httpRequestMdcFilterRegistration() {
+        FilterRegistrationBean<HttpRequestMdcFilter> registration = new FilterRegistrationBean<>();
+        registration.setFilter(new HttpRequestMdcFilter());
+        registration.addUrlPatterns("/api/*");
+        registration.setName("httpRequestMdcFilter");
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE+1);
         return registration;
     }
 }

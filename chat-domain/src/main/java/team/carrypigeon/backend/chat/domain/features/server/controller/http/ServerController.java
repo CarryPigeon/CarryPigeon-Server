@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.features.server.controller.http.dto.ServerDiscoveryResponse;
 import team.carrypigeon.backend.chat.domain.features.server.domain.api.entrance.ServerEntranceApi;
 
@@ -44,7 +44,7 @@ public class ServerController {
     @GetMapping(produces = "application/json")
     @Operation(summary = "读取服务发现文档", description = "返回客户端握手与登录前置阶段所需的服务发现信息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回服务发现文档", useReturnTypeSchema = true))
-    public Result<ServerDiscoveryResponse> getServerDiscoveryDocument() {
+    public Result getServerDiscoveryDocument() {
         return Result.success(ServerDiscoveryResponse.from(serverEntranceDomainApi.getServerDiscoveryDocument()));
     }
 

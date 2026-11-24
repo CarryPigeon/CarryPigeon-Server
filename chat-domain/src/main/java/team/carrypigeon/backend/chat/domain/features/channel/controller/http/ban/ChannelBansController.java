@@ -22,8 +22,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResponse;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanListItemResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.ban.dto.ChannelBanRequest;
@@ -81,7 +81,7 @@ public class ChannelBansController {
             )
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为禁言记录，含 cid、uid、until、reason、create_time", useReturnTypeSchema = true))
-    public Result<ChannelBanResponse> banChannelMemberV1(
+    public Result banChannelMemberV1(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -133,7 +133,7 @@ public class ChannelBansController {
             description = "解除指定频道成员当前生效的禁言状态。成功返回 200，data 为 null。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> unbanChannelMember(
+    public Result unbanChannelMember(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -166,7 +166,7 @@ public class ChannelBansController {
             description = "分页返回指定频道的禁言记录列表。列表包含已解除与已过期的历史记录，由调用方按 until 自行过滤。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为禁言记录数组", useReturnTypeSchema = true))
-    public Result<PageResponse<ChannelBanListItemResponse>> listChannelBans(
+    public Result listChannelBans(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")

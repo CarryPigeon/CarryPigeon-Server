@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResponse;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
@@ -64,7 +64,7 @@ public class ChannelMemberGovernanceController {
             description = "分页返回指定频道的成员列表。成员资料缺失时对应用户名与头像字段为空，不影响列表返回。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为成员数组，含 uid、username、role、avatar、join_time", useReturnTypeSchema = true))
-    public Result<PageResponse<ChannelMemberResponse>> listChannelMembers(
+    public Result listChannelMembers(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -122,7 +122,7 @@ public class ChannelMemberGovernanceController {
             description = "将指定频道成员的角色提升为 ADMIN，要求 OWNER 成员角色。请求体为空，成功时 data 为 null。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> promoteChannelMemberV1(
+    public Result promoteChannelMemberV1(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -157,7 +157,7 @@ public class ChannelMemberGovernanceController {
             description = "将指定频道成员的角色降级为 MEMBER，要求 OWNER 成员角色。请求体为空，成功时 data 为 null。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> demoteChannelAdminV1(
+    public Result demoteChannelAdminV1(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -192,7 +192,7 @@ public class ChannelMemberGovernanceController {
             description = "删除指定成员的频道成员关系，要求 OWNER 或 ADMIN 成员角色。请求体为空，成功时 data 为 null。"
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "成功时 code 为 0 且 data 为 null", useReturnTypeSchema = true))
-    public Result<Void> kickChannelMember(
+    public Result kickChannelMember(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")

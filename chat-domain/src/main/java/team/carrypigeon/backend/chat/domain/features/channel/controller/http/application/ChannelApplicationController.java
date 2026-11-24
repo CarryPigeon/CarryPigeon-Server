@@ -21,8 +21,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.PageResponse;
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.page.PageResponse;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.ChannelApplicationResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.CreateChannelApplicationRequest;
@@ -75,7 +75,7 @@ public class ChannelApplicationController {
             )
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为新建申请，含 application_id、cid、uid、reason、apply_time、status", useReturnTypeSchema = true))
-    public Result<ChannelApplicationResponse> createApplication(
+    public Result createApplication(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -102,7 +102,7 @@ public class ChannelApplicationController {
     @GetMapping(value = "/applications", produces = "application/json")
     @Operation(summary = "获取入群申请列表", description = "分页读取个人入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为申请数组", useReturnTypeSchema = true))
-    public Result<PageResponse<ChannelApplicationResponse>> listApplications(
+    public Result listApplications(
         @Parameter(description = "页码，从 1 开始", example = "1")
         @RequestParam(name = "page", defaultValue = "1")
         @Min(value = 1, message = "page must be greater than 0")
@@ -142,7 +142,7 @@ public class ChannelApplicationController {
     @GetMapping(value = "/{channelId}/applications", produces = "application/json")
     @Operation(summary = "获取入群申请列表", description = "分页读取频道入群申请列表，要求 OWNER 或 ADMIN 成员角色。无申请时 items 为空数组。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为分页外壳，items 为申请数组", useReturnTypeSchema = true))
-    public Result<PageResponse<ChannelApplicationResponse>> listApplications(
+    public Result listApplications(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -199,7 +199,7 @@ public class ChannelApplicationController {
             )
     )
     @ApiResponses(@ApiResponse(responseCode = "200", description = "data 为审批后的申请，status 为 accepted 或 declined", useReturnTypeSchema = true))
-    public Result<ChannelApplicationResponse> decideApplication(
+    public Result decideApplication(
         @Parameter(description = "申请所属频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")

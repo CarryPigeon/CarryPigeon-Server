@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import team.carrypigeon.backend.chat.domain.http.Result;
+import team.carrypigeon.backend.chat.domain.shared.result.Result;
 import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageContextResponse;
 import team.carrypigeon.backend.chat.domain.features.message.controller.http.dto.ChannelMessageHistoryResponse;
@@ -62,7 +62,7 @@ public class ChannelMessageHistoryController {
     @GetMapping(value = "/{channelId}/messages", produces = "application/json")
     @Operation(summary = "读取频道历史消息", description = "按消息 ID 降序返回，传入 before_mid 时只读取比它更旧的消息。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items 和 has_more 分页对象", useReturnTypeSchema = true))
-    public Result<ChannelMessageHistoryResponse> listMessages(
+    public Result listMessages(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
@@ -103,7 +103,7 @@ public class ChannelMessageHistoryController {
     @GetMapping(value = "/{channelId}/messages/around", produces = "application/json")
     @Operation(summary = "读取锚点上下文", description = "返回锚点消息前后的固定窗口消息，结果按消息 ID 倒序排列。")
     @ApiResponses(@ApiResponse(responseCode = "200", description = "返回 items 上下文消息数组", useReturnTypeSchema = true))
-    public Result<ChannelMessageContextResponse> getMessagesAround(
+    public Result getMessagesAround(
         @Parameter(description = "目标频道 ID", example = "2001")
         @PathVariable
         @Positive(message = "channelId must be greater than 0")
