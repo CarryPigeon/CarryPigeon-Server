@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.account;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
@@ -24,6 +28,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.cache.Datab
  * 写路径在数据库写入后同时精确失效实体键与新旧唯一键指针，不使用模式删除。
  * 安全边界：账户记录含密码摘要，Redis 必须按敏感存储保护；多实例部署时跨实例失效窗口由 TTL 兜底。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class AuthAccountDatabaseServiceImpl implements AuthAccountDatabaseService {
 
     private static final String DOMAIN = "auth-account";

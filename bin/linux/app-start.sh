@@ -47,6 +47,6 @@ mvn -f "$BASE_DIR/pom.xml" -pl distribution -am -DskipTests install
 
 exec mvn -f "$BASE_DIR/distribution/pom.xml" \
   -DskipTests \
-  "-Dspring-boot.run.arguments=--spring.config.additional-location=file:$CONFIG_DIR/" \
+  "-Dspring-boot.run.arguments=--spring.profiles.active=dev --spring.config.additional-location=file:$CONFIG_DIR/" \
   spring-boot:run \
   "$@"

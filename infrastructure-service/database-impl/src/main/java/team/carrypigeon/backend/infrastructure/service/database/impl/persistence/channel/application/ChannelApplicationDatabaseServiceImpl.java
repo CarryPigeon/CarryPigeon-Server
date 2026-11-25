@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.application;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +22,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 职责：在 database-impl 中完成频道申请的最小查询与写入能力。
  * 边界：只负责数据库记录映射，不承载申请审批业务规则。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class ChannelApplicationDatabaseServiceImpl implements ChannelApplicationDatabaseService {
 
     private final ChannelApplicationMapper channelApplicationMapper;

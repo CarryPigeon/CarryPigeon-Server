@@ -1,11 +1,15 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.health;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationChecker;
 import team.carrypigeon.backend.infrastructure.basic.startup.InitializationCheckResult;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealth;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 
 /** 启动时检查Mail实现的可用性；检查失败会阻止应用启动。 */
+@EnvironmentComponent(profiles = PROD)
 public final class SmtpInitializationChecker implements InitializationChecker {
 
     private final MailHealthService healthService;

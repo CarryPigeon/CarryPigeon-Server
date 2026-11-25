@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.ban;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +19,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
 import team.carrypigeon.backend.infrastructure.service.database.impl.cache.DatabaseCache;
 
 /** 频道禁言持久化适配；提供权威权限查询、展示缓存与限量清理，不决定禁言业务规则。 */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class ChannelBanDatabaseServiceImpl implements ChannelBanDatabaseService {
 
     private static final String DOMAIN = "channel-ban";

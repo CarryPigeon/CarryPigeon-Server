@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.io.InputStream;
 import java.time.Duration;
 import java.util.Base64;
@@ -21,6 +25,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.impl.config.Minio
  * 职责：基于 MinIO 客户端实现 storage-api 定义的对象存储契约。
  * 边界：MinIO SDK 细节保持在 impl 内，不向上层暴露。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class MinioObjectStorageService implements ObjectStorageService {
 
     private final MinioClient minioClient;

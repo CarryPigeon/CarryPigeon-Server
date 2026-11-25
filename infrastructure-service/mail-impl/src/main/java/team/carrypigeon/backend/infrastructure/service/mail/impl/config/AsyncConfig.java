@@ -1,5 +1,8 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.config;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.springframework.context.annotation.Bean;
@@ -9,6 +12,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /** 邮件专用有界执行器；饱和或关闭时明确拒绝，不允许请求线程接管 SMTP 工作。 */
 @Configuration
+@EnvironmentComponent(profiles = PROD)
 public class AsyncConfig {
 
     @Bean("mailExecutor")

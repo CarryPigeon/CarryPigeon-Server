@@ -1,5 +1,7 @@
 package team.carrypigeon.backend.distribution;
 
+import team.carrypigeon.backend.infrastructure.basic.environment.RuntimeEnvironment;
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
@@ -52,10 +54,15 @@ public final class DistributionVerifier {
                 var jwt = binder.bind("cp.chat.auth.jwt", AuthJwtProperties.class).get();
                 var file = binder.bind("cp.chat.file.share-key", FileShareKeyProperties.class).get();
                 binder.bind("cp.chat.server.realtime", RealtimeServerProperties.class).get().afterPropertiesSet();
-                binder.bind("service.database.mysql", DatabaseServiceProperties.class).get();
-                binder.bind("service.cache.redis", RedisCacheProperties.class).get();
-                binder.bind("service.storage.minio", MinioStorageProperties.class).get();
-                binder.bind("service.mail.smtp", SmtpMailProperties.class).get();
+                String profile = RuntimeEnvironment.selected(environment);
+                if (!EnvironmentComponent.TEST.equals(profile)) {
+                    binder.bind("service.database.mysql", DatabaseServiceProperties.class).get();
+                    binder.bind("service.cache.redis", RedisCacheProperties.class).get();
+                    binder.bind("service.storage.minio", MinioStorageProperties.class).get();
+                }
+                if (EnvironmentComponent.PROD.equals(profile)) {
+                    binder.bind("service.mail.smtp", SmtpMailProperties.class).get();
+                }
             }
             System.out.println(strict ? "Distribution configuration verified (offline)." : "Distribution files and YAML verified (offline).");
         } catch (BindException exception) {

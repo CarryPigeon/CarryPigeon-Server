@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,6 +28,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.persistence
  * 职责：在 database-impl 中完成消息表级读写与专用搜索查询。
  * 边界：只负责持久化映射和数据谓词，不承载消息业务规则。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class MessageDatabaseServiceImpl implements MessageDatabaseService {
 
     private final MessageMapper messageMapper;

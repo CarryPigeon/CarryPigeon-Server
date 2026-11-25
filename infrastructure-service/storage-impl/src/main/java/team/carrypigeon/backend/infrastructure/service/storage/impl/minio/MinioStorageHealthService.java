@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.minio;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import io.minio.BucketExistsArgs;
 import io.minio.MinioClient;
 import io.minio.errors.ErrorResponseException;
@@ -13,6 +17,7 @@ import team.carrypigeon.backend.infrastructure.service.storage.impl.config.Minio
  * 职责：通过 bucket 存在性校验验证对象存储服务可用性。
  * 边界：MinIO SDK 细节保持在 impl 内部。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class MinioStorageHealthService implements StorageHealthService {
 
     private final MinioClient minioClient;

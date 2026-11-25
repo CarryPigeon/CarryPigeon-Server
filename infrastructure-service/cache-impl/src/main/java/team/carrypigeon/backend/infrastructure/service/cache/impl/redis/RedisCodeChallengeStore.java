@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.redis;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.time.Duration;
 import java.util.List;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -11,6 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeCha
  * Redis 单键挑战状态机；Lua 保证次数限制和消费在多实例之间只有一个判定结果。
  * 消费或耗尽后保留终态至原 TTL 到期，重发整体替换，清理按 challengeId 比较。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class RedisCodeChallengeStore implements CodeChallengeStore {
 
     private static final DefaultRedisScript<Long> REPLACE = new DefaultRedisScript<>("""

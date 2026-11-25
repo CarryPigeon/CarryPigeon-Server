@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.file;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import team.carrypigeon.backend.infrastructure.service.database.api.model.FileRecord;
 import team.carrypigeon.backend.infrastructure.service.database.api.service.FileDatabaseService;
@@ -13,6 +17,7 @@ import java.util.Optional;
 /**
  * 文件上传状态持久化；取得写入权和登记对象键原子提交，网络上传不占用数据库事务。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class FileDatabaseServiceImpl implements FileDatabaseService {
 
     private final static String DOMAIN = "file";

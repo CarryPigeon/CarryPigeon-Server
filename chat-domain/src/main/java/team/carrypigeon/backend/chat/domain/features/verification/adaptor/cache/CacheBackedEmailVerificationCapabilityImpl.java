@@ -6,7 +6,6 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
@@ -35,15 +34,15 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     private static final String CACHE_KEY_PREFIX = "auth:email-challenge:";
     private static final String MAIL_SUBJECT = "CarryPigeon verification code";
 
-    private final ObjectProvider<CodeChallengeStore> challengeStoreProvider;
-    private final ObjectProvider<MailSenderService> mailSenderServiceProvider;
+    private final CodeChallengeStore challengeStore;
+    private final MailSenderService mailSenderService;
 
     public CacheBackedEmailVerificationCapabilityImpl(
-            ObjectProvider<CodeChallengeStore> challengeStoreProvider,
-            ObjectProvider<MailSenderService> mailSenderServiceProvider
+            CodeChallengeStore challengeStore,
+            MailSenderService mailSenderService
     ) {
-        this.challengeStoreProvider = challengeStoreProvider;
-        this.mailSenderServiceProvider = mailSenderServiceProvider;
+        this.challengeStore = challengeStore;
+        this.mailSenderService = mailSenderService;
     }
 
     @Override
@@ -51,19 +50,18 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         String code = String.format(Locale.ROOT, "%06d", CODE_RANDOM.nextInt(1_000_000));
         String cacheKey = challengeKey(email, purpose, accountId);
         String challengeId = UUID.randomUUID().toString();
-        CodeChallengeStore store = requireStore();
         try {
-            store.replace(cacheKey, challengeId, code, 5, CODE_TTL);
+            challengeStore.replace(cacheKey, challengeId, code, 5, CODE_TTL);
         } catch (CacheServiceException exception) {
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
         }
         try {
             CompletionStage<Void> delivery = deliverCode(email, code, purpose);
             // HTTP 成功只表示任务已受理；SMTP 异步失败时仅作废当前 challenge，不能影响之后重发的批次。
-            delivery.whenComplete((ignored, failure) -> completeDelivery(store, cacheKey, challengeId, purpose, accountId, failure));
+            delivery.whenComplete((ignored, failure) -> completeDelivery(cacheKey, challengeId, purpose, accountId, failure));
         } catch (RuntimeException exception) {
-            // 同步任务拒绝或依赖缺失也登记为本批次失败，与异步结果使用同一作废约束。
-            completeDelivery(store, cacheKey, challengeId, purpose, accountId, exception);
+            // 同步投递失败也登记为本批次失败，与异步结果使用同一作废约束。
+            completeDelivery(cacheKey, challengeId, purpose, accountId, exception);
             throw exception;
         }
     }
@@ -72,7 +70,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     public void verifyCode(String email, String code, EmailCodePurpose purpose, Long accountId) {
         CodeChallengeStore.Result result;
         try {
-            result = requireStore().verify(challengeKey(email, purpose, accountId), code);
+            result = challengeStore.verify(challengeKey(email, purpose, accountId), code);
         } catch (CacheServiceException exception) {
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
         }
@@ -85,28 +83,12 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         throw ProblemException.of(VerificationProblem.INVALID_CODE, "email code is invalid");
     }
 
-    /**
-     * 获取验证码缓存能力。
-     * 缺少挑战存储时返回稳定错误；不对其它依赖缓存的功能作启动保证。
-     */
-    private CodeChallengeStore requireStore() {
-        CodeChallengeStore store = challengeStoreProvider.getIfAvailable();
-        if (store == null) {
-            throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE);
-        }
-        return store;
-    }
-
     /** 签发与消费必须构造同一身份，修改邮箱的挑战不能被其它账号消费。 */
     private String challengeKey(String email, EmailCodePurpose purpose, Long accountId) {
         return CACHE_KEY_PREFIX + purpose.name() + ":" + (accountId == null ? "" : accountId) + ":" + email;
     }
 
     private CompletionStage<Void> deliverCode(String email, String code, EmailCodePurpose purpose) {
-        MailSenderService mailSenderService = mailSenderServiceProvider.getIfAvailable();
-        if (mailSenderService == null) {
-            throw ProblemException.of(VerificationProblem.MAIL_UNAVAILABLE);
-        }
         try {
             CompletionStage<Void> result = mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code, purpose)));
             if (result == null) {
@@ -119,7 +101,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     }
 
     /** 结果和缓存写入分别观测；缓存短时故障不能吞掉真实 SMTP 结果，也不能在已返回的 HTTP 上补报。 */
-    private void completeDelivery(CodeChallengeStore store, String cacheKey, String challengeId,
+    private void completeDelivery(String cacheKey, String challengeId,
             EmailCodePurpose purpose, Long accountId, Throwable failure) {
         if (failure == null) {
             AuditLogs.success("auth.code_delivery", accountId, "challenge_id", challengeId, "purpose", purpose);
@@ -128,7 +110,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
                     "challenge_id", challengeId, "purpose", purpose);
         }
         try {
-            store.completeDelivery(cacheKey, challengeId, failure == null);
+            challengeStore.completeDelivery(cacheKey, challengeId, failure == null);
         } catch (RuntimeException cleanupFailure) {
             // 不输出邮件正文、验证码或收件人；批次 ID 可用于关联受理与投递审计记录。
             log.error("Failed to persist email delivery result: challengeId={}, failureType={}",

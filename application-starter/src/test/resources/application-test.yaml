@@ -1,0 +1,11 @@
+cp:
+  chat:
+    auth:
+      jwt:
+        secret: carrypigeon-test-only-auth-signing-key-32
+    file:
+      share-key:
+        secret: carrypigeon-test-only-file-signing-key-32
+    server:
+      realtime:
+        enabled: false

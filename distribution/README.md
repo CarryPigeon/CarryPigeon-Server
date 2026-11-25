@@ -20,8 +20,9 @@ Windows 可自行使用 Java 类路径启动；当前不提供包内 Windows 生
 部署前填写 `config/application.yaml` 中的 `cp.chat.auth.jwt.secret`、
 `cp.chat.file.share-key.secret`，并核对 `cp.server.meta` 和全部 `service.*` 连接配置。
 两个密钥必须不同，分别使用至少 32 字符的随机值，也可通过 `CP_JWT_SECRET` 和 `CP_FILE_SHARE_KEY_SECRET` 提供。
-公开示例密钥仅允许在显式选择 `dev` 时使用；直接运行 starter 的本地开发命令需传入
-`--spring.profiles.active=dev`。分发包应使用部署密钥，不启用 `dev`。
+默认环境为 `prod`，部署时填写 MySQL、Redis、MinIO 和 SMTP 连接参数（包括 SMTP 主机和发件地址）。四项服务均参与启动检查。
+本地启动脚本显式选择 `dev` 并使用前三项服务。验证码邮件写入工作目录下的 `target/dev-mailbox/`，可通过 `service.mail.local.directory` 修改收件目录。
+自动化测试在 `application-starter` 的测试类路径激活 `test`，四项服务均使用内存实现。每次启动选择一个运行环境，原四项服务的 `enabled` 开关由环境选择取代。
 更换 JWT 密钥会使既有令牌失效；更换文件签名密钥会使尚未过期的上传凭证失效，已上传对象及下载地址不依赖该密钥。
 启用实时通道时必须填写
 `cp.chat.server.realtime.public-url`，例如经 TLS 代理部署使用

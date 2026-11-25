@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
@@ -8,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 
-import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -19,14 +22,14 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMail
  * 职责：基于 Spring Mail 实现 mail-api 定义的纯文本邮件发送契约。
  * 边界：SMTP 访问细节封装在 impl 内部，不向上层泄露。
  */
-@Service
+@EnvironmentComponent(profiles = PROD)
 public class SmtpMailSenderService implements MailSenderService {
 
     private final JavaMailSender mailSender;
     private final SmtpMailProperties properties;
     private final Executor executor;
 
-    public SmtpMailSenderService(JavaMailSender mailSender, SmtpMailProperties properties, Executor executor) {
+    public SmtpMailSenderService(JavaMailSender mailSender, SmtpMailProperties properties, @Qualifier("mailExecutor") Executor executor) {
         this.mailSender = mailSender;
         this.properties = properties;
         this.executor = executor;
@@ -49,7 +52,7 @@ public class SmtpMailSenderService implements MailSenderService {
         message.setSubject(command.subject().trim());
         message.setText(command.text());
         return CompletableFuture.runAsync(() -> {
-            for (int attempt = 1; attempt <= 3; attempt++) {
+            for (int attempt = 1; true; attempt++) {
                 try {
                     mailSender.send(message);
                     return;

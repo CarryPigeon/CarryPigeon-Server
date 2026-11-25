@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.user;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.transaction.annotation.Propagation;
@@ -19,6 +23,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.cache.Datab
  * 边界：只负责数据库记录映射，不承载资料校验与展示业务规则。
  * 缓存：按账户 ID 缓存单条与批量资料读取；写路径按账户 ID 精确失效，不缓存分页查询。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class UserProfileDatabaseServiceImpl implements UserProfileDatabaseService {
 
     private static final String DOMAIN = "user-profile";

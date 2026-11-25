@@ -1,13 +1,17 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.config;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
 import java.time.Duration;
+import team.carrypigeon.backend.infrastructure.basic.environment.InEnvironment;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /** Redis 连接、命令执行和缓存有效期配置；两个超时均须为正数，单位由 Duration 保留。 */
+@InEnvironment(profiles = {PROD, DEV})
 @ConfigurationProperties(prefix = "service.cache.redis")
 public record RedisCacheProperties(
-        boolean enabled,
         String host,
         int port,
         String password,

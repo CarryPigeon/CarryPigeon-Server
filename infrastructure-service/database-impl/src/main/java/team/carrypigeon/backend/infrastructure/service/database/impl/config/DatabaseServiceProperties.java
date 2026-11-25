@@ -1,6 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.config;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
 import java.time.Duration;
+import team.carrypigeon.backend.infrastructure.basic.environment.InEnvironment;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
@@ -13,7 +17,6 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * 实体负载默认 5 分钟，唯一键 lookup 指针默认 5 分钟，
  * 单次批量缓存读取最多 128 个主键（超过直接读库）。</p>
  *
- * @param enabled 是否启用数据库服务
  * @param url MySQL 连接地址
  * @param username MySQL 用户名
  * @param password MySQL 密码
@@ -24,9 +27,9 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * @param cacheLookupTtl 唯一键 lookup 指针缓存 TTL
  * @param cacheMaxBatchSize 单次批量缓存读取允许的最大主键数量
  */
+@InEnvironment(profiles = {PROD, DEV})
 @ConfigurationProperties(prefix = "service.database.mysql")
 public record DatabaseServiceProperties(
-        boolean enabled,
         String url,
         String username,
         String password,
@@ -46,7 +49,7 @@ public record DatabaseServiceProperties(
     @ConstructorBinding
     public DatabaseServiceProperties {
         if (url == null || url.isBlank()) {
-            throw new IllegalArgumentException("service.database.mysql.url must not be blank when database is enabled");
+            throw new IllegalArgumentException("service.database.mysql.url must not be blank");
         }
         if (username == null) {
             username = "";

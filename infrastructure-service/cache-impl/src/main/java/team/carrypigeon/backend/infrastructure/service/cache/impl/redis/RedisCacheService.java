@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.redis;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -17,6 +21,7 @@ import team.carrypigeon.backend.infrastructure.service.cache.impl.config.RedisCa
  * 职责：基于 StringRedisTemplate 实现 cache-api 定义的字符串缓存契约。
  * 边界：Redis 访问细节封装在 impl 内，不向上层泄露。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class RedisCacheService implements CacheService {
 
     private static final DefaultRedisScript<Boolean> CONSUME_IF_EQUALS_SCRIPT = new DefaultRedisScript<>(

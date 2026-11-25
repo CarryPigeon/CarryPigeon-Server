@@ -44,25 +44,21 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
     private void runCheck(InitializationChecker initializationChecker) {
         String checkName = initializationChecker.name();
         long startedAtNanos = System.nanoTime();
+        InitializationCheckResult result;
         try {
-            InitializationCheckResult result = initializationChecker.check();
-            long elapsedMillis = elapsedMillis(startedAtNanos);
-            if (result == null) {
-                handleFailure(initializationChecker, checkName, "check returned no result", elapsedMillis, null);
-                return;
-            }
-            String message = result.message();
-            if (result.passed()) {
-                log.info("Initialization check passed [{}] in {} ms: {}", checkName, elapsedMillis, message);
-                return;
-            }
-            handleFailure(initializationChecker, checkName, message, elapsedMillis, null);
+            result = initializationChecker.check();
         } catch (RuntimeException exception) {
-            long elapsedMillis = elapsedMillis(startedAtNanos);
-            String message = exception.getClass().getSimpleName() + ": "
-                    + exception.getMessage();
-            handleFailure(initializationChecker, checkName, message, elapsedMillis, exception);
+            String message = exception.getClass().getSimpleName() + ": " + exception.getMessage();
+            handleFailure(initializationChecker, checkName, message, elapsedMillis(startedAtNanos), exception);
+            return;
         }
+        long elapsedMillis = elapsedMillis(startedAtNanos);
+        if (result == null || !result.passed()) {
+            String message = result == null ? "check returned no result" : result.message();
+            handleFailure(initializationChecker, checkName, message, elapsedMillis, null);
+            return;
+        }
+        log.info("Initialization check passed [{}] in {} ms: {}", checkName, elapsedMillis, result.message());
     }
 
     private void handleFailure(
@@ -80,7 +76,7 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
                 log.error("Required initialization check threw [{}] after {} ms: {}",
                         checkName, elapsedMillis, message, cause);
             }
-            throw new RuntimeException("Required initialization check failed", cause);
+            throw new IllegalStateException("Required initialization check failed: " + checkName, cause);
         }
         if (cause == null) {
             log.warn("Initialization check failed but marked optional [{}] after {} ms: {}",
@@ -90,8 +86,6 @@ public class InitializationCheckRunner implements SmartInitializingSingleton {
         log.warn("Initialization check threw but is marked optional [{}] after {} ms: {}",
                 checkName, elapsedMillis, message, cause);
     }
-
-
 
     private long elapsedMillis(long startedAtNanos) {
         return (System.nanoTime() - startedAtNanos) / 1_000_000L;

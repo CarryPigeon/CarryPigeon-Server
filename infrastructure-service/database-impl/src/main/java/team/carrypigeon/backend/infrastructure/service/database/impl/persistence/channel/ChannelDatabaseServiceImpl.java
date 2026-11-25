@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +28,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.persistence
  * 边界：只负责数据库记录映射，不承载频道业务规则。
  * 缓存：按频道 ID 缓存单条与批量频道主数据；写路径按频道 ID 精确失效，不缓存分页/发现页查询。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class ChannelDatabaseServiceImpl implements ChannelDatabaseService {
 
     private static final String DOMAIN = "channel";

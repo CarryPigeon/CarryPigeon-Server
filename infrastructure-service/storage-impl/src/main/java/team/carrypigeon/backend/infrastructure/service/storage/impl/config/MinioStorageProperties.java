@@ -1,6 +1,10 @@
 package team.carrypigeon.backend.infrastructure.service.storage.impl.config;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
 import java.time.Duration;
+import team.carrypigeon.backend.infrastructure.basic.environment.InEnvironment;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
@@ -9,7 +13,6 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * 职责：承载 storage-impl 所需的 MinIO 连接信息与默认 bucket。
  * 边界：配置类属于具体对象存储实现模块，不进入基础设施固定层或业务层。
  *
- * @param enabled 是否启用对象存储实现
  * @param endpoint MinIO 服务地址
  * @param accessKey MinIO 访问 key
  * @param secretKey MinIO 密钥
@@ -18,9 +21,9 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
  * @param readTimeout 读取停顿超时
  * @param writeTimeout 写入停顿超时
  */
+@InEnvironment(profiles = {PROD, DEV})
 @ConfigurationProperties(prefix = "service.storage.minio")
 public record MinioStorageProperties(
-        boolean enabled,
         String endpoint,
         String accessKey,
         String secretKey,
@@ -51,11 +54,11 @@ public record MinioStorageProperties(
         connectTimeout = positiveOrDefault(connectTimeout, DEFAULT_CONNECT_TIMEOUT, "connect-timeout");
         readTimeout = positiveOrDefault(readTimeout, DEFAULT_READ_TIMEOUT, "read-timeout");
         writeTimeout = positiveOrDefault(writeTimeout, DEFAULT_WRITE_TIMEOUT, "write-timeout");
-        if (enabled && accessKey.isBlank()) {
-            throw new IllegalArgumentException("service.storage.minio.access-key must not be blank when storage is enabled");
+        if (accessKey.isBlank()) {
+            throw new IllegalArgumentException("service.storage.minio.access-key must not be blank");
         }
-        if (enabled && secretKey.isBlank()) {
-            throw new IllegalArgumentException("service.storage.minio.secret-key must not be blank when storage is enabled");
+        if (secretKey.isBlank()) {
+            throw new IllegalArgumentException("service.storage.minio.secret-key must not be blank");
         }
     }
 

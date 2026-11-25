@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.readstate;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +26,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Chan
  * 职责：在 database-impl 中持久化频道已读锚点与未读统计查询。
  * 边界：不承载“只前进不后退”等业务规则，只暴露存储层读写能力。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class ChannelReadStateDatabaseServiceImpl implements ChannelReadStateDatabaseService {
 
     private final ChannelReadStateMapper channelReadStateMapper;

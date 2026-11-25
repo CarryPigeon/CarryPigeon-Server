@@ -5,7 +5,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
@@ -14,10 +13,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * 职责：启动 Spring 容器，并作为最终运行时的装配入口。
  */
 @Slf4j
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "team.carrypigeon.backend")
 @EnableScheduling
-@ComponentScan(basePackages = {"team.carrypigeon.backend"})
-@ConfigurationPropertiesScan(basePackages = {"team.carrypigeon.backend"})
+@ConfigurationPropertiesScan("team.carrypigeon.backend")
 public class ApplicationStarter {
     /**
      * Spring Boot 应用入口。

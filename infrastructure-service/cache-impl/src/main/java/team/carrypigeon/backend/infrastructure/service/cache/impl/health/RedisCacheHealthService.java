@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.cache.impl.health;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionCommands;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -11,6 +15,7 @@ import team.carrypigeon.backend.infrastructure.service.cache.api.health.CacheHea
  * 职责：通过 ping 验证 Redis 服务是否可用。
  * 边界：Redis 连接细节停留在 impl 内部。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class RedisCacheHealthService implements CacheHealthService {
 
     private final StringRedisTemplate redisTemplate;

@@ -63,4 +63,24 @@
             </exclusions>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-memory-fixtures</id>
+                        <phase>process-test-classes</phase>
+                        <goals><goal>test-jar</goal></goals>
+                        <configuration>
+                            <includes>
+                                <include>team/carrypigeon/backend/infrastructure/service/storage/memory/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

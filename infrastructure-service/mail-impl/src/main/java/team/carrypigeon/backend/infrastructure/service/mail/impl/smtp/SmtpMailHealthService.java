@@ -1,7 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealth;
 import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealthService;
 
@@ -10,7 +12,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.health.MailHealt
  * 职责：通过 SMTP 连接测试验证邮件服务是否可用。
  * 边界：SMTP 连接细节停留在 impl 内部。
  */
-@Service
+@EnvironmentComponent(profiles = PROD)
 public class SmtpMailHealthService implements MailHealthService {
 
     private final JavaMailSenderImpl mailSender;
@@ -30,8 +32,8 @@ public class SmtpMailHealthService implements MailHealthService {
             mailSender.testConnection();
             return new MailHealth(true, "mail service is available");
         } catch (Exception exception) {
-            String diagnostic =exception.getMessage();
-            if (diagnostic.isBlank()) {
+            String diagnostic = exception.getMessage();
+            if (diagnostic == null || diagnostic.isBlank()) {
                 diagnostic = exception.getClass().getSimpleName();
             }
             return new MailHealth(false, "mail service is unavailable: " + diagnostic);

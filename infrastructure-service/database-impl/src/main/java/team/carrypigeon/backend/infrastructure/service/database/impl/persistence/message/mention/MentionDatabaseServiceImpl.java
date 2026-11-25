@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.message.mention;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +23,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Ment
  * 职责：在 database-impl 中提供提及表级读写与通用查询。
  * 边界：不承载已读状态流转；read 过滤值由 Repository 传入。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class MentionDatabaseServiceImpl implements MentionDatabaseService {
 
     private final MentionMapper mentionMapper;

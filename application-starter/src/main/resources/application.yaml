@@ -3,6 +3,8 @@ server:
   forward-headers-strategy: none
 
 spring:
+  profiles:
+    default: prod
   flyway:
     # 只迁移版本历史可追踪的数据库；未纳管的非空库需要显式核对后接管。
     baseline-on-migrate: false
@@ -88,8 +90,6 @@ cp:
 service:
   database:
     mysql:
-      # 职责：控制数据库服务实现是否参与当前运行时装配。
-      enabled: true
       # 职责：定义数据库连接地址。
       url: jdbc:mysql://127.0.0.1:3306/carrypigeon?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=30000
       # 职责：定义数据库连接用户名。
@@ -110,9 +110,6 @@ service:
       cache-max-batch-size: 128
   cache:
     redis:
-      # 职责：控制缓存服务实现是否参与当前运行时装配。
-      # 约束：邮箱验证码能力与数据库查询缓存都依赖缓存实现，生产环境应保持开启。
-      enabled: true
       # 职责：定义 Redis 主机地址。
       host: 127.0.0.1
       # 职责：定义 Redis 服务端口。
@@ -127,8 +124,6 @@ service:
       default-ttl: 5m
   mail:
     smtp:
-      # 职责：控制邮件服务实现是否参与当前运行时装配。
-      enabled: false
       # 职责：定义 SMTP 主机地址。
       host: ""
       # 职责：定义 SMTP 服务端口。
@@ -152,8 +147,6 @@ service:
   # 存储配置
   storage:
     minio:
-      # 职责：控制对象存储服务实现是否参与当前运行时装配。
-      enabled: true
       # 职责：定义 MinIO 连接地址。
       endpoint: http://127.0.0.1:9000
       # 职责：定义 MinIO 访问身份。

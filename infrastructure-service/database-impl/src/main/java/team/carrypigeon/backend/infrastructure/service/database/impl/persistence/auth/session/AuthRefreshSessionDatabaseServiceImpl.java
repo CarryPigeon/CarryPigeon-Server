@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.auth.session;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +25,7 @@ import team.carrypigeon.backend.infrastructure.service.database.api.service.Auth
  * 职责：在 database-impl 中完成刷新会话的最小查询、写入与撤销能力。
  * 边界：只负责数据库记录映射，不承载 token 轮换业务规则。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class AuthRefreshSessionDatabaseServiceImpl implements AuthRefreshSessionDatabaseService {
 
     private final AuthRefreshSessionMapper authRefreshSessionMapper;

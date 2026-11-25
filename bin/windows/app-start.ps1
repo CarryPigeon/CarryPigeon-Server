@@ -41,6 +41,6 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$springRunArguments = '--spring.config.additional-location=file:{0}/' -f ($ConfigDir -replace '\\', '/')
+$springRunArguments = '--spring.profiles.active=dev --spring.config.additional-location=file:{0}/' -f ($ConfigDir -replace '\\', '/')
 & mvn -f (Join-Path $BaseDir 'distribution/pom.xml') -DskipTests "-Dspring-boot.run.arguments=$springRunArguments" spring-boot:run @args
 exit $LASTEXITCODE

@@ -1,11 +1,14 @@
 package team.carrypigeon.backend.infrastructure.service.mail.impl.config;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.InEnvironment;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.ConstructorBinding;
 
+@InEnvironment(profiles = PROD)
 @ConfigurationProperties(prefix = "service.mail.smtp")
 public record SmtpMailProperties(
-        boolean enabled,
         String host,
         int port,
         String username,
@@ -24,8 +27,8 @@ public record SmtpMailProperties(
 
     @ConstructorBinding
     public SmtpMailProperties {
-        if (host == null) {
-            host = "";
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("service.mail.smtp.host must not be blank");
         }
         if (port <= 0) {
             port = DEFAULT_PORT;
@@ -48,12 +51,9 @@ public record SmtpMailProperties(
         if (writeTimeout <= 0) {
             writeTimeout = DEFAULT_WRITE_TIMEOUT;
         }
-        if (enabled && fromAddress.isBlank()) {
-            throw new IllegalArgumentException("service.mail.smtp.from-address must not be blank when mail is enabled");
+        if (fromAddress.isBlank()) {
+            throw new IllegalArgumentException("service.mail.smtp.from-address must not be blank");
         }
     }
 
-    public SmtpMailProperties() {
-        this(false, "", DEFAULT_PORT, "", "", "", true, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_TIMEOUT, DEFAULT_WRITE_TIMEOUT, true);
-    }
 }

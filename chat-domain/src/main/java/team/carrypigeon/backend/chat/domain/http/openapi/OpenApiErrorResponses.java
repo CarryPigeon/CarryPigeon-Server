@@ -21,6 +21,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 import org.springdoc.core.customizers.GlobalOperationComponentsCustomizer;
 import org.springdoc.core.properties.SpringDocConfigProperties;
 import org.springdoc.core.utils.SpringDocAnnotationsUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.method.HandlerMethod;
 
@@ -28,6 +29,7 @@ import team.carrypigeon.backend.chat.domain.shared.result.Result;
 
 /** 用方法的完整泛型生成成功分支，保留页内元素类型和无返回值操作的必填 null。 */
 @Component
+@ConditionalOnProperty(name = "springdoc.api-docs.enabled", havingValue = "true", matchIfMissing = true)
 final class OpenApiErrorResponses implements GlobalOperationComponentsCustomizer {
 
     private static final String JSON = "application/json";

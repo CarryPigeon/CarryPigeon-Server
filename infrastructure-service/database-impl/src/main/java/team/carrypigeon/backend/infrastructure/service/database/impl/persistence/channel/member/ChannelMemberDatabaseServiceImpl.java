@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.infrastructure.service.database.impl.persistence.channel.member;
 
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
+import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.DEV;
+
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +26,7 @@ import team.carrypigeon.backend.infrastructure.service.database.impl.cache.Datab
  * 缓存：按 (频道, 账户) 唯一键缓存“关系 -&gt; 成员主键”lookup 指针，成员实体按主键缓存一份；
  * 写路径精确失效实体键与新旧关系指针，成员列表/分页查询不缓存。
  */
+@EnvironmentComponent(profiles = {PROD, DEV})
 public class ChannelMemberDatabaseServiceImpl implements ChannelMemberDatabaseService {
 
     private static final String DOMAIN = "channel-member";
