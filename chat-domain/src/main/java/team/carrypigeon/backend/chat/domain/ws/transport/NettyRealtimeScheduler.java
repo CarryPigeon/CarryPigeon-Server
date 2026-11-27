@@ -5,6 +5,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
 import team.carrypigeon.backend.chat.domain.ws.frame.RealtimeFrameCodec;
@@ -48,8 +49,8 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
             if (channel.isActive() && attributes.getAccountId() == null) {
                 LogContexts.uid(null);
                 log.debug("Realtime authentication timeout, channelId={}", channel.id().asShortText());
-                //TODO 错误吗规范
-                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "authentication frame was not received in time")))
+                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(
+                    null, "auth", AuthProblem.AUTHENTICATION_REQUIRED.code(), "authentication frame was not received in time")))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), timeoutSeconds, TimeUnit.SECONDS);
@@ -69,8 +70,8 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
                 LogContexts.uid(String.valueOf(attributes.getAccountId()));
                 log.debug("Realtime access token expired, channelId={}, uid={}",
                         channel.id().asShortText(), attributes.getAccountId());
-                //TODO 错误码规范
-                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "access token is expired")))
+                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(
+                    null, "auth", AuthProblem.TOKEN_EXPIRED.code(), "access token is expired")))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), delayMillis, TimeUnit.MILLISECONDS);

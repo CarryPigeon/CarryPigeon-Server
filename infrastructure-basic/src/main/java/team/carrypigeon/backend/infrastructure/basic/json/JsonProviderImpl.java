@@ -25,7 +25,7 @@ public class JsonProviderImpl implements JsonProvider {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (Exception e) {
-            throw ProblemException.of(JsonProblem.JSON_SERIALIZE_FAILED);
+            throw ProblemException.of(JsonProblem.JSON_SERIALIZE_FAILED, e);
         }
     }
 
@@ -36,7 +36,7 @@ public class JsonProviderImpl implements JsonProvider {
         try {
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
-            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED);
+            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED, e);
         }
     }
 
@@ -47,7 +47,7 @@ public class JsonProviderImpl implements JsonProvider {
         try {
             return objectMapper.readValue(json, type);
         } catch (Exception e) {
-            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED);
+            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED, e);
         }
     }
 
@@ -58,7 +58,7 @@ public class JsonProviderImpl implements JsonProvider {
         try {
             return objectMapper.readTree(json);
         } catch (Exception e) {
-            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED);
+            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED, e);
         }
     }
 }

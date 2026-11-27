@@ -15,6 +15,7 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.Auth
 import team.carrypigeon.backend.chat.domain.features.auth.domain.capability.AuthTokenCodec;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
+import team.carrypigeon.backend.infrastructure.basic.json.JsonProblem;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
@@ -181,6 +182,9 @@ public class HmacJwtAuthTokenService implements AuthTokenCodec {
                     expiresAt
             );
         } catch (ProblemException exception) {
+            if (exception.mapping() == JsonProblem.JSON_DESERIALIZE_FAILED) {
+                throw invalidToken();
+            }
             throw exception;
         } catch (RuntimeException exception) {
             throw invalidToken();

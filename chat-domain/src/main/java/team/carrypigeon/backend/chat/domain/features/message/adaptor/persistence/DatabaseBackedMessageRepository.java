@@ -154,7 +154,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         try {
             return dataReader.readValue(data);
         } catch (JsonProcessingException exception) {
-            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED);
+            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED, exception);
         }
     }
 

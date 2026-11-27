@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import io.netty.util.AttributeKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.NestedExceptionUtils;
+import team.carrypigeon.backend.chat.domain.features.auth.domain.problem.AuthProblem;
 import team.carrypigeon.backend.chat.domain.ws.transport.NettyRealtimeAttributes;
 import team.carrypigeon.backend.chat.domain.ws.transport.NettyRealtimeConnection;
 import team.carrypigeon.backend.chat.domain.ws.transport.NettyRealtimeScheduler;
@@ -88,12 +89,11 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
                 return;
             }
             if (event instanceof IdleStateEvent) {
-                //TODO 错误码规范
                 log.debug("WebSocket 连接空闲超时");
                 writeFrame(context, new RealtimeFrame.CommandError(
                     null,
                     RealtimeFrameCodec.COMMAND_FRAME_TYPE,
-                    11000,
+                    10014,
                     "realtime connection is idle"
                 )).addListener(ChannelFutureListener.CLOSE);
                 return;
@@ -110,7 +110,7 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             request = frameCodec.decode(frame.text());
         } catch (ProblemException invalidFrame) {
             // 保留解码失败直接断连的协议行为，尚无可回显的命令 ID。
-            logSummary(startedAt, null, "invalid_frame");
+            logSummary(startedAt, 10002, "invalid_frame");
             context.close();
             return;
         }
@@ -132,20 +132,22 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             }
             Optional<RealtimeCommandHandler> handler = commandRegistry.find(request.type());
             if (handler.isEmpty()) {
-                code = 400;
+                code = 10003;
                 writeErrorAndCloseIfUnauthenticated(context, attributes, request, code, "unsupported realtime command");
                 return;
             }
             LogContexts.route(handler.get().commandType());
             if (handler.get().requiresAuthentication() && attributes.getAccountId() == null) {
-                code = 401;
+                code = AuthProblem.AUTHENTICATION_REQUIRED.code();
                 writeErrorAndCloseIfUnauthenticated(context, attributes, request, code, "auth must be the first realtime command");
                 return;
             }
             handler.get().handle(request, connection, attributes, scheduler, realtimeAuthState);
         } catch (RuntimeException exception) {
+            String message;
             if (exception instanceof ProblemException problem) {
                 code = problem.mapping().code();
+                message = safeMessage(problem.getMessage());
                 if (code == 10011 || code == 10012) {
                     log.atError()
                         .addKeyValue("business_code", code)
@@ -153,15 +155,16 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
                         .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(problem).getClass().getName())
                         .log("实时命令依赖或内部操作失败");
                 }
+            } else if (exception instanceof RealtimeProtocolException protocol) {
+                code = 10001;
+                reason = protocol.reason();
+                message = safeMessage(protocol.getMessage());
             } else {
-                code = 500;
-                if (exception instanceof RealtimeProtocolException protocol) {
-                    reason = protocol.reason();
-                } else {
-                    log.error("实时命令处理异常", exception);
-                }
+                code = 10012;
+                message = "internal server error";
+                log.error("实时命令处理异常", exception);
             }
-            writeRealtimeFailure(context, attributes, request, exception);
+            writeErrorAndCloseIfUnauthenticated(context, attributes, request, code, message);
         } finally {
             logSummary(startedAt, code, reason);
         }
@@ -197,31 +200,6 @@ public class NettyRealtimeServiceHandler extends SimpleChannelInboundHandler<Tex
             log.debug("WebSocket 连接已关闭");
             super.channelInactive(context);
         }
-    }
-
-    /**
-     * 按失败语义写出实时错误帧。
-     * 约定：协议错误与业务拒绝使用异常自身原因；未预期异常才使用 internal_server_error。
-     *
-     * @param context Netty 上下文
-     * @param attributes 当前连接属性
-     * @param request 当前帧请求，可能为空
-     * @param exception 待处理的异常
-     */
-    private void writeRealtimeFailure(
-            ChannelHandlerContext context,
-            RealtimeAttributes attributes,
-            RealtimeClientMessage request,
-            RuntimeException exception
-    ) {
-        if (exception instanceof ProblemException problemException) {
-            writeErrorAndCloseIfUnauthenticated(
-                    context, attributes, request,
-                    problemException.mapping().code(), safeMessage(problemException.getMessage()));
-            return;
-        }
-        writeErrorAndCloseIfUnauthenticated(
-                context, attributes, request, 500, "internal server error");
     }
 
     private RealtimeConnection resolveConnection(ChannelHandlerContext context) {

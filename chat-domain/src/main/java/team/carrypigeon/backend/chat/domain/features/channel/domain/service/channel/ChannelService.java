@@ -152,24 +152,18 @@ public class ChannelService implements ChannelApi {
                 ChannelMemberRole.ADMIN,
                 operator.joinedAt()
             ));
-            // 保留两次角色写入的执行顺序，只为两次均命中的转移记录成功。
-            if (newOwnerUpdated && previousOwnerUpdated) {
-                afterCommit.execute(
-                    () -> log.atInfo()
-                        .addKeyValue("action", "channel.member.transfer")
-                        .addKeyValue("outcome", "success")
-                        .addKeyValue("channel_id", channelId)
-                        .addKeyValue("target_uid", newOwnerId)
-                        .log("频道所有权已转移")
-                );
-            } else {
-                log.atError()
+            // 两次角色写入必须一并提交；任一未命中时回滚，避免只完成一半转移。
+            if (!newOwnerUpdated || !previousOwnerUpdated) {
+                throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
+            }
+            afterCommit.execute(
+                () -> log.atInfo()
                     .addKeyValue("action", "channel.member.transfer")
-                    .addKeyValue("outcome", "failure")
+                    .addKeyValue("outcome", "success")
                     .addKeyValue("channel_id", channelId)
                     .addKeyValue("target_uid", newOwnerId)
-                    .log("频道所有权更新未命中");
-            }
+                    .log("频道所有权已转移")
+            );
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channelId,
