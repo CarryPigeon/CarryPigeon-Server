@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 消息响应。
@@ -29,13 +28,13 @@ public record ChannelMessageResponse(
      */
     public static ChannelMessageResponse from(ChannelMessageResult result) {
         return new ChannelMessageResponse(
-            IdUtil.toString(result.messageId()),
-            IdUtil.toString(result.senderId()),
-            IdUtil.toString(result.channelId()),
+            String.valueOf(result.messageId()),
+            String.valueOf(result.senderId()),
+            String.valueOf(result.channelId()),
             result.domain(),
             result.data(),
             result.preview(),
-            result.mentions().stream().map(IdUtil::toString).toList(),
+            result.mentions().stream().map(String::valueOf).toList(),
             result.sendTime().toEpochMilli()
         );
     }

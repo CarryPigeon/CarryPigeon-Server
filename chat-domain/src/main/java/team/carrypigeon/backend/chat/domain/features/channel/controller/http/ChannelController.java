@@ -25,7 +25,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.ChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.channel.result.DiscoverChannelResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.problem.ChannelProblem;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.chat.domain.shared.cursor.CursorPageResponse;
 import team.carrypigeon.backend.chat.domain.shared.cursor.OpaqueCursorCodec;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
@@ -129,7 +128,7 @@ public class ChannelController {
         return Result.success(new PageResponse<>(
                 result.items().stream()
                         .map(channel -> new ChannelResponseBody(
-                                IdUtil.toString(channel.channelId()),
+                                String.valueOf(channel.channelId()),
                                 channel.name(),
                                 channel.brief(),
                                 channel.systemChannel(),
@@ -167,7 +166,7 @@ public class ChannelController {
     ) {
         ChannelResult result = channelApi.getChannelById(channelId);
         return Result.success(new ChannelResponseBody(
-            IdUtil.toString(result.channelId()),
+            String.valueOf(result.channelId()),
             result.name(),
             result.brief(),
             result.systemChannel(),
@@ -264,7 +263,7 @@ public class ChannelController {
             results.size(),
             results.stream()
                 .map(channel -> new ChannelResponseBody(
-                    IdUtil.toString(channel.channelId()),
+                    String.valueOf(channel.channelId()),
                     channel.name(),
                     channel.brief(),
                     channel.systemChannel(),
@@ -296,7 +295,7 @@ public class ChannelController {
     ) {
         ChannelResult result = channelApi.createChannel(cpPrincipal.accountId(), body.name(), body.brief());
         return Result.success(new ChannelResponseBody(
-            IdUtil.toString(result.channelId()),
+            String.valueOf(result.channelId()),
             result.name(),
             result.brief(),
             result.systemChannel(),

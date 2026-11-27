@@ -27,7 +27,6 @@ import team.carrypigeon.backend.chat.domain.features.user.controller.http.dto.*;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.UserProfileApi;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.input.UpdateCurrentUserProfileCommand;
 import team.carrypigeon.backend.chat.domain.features.user.domain.api.profile.result.UserProfileResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 用户资料 HTTP 入口。
@@ -105,7 +104,7 @@ public class UserProfileController {
     ) {
         List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(ids).stream()
                 .map(user -> new UserPublicProfileResponse(
-                        IdUtil.toString(user.accountId()),
+                        String.valueOf(user.accountId()),
                         user.username(),
                         user.avatarUrl()
                     )

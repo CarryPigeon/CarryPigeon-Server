@@ -25,7 +25,6 @@ import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.Aut
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.account.result.RegisterResult;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.AuthTokenApi;
 import team.carrypigeon.backend.chat.domain.features.auth.domain.api.token.result.AuthTokenResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 账号和鉴权相关的api文档
@@ -69,7 +68,7 @@ public class AuthController {
         RegisterRequestBody request
     ) {
         RegisterResult result = authAccountApi.register(request.username().trim(), request.password(),request.email().toLowerCase(Locale.ROOT),request.code());
-        return Result.success(new RegisterResponseBody(IdUtil.toString(result.accountId()), result.username()));
+        return Result.success(new RegisterResponseBody(String.valueOf(result.accountId()), result.username()));
     }
 
     /**
@@ -95,7 +94,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            IdUtil.toString(result.accountId())
+            String.valueOf(result.accountId())
         ));
     }
 
@@ -120,7 +119,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            IdUtil.toString(result.accountId())
+            String.valueOf(result.accountId())
         ));
     }
 
@@ -145,7 +144,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            IdUtil.toString(result.accountId())
+            String.valueOf(result.accountId())
         ));
     }
 

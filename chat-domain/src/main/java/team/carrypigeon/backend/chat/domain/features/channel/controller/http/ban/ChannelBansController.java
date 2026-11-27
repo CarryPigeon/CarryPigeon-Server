@@ -32,7 +32,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.Chan
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.input.BanChannelMemberUntilCommand;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanListItemResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.ban.result.ChannelBanResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
@@ -106,8 +105,8 @@ public class ChannelBansController {
                 )
         );
         return Result.success(new ChannelBanResponse(
-                IdUtil.toString(result.channelId()),
-                IdUtil.toString(result.bannedAccountId()),
+                String.valueOf(result.channelId()),
+                String.valueOf(result.bannedAccountId()),
                 result.expiresAt() == null ? null : result.expiresAt().toEpochMilli(),
                 result.reason(),
                 result.createdAt().toEpochMilli()
@@ -199,8 +198,8 @@ public class ChannelBansController {
 
     private ChannelBanListItemResponse toChannelBanListItemResponse(ChannelBanListItemResult result) {
         return new ChannelBanListItemResponse(
-                IdUtil.toString(result.channelId()),
-                IdUtil.toString(result.bannedAccountId()),
+                String.valueOf(result.channelId()),
+                String.valueOf(result.bannedAccountId()),
                 result.expiresAt() == null ? null : result.expiresAt().toEpochMilli(),
                 result.reason(),
                 result.createdAt().toEpochMilli()

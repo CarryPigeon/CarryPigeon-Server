@@ -29,7 +29,6 @@ import team.carrypigeon.backend.chat.domain.features.channel.controller.http.app
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.application.dto.DecideChannelApplicationRequest;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.ChannelApplicationApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.application.result.ChannelApplicationResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
@@ -224,9 +223,9 @@ public class ChannelApplicationController {
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {
         return new ChannelApplicationResponse(
-            IdUtil.toString(result.applicationId()),
-            IdUtil.toString(result.channelId()),
-            IdUtil.toString(result.accountId()),
+            String.valueOf(result.applicationId()),
+            String.valueOf(result.channelId()),
+            String.valueOf(result.accountId()),
             result.reason(),
             result.applyTime().toEpochMilli(),
             result.status().toLowerCase()

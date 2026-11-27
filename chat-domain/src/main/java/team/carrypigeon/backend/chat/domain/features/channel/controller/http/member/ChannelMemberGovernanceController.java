@@ -24,7 +24,6 @@ import team.carrypigeon.backend.chat.domain.http.security.CpPrincipal;
 import team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto.ChannelMemberResponse;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
@@ -89,7 +88,7 @@ public class ChannelMemberGovernanceController {
         return Result.success(new PageResponse<>(
                 result.items().stream().map(
                         res -> new ChannelMemberResponse(
-                                IdUtil.toString(res.accountId()),
+                                String.valueOf(res.accountId()),
                                 res.username(),
                                 res.role().toLowerCase(),
                                 res.avatarUrl(),

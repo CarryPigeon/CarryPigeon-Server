@@ -41,7 +41,6 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result
 import team.carrypigeon.backend.chat.domain.features.file.domain.api.file.result.FileUploadGrantResult;
 import team.carrypigeon.backend.chat.domain.features.file.domain.problem.FileProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.chat.domain.shared.id.IdUtil;
 
 /**
  * 文件 HTTP 入口。
@@ -96,7 +95,7 @@ public class FileController {
         );
         return Result.success(
             new FileUploadResponse(
-                IdUtil.toString(result.fileId()),
+                String.valueOf(result.fileId()),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
                     "PUT",
