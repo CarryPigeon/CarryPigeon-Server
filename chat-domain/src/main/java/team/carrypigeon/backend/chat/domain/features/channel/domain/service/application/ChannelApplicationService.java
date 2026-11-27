@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -31,6 +31,7 @@ import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner
  * 职责：承接成员邀请、入群申请、审批与接受邀请等流程编排。
  * 边界：这里只处理 invite/application 生命周期，不承担频道目录查询或成员治理。
  */
+@Slf4j
 @Service
 public class ChannelApplicationService implements ChannelApplicationApi {
 
@@ -65,7 +66,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
 
     @Override
     public ChannelApplicationResult createChannelApplication(long accountId, long channelId, String reason) {
-        ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 已是成员时无需申请，直接按参数错误拒绝
@@ -103,10 +104,6 @@ public class ChannelApplicationService implements ChannelApplicationApi {
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelApplicationResult.from(application, normalizedReason);
         });
-        AuditLogs.success("channel.application.create", accountId,
-                "channel_id", result.channelId(),
-                "application_id", result.applicationId());
-        return result;
     }
 
     @Override
@@ -144,7 +141,7 @@ public class ChannelApplicationService implements ChannelApplicationApi {
 
     @Override
     public ChannelApplicationResult decideChannelApplication(long operatorAccountId, long channelId, long applicationId, String decision) {
-        ChannelApplicationResult result = transactionRunner.runInTransaction(afterCommit -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             // 与转移、踢出和删除遵守同一锁顺序，拿锁后再检查申请及当前治理权限。
             channelRepository.findByIdForUpdate(channelId)
                     .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
@@ -194,6 +191,16 @@ public class ChannelApplicationService implements ChannelApplicationApi {
                 readStates.initializeOnJoin(channelId, application.applicantId());
             }
             // 在事务内取成员快照：批准后申请人已在其中，拒绝时则不含申请人
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.application.decide")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("application_id", applicationId)
+                    .addKeyValue("target_uid", application.applicantId())
+                    .addKeyValue("decision", decidedStatus)
+                    .log("入群申请已处理")
+            );
             channelEventNotifier.channelChanged(afterCommit, application.channelId(), ChannelChangeScope.APPLICATIONS);
             // 申请人视角的频道集合也需要刷新，与上面的频道成员快照相互独立
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(application.applicantId()));
@@ -207,12 +214,6 @@ public class ChannelApplicationService implements ChannelApplicationApi {
                     updated.reason() == null || updated.reason().isBlank() ? "" : updated.reason().trim()
             );
         });
-        AuditLogs.success("channel.application.decide", operatorAccountId,
-                "channel_id", channelId,
-                "application_id", applicationId,
-                "target_uid", result.accountId(),
-                "decision", result.status());
-        return result;
     }
 
 }

@@ -2,16 +2,17 @@ package team.carrypigeon.backend.infrastructure.service.mail.impl.smtp;
 
 import static team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent.PROD;
 
-import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
-
+import team.carrypigeon.backend.infrastructure.basic.environment.EnvironmentComponent;
 import team.carrypigeon.backend.infrastructure.service.mail.api.exception.MailServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
 import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSenderService;
@@ -23,6 +24,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.impl.config.SmtpMail
  * 边界：SMTP 访问细节封装在 impl 内部，不向上层泄露。
  */
 @EnvironmentComponent(profiles = PROD)
+@Slf4j
 public class SmtpMailSenderService implements MailSenderService {
 
     private final JavaMailSender mailSender;
@@ -52,16 +54,34 @@ public class SmtpMailSenderService implements MailSenderService {
         message.setSubject(command.subject().trim());
         message.setText(command.text());
         return CompletableFuture.runAsync(() -> {
-            for (int attempt = 1; true; attempt++) {
-                try {
-                    mailSender.send(message);
-                    return;
-                } catch (MailException exception) {
-                    if (!(exception instanceof MailSendException) || attempt == 3) {
-                        throw new MailServiceException("failed to send email", exception);
-                    }
+            try {
+                sendWithRetries(message);
+            } catch (RuntimeException | Error failure) {
+                // SMTP 异常消息可能包含收件地址，仅记录根因类型。
+                log.atError()
+                    .addKeyValue("stage", "delivery")
+                    .addKeyValue("outcome", "failure")
+                    .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(failure).getClass().getName())
+                    .log("SMTP 邮件投递失败");
+                throw failure;
+            }
+            log.atDebug()
+                .addKeyValue("stage", "delivery")
+                .addKeyValue("outcome", "success")
+                .log("SMTP 服务器已接受邮件");
+        }, executor);
+    }
+
+    private void sendWithRetries(SimpleMailMessage message) {
+        for (int attempt = 1; true; attempt++) {
+            try {
+                mailSender.send(message);
+                return;
+            } catch (MailException exception) {
+                if (!(exception instanceof MailSendException) || attempt == 3) {
+                    throw new MailServiceException("failed to send email", exception);
                 }
             }
-        }, executor);
+        }
     }
 }

@@ -2,8 +2,12 @@ package team.carrypigeon.backend.chat.domain.http.exception;
 
 import com.fasterxml.jackson.core.exc.StreamReadException;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import team.carrypigeon.backend.chat.domain.http.log.HttpRequestLoggingFilter;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.CacheControl;
@@ -44,7 +48,17 @@ public class GlobalExceptionHandler {
      * */
     @ExceptionHandler(ProblemException.class)
     public ResponseEntity<ErrorResult> problem(ProblemException ex) {
-        return failure(ex.mapping().code(), ex.getMessage(), new HttpHeaders());
+        int code = ex.mapping().code();
+        if (code == 10011 || code == 10012 || ex.mapping() == VerificationProblem.EMAIL_DELIVERY_FAILED) {
+            var event = log.atError()
+                .addKeyValue("business_code", code)
+                .addKeyValue("reason", ex.mapping());
+            // 邮件和依赖异常的消息可包含收件人或请求参数，只记录原始故障类型。
+            Throwable cause = NestedExceptionUtils.getMostSpecificCause(ex);
+            event.addKeyValue("failure_type", cause.getClass().getName())
+                .log("HTTP 业务依赖或内部操作失败");
+        }
+        return failure(code, ex.getMessage(), new HttpHeaders());
     }
 
     /**
@@ -104,7 +118,6 @@ public class GlobalExceptionHandler {
      * */
     @ExceptionHandler(PessimisticLockingFailureException.class)
     public ResponseEntity<ErrorResult> lockConflict(PessimisticLockingFailureException ex) {
-        log.info("Database lock conflict", ex);
         return failure(10010, "Concurrent modification. Retry the operation.");
     }
 
@@ -113,7 +126,11 @@ public class GlobalExceptionHandler {
      * */
     @ExceptionHandler({CannotCreateTransactionException.class, DataAccessResourceFailureException.class})
     public ResponseEntity<ErrorResult> unavailable(RuntimeException ex) {
-        log.error("Database unavailable", ex);
+        log.atError()
+            .addKeyValue("business_code", 10011)
+            .addKeyValue("dependency", "database")
+            .setCause(ex)
+            .log("数据库不可用");
         return failure(10011, "Service temporarily unavailable.");
     }
 
@@ -121,12 +138,18 @@ public class GlobalExceptionHandler {
      * 处理其他异常
      * */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResult> unexpected(Exception ex, HttpServletResponse response) {
-        log.error("Unexpected HTTP failure", ex);
+    public ResponseEntity<ErrorResult> unexpected(Exception ex, HttpServletRequest request, HttpServletResponse response) {
+        var event = log.atError()
+            .setCause(ex);
         if (response.isCommitted()) {
+            event.addKeyValue("stage", "response_write")
+                .log("HTTP 响应已提交，处理失败");
+            request.setAttribute(HttpRequestLoggingFilter.WRITE_FAILED, true);
             return null;
         }
-        return failure( 10012, "Internal server error.");
+        event.addKeyValue("business_code", 10012)
+            .log("HTTP 请求处理异常");
+        return failure(10012, "Internal server error.");
     }
 
     /**
@@ -140,7 +163,6 @@ public class GlobalExceptionHandler {
      * 构建失败响应
      * */
     private ResponseEntity<ErrorResult> failure(int code, String message, HttpHeaders headers) {
-        log.info("HTTP failure code={}", code);
         var response = ResponseEntity.status(200).headers(headers).cacheControl(CacheControl.noStore())
             .contentType(MediaType.APPLICATION_JSON);
         return response.body(Result.failure(code, message));

@@ -7,7 +7,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -26,7 +25,6 @@ import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
  * 职责：进行权限校验
  * 边界：仅用于访问用户权限
  * */
-@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -70,12 +68,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
              result = authTokenApi.authenticate(token);
         } catch (ProblemException exception) {
             SecurityContextHolder.clearContext();
-            log.warn("HTTP authentication failed, method={}, error={}", request.getMethod(), exception.mapping().message());
             errors.write(request, response, exception);
             return;
         } catch (RuntimeException exception) {
             SecurityContextHolder.clearContext();
-            log.warn("HTTP authentication failed unexpectedly, method={}", request.getMethod(), exception);
             errors.write(request, response, exception);
             return;
         }

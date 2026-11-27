@@ -1,5 +1,6 @@
 package team.carrypigeon.backend.chat.domain.http.security;
 
+import team.carrypigeon.backend.chat.domain.http.log.HttpRequestMdcFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -41,6 +42,7 @@ final class SecurityErrorResponses {
                 if (route == null) {
                     failure = new NoHandlerFoundException(request.getMethod(), path, new HttpHeaders());
                 } else {
+                    HttpRequestMdcFilter.useMatchedRoute(request);
                     handler = route.getHandler();
                 }
             } catch (Exception routingFailure) {

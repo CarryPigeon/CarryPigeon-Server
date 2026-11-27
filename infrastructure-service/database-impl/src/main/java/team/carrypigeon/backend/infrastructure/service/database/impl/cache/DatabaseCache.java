@@ -17,6 +17,7 @@ import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.NestedExceptionUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CacheService;
@@ -306,7 +307,10 @@ public final class DatabaseCache {
         try {
             cacheService.delete(key);
         } catch (RuntimeException ex) {
-            log.warn("数据库缓存删除失败：key={}", key, ex);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getName())
+                .log("数据库缓存删除失败");
         }
     }
 
@@ -315,7 +319,10 @@ public final class DatabaseCache {
         try {
             cacheService.delete(key);
         } catch (RuntimeException exception) {
-            log.warn("数据库缓存提交后删除失败，等待 TTL 过期：key={}", key, exception);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(exception).getClass().getName())
+                .log("数据库缓存提交后删除失败，等待 TTL 过期");
         }
     }
 
@@ -332,7 +339,10 @@ public final class DatabaseCache {
             }
             raw = cached.get();
         } catch (RuntimeException ex) {
-            log.warn("数据库缓存读取失败，回退数据库：key={}", key, ex);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getName())
+                .log("数据库缓存读取失败，回退数据库");
             return Optional.empty();
         }
         return decode(key, type, raw);
@@ -348,9 +358,14 @@ public final class DatabaseCache {
             if (value != null) {
                 return Optional.of(value);
             }
-            log.warn("数据库缓存反序列化为空，按未命中处理：key={}", key);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .log("数据库缓存反序列化为空，回退数据库");
         } catch (RuntimeException ex) {
-            log.warn("数据库缓存反序列化失败，按未命中处理：key={}", key, ex);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .addKeyValue("failure_type", ex.getClass().getName())
+                .log("数据库缓存反序列化失败，回退数据库");
         }
         evict(key);
         return Optional.empty();
@@ -363,7 +378,10 @@ public final class DatabaseCache {
         try {
             return cacheService.getAll(keys);
         } catch (RuntimeException ex) {
-            log.warn("数据库缓存批量读取失败，全部回退数据库：keyCount={}", keys.size(), ex);
+            log.atWarn()
+                .addKeyValue("key_count", keys.size())
+                .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getName())
+                .log("数据库缓存批量读取失败，回退数据库");
             return Map.of();
         }
     }
@@ -375,8 +393,18 @@ public final class DatabaseCache {
         try {
             cacheService.set(key, toJson(value), ttl);
         } catch (RuntimeException ex) {
-            log.warn("数据库缓存写入失败：key={}", key, ex);
+            log.atWarn()
+                .addKeyValue("entity", cacheDomain(key))
+                .addKeyValue("failure_type", NestedExceptionUtils.getMostSpecificCause(ex).getClass().getName())
+                .log("数据库缓存写入失败");
         }
+    }
+
+    /** lookup 键可携带账号查询值；降级诊断只需要 cp:db 后的实体域。 */
+    private static String cacheDomain(String key) {
+        int start = KEY_PREFIX.length() + 1;
+        int end = key.indexOf(':', start);
+        return key.startsWith(KEY_PREFIX + ":") && end > start ? key.substring(start, end) : "unknown";
     }
 
     private String toJson(Object value) {

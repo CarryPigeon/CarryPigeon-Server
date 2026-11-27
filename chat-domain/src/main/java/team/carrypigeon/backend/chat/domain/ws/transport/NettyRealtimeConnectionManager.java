@@ -73,7 +73,10 @@ public class NettyRealtimeConnectionManager implements RealtimeConnectionManager
                     // 不能把异常回传为治理失败，也不能继续信任未刷新的权限索引。
                     updateSubscriptions(id, previous.channelIds(), Set.of());
                     previous.connections().forEach(RealtimeConnection::close);
-                    log.error("Failed to refresh realtime subscriptions; connections closed, accountId={}", id, exception);
+                    log.atError()
+                        .addKeyValue("target_uid", id)
+                        .setCause(exception)
+                        .log("实时订阅刷新失败，连接已关闭");
                     return null;
                 }
             });
@@ -118,6 +121,9 @@ public class NettyRealtimeConnectionManager implements RealtimeConnectionManager
                 }
                 if (!connection.isWritable()) {
                     connection.close();
+                    log.atWarn()
+                        .addKeyValue("target_uid", id)
+                        .log("实时连接不可写，已关闭");
                     return true;
                 }
                 try {
@@ -125,7 +131,10 @@ public class NettyRealtimeConnectionManager implements RealtimeConnectionManager
                     return false;
                 } catch (RuntimeException exception) {
                     connection.close();
-                    log.warn("Failed to send realtime frame; connection closed, accountId={}", id, exception);
+                    log.atWarn()
+                        .addKeyValue("target_uid", id)
+                        .setCause(exception)
+                        .log("实时帧提交失败，连接已关闭");
                     return true;
                 }
             });

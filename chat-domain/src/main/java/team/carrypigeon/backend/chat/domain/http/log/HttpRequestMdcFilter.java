@@ -2,6 +2,7 @@ package team.carrypigeon.backend.chat.domain.http.log;
 
 import java.io.IOException;
 import java.util.UUID;
+import org.springframework.web.servlet.HandlerMapping;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -31,12 +32,11 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String requestId = resolveRequestId(request);
         String traceId = resolveTraceId(request, requestId);
-        String route = resolveRoute(request);
         try (LogContexts.Scope ignored = LogContexts.openScope(LogScope.HTTP)) {
             response.setHeader(REQUEST_ID_HEADER, requestId);
             LogContexts.sessionId(requestId);
             LogContexts.traceId(traceId);
-            LogContexts.route(route);
+            LogContexts.route("unmatched");
             filterChain.doFilter(request, response);
         }
     }
@@ -50,7 +50,7 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter {
      */
     private String resolveRequestId(HttpServletRequest request) {
         String requestId = request.getHeader(REQUEST_ID_HEADER);
-        return requestId == null || requestId.isBlank() ? UUID.randomUUID().toString() : requestId;
+        return !LogContexts.usableId(requestId) ? UUID.randomUUID().toString() : requestId;
     }
 
     /**
@@ -63,17 +63,14 @@ public class HttpRequestMdcFilter extends OncePerRequestFilter {
      */
     private String resolveTraceId(HttpServletRequest request, String requestId) {
         String traceId = request.getHeader(TRACE_ID_HEADER);
-        return traceId == null || traceId.isBlank() ? requestId : traceId;
+        return !LogContexts.usableId(traceId) ? requestId : traceId;
     }
 
-    /**
-     * 解析请求的路径
-     *
-     * @param request HTTP 请求
-     * @return 请求url
-     *
-     */
-    private String resolveRoute(HttpServletRequest request) {
-        return request.getRequestURI();
+    /** 匹配结果在 MVC 或 Security 完成路由解析后才可用。 */
+    public static void useMatchedRoute(HttpServletRequest request) {
+        Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        if (pattern != null) {
+            LogContexts.route(pattern.toString());
+        }
     }
 }

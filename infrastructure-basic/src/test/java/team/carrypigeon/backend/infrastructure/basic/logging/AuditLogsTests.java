@@ -1,49 +1,55 @@
 package team.carrypigeon.backend.infrastructure.basic.logging;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.core.layout.JsonLayout;
+import org.apache.logging.log4j.message.SimpleMessage;
+import org.apache.logging.log4j.util.SortedArrayStringMap;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
-/**
- * 审计日志文本格式测试。
- * 职责：验证事件字段顺序、空值处理和不可信值引用，避免业务日志格式漂移。
- */
+/** 验证统一日志的上下文、事件字段及逐行 JSON 契约。 */
 class AuditLogsTests {
-
     @Test
-    void formatsSuccessWithStableFields() {
-        assertEquals(
-                "action=auth.login outcome=success uid=42 method=password",
-                AuditLogs.buildMessage("auth.login", "success", 42L, null, "method", "password")
-        );
+    void emitsOneJsonRecordWithEventFields() throws Exception {
+        var context = new SortedArrayStringMap();
+        context.putValue("action", "auth.login");
+        var event = Log4jLogEvent.newBuilder().setContextData(context)
+                .setMessage(new SimpleMessage("first\nsecond")).build();
+        String json = JsonLayout.newBuilder().setCompact(true).setEventEol(true).setProperties(true).build()
+                .toSerializable(event);
+        assertEquals(1, json.lines().count());
+        assertEquals("auth.login", new ObjectMapper().readTree(json).at("/contextMap/action").asText());
     }
 
     @Test
-    void formatsFailureAndQuotesUntrustedValues() {
-        assertEquals(
-                "action=auth.login outcome=failure uid= reason=\"invalid credentials\"",
-                AuditLogs.buildMessage("auth.login", "failure", null, "invalid credentials")
-        );
+    void propagatesOnlyOperationFieldsAndRestoresWorker() {
+        Runnable task;
+        try (var scope = LogContexts.openScope(LogScope.HTTP)) {
+            LogContexts.uid("42");
+            LogContexts.put("action", "auth.login");
+            task = LogContexts.wrap(LogScope.WS, () -> {
+                assertEquals("42", MDC.get("uid"));
+                assertEquals("ws", LogContexts.currentScope());
+                assertNull(MDC.get("action"));
+            });
+        }
+        try (var scope = LogContexts.openScope()) {
+            LogContexts.uid("7");
+            task.run();
+            assertEquals("7", MDC.get("uid"));
+            LogContexts.uid(null);
+            assertNull(MDC.get("uid"));
+        }
     }
 
     @Test
-    void skipsNullAndBlankFields() {
-        assertEquals(
-                "action=channel.create outcome=success uid=7 channel_id=100",
-                AuditLogs.buildMessage(
-                        "channel.create", "success", 7L, null,
-                        "channel_id", 100L,
-                        "empty", "   ",
-                        "missing", null
-                )
-        );
-    }
-
-    @Test
-    void fallsBackWhenActionIsBlank() {
-        assertEquals(
-                "action=unknown outcome=success uid=",
-                AuditLogs.buildMessage("   ", "success", null, null)
-        );
+    void boundsExternalCorrelationIds() {
+        assertTrue(LogContexts.usableId("req-1"));
+        assertFalse(LogContexts.usableId(null));
+        assertFalse(LogContexts.usableId("x\ny"));
+        assertFalse(LogContexts.usableId("x".repeat(129)));
     }
 }

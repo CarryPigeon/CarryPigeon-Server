@@ -20,7 +20,7 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.ChannelMessageCleanupApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
@@ -30,6 +30,7 @@ import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner
  * 职责：承接成员角色治理、踢出和所有权转移等写侧用例。
  * 边界：这里只处理成员治理动作，不承担频道生命周期、禁言和申请流编排。
  */
+@Slf4j
 @Service
 public class ChannelMemberService implements ChannelMemberApi {
 
@@ -107,10 +108,15 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.member.promote")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", targetAccountId)
+                    .log("频道管理员已设置"));
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
-        AuditLogs.success("channel.member.promote", operatorAccountId,
-                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
     @Override
@@ -145,15 +151,21 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 在事务内取成员账号快照，保证通知的接收人集合与本次角色变更一致
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.member.demote")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", targetAccountId)
+                    .log("频道管理员已撤销")
+            );
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
-        AuditLogs.success("channel.member.demote", operatorAccountId,
-                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
     @Override
     public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
-        ChannelOwnershipTransferResult result = transactionRunner.runInTransaction(afterCommit -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
             Channel channel = channelRepository.findByIdForUpdate(channelId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
@@ -191,12 +203,17 @@ public class ChannelMemberService implements ChannelMemberApi {
                 throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
             }
             // 两条角色变更在同一事务提交后才对其它事务可见。
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.member.transfer")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", targetAccountId)
+                    .log("频道所有权已转移")
+            );
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
             return ChannelOwnershipTransferResult.from(previousOwner, newOwner);
         });
-        AuditLogs.success("channel.member.transfer", operatorAccountId,
-                "channel_id", channelId, "target_uid", targetAccountId);
-        return result;
     }
 
     @Override
@@ -221,12 +238,18 @@ public class ChannelMemberService implements ChannelMemberApi {
             channelMemberRepository.delete(target.id());
             messageCleanup.deleteMemberState(channelId, targetAccountId);
             // 单独通知被移除账号刷新自己的可见频道集合，它已不在上面的接收快照中
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.member.kick")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", targetAccountId)
+                    .log("频道成员已移出")
+            );
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(target.accountId()));
             // 通知频道内其余成员刷新成员列表
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
         });
-        AuditLogs.success("channel.member.kick", operatorAccountId,
-                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
 }

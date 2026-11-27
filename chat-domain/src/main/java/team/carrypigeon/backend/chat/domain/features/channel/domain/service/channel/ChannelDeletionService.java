@@ -47,7 +47,12 @@ public class ChannelDeletionService {
             executor.execute(() -> cleanChannel(channelId));
         } catch (RuntimeException exception) {
             // 频道删除已经提交，无法通过抛出异常撤销；记录未受理的频道供运维处理。
-            log.error("Failed to submit channel cleanup, channelId={}", channelId, exception);
+            log.atError()
+                .addKeyValue("action", "channel.cleanup")
+                .addKeyValue("stage", "submit")
+                .addKeyValue("channel_id", channelId)
+                .setCause(exception)
+                .log("频道清理任务未受理");
         }
     }
 
@@ -67,7 +72,12 @@ public class ChannelDeletionService {
                 }
             });
         } catch (RuntimeException exception) {
-            log.error("Channel cleanup failed, channelId={}", channelId, exception);
+            log.atError()
+                .addKeyValue("action", "channel.cleanup")
+                .addKeyValue("stage", "execute")
+                .addKeyValue("channel_id", channelId)
+                .setCause(exception)
+                .log("频道清理任务执行失败");
         }
     }
 }

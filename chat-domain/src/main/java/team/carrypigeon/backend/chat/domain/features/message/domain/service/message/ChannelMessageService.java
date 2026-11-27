@@ -17,7 +17,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.repository.M
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageDispatcher;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
@@ -30,6 +30,7 @@ import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner
  * 职责：编排消息发送、撤回、持久化与提交后通知。
  * 边界：不承载请求字段校验；只处理频道权限、禁言、domain 支持、消息状态和事务。
  */
+@Slf4j
 @Service
 public class ChannelMessageService implements ChannelMessageApi {
 
@@ -127,10 +128,6 @@ public class ChannelMessageService implements ChannelMessageApi {
             savedMentions.forEach(mention -> messageEventNotifier.mentionCreated(afterCommit, mention));
             return finalMessage;
         });
-        AuditLogs.success("message.send", accountId,
-                "channel_id", channelId,
-                "message_id", message.messageId(),
-                "domain", domain);
         return ChannelMessageResult.of(message);
     }
 
@@ -175,10 +172,16 @@ public class ChannelMessageService implements ChannelMessageApi {
             // 删除提及
             mentionRepository.deleteByMessageId(existingMessage.messageId());
             // 内容清除提交后再通知，短期缓冲不保存正文。
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "message.recall")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("message_id", messageId)
+                    .addKeyValue("target_uid", existingMessage.senderId())
+                    .log("消息已撤回")
+            );
             messageEventNotifier.messageRecalled(afterCommit, recalledMessage);
         });
-        AuditLogs.success("message.recall", accountId,
-                "channel_id", channelId,
-                "message_id", messageId);
     }
 }

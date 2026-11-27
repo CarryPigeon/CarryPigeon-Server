@@ -1,18 +1,18 @@
 package team.carrypigeon.backend.chat.domain.features.verification.adaptor.cache;
 
-import java.time.Duration;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 
-import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeChallengeStore;
 import team.carrypigeon.backend.infrastructure.service.cache.api.exception.CacheServiceException;
 import team.carrypigeon.backend.infrastructure.service.mail.api.model.MailSendCommand;
@@ -55,15 +55,20 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         } catch (CacheServiceException exception) {
             throw ProblemException.of(VerificationProblem.CACHE_UNAVAILABLE, exception);
         }
+        CompletionStage<Void> delivery;
         try {
-            CompletionStage<Void> delivery = deliverCode(email, code, purpose);
-            // HTTP 成功只表示任务已受理；SMTP 异步失败时仅作废当前 challenge，不能影响之后重发的批次。
-            delivery.whenComplete((ignored, failure) -> completeDelivery(cacheKey, challengeId, purpose, accountId, failure));
+            var mail = new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code, purpose));
+            delivery = Objects.requireNonNull(mailSenderService.send(mail), "mail sender returned no completion");
         } catch (RuntimeException exception) {
-            // 同步投递失败也登记为本批次失败，与异步结果使用同一作废约束。
-            completeDelivery(cacheKey, challengeId, purpose, accountId, exception);
-            throw exception;
+            // 同步拒绝由 HTTP 边界记录；仍须作废当前批次。
+            recordDeliveryResult(cacheKey, challengeId, purpose, false);
+            throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
         }
+        log.atDebug()
+            .addKeyValue("challenge_id", challengeId)
+            .addKeyValue("purpose", purpose)
+            .log("验证码邮件已受理");
+        delivery.whenComplete((_, failure) -> recordDeliveryResult(cacheKey, challengeId, purpose, failure == null));
     }
 
     @Override
@@ -88,33 +93,17 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
         return CACHE_KEY_PREFIX + purpose.name() + ":" + (accountId == null ? "" : accountId) + ":" + email;
     }
 
-    private CompletionStage<Void> deliverCode(String email, String code, EmailCodePurpose purpose) {
+    /** 按签发批次写回，以免旧回调作废重发的新码。缓存故障单独记录，保留原始投递结果。 */
+    private void recordDeliveryResult(String cacheKey, String challengeId, EmailCodePurpose purpose, boolean accepted) {
         try {
-            CompletionStage<Void> result = mailSenderService.send(new MailSendCommand(email, MAIL_SUBJECT, buildMailText(code, purpose)));
-            if (result == null) {
-                throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, "mail sender returned no completion");
-            }
-            return result;
-        } catch (RuntimeException exception) {
-            throw ProblemException.of(VerificationProblem.EMAIL_DELIVERY_FAILED, exception);
-        }
-    }
-
-    /** 结果和缓存写入分别观测；缓存短时故障不能吞掉真实 SMTP 结果，也不能在已返回的 HTTP 上补报。 */
-    private void completeDelivery(String cacheKey, String challengeId,
-            EmailCodePurpose purpose, Long accountId, Throwable failure) {
-        if (failure == null) {
-            AuditLogs.success("auth.code_delivery", accountId, "challenge_id", challengeId, "purpose", purpose);
-        } else {
-            AuditLogs.failure("auth.code_delivery", accountId, VerificationProblem.EMAIL_DELIVERY_FAILED.message(),
-                    "challenge_id", challengeId, "purpose", purpose);
-        }
-        try {
-            challengeStore.completeDelivery(cacheKey, challengeId, failure == null);
-        } catch (RuntimeException cleanupFailure) {
-            // 不输出邮件正文、验证码或收件人；批次 ID 可用于关联受理与投递审计记录。
-            log.error("Failed to persist email delivery result: challengeId={}, failureType={}",
-                    challengeId, cleanupFailure.getClass().getName());
+            challengeStore.completeDelivery(cacheKey, challengeId, accepted);
+        } catch (RuntimeException failure) {
+            log.atError()
+                .addKeyValue("challenge_id", challengeId)
+                .addKeyValue("purpose", purpose)
+                .addKeyValue("stage", "persist_result")
+                .addKeyValue("failure_type", failure.getClass().getName())
+                .log("验证码投递结果写回失败");
         }
     }
 

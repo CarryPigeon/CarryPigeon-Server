@@ -42,7 +42,7 @@ public class RealtimeServerRuntime implements SmartLifecycle {
     @Override
     public void start() {
         if (running) {
-            log.info("Realtime Netty server start skipped because runtime is already running");
+            log.debug("Realtime Netty server start skipped because runtime is already running");
             return;
         }
         if (!properties.isEnabled()) {

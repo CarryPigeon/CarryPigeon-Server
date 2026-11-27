@@ -24,13 +24,14 @@ import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.C
 import team.carrypigeon.backend.chat.domain.features.channel.domain.repository.ChannelRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 
 /**
  * 频道禁言领域 API 实现。
  * 职责：独立承接限时禁言与解除禁言，不依赖成员治理 API。
  */
+@Slf4j
 @Service
 public class ChannelBanService implements ChannelBanApi {
 
@@ -81,7 +82,7 @@ public class ChannelBanService implements ChannelBanApi {
 
     @Override
     public ChannelBanResult banChannelMemberUntil(long operatorAccountId, BanChannelMemberUntilCommand command) {
-        ChannelBanResult result = transactionRunner.runInTransaction(afterCommit -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             Channel channel = channelRepository.findByIdForUpdate(command.channelId())
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
             // 可能等待其它治理事务，取得锁后再校验截止时间，避免等待期间已经过期。
@@ -144,13 +145,16 @@ public class ChannelBanService implements ChannelBanApi {
                 );
                 channelBanRepository.update(ban);
             }
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.ban")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", command.channelId())
+                    .addKeyValue("target_uid", command.targetAccountId())
+                    .log("频道成员已禁言"));
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.BANS);
             return ChannelBanResult.from(ban);
         });
-        AuditLogs.success("channel.ban", operatorAccountId,
-                "channel_id", command.channelId(),
-                "target_uid", command.targetAccountId());
-        return result;
     }
 
     @Override
@@ -182,14 +186,19 @@ public class ChannelBanService implements ChannelBanApi {
                 existingBan.reason(), existingBan.expiresAt(), existingBan.createdAt(), timeProvider.nowInstant());
             channelBanRepository.update(revokedBan);
             // 通知频道成员刷新禁言台账，并单独通知被解禁者刷新自身状态
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.unban")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", targetAccountId)
+                    .log("频道成员已解除禁言"));
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channel.id(),
                 ChannelChangeScope.BANS
             );
         });
-        AuditLogs.success("channel.unban", operatorAccountId,
-                "channel_id", channelId, "target_uid", targetAccountId);
     }
 
 }

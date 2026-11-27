@@ -22,5 +22,8 @@ public final class LogKeys {
     /** 已认证用户 id。 */
     public static final String UID = "uid";
 
+    /** Netty 连接生命周期标识，同一连接的所有帧共享。 */
+    public static final String CONNECTION_ID = "connection_id";
+
     private LogKeys() {}
 }

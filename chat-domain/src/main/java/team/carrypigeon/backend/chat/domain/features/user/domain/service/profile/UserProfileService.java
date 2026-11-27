@@ -14,7 +14,6 @@ import team.carrypigeon.backend.chat.domain.features.user.domain.model.UserProfi
 import team.carrypigeon.backend.chat.domain.features.user.domain.problem.UserProblem;
 import team.carrypigeon.backend.chat.domain.features.user.domain.repository.UserProfileRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner;
 
@@ -86,39 +85,33 @@ public class UserProfileService implements UserProfileApi {
 
     @Override
     public void updateUserProfile(long operatorAccountId, UpdateCurrentUserProfileCommand command) {
-        try {
-            transactionRunner.runInTransaction(() -> {
-                UserProfile existingProfile = userProfileRepository.findByAccountIdForUpdate(operatorAccountId)
-                    .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
+        transactionRunner.runInTransaction(() -> {
+            UserProfile existingProfile = userProfileRepository.findByAccountIdForUpdate(operatorAccountId)
+                .orElseThrow(() -> ProblemException.of(UserProblem.PROFILE_NOT_FOUND));
 
-                UserProfile updatedProfile = existingProfile.updateProfile(
-                    command.avatarUrl(),
-                    command.bio(),
-                    command.sex(),
-                    command.birthday(),
-                    timeProvider.nowInstant()
-                );
-                userProfileRepository.update(updatedProfile);
-                if (!existingProfile.avatarUrl().equals(updatedProfile.avatarUrl())){
-                    // 标记头像
-                    fileReferences.replaceAvatarReference(existingProfile.avatarUrl(), updatedProfile.avatarUrl());
-                }
-                return new UserProfileResult(
-                    updatedProfile.accountId(),
-                    authAccountAdaptor.findById(updatedProfile.accountId()).username(),
-                    updatedProfile.avatarUrl(),
-                    updatedProfile.bio(),
-                    updatedProfile.sex(),
-                    updatedProfile.birthday(),
-                    updatedProfile.createdAt(),
-                    updatedProfile.updatedAt()
-                );
-            });
-            AuditLogs.success("user.profile_update", operatorAccountId);
-        } catch (ProblemException exception) {
-            AuditLogs.failure("user.profile_update", operatorAccountId,exception.getMessage());
-            throw exception;
-        }
+            UserProfile updatedProfile = existingProfile.updateProfile(
+                command.avatarUrl(),
+                command.bio(),
+                command.sex(),
+                command.birthday(),
+                timeProvider.nowInstant()
+            );
+            userProfileRepository.update(updatedProfile);
+            if (!existingProfile.avatarUrl().equals(updatedProfile.avatarUrl())){
+                // 标记头像
+                fileReferences.replaceAvatarReference(existingProfile.avatarUrl(), updatedProfile.avatarUrl());
+            }
+            return new UserProfileResult(
+                updatedProfile.accountId(),
+                authAccountAdaptor.findById(updatedProfile.accountId()).username(),
+                updatedProfile.avatarUrl(),
+                updatedProfile.bio(),
+                updatedProfile.sex(),
+                updatedProfile.birthday(),
+                updatedProfile.createdAt(),
+                updatedProfile.updatedAt()
+            );
+        });
     }
 
 }

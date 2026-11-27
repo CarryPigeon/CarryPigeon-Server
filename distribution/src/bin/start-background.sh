@@ -9,7 +9,7 @@ readiness_url=${CP_READINESS_URL:-http://127.0.0.1:8080/internal/readiness}
 lock_application
 log_file="$LOG_DIR/application-stdout.log"
 # 每次启动独立记录 stdout，探针检查不依赖日志文本。
-nohup "${JAVA_COMMAND[@]}" "${RUNTIME_ARGS[@]}" > "$log_file" 2>&1 < /dev/null &
+nohup "${JAVA_COMMAND[0]}" -Dcp.log.output=file "${JAVA_COMMAND[@]:1}" "${RUNTIME_ARGS[@]}" > "$log_file" 2>&1 < /dev/null &
 application_pid=$!
 printf '%s\n' "$application_pid" > "$PID_FILE"
 

@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 
 /** 邮件专用有界执行器；饱和或关闭时明确拒绝，不允许请求线程接管 SMTP 工作。 */
 @Configuration
@@ -20,6 +21,7 @@ public class AsyncConfig {
     public ThreadPoolTaskExecutor mailExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 核心线程数：根据邮件发送频率调整
+        executor.setTaskDecorator(LogContexts::wrap);
         executor.setCorePoolSize(5);
         // 最大线程数：防止邮件任务挤占其他异步资源
         executor.setMaxPoolSize(20);

@@ -1,6 +1,8 @@
 package team.carrypigeon.backend.infrastructure.basic.logging;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.slf4j.MDC;
 
 /**
@@ -9,6 +11,15 @@ import org.slf4j.MDC;
  * 边界：作为线程上下文静态辅助能力直接暴露，不承载业务日志策略。
  */
 public final class LogContexts {
+
+    private static final Set<String> OPERATION_KEYS = Set.of(LogKeys.SCOPE, LogKeys.SESSION_ID,
+            LogKeys.TRACE_ID, LogKeys.ROUTE, LogKeys.UID, LogKeys.CONNECTION_ID);
+
+    /** 外部关联 ID 仅接受有界的可打印 ASCII，确保可安全回写为 HTTP 响应头。 */
+    public static boolean usableId(String value) {
+        return value != null && !value.isEmpty() && value.length() <= 128
+                && value.chars().allMatch(c -> c >= 33 && c <= 126);
+    }
 
     private LogContexts() {
     }
@@ -61,13 +72,13 @@ public final class LogContexts {
 
     /**
      * 向 MDC 写入单个字段。
-     * 约束：值会先转换为有长度上限的单行文本；空值会移除旧字段，避免线程复用时残留上下文。
+     * 约束：外部关联 ID 由协议入口校验；空值会移除旧字段，避免线程复用时残留上下文。
      */
     public static void put(String key, String value) {
         if (key == null || key.isBlank()) {
             return;
         }
-        if (value.isEmpty()) {
+        if (value == null || value.isBlank()) {
             MDC.remove(key);
             return;
         }
@@ -168,15 +179,28 @@ public final class LogContexts {
      * @return 带日志上下文快照的任务
      */
     public static Runnable wrap(LogScope scope, Runnable task) {
-        Map<String, String> snapshot = MDC.getCopyOfContextMap();
+        Map<String, String> snapshot = snapshot();
         return () -> {
-            try (Scope ignored = openScope(scope)) {
-                if (snapshot != null && !snapshot.isEmpty()) {
-                    MDC.setContextMap(snapshot);
+            try (Scope ignored = openScope()) {
+                MDC.setContextMap(snapshot);
+                if (scope != null) {
+                    scope(scope);
                 }
                 task.run();
             }
         };
+    }
+
+    /** 捕获操作上下文，单条事件的 action 等字段不会传播到回调或线程池。 */
+    public static Map<String, String> snapshot() {
+        Map<String, String> snapshot = new HashMap<>();
+        for (String key : OPERATION_KEYS) {
+            String value = MDC.get(key);
+            if (value != null) {
+                snapshot.put(key, value);
+            }
+        }
+        return Map.copyOf(snapshot);
     }
 
     /**

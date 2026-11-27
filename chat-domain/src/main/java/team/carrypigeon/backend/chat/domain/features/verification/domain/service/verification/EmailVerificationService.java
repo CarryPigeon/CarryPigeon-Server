@@ -7,7 +7,6 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
 import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 
 /**
  * 邮箱验证领域 API 实现。
@@ -25,14 +24,8 @@ public class EmailVerificationService implements EmailVerificationApi {
 
     @Override
     public void issueCode(String email, EmailCodePurpose purpose, Long accountId) {
-        try {
-            validateChallenge(email, purpose, accountId);
-            cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
-            AuditLogs.success("auth.code_request_accepted", accountId, "purpose", purpose);
-        } catch (ProblemException exception) {
-            AuditLogs.failure("auth.code_request_accepted", accountId, exception.mapping().message(), "purpose", purpose);
-            throw exception;
-        }
+        validateChallenge(email, purpose, accountId);
+        cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
     }
 
     @Override

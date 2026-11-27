@@ -20,7 +20,6 @@ import team.carrypigeon.backend.chat.domain.features.file.domain.repository.File
 import team.carrypigeon.backend.chat.domain.features.file.domain.service.file.FileUploadShareKeyCodec.IssuedUploadShareKey;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 import team.carrypigeon.backend.infrastructure.service.storage.api.model.StorageObject;
 import team.carrypigeon.backend.infrastructure.service.storage.api.service.ObjectStorageService;
@@ -112,8 +111,6 @@ public class FileTransferService implements FileTransferApi {
                 expiresAt,
                 null)
         );
-        AuditLogs.success("file.upload_grant", accountId,
-            "file_id", fileId, "size_bytes", sizeBytes);
         return new FileUploadGrantResult(
             fileId,
             shareKey,
@@ -136,33 +133,27 @@ public class FileTransferService implements FileTransferApi {
         if (sizeBytes <= 0) {
             throw ProblemException.of(FileProblem.INVALID_INPUT);
         }
-        try {
-            IssuedUploadShareKey issued = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
-            if (issued.ownerAccountId() != accountId || issued.declaredSizeBytes() != sizeBytes) {
-                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
-            }
-            CPFile upload = fileRepository.findByShareKey(shareKey)
-                .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
-            if (upload.ownerAccountId() != accountId || upload.sizeBytes() != sizeBytes) {
-                throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
-            }
+        IssuedUploadShareKey issued = uploadShareKeyCodec.parse(shareKey, timeProvider.nowInstant());
+        if (issued.ownerAccountId() != accountId || issued.declaredSizeBytes() != sizeBytes) {
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+        }
+        CPFile upload = fileRepository.findByShareKey(shareKey)
+            .orElseThrow(() -> ProblemException.of(FileProblem.INVALID_SHARE_KEY));
+        if (upload.ownerAccountId() != accountId || upload.sizeBytes() != sizeBytes) {
+            throw ProblemException.of(FileProblem.INVALID_SHARE_KEY);
+        }
 
-            if (upload.status() == CPFile.Status.COMPLETED) {
-                return;
-            }
+        if (upload.status() == CPFile.Status.COMPLETED) {
+            return;
+        }
 
-            String objectKey = "/files/objects/" + UUID.randomUUID();
-            String storedType = contentType == null || contentType.isBlank()
-                ? "application/octet-stream" : contentType.trim();
-            requireStorage().put(objectKey, content, sizeBytes, storedType, upload.sha256());
-            // 存储成功之后才发布数据库状态；这里失败时不回写 FAILED，避免掩盖不确定的提交结果。
-            if (!fileRepository.complete(upload, objectKey, storedType, timeProvider.nowInstant())) {
-                throw ProblemException.of(FileProblem.UPLOAD_CONFLICT);
-            }
-            AuditLogs.success("file.upload", accountId, "file_id", upload.fileId(), "size_bytes", sizeBytes);
-        } catch (ProblemException exception) {
-            AuditLogs.failure("file.upload", accountId, exception.mapping().message());
-            throw exception;
+        String objectKey = "/files/objects/" + UUID.randomUUID();
+        String storedType = contentType == null || contentType.isBlank()
+            ? "application/octet-stream" : contentType.trim();
+        requireStorage().put(objectKey, content, sizeBytes, storedType, upload.sha256());
+        // 存储成功之后才发布数据库状态；这里失败时不回写 FAILED，避免掩盖不确定的提交结果。
+        if (!fileRepository.complete(upload, objectKey, storedType, timeProvider.nowInstant())) {
+            throw ProblemException.of(FileProblem.UPLOAD_CONFLICT);
         }
     }
 

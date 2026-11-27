@@ -6,6 +6,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import team.carrypigeon.backend.chat.domain.ws.transport.NettyRealtimeAttributes;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogScope;
+import team.carrypigeon.backend.infrastructure.basic.logging.LogKeys;
 import team.carrypigeon.backend.chat.domain.ws.connection.RealtimeAttributes;
 
 import java.util.UUID;
@@ -24,7 +25,8 @@ public class NettyRealtimeContextHandler extends SimpleChannelInboundHandler<Tex
             if (accountId != null) {
                 LogContexts.uid(String.valueOf(accountId));
             }
-            LogContexts.route("websocket");
+            LogContexts.put(LogKeys.CONNECTION_ID, ctx.channel().id().asLongText());
+            LogContexts.route("unmatched");
             String frameId = UUID.randomUUID().toString();
             LogContexts.sessionId(frameId);
             LogContexts.traceId(frameId);

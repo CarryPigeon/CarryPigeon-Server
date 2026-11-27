@@ -7,6 +7,7 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 import team.carrypigeon.backend.chat.domain.ws.transport.handlers.NettyRealtimeContextHandler;
 import team.carrypigeon.backend.chat.domain.ws.transport.handlers.NettyRealtimeServiceHandler;
 import team.carrypigeon.backend.chat.domain.ws.config.RealtimeServerProperties;
@@ -23,6 +24,7 @@ import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
 @Component
 public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
 
+    private final boolean requestLogEnabled;
     private final RealtimeServerProperties properties;
     private final TimeProvider timeProvider;
     private final RealtimeFrameCodec frameCodec;
@@ -34,8 +36,10 @@ public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
         TimeProvider timeProvider,
         RealtimeFrameCodec frameCodec,
         RealtimeCommandRegistry commandRegistry,
-        RealtimeAuthState realtimeAuthState
+        RealtimeAuthState realtimeAuthState,
+        @Value("${cp.local-dev.http.request-log.enabled:false}") boolean requestLogEnabled
     ) {
+        this.requestLogEnabled = requestLogEnabled;
         this.properties = properties;
         this.timeProvider = timeProvider;
         this.realtimeAuthState = realtimeAuthState;
@@ -63,7 +67,7 @@ public class NettyHandlerInitializer extends ChannelInitializer<SocketChannel> {
             commandRegistry,
             realtimeAuthState,
             timeProvider,
-            properties.getAuthenticationTimeoutSeconds()
+            properties.getAuthenticationTimeoutSeconds(), requestLogEnabled
         ));
     }
 }

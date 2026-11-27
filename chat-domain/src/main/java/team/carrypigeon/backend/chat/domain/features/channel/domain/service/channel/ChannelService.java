@@ -22,7 +22,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.cleanup.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.readstate.MessageReadStateApi;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.basic.id.IdGenerator;
-import team.carrypigeon.backend.infrastructure.basic.logging.AuditLogs;
+import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 import team.carrypigeon.backend.infrastructure.basic.time.TimeProvider;
@@ -33,6 +33,7 @@ import team.carrypigeon.backend.chat.domain.shared.transaction.TransactionRunner
  * 职责：承接频道创建、资料更新与删除等生命周期用例。
  * 边界：这里只处理频道实体本身的生命周期，不承担邀请流和成员治理。
  */
+@Slf4j
 @Service
 public class ChannelService implements ChannelApi {
 
@@ -137,20 +138,38 @@ public class ChannelService implements ChannelApi {
             }
             ChannelMember newOwner = channelMemberRepository.findByRelationForUpdate(channelId, newOwnerId)
                 .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            channelMemberRepository.update(new ChannelMember(
+            boolean newOwnerUpdated = channelMemberRepository.update(new ChannelMember(
                 newOwner.id(),
                 newOwner.channelId(),
                 newOwner.accountId(),
                 ChannelMemberRole.OWNER,
                 newOwner.joinedAt()
             ));
-            channelMemberRepository.update(new ChannelMember(
+            boolean previousOwnerUpdated = channelMemberRepository.update(new ChannelMember(
                 operator.id(),
                 operator.channelId(),
                 operator.accountId(),
                 ChannelMemberRole.ADMIN,
                 operator.joinedAt()
             ));
+            // 保留两次角色写入的执行顺序，只为两次均命中的转移记录成功。
+            if (newOwnerUpdated && previousOwnerUpdated) {
+                afterCommit.execute(
+                    () -> log.atInfo()
+                        .addKeyValue("action", "channel.member.transfer")
+                        .addKeyValue("outcome", "success")
+                        .addKeyValue("channel_id", channelId)
+                        .addKeyValue("target_uid", newOwnerId)
+                        .log("频道所有权已转移")
+                );
+            } else {
+                log.atError()
+                    .addKeyValue("action", "channel.member.transfer")
+                    .addKeyValue("outcome", "failure")
+                    .addKeyValue("channel_id", channelId)
+                    .addKeyValue("target_uid", newOwnerId)
+                    .log("频道所有权更新未命中");
+            }
             channelEventNotifier.channelChanged(
                 afterCommit,
                 channelId,
@@ -161,7 +180,7 @@ public class ChannelService implements ChannelApi {
 
     @Override
     public ChannelResult createChannel(long accountId, String name, String brief) {
-        ChannelResult result = transactionRunner.runInTransaction(afterCommit -> {
+        return transactionRunner.runInTransaction(afterCommit -> {
             // 频道与创建者的成员关系必须同事务写入，否则会出现"频道存在但没有任何成员"的孤儿频道
             long channelId = idGenerator.nextLongId();
             Instant now = timeProvider.nowInstant();
@@ -177,12 +196,17 @@ public class ChannelService implements ChannelApi {
             // 创建者直接落 OWNER 角色，这是后续所有频道治理动作的权限来源
             channelMemberRepository.save(new ChannelMember(idGenerator.nextLongId(), channel.id(), accountId, ChannelMemberRole.OWNER, now));
             readStates.initializeOnJoin(channelId, accountId);
-            // 提交后通知该账号刷新可见频道集合，回滚时不应发出通知
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.create")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channel.id())
+                    .log("频道已创建")
+            );
+            // 提交后通知创建者刷新可见频道集合。
             channelEventNotifier.accountChannelsChanged(afterCommit, List.of(accountId));
             return ChannelResult.from(channel);
         });
-        AuditLogs.success("channel.create", accountId, "channel_id", result.channelId());
-        return result;
     }
 
     @Override
@@ -200,9 +224,15 @@ public class ChannelService implements ChannelApi {
             // 收件箱可跨频道查询，必须随主记录一起删除；其余频道数据提交后清理。
             messageCleanup.deleteChannelMentions(channelId);
             channelRepository.delete(channel.id());
+            afterCommit.execute(
+                () -> log.atInfo()
+                    .addKeyValue("action", "channel.delete")
+                    .addKeyValue("outcome", "success")
+                    .addKeyValue("channel_id", channelId)
+                    .log("频道已删除")
+            );
             afterCommit.execute(() -> channelDeletionService.submit(channelId));
         });
-        AuditLogs.success("channel.delete", operatorAccountId, "channel_id", channelId);
     }
 
     @Override
@@ -234,7 +264,6 @@ public class ChannelService implements ChannelApi {
             );
             return ChannelResult.from(updated);
         });
-        AuditLogs.success("channel.update", operatorAccountId, "channel_id", channelId);
     }
 
 }

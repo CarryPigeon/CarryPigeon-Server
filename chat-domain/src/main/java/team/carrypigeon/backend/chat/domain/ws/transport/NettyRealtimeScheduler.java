@@ -3,7 +3,6 @@ package team.carrypigeon.backend.chat.domain.ws.transport;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.util.concurrent.ScheduledFuture;
 import lombok.extern.slf4j.Slf4j;
 import team.carrypigeon.backend.infrastructure.basic.logging.LogContexts;
@@ -47,9 +46,10 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
         authTimeoutFuture = context.executor().schedule(LogContexts.wrap(LogScope.WS, () -> {
             Channel channel = context.channel();
             if (channel.isActive() && attributes.getAccountId() == null) {
-                log.info("Realtime authentication timeout, channelId={}", channel.id().asShortText());
+                LogContexts.uid(null);
+                log.debug("Realtime authentication timeout, channelId={}", channel.id().asShortText());
                 //TODO 错误吗规范
-                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "authentication frame was not received in time"))))
+                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "authentication frame was not received in time")))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), timeoutSeconds, TimeUnit.SECONDS);
@@ -66,10 +66,11 @@ public final class NettyRealtimeScheduler implements RealtimeScheduler {
             if (channel.isActive()
                     && attributes.getAccountId() != null
                     && expiresAt.equals(currentTokenExpiresAt)) {
-                log.info("Realtime access token expired, channelId={}, uid={}",
+                LogContexts.uid(String.valueOf(attributes.getAccountId()));
+                log.debug("Realtime access token expired, channelId={}, uid={}",
                         channel.id().asShortText(), attributes.getAccountId());
                 //TODO 错误码规范
-                context.writeAndFlush(new TextWebSocketFrame(frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "access token is expired"))))
+                NettyRealtimeConnection.write(context, frameCodec.encode(new RealtimeFrame.CommandError(null, "auth", 403, "access token is expired")))
                     .addListener(ChannelFutureListener.CLOSE);
             }
         }), delayMillis, TimeUnit.MILLISECONDS);

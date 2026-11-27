@@ -5,6 +5,11 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -45,18 +50,30 @@ public class HttpConfiguration implements WebMvcConfigurer {
                 .maxAge(cors.maxAge());
     }
 
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new HandlerInterceptor() {
+            @Override
+            public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+                HttpRequestMdcFilter.useMatchedRoute(request);
+                return true;
+            }
+        }).addPathPatterns("/api/**");
+    }
+
     /**
      * 注册本地请求摘要日志过滤器。
      *
      * @return 过滤器注册 Bean
      */
     @Bean
+    @ConditionalOnProperty(name = "cp.local-dev.http.request-log.enabled", havingValue = "true")
     public FilterRegistrationBean<HttpRequestLoggingFilter> httpRequestDebugLoggingFilterRegistration() {
         FilterRegistrationBean<HttpRequestLoggingFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new HttpRequestLoggingFilter());
         registration.addUrlPatterns("/api/*");
         registration.setName("httpRequestDebugLoggingFilter");
-        registration.setOrder(Ordered.LOWEST_PRECEDENCE);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 2);
         return registration;
     }
 

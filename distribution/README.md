@@ -81,6 +81,11 @@ systemd 直接托管前台 JVM，停止服务使用 `systemctl stop carrypigeon`
 再生成 `distribution/target/release/full-distribution.sha256` 和版本清单。
 校验和用于产物完整性检查，不能代替发布者签名。
 
-日志采集路径：普通日志位于 `service-logs/application/`，审计日志位于
-`service-logs/audit/`；归档默认分别保留 30 天和 180 天。进程标准输出仍写入
-`service-logs/application-stdout.log`。历史归档保留原位，不由启动脚本搬移或删除。
+前台及 systemd 默认从 stdout 采集应用 JSON 行，journal 管理保留期。后台启动将应用事件写入
+`service-logs/application/app.jsonl`，`application-stdout.log` 保留启动与 JVM 诊断。
+开发前台可用 JVM 参数 `-Dcp.log.output=text` 查看文本，HTTP 和 WS 的逐次摘要由
+`cp.local-dev.http.request-log.enabled` 控制，分发配置默认关闭。
+文件模式按日或 100 MB 滚动，`CP_LOG_RETENTION` 默认 30 天，`CP_LOG_HOME` 可覆盖根目录。
+JSON 时间使用 Log4j2 的 `instant`（epoch 秒和纳秒），展示时区由采集端选择。
+按 `contextMap.action`、`contextMap.session_id` 查询管理操作与请求。升级时切换原分级日志和 audit 日志的采集规则，
+旧归档由部署方按原期限清理。插件中的 `AuditLogs` 调用须迁至类级 SLF4J logger 的 `addKeyValue`。
