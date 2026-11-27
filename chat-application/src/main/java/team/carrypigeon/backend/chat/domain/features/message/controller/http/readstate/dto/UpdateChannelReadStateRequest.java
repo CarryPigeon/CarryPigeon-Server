@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Positive;
  * 更新频道已读状态请求。
  */
 public record UpdateChannelReadStateRequest(
-        @Schema(description = "最后已读消息 ID（十进制字符串）", type = "long", example = "100")
+        @Schema(description = "最后已读消息 ID（整数或十进制字符串）", oneOf = {String.class, Long.class}, example = "100")
         @NotNull
         @Positive
         Long lastReadMid

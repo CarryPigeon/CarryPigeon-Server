@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,13 +25,13 @@ import java.util.Map;
  * @param status 消息状态，小写
  */
 public record MessageBody(
-        String mid,
-        String uid,
-        String cid,
+        @JsonSerialize(using = ToStringSerializer.class) long mid,
+        @JsonSerialize(using = ToStringSerializer.class) long uid,
+        @JsonSerialize(using = ToStringSerializer.class) long cid,
         String domain,
         Map<String, Object> data,
         long sendTime,
-        List<String> mentions,
+        @JsonSerialize(contentUsing = ToStringSerializer.class) List<Long> mentions,
         String preview,
         String status
 ) {

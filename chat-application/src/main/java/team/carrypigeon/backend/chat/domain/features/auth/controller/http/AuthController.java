@@ -68,7 +68,7 @@ public class AuthController {
         RegisterRequestBody request
     ) {
         RegisterResult result = authAccountApi.register(request.username().trim(), request.password(),request.email().toLowerCase(Locale.ROOT),request.code());
-        return Result.success(new RegisterResponseBody(String.valueOf(result.accountId()), result.username()));
+        return Result.success(new RegisterResponseBody(result.accountId(), result.username()));
     }
 
     /**
@@ -94,7 +94,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            String.valueOf(result.accountId())
+            result.accountId()
         ));
     }
 
@@ -119,7 +119,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            String.valueOf(result.accountId())
+            result.accountId()
         ));
     }
 
@@ -144,7 +144,7 @@ public class AuthController {
             result.accessToken(),
             result.expiresIn(),
             result.refreshToken(),
-            String.valueOf(result.accountId())
+            result.accountId()
         ));
     }
 

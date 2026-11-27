@@ -88,7 +88,7 @@ public class ChannelMemberGovernanceController {
         return Result.success(new PageResponse<>(
                 result.items().stream().map(
                         res -> new ChannelMemberResponse(
-                                String.valueOf(res.accountId()),
+                                res.accountId(),
                                 res.username(),
                                 res.role().toLowerCase(),
                                 res.avatarUrl(),

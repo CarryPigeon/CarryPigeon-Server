@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -8,8 +12,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * 边界：不承载令牌、资料详情或敏感字段。
  */
 public record RegisterResponseBody(
-        @Schema(description = "账户 ID", example = "1001")
-        String uid,
+        @Schema(type = "string", description = "账户 ID", example = "1001")
+        @JsonSerialize(using = ToStringSerializer.class) long uid,
         @Schema(description = "用户名", example = "carry-user")
         String username
 ) {

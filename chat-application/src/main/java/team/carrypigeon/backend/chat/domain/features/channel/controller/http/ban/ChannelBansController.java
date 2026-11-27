@@ -105,8 +105,8 @@ public class ChannelBansController {
                 )
         );
         return Result.success(new ChannelBanResponse(
-                String.valueOf(result.channelId()),
-                String.valueOf(result.bannedAccountId()),
+                result.channelId(),
+                result.bannedAccountId(),
                 result.expiresAt() == null ? null : result.expiresAt().toEpochMilli(),
                 result.reason(),
                 result.createdAt().toEpochMilli()
@@ -198,8 +198,8 @@ public class ChannelBansController {
 
     private ChannelBanListItemResponse toChannelBanListItemResponse(ChannelBanListItemResult result) {
         return new ChannelBanListItemResponse(
-                String.valueOf(result.channelId()),
-                String.valueOf(result.bannedAccountId()),
+                result.channelId(),
+                result.bannedAccountId(),
                 result.expiresAt() == null ? null : result.expiresAt().toEpochMilli(),
                 result.reason(),
                 result.createdAt().toEpochMilli()

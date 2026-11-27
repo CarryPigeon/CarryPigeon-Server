@@ -45,20 +45,20 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
 
     @Override
     public CPChannelMessage handle(CPChannelMessage message) throws ProblemException {
-        CPChannelTextMessageOriginData originData = parseAndValidate(message.data());
+        CPChannelTextMessageOriginData originData = parsePayload(message.data());
         String content = originData.content();
-        Long replyMessageId = null;
+        String replyToMid = null;
         CPChannelTextMessageData.CPChannelTextMessageReplyToUser replyToUser = null;
-        if(originData.replyToMid()!=null){
-            replyMessageId = Long.parseLong(originData.replyToMid());
+        if (originData.replyToMid() != null) {
             // 归属与状态校验通过后才读取发送者资料，避免从无权访问的消息派生快照。
-            CPChannelMessage repliedMessage = messageRepository.findById(replyMessageId)
+            CPChannelMessage repliedMessage = messageRepository.findById(parseReplyId(originData.replyToMid()))
                 .orElseThrow(() -> ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND));
             // 跨频道和已撤回的回复目标统一按不存在处理，避免泄露目标消息信息。
             if (repliedMessage.channelId() != message.channelId() || repliedMessage.status() != CPMessageStatus.SENT) {
                 throw ProblemException.of(MessageProblem.MESSAGE_NOT_FOUND);
             }
             String senderName = userProfileQueryAdapter.findSenderName(repliedMessage.senderId());
+            replyToMid = Long.toString(repliedMessage.messageId());
             replyToUser = new CPChannelTextMessageData.CPChannelTextMessageReplyToUser(
                 senderName,
                 repliedMessage.preview(),
@@ -66,7 +66,7 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
             );
         }
         CPChannelTextMessageData data = new CPChannelTextMessageData(
-            content, replyMessageId==null? null : String.valueOf(replyMessageId), replyToUser
+            content, replyToMid, replyToUser
         );
         int previewEnd = content.offsetByCodePoints(
             0, Math.min(content.codePointCount(0, content.length()), PREVIEW_CODE_POINTS)
@@ -85,7 +85,7 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
         );
     }
 
-    private CPChannelTextMessageOriginData parseAndValidate(Map<String, Object> payload) {
+    private CPChannelTextMessageOriginData parsePayload(Map<String, Object> payload) {
         // 直接检查原始 JSON 值，避免 Jackson 把数字或布尔值宽松转换成字符串。
         if (!(payload.get("content") instanceof String content) || content.isBlank()) {
             throw invalidField("content must be a non-blank string");
@@ -97,7 +97,22 @@ public class CPChannelTextMessageHandler implements CPChannelMessageHandler {
         if (replyValue == null) {
             return new CPChannelTextMessageOriginData(content, null);
         }
-        return new CPChannelTextMessageOriginData(content, String.valueOf(replyValue));
+        if (replyValue instanceof String || replyValue instanceof Number) {
+            return new CPChannelTextMessageOriginData(content, replyValue.toString());
+        }
+        throw ProblemException.of(MessageProblem.INVALID_INPUT, "data.reply_to_mid must be a positive integer within the long range");
+    }
+
+    private long parseReplyId(String value) {
+        try {
+            long id = Long.parseLong(value);
+            if (id > 0) {
+                return id;
+            }
+        } catch (NumberFormatException ignored) {
+            // 小数和超出 long 范围的值均按字段校验失败处理。
+        }
+        throw ProblemException.of(MessageProblem.INVALID_INPUT, "data.reply_to_mid must be a positive integer within the long range");
     }
 
     private ProblemException invalidField(String message) {

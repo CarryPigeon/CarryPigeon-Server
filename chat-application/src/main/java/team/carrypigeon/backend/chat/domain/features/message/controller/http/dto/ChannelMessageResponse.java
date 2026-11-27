@@ -1,5 +1,13 @@
 package team.carrypigeon.backend.chat.domain.features.message.controller.http.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import java.util.List;
 import java.util.Map;
 
@@ -11,13 +19,14 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
  * 边界：domain 专属字段位于 data，数值 ID 在 HTTP 响应映射时转成字符串。
  */
 public record ChannelMessageResponse(
-    String mid,
-    String uid,
-    String cid,
+    @Schema(type = "string") @JsonSerialize(using = ToStringSerializer.class) long mid,
+    @Schema(type = "string") @JsonSerialize(using = ToStringSerializer.class) long uid,
+    @Schema(type = "string") @JsonSerialize(using = ToStringSerializer.class) long cid,
     String domain,
     Map<String,Object> data,
     String preview,
-    List<String> mentions,
+    @ArraySchema(schema = @Schema(type = "string"))
+    @JsonSerialize(contentUsing = ToStringSerializer.class) List<Long> mentions,
     Long sendTime
 ) {
 
@@ -28,13 +37,13 @@ public record ChannelMessageResponse(
      */
     public static ChannelMessageResponse from(ChannelMessageResult result) {
         return new ChannelMessageResponse(
-            String.valueOf(result.messageId()),
-            String.valueOf(result.senderId()),
-            String.valueOf(result.channelId()),
+            result.messageId(),
+            result.senderId(),
+            result.channelId(),
             result.domain(),
             result.data(),
             result.preview(),
-            result.mentions().stream().map(String::valueOf).toList(),
+            result.mentions(),
             result.sendTime().toEpochMilli()
         );
     }

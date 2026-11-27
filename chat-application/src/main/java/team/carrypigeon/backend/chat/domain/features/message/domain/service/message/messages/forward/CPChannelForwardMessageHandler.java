@@ -1,6 +1,10 @@
 package team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.forward;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.chat.domain.features.message.domain.problem.MessageProblem;
@@ -9,8 +13,7 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.service.mess
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessageHandler;
 
 /**
- * 转发消息处理器占位，尚未实现载荷校验与转换，不参与消息能力注册。
- * 实现完整发送契约后才能添加 MessageHandler 注解。
+ * 校验转发消息的来源频道，并以十进制字符串保存转发载荷中的 ID。
  */
 @MessageHandler(CPChannelForwardMessageHandler.DOMAIN)
 public class CPChannelForwardMessageHandler implements CPChannelMessageHandler {
@@ -26,24 +29,38 @@ public class CPChannelForwardMessageHandler implements CPChannelMessageHandler {
 
     @Override
     public CPChannelMessage handle(CPChannelMessage message) throws ProblemException {
-        // 消息校验
-        CPChannelForwardMessageData cpChannelForwardMessageData = objectMapper.convertValue(message.data(), CPChannelForwardMessageData.class);
-        if (cpChannelForwardMessageData == null) {
+        long sourceChannelId;
+        List<Long> messageIds;
+        try {
+            var forward = objectMapper.convertValue(message.data(), CPChannelForwardMessageData.class);
+            if (forward == null || forward.getMessageIds() == null) {
+                throw ProblemException.of(MessageProblem.INVALID_INPUT);
+            }
+            sourceChannelId = Long.parseLong(forward.getSourceChannelId());
+            messageIds = forward.getMessageIds().stream().map(Long::valueOf).toList();
+        } catch (IllegalArgumentException invalidId) {
+            throw ProblemException.of(MessageProblem.INVALID_INPUT, "forward message IDs must be positive integers within the long range");
+        }
+        if (sourceChannelId <= 0 || messageIds.stream().anyMatch(id -> id <= 0)) {
             throw ProblemException.of(MessageProblem.INVALID_INPUT);
         }
         // 不允许伪造消息源，其他的保持不变
-        for (CPChannelMessage messageItem : messageRepository.findByIds(cpChannelForwardMessageData.getMessageIds())) {
-            if (messageItem.channelId() != cpChannelForwardMessageData.getSourceChannelId()){
+        for (CPChannelMessage messageItem : messageRepository.findByIds(messageIds)) {
+            if (messageItem.channelId() != sourceChannelId) {
                 throw ProblemException.of(MessageProblem.INVALID_INPUT);
             }
         }
 
+        // 自定义字段随原载荷保存，已声明的 ID 统一按响应协议输出，以免客户端丢失精度。
+        Map<String,Object> data = new LinkedHashMap<>(message.data());
+        data.put("source_channel_id", Long.toString(sourceChannelId));
+        data.put("message_ids", messageIds.stream().map(String::valueOf).toList());
         return new CPChannelMessage(
             message.messageId(),
             message.senderId(),
             message.channelId(),
             message.domain(),
-            message.data(),
+            data,
             message.sendTime(),
             message.mentions(),
             "转发消息",

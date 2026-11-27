@@ -14,7 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class CPChannelForwardMessageData {
     /**转发自哪个频道*/
-    private long sourceChannelId;
+    private String sourceChannelId;
     /**消息id列表*/
-    private List<Long> messageIds;
+    private List<String> messageIds;
 }

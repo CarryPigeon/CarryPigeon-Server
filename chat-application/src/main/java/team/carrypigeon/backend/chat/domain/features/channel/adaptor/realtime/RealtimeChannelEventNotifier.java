@@ -40,7 +40,7 @@ public class RealtimeChannelEventNotifier implements ChannelEventNotifier {
         afterCommit.execute(() -> realtimeEventApi.publishToChannel(
             channelId,
             CHANNEL_CHANGED,
-            new ChannelChangedPayload(Long.toString(channelId), wireScope(scope), REFRESH_HINT)
+            new ChannelChangedPayload(channelId, wireScope(scope), REFRESH_HINT)
         ));
     }
 

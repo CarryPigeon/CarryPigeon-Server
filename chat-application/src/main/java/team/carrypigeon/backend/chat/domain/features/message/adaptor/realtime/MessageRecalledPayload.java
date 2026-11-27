@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * 消息撤回事件载荷。
  *
@@ -7,5 +11,5 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
  * @param mid 消息 ID
  * @param recallTime 撤回时间，epoch 毫秒
  */
-public record MessageRecalledPayload(String cid, String mid, long recallTime) {
+public record MessageRecalledPayload(@JsonSerialize(using = ToStringSerializer.class) long cid, @JsonSerialize(using = ToStringSerializer.class) long mid, long recallTime) {
 }

@@ -65,9 +65,9 @@ public class ChannelReadStateController {
     ) {
         ChannelReadSummaryResult result = messageReadStateApi.getChannelReadState(principal.accountId(), channelId);
         return Result.success(new ChannelReadSummaryResponse(
-            Long.toString(result.channelId()),
-            Long.toString(result.accountId()),
-            result.lastReadMessageId() == null ? null : result.lastReadMessageId().toString(),
+            result.channelId(),
+            result.accountId(),
+            result.lastReadMessageId(),
             result.unreadCount()
         ));
     }
@@ -99,9 +99,9 @@ public class ChannelReadStateController {
             request.lastReadMid()
         );
         return Result.success(new ChannelReadStateResponse(
-            Long.toString(result.channelId()),
-            Long.toString(result.accountId()),
-            Long.toString(result.lastReadMessageId())
+            result.channelId(),
+            result.accountId(),
+            result.lastReadMessageId()
         ));
     }
 
@@ -120,7 +120,7 @@ public class ChannelReadStateController {
         CpPrincipal principal
     ) {
         List<UnreadItemResponse> items = messageReadStateApi.listUnreads(principal.accountId()).stream()
-            .map(result -> new UnreadItemResponse(Long.toString(result.channelId()),
+            .map(result -> new UnreadItemResponse(result.channelId(),
                     result.unreadCount()))
             .toList();
         return Result.success(new UnreadListResponse(items.size(),items));

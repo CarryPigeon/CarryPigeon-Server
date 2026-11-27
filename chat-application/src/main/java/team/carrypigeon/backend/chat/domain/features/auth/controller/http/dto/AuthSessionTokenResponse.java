@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.auth.controller.http.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -16,7 +20,8 @@ public record AuthSessionTokenResponse(
         long expiresIn,
         @Schema(description = "刷新令牌", example = "eyJhbGciOiJIUzI1NiJ9.refresh.token")
         String refreshToken,
-        @Schema(description = "当前用户 ID", example = "1001")
-        String uid
+        @Schema(type = "string", description = "当前用户 ID", example = "1001")
+        @JsonSerialize(using = ToStringSerializer.class)
+        long uid
 ) {
 }

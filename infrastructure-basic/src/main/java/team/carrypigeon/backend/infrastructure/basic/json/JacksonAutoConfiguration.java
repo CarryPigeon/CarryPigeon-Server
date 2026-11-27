@@ -3,6 +3,8 @@ package team.carrypigeon.backend.infrastructure.basic.json;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.jackson.Jackson2ObjectMapperBuilderCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -26,7 +28,13 @@ public class JacksonAutoConfiguration {
         return builder -> builder
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .featuresToEnable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .featuresToDisable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS);
+                .featuresToDisable(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS)
+                .postConfigurer(mapper -> {
+                    // 业务 ID 接受整数和字符串，避免将小数截断为另一个有效 ID。
+                    for (Class<?> type : new Class<?>[]{Long.class, long.class}) {
+                        mapper.coercionConfigFor(type).setCoercion(CoercionInputShape.Float, CoercionAction.Fail);
+                    }
+                });
     }
 
     /**

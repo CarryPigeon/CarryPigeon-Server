@@ -16,7 +16,7 @@ public sealed interface RealtimeFrame {
      * @param serverTime 服务端时间，epoch 毫秒
      * @param payload 事件载荷，由发射方定义
      */
-    record Event(String eventId, RealtimeEventType type, long serverTime, Object payload) implements RealtimeFrame {
+    record Event(long eventId, RealtimeEventType type, long serverTime, Object payload) implements RealtimeFrame {
     }
 
     /**

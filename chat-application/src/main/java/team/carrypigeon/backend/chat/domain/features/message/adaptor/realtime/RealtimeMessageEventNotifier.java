@@ -47,9 +47,9 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
         afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
                 READ_STATE_UPDATED,
                 new ReadStateUpdatedPayload(
-                        Long.toString(readState.channelId()),
-                        Long.toString(readState.accountId()),
-                        Long.toString(readState.lastReadMessageId())
+                        readState.channelId(),
+                        readState.accountId(),
+                        readState.lastReadMessageId()
                 ),
                 List.of(readState.accountId())
         )));
@@ -69,7 +69,7 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
         var event = eventBuffer.append(message.channelId(), ids.nextLongId(), type.wireName(), message.messageId());
         try {
             realtimeEventApi.publishToChannel(message.channelId(), new RealtimeFrame.Event(
-                    Long.toString(event.eventId()), type, event.createdAt(), Map.of(
+                    event.eventId(), type, event.createdAt(), Map.of(
                             "channel_id", Long.toString(message.channelId()),
                             "message_id", Long.toString(message.messageId()),
                             "event_sequence", event.sequence())));
@@ -85,11 +85,11 @@ public class RealtimeMessageEventNotifier implements MessageEventNotifier {
         afterCommit.execute(() -> realtimeEventApi.publish(new RealtimeEvent(
                 MENTION_CREATED,
                 new MentionCreatedPayload(
-                        Long.toString(mention.mentionId()),
-                        Long.toString(mention.channelId()),
-                        Long.toString(mention.messageId()),
-                        Long.toString(mention.fromAccountId()),
-                        Long.toString(mention.targetAccountId()),
+                        mention.mentionId(),
+                        mention.channelId(),
+                        mention.messageId(),
+                        mention.fromAccountId(),
+                        mention.targetAccountId(),
                         mention.createdAt().toEpochMilli()
                 ),
                 List.of(mention.targetAccountId())

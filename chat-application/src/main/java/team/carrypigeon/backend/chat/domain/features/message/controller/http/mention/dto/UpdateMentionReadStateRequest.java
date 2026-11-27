@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 
 /** 范围已读的可选请求体。一旦提供对象，就必须给出包含端点的 ID 上界。 */
 public record UpdateMentionReadStateRequest(
-    @Schema(description = "标记该 ID 及之前的提及", type = "string", example = "4002")
+    @Schema(description = "标记该 ID 及之前的提及", oneOf = {String.class, Long.class}, example = "4002")
     @NotNull
     @Positive
     Long throughMentionId

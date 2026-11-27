@@ -26,8 +26,6 @@ import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.ChannelMessageContextApi;
 import team.carrypigeon.backend.chat.domain.features.message.domain.api.message.result.ChannelMessageResult;
 
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * 频道消息命令 HTTP 入口。
@@ -111,7 +109,7 @@ public class ChannelMessageController {
 
     /**
      * 根据消息ids查询信息
-     * <p>请求 {@code POST /api/channels/2001/messages/ids}。JSON 请求体示例 {@code {"message_ids":[3001,3002]}}。
+     * <p>请求 {@code POST /api/channels/2001/messages/ids}。JSON 请求体示例 {@code {"message_ids":["3001","3002"]}}。
      * <p>成功响应 HTTP 200，code 为 0，data 为 {@code ChannelMessageResponse}。
      * <p>失败示例：消息不存在 30001。
      *
@@ -129,9 +127,7 @@ public class ChannelMessageController {
         @RequestBody
         ChannelMessageIdsRequest requestBody
     ) {
-        // 转化为long[]
-        List<Long> messageIds = Arrays.stream(requestBody.getMessageIds()).mapToLong(Long::parseLong).boxed().toList();
-        return Result.success(ChannelMessagesResponse.of(messageContextApi.getMessages(messageIds)));
+        return Result.success(ChannelMessagesResponse.of(messageContextApi.getMessages(requestBody.messageIds())));
     }
     /**
      * 撤回指定频道消息。

@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.file.controller.http.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.Map;
 
@@ -7,8 +11,8 @@ import java.util.Map;
  * 文件上传申请响应。
  */
 public record FileUploadResponse(
-        @Schema(description = "文件 ID", example = "1")
-        String fileId,
+        @Schema(type = "string", description = "文件 ID", example = "1")
+        @JsonSerialize(using = ToStringSerializer.class) long fileId,
         @Schema(description = "分享键", example = "shr_01H...")
         String shareKey,
         @Schema(description = "上传信息")

@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -7,8 +11,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * 职责：承载按频道资料所需的频道标识、名称、简介、系统频道标记与创建时间。
  */
 public record ChannelResponseBody(
-    @Schema(description = "频道 ID", example = "123456")
-    String cid,
+    @Schema(type = "string", description = "频道 ID", example = "123456")
+    @JsonSerialize(using = ToStringSerializer.class) long cid,
     @Schema(description = "频道名称", example = "技术交流")
     String name,
     @Schema(description = "频道简介", example = "一个关于技术交流的频道")

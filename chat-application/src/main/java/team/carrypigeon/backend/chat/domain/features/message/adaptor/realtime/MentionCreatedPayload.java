@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * 新增提及事件载荷。
  *
@@ -11,11 +15,11 @@ package team.carrypigeon.backend.chat.domain.features.message.adaptor.realtime;
  * @param createdAt 提及创建时间，epoch 毫秒
  */
 public record MentionCreatedPayload(
-        String mentionId,
-        String cid,
-        String mid,
-        String fromUid,
-        String uid,
+        @JsonSerialize(using = ToStringSerializer.class) long mentionId,
+        @JsonSerialize(using = ToStringSerializer.class) long cid,
+        @JsonSerialize(using = ToStringSerializer.class) long mid,
+        @JsonSerialize(using = ToStringSerializer.class) long fromUid,
+        @JsonSerialize(using = ToStringSerializer.class) long uid,
         long createdAt
 ) {
 }

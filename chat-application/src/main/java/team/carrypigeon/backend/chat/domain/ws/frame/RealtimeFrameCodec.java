@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.ws.frame;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProvider;
 import team.carrypigeon.backend.chat.domain.ws.uplink.RealtimeClientMessage;
@@ -90,7 +94,7 @@ public final class RealtimeFrameCodec {
      * @param serverTime 服务端时间，epoch 毫秒
      * @param payload 事件载荷
      */
-    private record EventBody(String eventId, String eventType, long serverTime, Object payload) {
+    private record EventBody(@JsonSerialize(using = ToStringSerializer.class) long eventId, String eventType, long serverTime, Object payload) {
     }
 
     /**

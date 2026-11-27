@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.controller.http.member.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
@@ -9,8 +13,8 @@ import java.time.Instant;
  * 边界：只暴露成员展示字段，不暴露成员关系主键与内部治理状态。
  */
 public record ChannelMemberResponse(
-        @Schema(description = "用户 ID", example = "1001")
-        String uid,
+        @Schema(type = "string", description = "用户 ID", example = "1001")
+        @JsonSerialize(using = ToStringSerializer.class) long uid,
         @Schema(description = "用户名（同时作为公开昵称）", example = "Alice")
         String username,
         @Schema(description = "频道角色", example = "owner")

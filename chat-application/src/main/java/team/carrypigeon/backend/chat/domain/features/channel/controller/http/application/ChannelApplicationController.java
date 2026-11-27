@@ -223,9 +223,9 @@ public class ChannelApplicationController {
 
     private ChannelApplicationResponse toResponse(ChannelApplicationResult result) {
         return new ChannelApplicationResponse(
-            String.valueOf(result.applicationId()),
-            String.valueOf(result.channelId()),
-            String.valueOf(result.accountId()),
+            result.applicationId(),
+            result.channelId(),
+            result.accountId(),
             result.reason(),
             result.applyTime().toEpochMilli(),
             result.status().toLowerCase()

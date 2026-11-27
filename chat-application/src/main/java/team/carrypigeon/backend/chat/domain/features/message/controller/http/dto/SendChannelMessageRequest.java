@@ -24,13 +24,13 @@ public record SendChannelMessageRequest(
         message = "domain must use category:subcategory:version format"
     )
     String domain,
-    @Schema(description = "domain 专属数据；文本 reply_to_mid 为正数 ID 字符串，省略或 null 表示不回复")
+    @Schema(description = "domain 专属数据；文本 reply_to_mid 为正整数或其十进制字符串，省略或 null 表示不回复")
     @NotNull(message = "data must not be null")
     Map<String, Object> data,
 
     @ArraySchema(
-        arraySchema = @Schema(description = "需要提醒的用户 ID 数组，元素为十进制字符串"),
-        schema = @Schema(type = "string", example = "1001")
+        arraySchema = @Schema(description = "需要提醒的用户 ID 数组，元素可以是整数或十进制字符串"),
+        schema = @Schema(oneOf = {String.class, Long.class}, example = "1001")
     )
     List<@Positive(message = "mentions must contain positive snowflake ids") Long> mentions
 ) {

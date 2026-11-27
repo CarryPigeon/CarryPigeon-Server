@@ -1,10 +1,15 @@
 package team.carrypigeon.backend.chat.domain.features.user.controller.http.dto;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record UserDetailProfileResponse(
-    @Schema(description = "用户 ID", example = "1001")
-    String uid,
+    @Schema(type = "string", description = "用户 ID", example = "1001")
+    @JsonSerialize(using = ToStringSerializer.class)
+    long uid,
     @Schema(description = "用户名", example = "Alice")
     String username,
     @Schema(description = "用户头像相对路径", example = "avatars/u/1001.png")

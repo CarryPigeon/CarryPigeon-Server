@@ -95,7 +95,7 @@ public class FileController {
         );
         return Result.success(
             new FileUploadResponse(
-                String.valueOf(result.fileId()),
+                result.fileId(),
                 result.shareKey(),
                 new FileUploadResponse.UploadResponse(
                     "PUT",

@@ -90,7 +90,7 @@ public class ChannelController {
                 : null;
 
         return Result.success(CursorPageResponse.of(items.stream().map(item -> new DiscoverChannelResponse(
-                Long.toString(item.cid()), item.name(), item.brief(), item.avatar(),
+                item.cid(), item.name(), item.brief(), item.avatar(),
                 item.memberCount(), item.requiresApplication())).toList(),
                 nextCursor, hasMore));
     }
@@ -128,7 +128,7 @@ public class ChannelController {
         return Result.success(new PageResponse<>(
                 result.items().stream()
                         .map(channel -> new ChannelResponseBody(
-                                String.valueOf(channel.channelId()),
+                                channel.channelId(),
                                 channel.name(),
                                 channel.brief(),
                                 channel.systemChannel(),
@@ -166,7 +166,7 @@ public class ChannelController {
     ) {
         ChannelResult result = channelApi.getChannelById(channelId);
         return Result.success(new ChannelResponseBody(
-            String.valueOf(result.channelId()),
+            result.channelId(),
             result.name(),
             result.brief(),
             result.systemChannel(),
@@ -224,16 +224,12 @@ public class ChannelController {
         long channelId,
         @Parameter(description = "转让请求体，包含新所有者 ID", example = "{\"new_owner\": \"1001\"}")
         @RequestBody
+        @Valid
         TransferChannelRequest body,
         @AuthenticationPrincipal
         CpPrincipal cpPrincipal
     ) {
-        long newOwnerId = Long.parseLong(body.newOwner());
-        // 数据校验
-        if (newOwnerId <= 0) {
-            throw new IllegalArgumentException("newOwnerId must be greater than 0");
-        }
-        channelApi.transferChannel(cpPrincipal.accountId(), channelId, newOwnerId);
+        channelApi.transferChannel(cpPrincipal.accountId(), channelId, body.newOwner());
         return Result.success();
     }
 
@@ -263,7 +259,7 @@ public class ChannelController {
             results.size(),
             results.stream()
                 .map(channel -> new ChannelResponseBody(
-                    String.valueOf(channel.channelId()),
+                    channel.channelId(),
                     channel.name(),
                     channel.brief(),
                     channel.systemChannel(),
@@ -295,7 +291,7 @@ public class ChannelController {
     ) {
         ChannelResult result = channelApi.createChannel(cpPrincipal.accountId(), body.name(), body.brief());
         return Result.success(new ChannelResponseBody(
-            String.valueOf(result.channelId()),
+            result.channelId(),
             result.name(),
             result.brief(),
             result.systemChannel(),

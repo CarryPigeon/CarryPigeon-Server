@@ -76,7 +76,7 @@ public class UserProfileController {
         UserProfileResult result = userProfileDomainApi.findById(accountId);
         PublicAccountResult account = authAccountApi.getAccount(accountId);
         return Result.success(new UserDetailProfileResponse(
-                result.accountId() + "",
+                result.accountId(),
                 result.username(),
                 result.avatarUrl(),
                 account.email(),
@@ -104,7 +104,7 @@ public class UserProfileController {
     ) {
         List<UserPublicProfileResponse> result = userProfileDomainApi.getPublicUserProfiles(ids).stream()
                 .map(user -> new UserPublicProfileResponse(
-                        String.valueOf(user.accountId()),
+                        user.accountId(),
                         user.username(),
                         user.avatarUrl()
                     )

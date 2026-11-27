@@ -4,17 +4,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 
 import org.springframework.stereotype.Component;
 
 import team.carrypigeon.backend.chat.domain.features.message.domain.repository.MessageRepository;
-import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
-import team.carrypigeon.backend.infrastructure.basic.json.JsonProblem;
 import team.carrypigeon.backend.infrastructure.basic.json.JsonProviderImpl;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPChannelMessage;
 import team.carrypigeon.backend.chat.domain.features.message.domain.service.message.messages.CPMessageStatus;
@@ -35,15 +29,12 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
 
     private final MessageDatabaseService messageDatabaseService;
     private final JsonProviderImpl jsonProvider;
-    private final ObjectReader dataReader;
 
     public DatabaseBackedMessageRepository(
-            MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider, ObjectMapper objectMapper
+            MessageDatabaseService messageDatabaseService, JsonProviderImpl jsonProvider
     ) {
         this.messageDatabaseService = messageDatabaseService;
         this.jsonProvider = jsonProvider;
-        // 无类型 Map 的整数统一恢复为 Long，避免小 ID 被 Jackson 恢复为 Integer。
-        this.dataReader = objectMapper.readerFor(DATA_TYPE).with(DeserializationFeature.USE_LONG_FOR_INTS);
     }
 
     @Override
@@ -151,11 +142,7 @@ public class DatabaseBackedMessageRepository implements MessageRepository {
         if (data == null || data.isBlank()) {
             return Map.of();
         }
-        try {
-            return dataReader.readValue(data);
-        } catch (JsonProcessingException exception) {
-            throw ProblemException.of(JsonProblem.JSON_DESERIALIZE_FAILED, exception);
-        }
+        return jsonProvider.fromJson(data, DATA_TYPE);
     }
 
     private List<Long> parseMentions(String mentions) {

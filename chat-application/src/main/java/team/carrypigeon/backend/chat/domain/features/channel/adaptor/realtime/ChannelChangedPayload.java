@@ -1,5 +1,9 @@
 package team.carrypigeon.backend.chat.domain.features.channel.adaptor.realtime;
 
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * 频道变化事件的线上载荷。
  * 职责：定义 `channel.changed` 事件的对外字段。
@@ -9,5 +13,5 @@ package team.carrypigeon.backend.chat.domain.features.channel.adaptor.realtime;
  * @param scope 失效范围的线上取值
  * @param hint 刷新提示
  */
-public record ChannelChangedPayload(String cid, String scope, String hint) {
+public record ChannelChangedPayload(@JsonSerialize(using = ToStringSerializer.class) long cid, String scope, String hint) {
 }

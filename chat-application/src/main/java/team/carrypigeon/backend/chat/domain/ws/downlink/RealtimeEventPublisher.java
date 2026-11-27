@@ -77,7 +77,7 @@ public class RealtimeEventPublisher implements RealtimeEventApi {
 
     /** 同一事件只编码一次，协议帧字节上限对账号与频道两种路由一致生效。 */
     private String encode(RealtimeEventType type, Object payload) {
-        return encode(new RealtimeFrame.Event(idGenerator.nextStringId(), type, timeProvider.nowMillis(), payload));
+        return encode(new RealtimeFrame.Event(idGenerator.nextLongId(), type, timeProvider.nowMillis(), payload));
     }
 
     private String encode(RealtimeFrame.Event event) {
