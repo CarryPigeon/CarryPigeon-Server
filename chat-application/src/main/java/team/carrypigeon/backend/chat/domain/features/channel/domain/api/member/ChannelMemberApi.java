@@ -1,7 +1,6 @@
 package team.carrypigeon.backend.chat.domain.features.channel.domain.api.member;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.shared.page.PageQuery;
 import team.carrypigeon.backend.chat.domain.shared.page.PageResult;
 
@@ -35,14 +34,6 @@ public interface ChannelMemberApi {
      * @param targetAccountId 目标账号 ID
      */
     void demoteChannelAdmin(long operatorAccountId, long channelId, long targetAccountId);
-
-    /**
-     * 转移频道所有权。
-     * @param operatorAccountId 操作者账号 ID
-     * @param channelId 频道 ID
-     * @param targetAccountId 目标账号 ID
-     */
-    ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId);
 
     /**
      * 将成员移出频道。

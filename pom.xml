@@ -21,7 +21,7 @@
         </license>
     </licenses>
     <modules>
-        <module>chat-domain</module>
+        <module>chat-application</module>
         <module>infrastructure-basic</module>
         <module>infrastructure-service</module>
         <module>application-starter</module>
@@ -48,7 +48,7 @@
         <dependencies>
             <dependency>
                 <groupId>CarryPigeon</groupId>
-                <artifactId>chat-domain</artifactId>
+                <artifactId>chat-application</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>

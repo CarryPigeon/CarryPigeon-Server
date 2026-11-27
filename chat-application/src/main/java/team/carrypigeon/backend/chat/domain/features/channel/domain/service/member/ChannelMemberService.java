@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.ChannelMemberApi;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelMemberResult;
-import team.carrypigeon.backend.chat.domain.features.channel.domain.api.member.result.ChannelOwnershipTransferResult;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelChangeScope;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.ChannelEventNotifier;
 import team.carrypigeon.backend.chat.domain.features.channel.domain.capability.MemberProfile;
@@ -160,59 +159,6 @@ public class ChannelMemberService implements ChannelMemberApi {
                     .log("频道管理员已撤销")
             );
             channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
-        });
-    }
-
-    @Override
-    public ChannelOwnershipTransferResult transferChannelOwnership(long operatorAccountId, long channelId, long targetAccountId) {
-        return transactionRunner.runInTransaction(afterCommit -> {
-            // 同一频道的治理写入先锁频道，再读取成员角色，避免并发转移或移除覆盖角色变更。
-            Channel channel = channelRepository.findByIdForUpdate(channelId)
-                .orElseThrow(() -> ProblemException.of(ChannelProblem.CHANNEL_NOT_FOUND));
-            ChannelMember operator = channelMemberRepository.findByRelationForUpdate(channelId, operatorAccountId)
-                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBERSHIP_REQUIRED));
-            // 目标不是成员时按资源不存在处理，与操作者非成员的拒绝语义区分开
-            ChannelMember target = channelMemberRepository.findByRelationForUpdate(channelId, targetAccountId)
-                .orElseThrow(() -> ProblemException.of(ChannelProblem.MEMBER_NOT_FOUND));
-            // 只有现任 OWNER 才能发起转移，避免 ADMIN 自行接管频道
-            if (operator.role() != ChannelMemberRole.OWNER) {
-                throw ProblemException.of(ChannelProblem.OWNERSHIP_FORBIDDEN);
-            }
-            // 目标已是 OWNER 时转移无意义，按参数错误拒绝
-            if (target.role() == ChannelMemberRole.OWNER) {
-                throw ProblemException.of(ChannelProblem.INVALID_INPUT, "target member is already owner");
-            }
-            // 两次角色变更必须构成同一事务：否则可能出现频道短暂没有 OWNER 的状态
-            // 领域模型不可变，两处都以各自原主键重建；主键必须沿用，否则更新命中不到任何行
-            ChannelMember previousOwner = new ChannelMember(
-                operator.id(),
-                operator.channelId(),
-                operator.accountId(),
-                ChannelMemberRole.ADMIN,
-                operator.joinedAt()
-            );
-            ChannelMember newOwner = new ChannelMember(
-                target.id(),
-                target.channelId(),
-                target.accountId(),
-                ChannelMemberRole.OWNER,
-                target.joinedAt()
-            );
-            // 任一成员更新未命中时整笔回滚，不能只完成所有权转移的一半。
-            if (!channelMemberRepository.update(previousOwner) || !channelMemberRepository.update(newOwner)) {
-                throw ProblemException.of(ChannelProblem.GOVERNANCE_CONFLICT);
-            }
-            // 两条角色变更在同一事务提交后才对其它事务可见。
-            afterCommit.execute(
-                () -> log.atInfo()
-                    .addKeyValue("action", "channel.member.transfer")
-                    .addKeyValue("outcome", "success")
-                    .addKeyValue("channel_id", channelId)
-                    .addKeyValue("target_uid", targetAccountId)
-                    .log("频道所有权已转移")
-            );
-            channelEventNotifier.channelChanged(afterCommit, channel.id(), ChannelChangeScope.MEMBERS);
-            return ChannelOwnershipTransferResult.from(previousOwner, newOwner);
         });
     }
 

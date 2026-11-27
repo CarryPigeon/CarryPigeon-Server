@@ -19,7 +19,7 @@ CarryPigeon Backend 是一个基于 **Java 25 + Spring Boot** 的开源聊天后
 ## 模块结构
 
 - `application-starter`：启动与运行时装配模块
-- `chat-domain`：核心业务域模块
+- `chat-application`：核心业务域模块
 - `infrastructure-basic`：固定全局基础设施模块
 - `infrastructure-service`：可拔插外部服务基础设施父模块
   - 各级子模块承当具体的外部服务功能

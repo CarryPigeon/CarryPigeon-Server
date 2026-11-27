@@ -10,7 +10,7 @@ import java.util.concurrent.CompletionStage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationChallenge;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 import team.carrypigeon.backend.infrastructure.service.cache.api.service.CodeChallengeStore;
@@ -25,7 +25,7 @@ import team.carrypigeon.backend.infrastructure.service.mail.api.service.MailSend
  */
 @Component
 @Slf4j
-public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEmailVerificationCapability {
+public class CacheBackedEmailVerificationChallenge implements EmailVerificationChallenge {
 
     // 认证凭证使用 JDK 安全随机源，不以时间戳或用户身份作为种子。
     private static final SecureRandom CODE_RANDOM = new SecureRandom();
@@ -37,7 +37,7 @@ public class CacheBackedEmailVerificationCapabilityImpl implements CacheBackedEm
     private final CodeChallengeStore challengeStore;
     private final MailSenderService mailSenderService;
 
-    public CacheBackedEmailVerificationCapabilityImpl(
+    public CacheBackedEmailVerificationChallenge(
             CodeChallengeStore challengeStore,
             MailSenderService mailSenderService
     ) {

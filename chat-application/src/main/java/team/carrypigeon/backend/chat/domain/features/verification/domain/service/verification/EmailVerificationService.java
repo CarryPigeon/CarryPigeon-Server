@@ -4,7 +4,7 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailCodePurpose;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.api.verification.EmailVerificationApi;
-import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.CacheBackedEmailVerificationCapability;
+import team.carrypigeon.backend.chat.domain.features.verification.domain.capability.EmailVerificationChallenge;
 import team.carrypigeon.backend.chat.domain.features.verification.domain.problem.VerificationProblem;
 import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 
@@ -16,22 +16,22 @@ import team.carrypigeon.backend.infrastructure.basic.exception.ProblemException;
 @Service
 public class EmailVerificationService implements EmailVerificationApi {
 
-    private final CacheBackedEmailVerificationCapability cacheBackedEmailVerificationCapability;
+    private final EmailVerificationChallenge emailVerificationChallenge;
 
-    public EmailVerificationService(CacheBackedEmailVerificationCapability cacheBackedEmailVerificationCapability) {
-        this.cacheBackedEmailVerificationCapability = cacheBackedEmailVerificationCapability;
+    public EmailVerificationService(EmailVerificationChallenge emailVerificationChallenge) {
+        this.emailVerificationChallenge = emailVerificationChallenge;
     }
 
     @Override
     public void issueCode(String email, EmailCodePurpose purpose, Long accountId) {
         validateChallenge(email, purpose, accountId);
-        cacheBackedEmailVerificationCapability.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
+        emailVerificationChallenge.issueCode(email.trim().toLowerCase(Locale.ROOT), purpose, accountId);
     }
 
     @Override
     public void verifyCode(String email, String code, EmailCodePurpose purpose, Long accountId) {
         validateChallenge(email, purpose, accountId);
-        cacheBackedEmailVerificationCapability.verifyCode(email.trim().toLowerCase(Locale.ROOT), code, purpose, accountId);
+        emailVerificationChallenge.verifyCode(email.trim().toLowerCase(Locale.ROOT), code, purpose, accountId);
     }
 
     /** 签发与消费使用相同的身份约束，防止缺少账号绑定的修改邮箱挑战进入缓存。 */

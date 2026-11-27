@@ -7,7 +7,7 @@ import team.carrypigeon.backend.chat.domain.features.verification.domain.api.ver
  * 职责：按用途及账号绑定存储、投递和消费邮箱挑战；入参已由领域服务校验并规范化。
  * 边界：这里只定义验证码语义，不暴露真实邮件基础设施实现细节。
  */
-public interface CacheBackedEmailVerificationCapability {
+public interface EmailVerificationChallenge {
 
     /**
      * 为目标邮箱签发验证码。

@@ -8,10 +8,10 @@
 		<version>1.0.0</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
-	<artifactId>chat-domain</artifactId>
+	<artifactId>chat-application</artifactId>
 	<version>1.0.0</version>
-	<name>chat-domain</name>
-	<description>chat-domain</description>
+	<name>chat-application</name>
+	<description>chat-application</description>
 	<packaging>jar</packaging>
 	<url/>
 	<developers>
